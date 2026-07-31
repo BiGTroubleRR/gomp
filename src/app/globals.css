@@ -1,17 +1,17 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --gomp-bg: #f5f0e6;
+  --gomp-panel: #fdfaf4;
+  --gomp-ink: #1c1c1a;
+  --gomp-muted: #7a7469;
+  --gomp-faint: #a09890;
+  --gomp-maroon: #6e1423;
+  --gomp-gold: #c4a35a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html {
-  height: 100%;
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
 html,
@@ -21,20 +21,11 @@ body {
 }
 
 body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--gomp-ink);
+  background: var(--gomp-bg);
+  font-family: var(--font-sans), sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
 a {
@@ -42,8 +33,192 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+/* ---- Nav-link hover affordance, shared across every page's plain nav links ---- */
+a[data-gomp-nav]:not([style*='background']) {
+  padding: 7px 11px;
+  margin: -7px -11px;
+  border-radius: 3px;
+  transition: background-color 0.15s ease;
+}
+a[data-gomp-nav]:not([style*='background']):hover {
+  background-color: rgba(110, 20, 35, 0.09);
+}
+
+/* ---- Scroll-reveal (Reveal component) ---- */
+.gomp-reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.gomp-reveal.gomp-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .gomp-reveal {
+    transition: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---- Tab-switch / section entrance animation (Account page, hero, etc.) ---- */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ---- Same-document View Transitions: posh ease-out-expo glide, direction-aware ---- */
+@view-transition {
+  navigation: auto;
+}
+@media (prefers-reduced-motion: no-preference) {
+  :active-view-transition-type(gomp-forward)::view-transition-old(root) {
+    animation: gomp-slide-out-left 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    z-index: 2;
+  }
+  :active-view-transition-type(gomp-forward)::view-transition-new(root) {
+    animation: gomp-fade-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    z-index: 1;
+  }
+  :active-view-transition-type(gomp-backward)::view-transition-old(root) {
+    animation: gomp-slide-out-right 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    z-index: 2;
+  }
+  :active-view-transition-type(gomp-backward)::view-transition-new(root) {
+    animation: gomp-fade-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    z-index: 1;
+  }
+  @keyframes gomp-slide-out-left {
+    to {
+      transform: translateX(-100%);
+    }
+  }
+  @keyframes gomp-slide-out-right {
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes gomp-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
+/* ---- Checkout page: fade-up step transitions + confirmation checkmark draw-in ----
+   (gompOverlayOut/gompRotateSlow/gompRotateSlowRev/gompEmberRise/gompGlowPulse used by the
+   checkout entry overlay are already defined below, shared with the Benchmarks handoff.) */
+@keyframes gompFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes gompCheckDraw {
+  from {
+    stroke-dashoffset: 60;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes gompPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+}
+
+/* ---- Booting-up / preparing-checkout maroon ember overlay (Benchmarks page handoff) ---- */
+@keyframes gompOverlayIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes gompOverlayOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes gompCompleteFadeIn {
+  0% {
+    opacity: 0;
+    letter-spacing: 12px;
+  }
+  100% {
+    opacity: 1;
+    letter-spacing: 6px;
+  }
+}
+@keyframes gompRotateSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes gompRotateSlowRev {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+@keyframes gompEmberRise {
+  0% {
+    transform: translateY(0) scale(0.7);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-46px) scale(1.15);
+    opacity: 0;
+  }
+}
+@keyframes gompGlowPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
   }
 }

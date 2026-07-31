@@ -1,0 +1,1113 @@
+'use client';
+
+import { CSSProperties, useEffect, useState } from 'react';
+import { useSite } from '@/contexts/SiteContext';
+import TransitionLink from '@/components/TransitionLink';
+import { readJSON, writeJSON } from '@/lib/gomp-storage';
+import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
+import {
+  defaultComponentDb,
+  defaultBuilds,
+  defaultMargin,
+  computePrice,
+  type Category,
+  type Component,
+  type ComponentDb,
+  type Build,
+  type Margin,
+  type Tier,
+} from '@/lib/component-db-seed';
+
+// ---------------------------------------------------------------------------
+// Static data
+// ---------------------------------------------------------------------------
+
+type Suggestion = { name: string; passmark?: number; passmarkUrl?: string; specs?: string };
+
+// Visual tab order on the Components tab (matches the original site; differs from the
+// shared CATEGORIES export's declaration order, which isn't meant to dictate UI order).
+const CATEGORY_TAB_ORDER: Category[] = ['gpu', 'cpu', 'ram', 'storage', 'mobo', 'cooler', 'psu', 'case'];
+
+const CAT_LABELS: Record<'en' | 'sk', Record<Category, string>> = {
+  en: { gpu: 'GPU', cpu: 'CPU', ram: 'RAM', storage: 'Storage', mobo: 'Motherboard', cooler: 'Cooler', psu: 'PSU', case: 'Case' },
+  sk: { gpu: 'GPU', cpu: 'CPU', ram: 'RAM', storage: 'Úložisko', mobo: 'Základná doska', cooler: 'Chladič', psu: 'PSU', case: 'Skriňa' },
+};
+
+const CASE_CATS = ['Full Tower', 'Mid Tower', 'Mini Tower', 'SFF'];
+
+// Tier badge palette used ONLY on the Builds tab. The Components tab uses TIER_COLORS
+// imported from @/lib/passmark. This is a deliberate, preserved quirk of the original site,
+// which really does use two different tier-badge palettes across its two tabs.
+const BUILD_TIER_COLORS: Record<Tier, { bg: string; text: string; border: string }> = {
+  S: { bg: '#FFF5CC', text: '#876400', border: '#D4A017' },
+  A: { bg: '#FFE8E8', text: '#8B1A00', border: '#CC3333' },
+  B: { bg: '#E8F0FF', text: '#1A3080', border: '#3366CC' },
+  C: { bg: '#E8FFF0', text: '#1A5030', border: '#339966' },
+  D: { bg: '#F2F2F6', text: '#505060', border: '#9090A0' },
+};
+
+// Autocomplete suggestions per category, shown while adding/editing a component. Exact
+// PassMark scores/URLs ported verbatim from the original site's SUGGESTIONS table.
+const SUGGESTIONS: Record<Category, Suggestion[]> = {
+  gpu: [
+    { name: 'NVIDIA RTX 5090', passmark: 38960, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5090&id=5725' },
+    { name: 'NVIDIA RTX 5080', passmark: 35665, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5080&id=5721' },
+    { name: 'NVIDIA RTX 5070 Ti', passmark: 32375, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5070+Ti&id=5878' },
+    { name: 'NVIDIA RTX 5070', passmark: 28687, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5070&id=5940' },
+    { name: 'NVIDIA RTX 5060 Ti 16GB', passmark: 22630, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5060+Ti+16GB&id=6160' },
+    { name: 'NVIDIA RTX 5060', passmark: 20700, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5060&id=5602' },
+    { name: 'NVIDIA RTX 5050', passmark: 16957, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5050&id=6668' },
+    { name: 'NVIDIA RTX 4090', passmark: 38054, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4090&id=4606' },
+    { name: 'NVIDIA RTX 4080 Super', passmark: 34238, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4080+SUPER&id=4984' },
+    { name: 'NVIDIA RTX 4080', passmark: 34451, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4080&id=4622' },
+    { name: 'NVIDIA RTX 4070 Ti Super', passmark: 31851, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+Ti+SUPER&id=4980' },
+    { name: 'NVIDIA RTX 4070 Ti', passmark: 31545, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+Ti&id=4699' },
+    { name: 'NVIDIA RTX 4070 Super', passmark: 29947, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+SUPER&id=4973' },
+    { name: 'NVIDIA RTX 4070', passmark: 26881, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070&id=4795' },
+    { name: 'NVIDIA RTX 4060 Ti 16GB', passmark: 22592, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4060+Ti+16GB&id=4898' },
+    { name: 'NVIDIA RTX 4060', passmark: 19494, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4060&id=4850' },
+    { name: 'NVIDIA RTX 3080 Ti', passmark: 26749, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3080+Ti&id=4409' },
+    { name: 'NVIDIA RTX 3080', passmark: 25000, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3080&id=4282' },
+    { name: 'NVIDIA RTX 3070 Ti', passmark: 23197, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3070+Ti&id=4413' },
+    { name: 'NVIDIA RTX 3070', passmark: 22097, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3070&id=4283' },
+    { name: 'NVIDIA RTX 3060 Ti', passmark: 20241, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3060+Ti&id=4318' },
+    { name: 'NVIDIA RTX 3060 12GB', passmark: 16716, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3060+12GB&id=4345' },
+    { name: 'AMD Radeon RX 9070 XT', passmark: 26907, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9070+XT&id=5956' },
+    { name: 'AMD Radeon RX 9070', passmark: 25395, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9070&id=5958' },
+    { name: 'AMD Radeon RX 9060 XT 16GB', passmark: 20085, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9060+XT+16GB&id=5957' },
+    { name: 'AMD Radeon RX 7900 XTX', passmark: 31424, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7900+XTX&id=4644' },
+    { name: 'AMD Radeon RX 7900 XT', passmark: 29065, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7900+XT&id=4646' },
+    { name: 'AMD Radeon RX 7800 XT', passmark: 24402, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7800+XT&id=4917' },
+    { name: 'AMD Radeon RX 7700 XT', passmark: 22687, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7700+XT&id=4919' },
+    { name: 'AMD Radeon RX 7600', passmark: 16465, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7600&id=4832' },
+    { name: 'AMD Radeon RX 6800 XT', passmark: 25064, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+6800+XT&id=4312' },
+    { name: 'AMD Radeon RX 6700 XT', passmark: 19731, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+6700+XT&id=4369' },
+    { name: 'AMD Radeon RX 6600 XT', passmark: 16440, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+6600+XT&id=4444' },
+    { name: 'Intel Arc B580', passmark: 16026, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Intel+Arc+B580&id=5306' },
+    { name: 'Intel Arc B570', passmark: 14116, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Intel+Arc+B570&id=5652' },
+    { name: 'Intel Arc A770', passmark: 13351, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Intel+Arc+A770&id=4605' },
+    { name: 'Intel Arc A750', passmark: 12631, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Intel+Arc+A750&id=4612' },
+  ],
+  cpu: [
+    { name: 'AMD Ryzen 9 9950X3D', passmark: 70175, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+9+9950X3D&id=6549' },
+    { name: 'AMD Ryzen 9 9950X', passmark: 65758, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+9+9950X&id=6211' },
+    { name: 'AMD Ryzen 9 9900X3D', passmark: 56190, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+9+9900X3D&id=6548' },
+    { name: 'AMD Ryzen 9 9900X', passmark: 54413, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+9+9900X&id=6171' },
+    { name: 'AMD Ryzen 7 9800X3D', passmark: 39967, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+9800X3D&id=6344' },
+    { name: 'AMD Ryzen 9 7950X3D', passmark: 62317, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+9+7950X3D&id=5234' },
+    { name: 'AMD Ryzen 9 7950X', passmark: 62182, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+9+7950X&id=5031' },
+    { name: 'AMD Ryzen 7 7800X3D', passmark: 34290, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+7800X3D&id=5299' },
+    { name: 'AMD Ryzen 9 7900X3D', passmark: 50212, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+9+7900X3D&id=5240' },
+    { name: 'Intel Core Ultra 9 285K', passmark: 67283, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+Ultra+9+285K&id=6296' },
+    { name: 'Intel Core i9-14900KS', passmark: 60060, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i9-14900KS&id=5957' },
+    { name: 'Intel Core i9-14900K', passmark: 58312, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i9-14900K&id=5717' },
+    { name: 'Intel Core i9-14900KF', passmark: 58200, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i9-14900KF&id=5684' },
+    { name: 'Intel Core i9-13900K', passmark: 58167, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i9-13900K&id=5022' },
+    { name: 'Intel Core i7-14700K', passmark: 51995, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i7-14700K&id=5719' },
+    { name: 'Intel Core i9-13900KS', passmark: 60486, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i9-13900KS&id=5160' },
+  ],
+  ram: [
+    { name: 'G.Skill Trident Z5 32GB DDR5 6400', specs: '2×16GB · CL32 · EXPO/XMP3' },
+    { name: 'Corsair Dominator 32GB DDR5 5600', specs: '2×16GB · CL36' },
+    { name: 'Kingston Fury Beast 32GB DDR5 6000', specs: '2×16GB · CL36 · EXPO/XMP3' },
+    { name: 'Kingston Fury Beast 16GB DDR5 6000', specs: '2×8GB · CL36 · EXPO/XMP3' },
+    { name: 'G.Skill Trident Z5 64GB DDR5 6000', specs: '2×32GB · CL30 · EXPO/XMP3' },
+    { name: 'Corsair Vengeance 64GB DDR5 6000', specs: '2×32GB · CL30' },
+    { name: 'Corsair Vengeance 32GB DDR4 3600', specs: '2×16GB · CL18' },
+    { name: 'Crucial Pro 32GB DDR5 5600', specs: '2×16GB · CL46' },
+  ],
+  storage: [
+    { name: 'Samsung 990 Pro 2TB NVMe', specs: 'PCIe 4.0 · 7450MB/s read' },
+    { name: 'WD Black SN850X 2TB NVMe', specs: 'PCIe 4.0 · 7300MB/s read' },
+    { name: 'Samsung 9100 Pro 2TB NVMe', specs: 'PCIe 5.0 · 14800MB/s read' },
+    { name: 'Crucial T500 1TB NVMe', specs: 'PCIe 4.0 · 7400MB/s read' },
+    { name: 'Crucial P3 Plus 1TB NVMe', specs: 'PCIe 4.0 · 5000MB/s read' },
+    { name: 'Samsung 990 EVO Plus 1TB NVMe', specs: 'PCIe 4.0/5.0 · 7150MB/s read' },
+    { name: 'Seagate FireCuda 530 2TB NVMe', specs: 'PCIe 4.0 · 7300MB/s read' },
+    { name: 'WD Blue SN580 1TB NVMe', specs: 'PCIe 4.0 · 4150MB/s read' },
+  ],
+  mobo: [
+    { name: 'ASUS ROG STRIX X870E-E', specs: 'AM5 · DDR5 · PCIe 5.0 · 4×M.2' },
+    { name: 'MSI MAG Z790 TOMAHAWK', specs: 'LGA1700 · DDR5 · PCIe 5.0' },
+    { name: 'Gigabyte X870 AORUS Elite', specs: 'AM5 · DDR5 · PCIe 5.0' },
+    { name: 'ASUS TUF Gaming Z890-Plus', specs: 'LGA1851 · DDR5 · PCIe 5.0' },
+    { name: 'MSI PRO B650-P WiFi', specs: 'AM5 · DDR5 · PCIe 4.0' },
+    { name: 'ASUS ROG STRIX B760-F', specs: 'LGA1700 · DDR5 · PCIe 5.0' },
+  ],
+  cooler: [
+    { name: 'NZXT Kraken 360 RGB', specs: '360mm AIO · LCD head · AM5/LGA1700' },
+    { name: 'Noctua NH-D15 chromax', specs: 'Dual tower · 165mm' },
+    { name: 'Corsair iCUE LINK Titan 360 RX', specs: '360mm AIO · LCD head' },
+    { name: 'ARCTIC Liquid Freezer III 360', specs: '360mm AIO · VRM fan' },
+    { name: 'Deepcool AK620', specs: 'Dual tower air · 160mm' },
+    { name: 'Cooler Master Hyper 212 Black Edition', specs: 'Single tower air · 155mm' },
+  ],
+  psu: [
+    { name: 'Corsair HX1200i ATX 3.0', specs: '1200W · 80+ Platinum · Modular' },
+    { name: 'Seasonic FOCUS GX-850', specs: '850W · 80+ Gold · Modular' },
+    { name: 'be quiet! Dark Power 13 1000W', specs: '1000W · 80+ Titanium · Modular' },
+    { name: 'MSI MPG A1000G', specs: '1000W · 80+ Gold · ATX 3.0 · Modular' },
+    { name: 'Corsair RM850x', specs: '850W · 80+ Gold · Modular' },
+    { name: 'EVGA SuperNOVA 650 GT', specs: '650W · 80+ Gold · Modular' },
+  ],
+  case: [
+    { name: 'NZXT H1 V2', specs: 'Mini-ITX · Tempered Glass · 280mm AIO Ready' },
+    { name: 'Fractal Design Pop Air', specs: 'Micro-ATX · Mesh Front · 360mm AIO Ready' },
+    { name: 'Fractal Design Meshify 2', specs: 'Mid-Tower ATX · Mesh Front · 360mm AIO Ready' },
+    { name: 'Lian Li O11D EVO XL', specs: 'Full-Tower E-ATX · Tempered Glass · 420mm AIO Ready' },
+    { name: 'Corsair 6500X', specs: 'Mid-Tower ATX · Dual Chamber · Tempered Glass' },
+    { name: 'Cooler Master MasterBox Q300L', specs: 'Micro-ATX · Mesh Front · Compact' },
+    { name: 'Phanteks Eclipse G360A', specs: 'Mid-Tower ATX · Mesh Front · 360mm AIO Ready' },
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// Translations
+// ---------------------------------------------------------------------------
+
+type Translations = {
+  admin_panel: string; sign_in_desc: string; password: string; wrong_password: string; sign_in: string;
+  default_password: string; admin_crumb: string; view_shop: string; log_out: string;
+  manage: string; builds_tab: string; components_tab: string;
+  database: string; builds_listed: string; components_word: string;
+  pc_builds: string; add_build: string;
+  name_label: string; tagline_label: string; storage_label: string;
+  mobo_label: string; cooler_label: string;
+  category_label: string; cat_flagship: string; cat_performance: string; cat_midrange: string; cat_entry: string;
+  tier_label: string; tier_s: string; tier_a: string; tier_b: string; tier_c: string; tier_d: string;
+  price_eur_label: string; price_eur_short: string; rating_label: string;
+  cancel: string; save_build: string; edit: string; del: string;
+  col_build: string; col_price: string; col_rating: string; col_status: string;
+  live: string; hidden: string;
+  edit_build: string; new_build: string; saved_ok: string;
+  components_db: string; components_db_desc: string;
+  suggestions_search_placeholder: string; already_added: string; no_suggestions: string;
+  margin_title: string; margin_desc: string;
+  margin_eur: string; margin_pct: string;
+  market_price_label: string; market_price_placeholder: string;
+  specs_notes: string; tier_rating: string; tower_category: string; tower_category_help: string;
+  update_arrow: string; add_prefix: string; edit_prefix: string;
+  select_prefix: string; select_suffix: string;
+  listings: (n: number) => string;
+  price_auto_note: (mp: number, m: number) => string;
+};
+
+const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
+  en: {
+    admin_panel: 'Admin Panel', sign_in_desc: 'Sign in to manage builds and components.',
+    password: 'Password', wrong_password: 'Incorrect password. Try again.', sign_in: 'Sign In →',
+    default_password: 'Default password:', admin_crumb: 'Admin', view_shop: 'View Shop ↗', log_out: 'Log out',
+    manage: 'Manage', builds_tab: 'Builds', components_tab: 'Components',
+    database: 'Database', builds_listed: 'Builds listed', components_word: 'Components',
+    pc_builds: 'PC Builds', add_build: '+ Add Build',
+    name_label: 'Name *', tagline_label: 'Tagline', storage_label: 'Storage',
+    mobo_label: 'Motherboard', cooler_label: 'Cooler',
+    category_label: 'Category', cat_flagship: 'Flagship', cat_performance: 'Performance', cat_midrange: 'Mid-Range', cat_entry: 'Entry',
+    tier_label: 'Tier', tier_s: 'S — Legendary', tier_a: 'A — Excellent', tier_b: 'B — Great', tier_c: 'C — Good', tier_d: 'D — Decent',
+    price_eur_label: 'Price (EUR)', price_eur_short: 'Price (€)', rating_label: 'Rating (0–5)',
+    cancel: 'Cancel', save_build: 'Save Build →', edit: 'Edit', del: 'Del',
+    col_build: 'Build', col_price: 'Price', col_rating: 'Rating', col_status: 'Status',
+    live: 'Live', hidden: 'Hidden',
+    edit_build: 'Edit Build', new_build: 'New Build', saved_ok: '✓ Saved successfully',
+    components_db: 'Components Database', components_db_desc: 'Parts available in the 3D PC Builder configurator',
+    suggestions_search_placeholder: 'Search suggestions…', already_added: 'Added', no_suggestions: 'No matches — type a custom name.',
+    margin_title: 'Pricing Margin',
+    margin_desc: 'Paste in the cheapest current price you find on Alza / Heureka as "Market Price" below — the sell price is derived automatically from this margin and updates across the site.',
+    margin_eur: '€ Flat', margin_pct: '% Markup',
+    market_price_label: 'Market Price (Alza/Heureka)', market_price_placeholder: 'e.g. 1650',
+    specs_notes: 'Specs / Notes', tier_rating: 'Tier Rating', tower_category: 'Tower Category',
+    tower_category_help: 'Full Tower 55–75 cm · Mid Tower 35–55 cm · Mini Tower 30–45 cm · SFF <35 cm',
+    update_arrow: 'Update →', add_prefix: 'Add ', edit_prefix: 'Edit ',
+    select_prefix: '— Select ', select_suffix: ' —',
+    listings: (n) => `${n} listings · changes save to localStorage and sync to Shop`,
+    price_auto_note: (mp, m) => `Auto: €${mp} market + margin = €${m} sell price`,
+  },
+  sk: {
+    admin_panel: 'Admin panel', sign_in_desc: 'Prihláste sa a správajte zostavy a komponenty.',
+    password: 'Heslo', wrong_password: 'Nesprávne heslo. Skúste znova.', sign_in: 'Prihlásiť sa →',
+    default_password: 'Predvolené heslo:', admin_crumb: 'Admin', view_shop: 'Zobraziť obchod ↗', log_out: 'Odhlásiť sa',
+    manage: 'Správa', builds_tab: 'Zostavy', components_tab: 'Komponenty',
+    database: 'Databáza', builds_listed: 'Uvedených zostáv', components_word: 'Komponenty',
+    pc_builds: 'Zostavy PC', add_build: '+ Pridať zostavu',
+    name_label: 'Názov *', tagline_label: 'Slogan', storage_label: 'Úložisko',
+    mobo_label: 'Základná doska', cooler_label: 'Chladič',
+    category_label: 'Kategória', cat_flagship: 'Vlajková loď', cat_performance: 'Výkonnostná', cat_midrange: 'Stredná trieda', cat_entry: 'Základná',
+    tier_label: 'Trieda', tier_s: 'S — Legendárna', tier_a: 'A — Výborná', tier_b: 'B — Skvelá', tier_c: 'C — Dobrá', tier_d: 'D — Slušná',
+    price_eur_label: 'Cena (EUR)', price_eur_short: 'Cena (€)', rating_label: 'Hodnotenie (0–5)',
+    cancel: 'Zrušiť', save_build: 'Uložiť zostavu →', edit: 'Upraviť', del: 'Zmazať',
+    col_build: 'Zostava', col_price: 'Cena', col_rating: 'Hodnotenie', col_status: 'Stav',
+    live: 'Aktívna', hidden: 'Skrytá',
+    edit_build: 'Upraviť zostavu', new_build: 'Nová zostava', saved_ok: '✓ Úspešne uložené',
+    components_db: 'Databáza komponentov', components_db_desc: 'Súčiastky dostupné v 3D konfigurátore PC',
+    suggestions_search_placeholder: 'Hľadať návrhy…', already_added: 'Pridané', no_suggestions: 'Nenájdené — zadajte vlastný názov.',
+    margin_title: 'Marketingová marža',
+    margin_desc: 'Vložte najlevnejšiu aktuálnu cenu z Alzy / Heureky ako „Tržnová cena" nižšie — predajná cena sa automaticky odvodí z tejto marže a aktualizuje sa v celom obchode.',
+    margin_eur: '€ Pevná', margin_pct: '% Prirážka',
+    market_price_label: 'Tržnová cena (Alza/Heureka)', market_price_placeholder: 'napr. 1650',
+    specs_notes: 'Špecifikácie / Poznámky', tier_rating: 'Hodnotenie triedy', tower_category: 'Kategória skrine',
+    tower_category_help: 'Veľká skriňa 55–75 cm · Stredná skriňa 35–55 cm · Malá skriňa 30–45 cm · SFF <35 cm',
+    update_arrow: 'Aktualizovať →', add_prefix: 'Pridať ', edit_prefix: 'Upraviť ',
+    select_prefix: '— Vybrať ', select_suffix: ' —',
+    listings: (n) => `${n} položiek · zmeny sa ukladajú do localStorage a synchronizujú s obchodom`,
+    price_auto_note: (mp, m) => `Auto: €${mp} trh + marža = €${m} predajná cena`,
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Form state shapes + helpers
+// ---------------------------------------------------------------------------
+
+type BuildFormState = {
+  name: string; tagline: string; cat: Build['cat']; tier: Tier;
+  gpu: string; cpu: string; ram: string; storage: string; mobo: string; cooler: string; psu: string;
+  price: string; rating: string;
+};
+
+function initialBuildForm(): BuildFormState {
+  return { name: '', tagline: '', cat: 'flagship', tier: 'S', gpu: '', cpu: '', ram: '', storage: '', mobo: '', cooler: '', psu: '', price: '', rating: '4.9' };
+}
+
+type CompFormState = {
+  name: string; price: string; marketPrice: string; specs: string; category: string; tier: Tier;
+  passmark: number | null; passmarkUrl: string;
+};
+
+function initialCompForm(): CompFormState {
+  return { name: '', price: '', marketPrice: '', specs: '', category: 'Mid Tower', tier: 'B', passmark: null, passmarkUrl: '' };
+}
+
+// Live-over-stored PassMark refresh + market-price-driven repricing, run once on every load.
+function migrateComponentDb(db: ComponentDb, margin: Margin): ComponentDb {
+  const out = {} as ComponentDb;
+  (Object.keys(db) as Category[]).forEach((cat) => {
+    out[cat] = (db[cat] || []).map((c) => {
+      let next = c;
+      if (cat === 'gpu' || cat === 'cpu') {
+        const live = passmarkLookup(c.name);
+        if (live) next = { ...next, passmark: live.score, passmarkUrl: live.url, tier: tierFromPassmark(cat === 'gpu', live.score) };
+      }
+      if (next.marketPrice != null) {
+        const price = computePrice(next.marketPrice, margin);
+        if (price != null) next = { ...next, price };
+      }
+      return next;
+    });
+  });
+  return out;
+}
+
+function recomputeMarginPrices(db: ComponentDb, margin: Margin): ComponentDb {
+  const out = {} as ComponentDb;
+  (Object.keys(db) as Category[]).forEach((cat) => {
+    out[cat] = (db[cat] || []).map((c) => {
+      if (c.marketPrice == null) return c;
+      const price = computePrice(c.marketPrice, margin);
+      return price != null ? { ...c, price } : c;
+    });
+  });
+  return out;
+}
+
+function computeNextBuildId(builds: Build[]): number {
+  return builds.reduce((m, b) => Math.max(m, b.id || 0), 0) + 1;
+}
+
+// Independent from the build-id counter (unlike the original, which shared one counter for
+// both numeric build ids and 'u'-prefixed component ids — a latent collision risk this
+// avoids). Derived from the highest existing 'uN' id so re-loading never collides.
+function computeNextCompId(db: ComponentDb): number {
+  let max = 0;
+  (Object.keys(db) as Category[]).forEach((cat) => {
+    (db[cat] || []).forEach((c) => {
+      const m = /^u(\d+)$/.exec(c.id);
+      if (m) max = Math.max(max, parseInt(m[1], 10));
+    });
+  });
+  return max + 1;
+}
+
+const LABEL_STYLE: CSSProperties = {
+  fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469',
+  letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6,
+};
+
+const INPUT_STYLE: CSSProperties = {
+  width: '100%', padding: '9px 12px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2,
+  fontSize: 13, background: '#F5F0E6', color: '#1C1C1A', fontFamily: 'var(--font-sans)',
+};
+
+function tierBadge(tier: Tier | undefined, palette: Record<Tier, { bg: string; text: string; border: string }>) {
+  return palette[tier || 'D'] || palette.D;
+}
+
+// ---------------------------------------------------------------------------
+// Small reusable pieces
+// ---------------------------------------------------------------------------
+
+function CompSelect({
+  label, value, options, placeholder, t, fmt, onChange,
+}: {
+  label: string; value: string; options: Component[]; placeholder: string;
+  t: Translations; fmt: (n: number) => string; onChange: (v: string) => void;
+}) {
+  return (
+    <div>
+      <div style={LABEL_STYLE}>{label}</div>
+      <select value={value} onChange={(e) => onChange(e.target.value)} style={INPUT_STYLE}>
+        <option value="">{t.select_prefix}{placeholder}{t.select_suffix}</option>
+        {options.map((c) => (
+          <option key={c.id} value={c.name}>{`${c.name}  ·  ${fmt(c.price)}`}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
+export default function AdminPage() {
+  const { lang, currency, setLang, setCurrency, fmt } = useSite();
+
+  const [authed, setAuthed] = useState(false);
+  const [pwInput, setPwInput] = useState('');
+  const [pwError, setPwError] = useState(false);
+
+  const [tab, setTab] = useState<'builds' | 'components'>('builds');
+  const [builds, setBuilds] = useState<Build[]>([]);
+  const [compDb, setCompDb] = useState<ComponentDb>(defaultComponentDb());
+
+  const [showForm, setShowForm] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [form, setForm] = useState<BuildFormState>(initialBuildForm());
+
+  const [compCat, setCompCat] = useState<Category>('gpu');
+  const [compForm, setCompForm] = useState<CompFormState>(initialCompForm());
+  const [editCompId, setEditCompId] = useState<string | null>(null);
+
+  const [saveMsg, setSaveMsg] = useState('');
+  const [nextBuildId, setNextBuildId] = useState(1);
+  const [nextCompId, setNextCompId] = useState(1);
+
+  const [margin, setMarginState] = useState<Margin>(defaultMargin());
+  const [marginValueInput, setMarginValueInput] = useState('0');
+
+  const [nameDropdownOpen, setNameDropdownOpen] = useState(false);
+
+  const t = TRANSLATIONS[lang];
+  const catLabels = CAT_LABELS[lang];
+
+  // Restore session on refresh (client-only, avoids SSR mismatch).
+  useEffect(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('gomp_admin_auth') === '1') {
+      setAuthed(true);
+    }
+  }, []);
+
+  // Load + migrate the shared DB once authed (fresh login or restored session).
+  useEffect(() => {
+    if (!authed) return;
+    const storedMargin = readJSON<Margin>('gomp_margin', defaultMargin());
+    const hadBuilds = typeof window !== 'undefined' && localStorage.getItem('gomp_builds_db') != null;
+    const loadedBuilds = readJSON<Build[]>('gomp_builds_db', defaultBuilds());
+    if (!hadBuilds) writeJSON('gomp_builds_db', loadedBuilds);
+    const rawCompDb = readJSON<ComponentDb>('gomp_components_db', defaultComponentDb());
+    const migrated = migrateComponentDb(rawCompDb, storedMargin);
+    writeJSON('gomp_components_db', migrated);
+
+    setMarginState(storedMargin);
+    setMarginValueInput(String(storedMargin.value));
+    setBuilds(loadedBuilds);
+    setCompDb(migrated);
+    setNextBuildId(computeNextBuildId(loadedBuilds));
+    setNextCompId(computeNextCompId(migrated));
+  }, [authed]);
+
+  // ---- auth ----
+
+  function handleLogin() {
+    if (pwInput === 'gomp2026') {
+      sessionStorage.setItem('gomp_admin_auth', '1');
+      setPwError(false);
+      setAuthed(true);
+    } else {
+      setPwError(true);
+    }
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem('gomp_admin_auth');
+    setAuthed(false);
+    setPwInput('');
+    setPwError(false);
+  }
+
+  // ---- builds CRUD ----
+
+  function openAddBuild() {
+    setShowForm(true);
+    setEditId(null);
+    setForm(initialBuildForm());
+  }
+
+  function openEditBuild(id: number) {
+    const b = builds.find((x) => x.id === id);
+    if (!b) return;
+    setShowForm(true);
+    setEditId(id);
+    setForm({
+      name: b.name, tagline: b.tagline, cat: b.cat, tier: b.tier,
+      gpu: b.gpu, cpu: b.cpu, ram: b.ram, storage: b.storage, mobo: b.mobo, cooler: b.cooler, psu: b.psu,
+      price: String(b.price), rating: String(b.rating),
+    });
+  }
+
+  function saveBuild() {
+    if (!form.name.trim()) return;
+    const build: Build = {
+      id: editId !== null ? editId : nextBuildId,
+      name: form.name.trim(), tagline: form.tagline.trim(), cat: form.cat, tier: form.tier,
+      gpu: form.gpu, cpu: form.cpu, ram: form.ram, storage: form.storage, mobo: form.mobo, cooler: form.cooler, psu: form.psu,
+      price: parseFloat(form.price) || 0, rating: parseFloat(form.rating) || 0, visible: true,
+    };
+    const newBuilds = editId !== null ? builds.map((b) => (b.id === editId ? build : b)) : [...builds, build];
+    writeJSON('gomp_builds_db', newBuilds);
+    writeJSON('gomp_components_db', compDb);
+    const wasEditing = editId !== null;
+    setBuilds(newBuilds);
+    setShowForm(false);
+    setEditId(null);
+    if (!wasEditing) setNextBuildId(nextBuildId + 1);
+    setSaveMsg('✓');
+    setTimeout(() => setSaveMsg(''), 2500);
+  }
+
+  function deleteBuild(id: number) {
+    const b = builds.find((x) => x.id === id);
+    if (!window.confirm(`Delete "${b ? b.name : ''}"?`)) return;
+    const newBuilds = builds.filter((x) => x.id !== id);
+    writeJSON('gomp_builds_db', newBuilds);
+    writeJSON('gomp_components_db', compDb);
+    setBuilds(newBuilds);
+  }
+
+  function toggleVisible(id: number) {
+    const newBuilds = builds.map((b) => (b.id === id ? { ...b, visible: !b.visible } : b));
+    writeJSON('gomp_builds_db', newBuilds);
+    writeJSON('gomp_components_db', compDb);
+    setBuilds(newBuilds);
+  }
+
+  // ---- margin ----
+
+  function updateMargin(patch: Partial<Margin>) {
+    const newMargin = { ...margin, ...patch };
+    writeJSON('gomp_margin', newMargin);
+    const newCompDb = recomputeMarginPrices(compDb, newMargin);
+    writeJSON('gomp_builds_db', builds);
+    writeJSON('gomp_components_db', newCompDb);
+    setMarginState(newMargin);
+    setCompDb(newCompDb);
+  }
+
+  // ---- components CRUD ----
+
+  function addComponent() {
+    if (!compForm.name.trim()) return;
+    const marketPrice = compForm.marketPrice !== '' ? parseFloat(compForm.marketPrice) : null;
+    const derived = marketPrice != null ? computePrice(marketPrice, margin) : null;
+    const tier: Tier = compForm.passmark ? tierFromPassmark(compCat === 'gpu', compForm.passmark) : compForm.tier;
+    const comp: Component = {
+      id: 'u' + nextCompId,
+      name: compForm.name.trim(),
+      price: derived != null ? derived : parseFloat(compForm.price) || 0,
+      marketPrice,
+      specs: compForm.specs.trim(),
+      tier,
+      ...(compForm.passmark ? { passmark: compForm.passmark, passmarkUrl: compForm.passmarkUrl || '' } : {}),
+      ...(compCat === 'case' ? { category: compForm.category || 'Mid Tower' } : {}),
+    };
+    const newCompDb: ComponentDb = { ...compDb, [compCat]: [...(compDb[compCat] || []), comp] };
+    writeJSON('gomp_builds_db', builds);
+    writeJSON('gomp_components_db', newCompDb);
+    setCompDb(newCompDb);
+    setCompForm(initialCompForm());
+    setNextCompId(nextCompId + 1);
+  }
+
+  function updateComponent() {
+    if (!editCompId || !compForm.name.trim()) return;
+    const marketPrice = compForm.marketPrice !== '' ? parseFloat(compForm.marketPrice) : null;
+    const derived = marketPrice != null ? computePrice(marketPrice, margin) : null;
+    const tier: Tier = compForm.passmark ? tierFromPassmark(compCat === 'gpu', compForm.passmark) : compForm.tier;
+    const updated: Component = {
+      id: editCompId,
+      name: compForm.name.trim(),
+      price: derived != null ? derived : parseFloat(compForm.price) || 0,
+      marketPrice,
+      specs: compForm.specs.trim(),
+      tier,
+      ...(compForm.passmark ? { passmark: compForm.passmark, passmarkUrl: compForm.passmarkUrl || '' } : {}),
+      ...(compCat === 'case' ? { category: compForm.category || 'Mid Tower' } : {}),
+    };
+    const newCompDb: ComponentDb = { ...compDb, [compCat]: (compDb[compCat] || []).map((c) => (c.id === editCompId ? updated : c)) };
+    writeJSON('gomp_builds_db', builds);
+    writeJSON('gomp_components_db', newCompDb);
+    setCompDb(newCompDb);
+    setEditCompId(null);
+    setCompForm(initialCompForm());
+  }
+
+  function deleteComponent(cat: Category, id: string) {
+    const newCompDb: ComponentDb = { ...compDb, [cat]: (compDb[cat] || []).filter((c) => c.id !== id) };
+    writeJSON('gomp_builds_db', builds);
+    writeJSON('gomp_components_db', newCompDb);
+    setCompDb(newCompDb);
+  }
+
+  function openEditComp(cat: Category, id: string) {
+    const comp = (compDb[cat] || []).find((c) => c.id === id);
+    if (!comp) return;
+    setCompCat(cat);
+    setEditCompId(id);
+    setCompForm({
+      name: comp.name || '',
+      price: String(comp.price ?? ''),
+      marketPrice: comp.marketPrice != null ? String(comp.marketPrice) : '',
+      specs: comp.specs || '',
+      category: comp.category || 'Mid Tower',
+      tier: comp.tier || 'B',
+      passmark: comp.passmark || null,
+      passmarkUrl: comp.passmarkUrl || '',
+    });
+  }
+
+  function cancelEditComp() {
+    setEditCompId(null);
+    setCompForm(initialCompForm());
+  }
+
+  function pickSuggestion(s: Suggestion) {
+    setCompForm((f) => ({ ...f, name: s.name, specs: s.specs || f.specs, passmark: s.passmark || null, passmarkUrl: s.passmarkUrl || '' }));
+    setNameDropdownOpen(false);
+  }
+
+  // ---- derived values ----
+
+  const suggestQ = compForm.name.trim().toLowerCase();
+  const existingNames = new Set((compDb[compCat] || []).map((c) => c.name.toLowerCase()));
+  const filteredSuggestions = (SUGGESTIONS[compCat] || []).filter((s) => !suggestQ || s.name.toLowerCase().includes(suggestQ));
+  const noSuggestions = filteredSuggestions.length === 0;
+  const suggestionsToShow = filteredSuggestions.slice(0, 10).map((s) => {
+    const live = (compCat === 'gpu' || compCat === 'cpu') ? passmarkLookup(s.name) : null;
+    const effective: Suggestion = live ? { ...s, passmark: live.score, passmarkUrl: live.url } : s;
+    return { name: s.name, already: existingNames.has(s.name.toLowerCase()), effective };
+  });
+
+  const mpParsed = parseFloat(compForm.marketPrice);
+  const hasManualMarketPrice = compForm.marketPrice !== '' && !isNaN(mpParsed);
+  const priceAutoNote = hasManualMarketPrice ? t.price_auto_note(mpParsed, computePrice(mpParsed, margin) ?? 0) : '';
+
+  const totalComps = (Object.values(compDb) as Component[][]).reduce((sum, arr) => sum + (arr ? arr.length : 0), 0);
+
+  // ---------------------------------------------------------------------------
+  // Login screen
+  // ---------------------------------------------------------------------------
+
+  if (!authed) {
+    return (
+      <div
+        style={{
+          position: 'relative', zIndex: 2, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'linear-gradient(135deg,#170809 0%,#2E1114 60%,#3A161A 100%)',
+        }}
+      >
+        <div style={{ background: '#FDFAF4', borderRadius: 2, padding: 52, width: 400, border: '0.5px solid rgba(28,28,26,0.1)' }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 17, fontWeight: 600, fontStyle: 'italic', letterSpacing: 1.5, color: '#C4A35A', marginBottom: 6 }}>
+            GOMP
+          </div>
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 26, fontWeight: 600, color: '#1C1C1A', marginBottom: 6, letterSpacing: -0.5 }}>
+            {t.admin_panel}
+          </div>
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', marginBottom: 40, fontWeight: 300 }}>
+            {t.sign_in_desc}
+          </div>
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>
+            {t.password}
+          </div>
+          <input
+            type="password"
+            value={pwInput}
+            onChange={(e) => setPwInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
+            placeholder="••••••••"
+            autoFocus
+            style={{ width: '100%', padding: '11px 14px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 14, background: '#F5F0E6', color: '#1C1C1A', marginBottom: 10 }}
+          />
+          {pwError && (
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#CC3333', marginBottom: 10, padding: '8px 12px', background: '#FFF0EE', borderRadius: 2, border: '0.5px solid rgba(204,51,51,0.25)' }}>
+              {t.wrong_password}
+            </div>
+          )}
+          <button
+            onClick={handleLogin}
+            style={{ width: '100%', background: '#6E1423', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3, marginTop: 4, fontFamily: 'var(--font-sans)' }}
+          >
+            {t.sign_in}
+          </button>
+          <div style={{ marginTop: 20, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#B0A898' }}>
+            {t.default_password} <span style={{ fontFamily: 'var(--font-mono)', background: '#F0EBE1', padding: '2px 7px', borderRadius: 2 }}>gomp2026</span>
+          </div>
+          <div style={{ marginTop: 24, paddingTop: 16, borderTop: '0.5px solid rgba(28,28,26,0.1)', display: 'flex', gap: 6, justifyContent: 'center' }}>
+            <button onClick={() => setLang('en')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 6px', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'en' ? '#6E1423' : '#7A7469' }}>EN</button>
+            <span style={{ color: 'rgba(28,28,26,0.25)' }}>/</span>
+            <button onClick={() => setLang('sk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 6px', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'sk' ? '#6E1423' : '#7A7469' }}>SK</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Admin shell (nav + sidebar + tabs)
+  // ---------------------------------------------------------------------------
+
+  return (
+    <div style={{ position: 'relative', zIndex: 2, minHeight: '100vh' }}>
+      <nav
+        style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: 54, display: 'flex', alignItems: 'center',
+          padding: '0 28px', background: '#170A0C', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        <TransitionLink
+          href="/"
+          style={{ fontFamily: 'var(--font-serif)', fontSize: 16, fontWeight: 600, fontStyle: 'italic', color: '#C4A35A', textDecoration: 'none', letterSpacing: 1.5, marginRight: 14 }}
+        >
+          GOMP
+        </TransitionLink>
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.28)', letterSpacing: 2, textTransform: 'uppercase', marginRight: 'auto' }}>
+          / {t.admin_crumb}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 20, fontFamily: 'var(--font-sans)', fontSize: 12 }}>
+          <button onClick={() => setLang('en')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'en' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: lang === 'en' ? 600 : 400 }}>EN</button>
+          <span style={{ color: 'rgba(245,240,230,0.25)' }}>/</span>
+          <button onClick={() => setLang('sk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'sk' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: lang === 'sk' ? 600 : 400 }}>SK</button>
+          <span style={{ color: 'rgba(245,240,230,0.18)', marginLeft: 4 }}>|</span>
+          <button onClick={() => setCurrency('eur')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: currency === 'eur' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: currency === 'eur' ? 600 : 400 }}>€</button>
+          <span style={{ color: 'rgba(245,240,230,0.25)' }}>/</span>
+          <button onClick={() => setCurrency('czk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: currency === 'czk' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: currency === 'czk' ? 600 : 400 }}>Kč</button>
+        </div>
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+          <TransitionLink href="/shop" style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(245,240,230,0.45)', textDecoration: 'none' }}>
+            {t.view_shop}
+          </TransitionLink>
+          <button
+            onClick={handleLogout}
+            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(245,240,230,0.7)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 2, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+          >
+            {t.log_out}
+          </button>
+        </div>
+      </nav>
+
+      <div style={{ display: 'flex', minHeight: '100vh', paddingTop: 54 }}>
+        {/* Sidebar */}
+        <div style={{ width: 188, flexShrink: 0, background: '#1D0D0F', borderRight: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', position: 'sticky', top: 54, height: 'calc(100vh - 54px)', overflowY: 'auto' }}>
+          <div style={{ padding: '20px 16px 10px', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 500, color: 'rgba(245,240,230,0.22)', letterSpacing: 2.5, textTransform: 'uppercase' }}>
+            {t.manage}
+          </div>
+          <button
+            onClick={() => setTab('builds')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '10px 18px',
+              background: tab === 'builds' ? 'rgba(245,240,230,0.07)' : 'transparent',
+              border: 'none', borderLeft: `2px solid ${tab === 'builds' ? '#4A90D9' : 'transparent'}`,
+              color: tab === 'builds' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'builds' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+            }}
+          >
+            {t.builds_tab}
+          </button>
+          <button
+            onClick={() => setTab('components')}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '10px 18px',
+              background: tab === 'components' ? 'rgba(245,240,230,0.07)' : 'transparent',
+              border: 'none', borderLeft: `2px solid ${tab === 'components' ? '#4A90D9' : 'transparent'}`,
+              color: tab === 'components' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'components' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+            }}
+          >
+            {t.components_tab}
+          </button>
+          <div style={{ padding: '24px 18px 0', marginTop: 20, borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(245,240,230,0.22)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
+              {t.database}
+            </div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 600, color: '#F5F0E6', lineHeight: 1, marginBottom: 3 }}>{builds.length}</div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.32)', marginBottom: 18 }}>{t.builds_listed}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 600, color: '#F5F0E6', lineHeight: 1, marginBottom: 3 }}>{totalComps}</div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.32)' }}>{t.components_word}</div>
+          </div>
+        </div>
+
+        {/* Main */}
+        <div style={{ flex: 1, background: '#F2EDE3', overflowY: 'auto', minHeight: 'calc(100vh - 54px)' }}>
+          {tab === 'builds' && (
+            <div style={{ padding: '36px 44px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.pc_builds}</h1>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300 }}>{t.listings(builds.length)}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  {saveMsg && (
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1A6B3A', background: '#EAFAF2', border: '0.5px solid #6DCFA0', borderRadius: 2, padding: '6px 14px' }}>
+                      {t.saved_ok}
+                    </div>
+                  )}
+                  <button
+                    onClick={openAddBuild}
+                    style={{ background: '#6E1423', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '10px 20px', fontSize: 13, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.2, fontFamily: 'var(--font-sans)' }}
+                  >
+                    {t.add_build}
+                  </button>
+                </div>
+              </div>
+
+              {showForm && (
+                <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: 28, marginBottom: 24, borderLeft: '3px solid #6E1423' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 600, color: '#1C1C1A', marginBottom: 22 }}>
+                    {editId !== null ? t.edit_build : t.new_build}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.name_label}</div>
+                      <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="The Apex Predator" style={INPUT_STYLE} />
+                    </div>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.tagline_label}</div>
+                      <input value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="Ultimate 4K gaming & creation" style={INPUT_STYLE} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+                    <CompSelect label="GPU" value={form.gpu} options={compDb.gpu || []} placeholder="GPU" t={t} fmt={fmt} onChange={(v) => setForm({ ...form, gpu: v })} />
+                    <CompSelect label="CPU" value={form.cpu} options={compDb.cpu || []} placeholder="CPU" t={t} fmt={fmt} onChange={(v) => setForm({ ...form, cpu: v })} />
+                    <CompSelect label="RAM" value={form.ram} options={compDb.ram || []} placeholder="RAM" t={t} fmt={fmt} onChange={(v) => setForm({ ...form, ram: v })} />
+                    <CompSelect label={t.storage_label} value={form.storage} options={compDb.storage || []} placeholder={catLabels.storage} t={t} fmt={fmt} onChange={(v) => setForm({ ...form, storage: v })} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+                    <CompSelect label={t.mobo_label} value={form.mobo} options={compDb.mobo || []} placeholder={catLabels.mobo} t={t} fmt={fmt} onChange={(v) => setForm({ ...form, mobo: v })} />
+                    <CompSelect label={t.cooler_label} value={form.cooler} options={compDb.cooler || []} placeholder={catLabels.cooler} t={t} fmt={fmt} onChange={(v) => setForm({ ...form, cooler: v })} />
+                    <CompSelect label="PSU" value={form.psu} options={compDb.psu || []} placeholder="PSU" t={t} fmt={fmt} onChange={(v) => setForm({ ...form, psu: v })} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 22 }}>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.category_label}</div>
+                      <select value={form.cat} onChange={(e) => setForm({ ...form, cat: e.target.value as Build['cat'] })} style={INPUT_STYLE}>
+                        <option value="flagship">{t.cat_flagship}</option>
+                        <option value="performance">{t.cat_performance}</option>
+                        <option value="midrange">{t.cat_midrange}</option>
+                        <option value="entry">{t.cat_entry}</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.tier_label}</div>
+                      <select value={form.tier} onChange={(e) => setForm({ ...form, tier: e.target.value as Tier })} style={INPUT_STYLE}>
+                        {(['S', 'A', 'B', 'C', 'D'] as Tier[]).map((tk) => (
+                          <option key={tk} value={tk}>{t[`tier_${tk.toLowerCase()}` as keyof Translations] as string}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.price_eur_label}</div>
+                      <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="4299" style={INPUT_STYLE} />
+                    </div>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.rating_label}</div>
+                      <input type="number" value={form.rating} onChange={(e) => setForm({ ...form, rating: e.target.value })} placeholder="4.9" min={0} max={5} step={0.1} style={INPUT_STYLE} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 18 }}>
+                    <button onClick={() => setShowForm(false)} style={{ background: 'transparent', color: '#7A7469', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, padding: '9px 20px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                      {t.cancel}
+                    </button>
+                    <button onClick={saveBuild} style={{ background: '#6E1423', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '9px 26px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                      {t.save_build}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.12)', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 210px 90px 54px 104px 88px 108px', padding: '11px 20px', background: '#EDE7DC', borderBottom: '0.5px solid rgba(28,28,26,0.1)', gap: 12, alignItems: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_build}</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>GPU / CPU</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_price}</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.tier_label}</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_rating}</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_status}</div>
+                  <div />
+                </div>
+                {builds.map((b) => {
+                  const tc = tierBadge(b.tier, BUILD_TIER_COLORS);
+                  const visible = b.visible !== false;
+                  const visibleColor = visible ? '#1A7040' : '#9090A0';
+                  return (
+                    <div
+                      key={b.id}
+                      style={{ display: 'grid', gridTemplateColumns: '1fr 210px 90px 54px 104px 88px 108px', padding: '14px 20px', borderBottom: '0.5px solid rgba(28,28,26,0.07)', alignItems: 'center', gap: 12, background: visible ? '#FDFAF4' : 'rgba(240,235,225,0.6)' }}
+                    >
+                      <div>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: '#1C1C1A', marginBottom: 2 }}>{b.name}</div>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', lineHeight: 1.4, fontWeight: 300 }}>{b.tagline}</div>
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', lineHeight: 1.8 }}>
+                        {b.gpu}<br />{b.cpu}
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 500, color: '#1C1C1A' }}>{fmt(b.price)}</div>
+                      <div>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: tc.bg, border: `1.5px solid ${tc.border}`, borderRadius: 4 }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: tc.text }}>{b.tier}</span>
+                        </div>
+                      </div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#1C1C1A' }}>{typeof b.rating === 'number' ? b.rating.toFixed(1) : b.rating} / 5</div>
+                      <div>
+                        <button
+                          onClick={() => toggleVisible(b.id)}
+                          style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: visibleColor, background: 'transparent', border: `0.5px solid ${visibleColor}`, borderRadius: 2, padding: '4px 10px', cursor: 'pointer' }}
+                        >
+                          {visible ? t.live : t.hidden}
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <button onClick={() => openEditBuild(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#6E1423', background: 'transparent', border: '0.5px solid rgba(110,20,35,0.4)', borderRadius: 2, padding: '5px 12px', cursor: 'pointer' }}>
+                          {t.edit}
+                        </button>
+                        <button onClick={() => deleteBuild(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#CC3333', background: 'transparent', border: '0.5px solid rgba(204,51,51,0.35)', borderRadius: 2, padding: '5px 12px', cursor: 'pointer' }}>
+                          {t.del}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {tab === 'components' && (
+            <div style={{ padding: '36px 44px' }}>
+              <div style={{ marginBottom: 28 }}>
+                <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.components_db}</h1>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300 }}>{t.components_db_desc}</div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 0, border: '0.5px solid rgba(28,28,26,0.14)', borderRadius: 2, overflow: 'hidden', marginBottom: 24, width: 'fit-content' }}>
+                {CATEGORY_TAB_ORDER.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setCompCat(cat)}
+                    style={{
+                      padding: '9px 16px', background: cat === compCat ? '#6E1423' : 'transparent', color: cat === compCat ? '#F5F0E6' : '#7A7469',
+                      border: 'none', borderRight: '0.5px solid rgba(28,28,26,0.1)', fontSize: 12, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3, whiteSpace: 'nowrap', fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    {catLabels[cat]}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: '20px 22px', marginBottom: 24 }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: '#1C1C1A', marginBottom: 5 }}>{t.margin_title}</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', fontWeight: 300, lineHeight: 1.6, marginBottom: 14, maxWidth: 640 }}>{t.margin_desc}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ display: 'flex', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, overflow: 'hidden' }}>
+                    <button
+                      onClick={() => updateMargin({ type: 'eur' })}
+                      style={{ padding: '8px 14px', background: margin.type === 'eur' ? '#6E1423' : 'transparent', color: margin.type === 'eur' ? '#FDFAF4' : '#7A7469', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                    >
+                      {t.margin_eur}
+                    </button>
+                    <button
+                      onClick={() => updateMargin({ type: 'pct' })}
+                      style={{ padding: '8px 14px', background: margin.type === 'pct' ? '#6E1423' : 'transparent', color: margin.type === 'pct' ? '#FDFAF4' : '#7A7469', border: 'none', borderLeft: '0.5px solid rgba(28,28,26,0.15)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                    >
+                      {t.margin_pct}
+                    </button>
+                  </div>
+                  <input
+                    type="number"
+                    value={marginValueInput}
+                    onChange={(e) => setMarginValueInput(e.target.value)}
+                    onBlur={() => updateMargin({ value: parseFloat(marginValueInput) || 0 })}
+                    onKeyDown={(e) => { if (e.key === 'Enter') updateMargin({ value: parseFloat(marginValueInput) || 0 }); }}
+                    style={{ width: 100, padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#F5F0E6', color: '#1C1C1A', fontFamily: 'var(--font-mono)' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
+                {(compDb[compCat] || []).map((comp) => {
+                  const tc = tierBadge(comp.tier, TIER_COLORS);
+                  const isEditing = comp.id === editCompId;
+                  return (
+                    <div
+                      key={comp.id}
+                      style={{ background: isEditing ? 'rgba(110,20,35,0.05)' : '#FDFAF4', border: `0.5px solid ${isEditing ? 'rgba(110,20,35,0.3)' : 'rgba(28,28,26,0.12)'}`, borderRadius: 2, padding: 18, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: '#1C1C1A', lineHeight: 1.35 }}>{comp.name}</div>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, background: tc.bg, border: `1.5px solid ${tc.border}`, borderRadius: 3, fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: tc.text }}>
+                            {comp.tier}
+                          </div>
+                          {compCat === 'case' && comp.category && (
+                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: '#6E1423', background: 'rgba(110,20,35,0.08)', border: '0.5px solid rgba(110,20,35,0.2)', borderRadius: 2, padding: '1px 7px', whiteSpace: 'nowrap', letterSpacing: 0.5 }}>
+                              {comp.category}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', marginBottom: 9, lineHeight: 1.6 }}>{comp.specs}</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, color: '#6E1423', marginBottom: 4 }}>{fmt(comp.price)}</div>
+                        {comp.marketPrice != null && (
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#A09890', marginBottom: 4 }}>Market: €{comp.marketPrice}</div>
+                        )}
+                        {comp.passmark != null && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: tc.text, fontWeight: 600 }}>PassMark {comp.passmark.toLocaleString()}</span>
+                            <a href={comp.passmarkUrl || '#'} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6E1423', textDecoration: 'none', fontWeight: 500 }}>
+                              Verify ↗
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
+                        <button onClick={() => openEditComp(compCat, comp.id)} style={{ fontFamily: 'var(--font-sans)', color: '#6E1423', background: 'transparent', border: '0.5px solid rgba(110,20,35,0.35)', borderRadius: 2, padding: '4px 8px', cursor: 'pointer', fontSize: 11 }}>
+                          {t.edit}
+                        </button>
+                        <button onClick={() => deleteComponent(compCat, comp.id)} style={{ fontFamily: 'var(--font-sans)', color: '#CC3333', background: 'transparent', border: '0.5px solid rgba(204,51,51,0.3)', borderRadius: 2, padding: '4px 8px', cursor: 'pointer', fontSize: 11 }}>
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: 26, borderLeft: '3px solid #6E1423' }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: '#1C1C1A', marginBottom: 18 }}>
+                  {editCompId ? t.edit_prefix + catLabels[compCat] : t.add_prefix + catLabels[compCat] + ' →'}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 12, marginBottom: 12 }}>
+                  <div style={{ position: 'relative' }}>
+                    <div style={LABEL_STYLE}>{t.name_label}</div>
+                    <input
+                      value={compForm.name}
+                      onChange={(e) => setCompForm({ ...compForm, name: e.target.value })}
+                      onFocus={() => setNameDropdownOpen(true)}
+                      onBlur={() => setTimeout(() => setNameDropdownOpen(false), 150)}
+                      placeholder="Component name..."
+                      autoComplete="off"
+                      style={INPUT_STYLE}
+                    />
+                    {nameDropdownOpen && (
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4, background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, boxShadow: '0 6px 18px rgba(28,28,26,0.15)', maxHeight: 260, overflowY: 'auto' }}>
+                        {suggestionsToShow.map((s) => (
+                          <div
+                            key={s.name}
+                            onMouseDown={(e) => { e.preventDefault(); pickSuggestion(s.effective); }}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 12px', cursor: 'pointer', borderBottom: '0.5px solid rgba(28,28,26,0.06)', background: s.already ? 'rgba(28,28,26,0.04)' : '#FDFAF4' }}
+                          >
+                            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: s.already ? '#A09890' : '#1C1C1A' }}>{s.name}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                              {s.effective.passmark != null && (
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469' }}>{s.effective.passmark.toLocaleString()}</span>
+                              )}
+                              {s.already && (
+                                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890', letterSpacing: 0.5, textTransform: 'uppercase' }}>{t.already_added}</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        {noSuggestions && (
+                          <div style={{ padding: '10px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890' }}>{t.no_suggestions}</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <div style={LABEL_STYLE}>{t.price_eur_short}</div>
+                    <input
+                      type="number"
+                      value={compForm.price}
+                      onChange={(e) => setCompForm({ ...compForm, price: e.target.value })}
+                      disabled={hasManualMarketPrice}
+                      placeholder="499"
+                      style={INPUT_STYLE}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={LABEL_STYLE}>{t.market_price_label}</div>
+                  <input
+                    type="number"
+                    value={compForm.marketPrice}
+                    onChange={(e) => setCompForm({ ...compForm, marketPrice: e.target.value })}
+                    placeholder={t.market_price_placeholder}
+                    style={INPUT_STYLE}
+                  />
+                  {hasManualMarketPrice && (
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#6E1423', marginTop: 6 }}>{priceAutoNote}</div>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 12, marginBottom: 12 }}>
+                  <div>
+                    <div style={LABEL_STYLE}>{t.specs_notes}</div>
+                    <input
+                      value={compForm.specs}
+                      onChange={(e) => setCompForm({ ...compForm, specs: e.target.value })}
+                      placeholder="24GB GDDR7, PCIe 5.0, 575W TGP..."
+                      style={INPUT_STYLE}
+                    />
+                  </div>
+                  <div>
+                    <div style={LABEL_STYLE}>{t.tier_rating}</div>
+                    <select value={compForm.tier} onChange={(e) => setCompForm({ ...compForm, tier: e.target.value as Tier })} style={INPUT_STYLE}>
+                      {(['S', 'A', 'B', 'C', 'D'] as Tier[]).map((tk) => (
+                        <option key={tk} value={tk}>{t[`tier_${tk.toLowerCase()}` as keyof Translations] as string}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {compCat === 'case' && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={LABEL_STYLE}>{t.tower_category}</div>
+                    <select value={compForm.category} onChange={(e) => setCompForm({ ...compForm, category: e.target.value })} style={INPUT_STYLE}>
+                      {CASE_CATS.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#B0A898', marginTop: 6, lineHeight: 1.6 }}>{t.tower_category_help}</div>
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <button
+                    onClick={editCompId ? updateComponent : addComponent}
+                    style={{ background: '#6E1423', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '10px 24px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                  >
+                    {editCompId ? t.update_arrow : t.add_prefix + catLabels[compCat] + ' →'}
+                  </button>
+                  {editCompId && (
+                    <button onClick={cancelEditComp} style={{ background: 'transparent', color: '#7A7469', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, padding: '10px 18px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                      {t.cancel}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
