@@ -10,6 +10,7 @@ import { readJSON, writeJSON } from '@/lib/gomp-storage';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS, type Tier } from '@/lib/passmark';
 import { defaultComponentDb, type Category, type Component, type ComponentDb } from '@/lib/component-db-seed';
 import { createBuildScene, SLOTS, CASE_SIZES, type BuildScene, type CompId } from '@/lib/build-scene';
+import { useIsMobile } from '@/lib/use-media-query';
 
 const T = {
   en: {
@@ -95,10 +96,11 @@ function TierBadge({ tier, small }: { tier?: Tier; small?: boolean }) {
 }
 
 export default function BuildPage() {
-  const { lang, setLang, currency, setCurrency, fmt } = useSite();
+  const { lang, fmt } = useSite();
   const router = useRouter();
   const pathname = usePathname();
   const t = T[lang];
+  const isMobile = useIsMobile();
 
   const [compDb, setCompDb] = useState<ComponentDb>(defaultComponentDb());
   const [selected, setSelected] = useState<Record<CompId, boolean>>({} as Record<CompId, boolean>);
@@ -255,15 +257,26 @@ export default function BuildPage() {
       {/* ---- Nav ---- */}
       <SiteNav />
 
-      <div style={{ display: 'flex', height: '100vh', paddingTop: 60 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: isMobile ? 'auto' : '100vh', minHeight: isMobile ? '100vh' : undefined, paddingTop: 60 }}>
         {/* ---- Sidebar ---- */}
-        {!sidebarHidden && (
-          <div style={{ width: 264, background: PANEL, borderRight: '0.5px solid rgba(28,28,26,0.1)', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '20px 20px 14px' }}>
+        {(!sidebarHidden || isMobile) && (
+          <div
+            style={{
+              width: isMobile ? '100%' : 264,
+              order: isMobile ? 2 : 0,
+              background: PANEL,
+              borderRight: isMobile ? 'none' : '0.5px solid rgba(28,28,26,0.1)',
+              borderTop: isMobile ? '0.5px solid rgba(28,28,26,0.1)' : 'none',
+              borderBottom: isMobile ? '0.5px solid rgba(28,28,26,0.1)' : 'none',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div style={{ padding: isMobile ? '20px 20px 10px' : '20px 20px 14px' }}>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase' }}>{t.pc_builder}</div>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#A09890', marginTop: 4 }}>{t.select_components}</div>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px' }}>
+            <div style={{ flex: isMobile ? 'none' : 1, overflowY: isMobile ? 'visible' : 'auto', padding: '0 12px' }}>
               {SLOTS.map((id) => {
                 const list = compDb[id] || [];
                 const isSelected = !!selected[id];
@@ -338,7 +351,7 @@ export default function BuildPage() {
         )}
 
         {/* ---- 3D viewport ---- */}
-        <div style={{ flex: 1, position: 'relative' }}>
+        <div style={{ flex: isMobile ? 'none' : 1, height: isMobile ? '46vh' : undefined, minHeight: isMobile ? 320 : undefined, order: isMobile ? 0 : 1, position: 'relative' }}>
           <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
             <div style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(28,28,26,0.35)' }}>
@@ -353,14 +366,16 @@ export default function BuildPage() {
             >
               {glassHidden ? t.show_panel : t.hide_panel}
             </button>
-            <button
-              onClick={() => setSidebarHidden((v) => !v)}
-              style={{ position: 'absolute', top: 16, left: 16, pointerEvents: 'all', background: 'rgba(253,250,244,0.9)', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 4, padding: '7px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: INK, cursor: 'pointer' }}
-            >
-              {sidebarHidden ? t.show_panel : t.hide_panel}
-            </button>
+            {!isMobile && (
+              <button
+                onClick={() => setSidebarHidden((v) => !v)}
+                style={{ position: 'absolute', top: 16, left: 16, pointerEvents: 'all', background: 'rgba(253,250,244,0.9)', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 4, padding: '7px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: INK, cursor: 'pointer' }}
+              >
+                {sidebarHidden ? t.show_panel : t.hide_panel}
+              </button>
+            )}
             {showComplete && (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? 16 : 0 }}>
                 <div
                   style={{
                     background: 'linear-gradient(135deg, rgba(26,18,20,0.86), rgba(10,8,10,0.9))',
@@ -368,18 +383,18 @@ export default function BuildPage() {
                     boxShadow: '0 24px 70px rgba(0,0,0,0.4)',
                     backdropFilter: 'blur(10px)',
                     borderRadius: 12,
-                    padding: '42px 64px',
+                    padding: isMobile ? '28px 32px' : '42px 64px',
                     textAlign: 'center',
                     animation: 'gompCompleteFadeIn 0.7s 0.15s cubic-bezier(0.16,1,0.3,1) both',
                   }}
                 >
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, letterSpacing: 7, color: 'rgba(245,240,230,0.65)', textTransform: 'uppercase' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, letterSpacing: isMobile ? 4 : 7, color: 'rgba(245,240,230,0.65)', textTransform: 'uppercase' }}>
                     {t.complete}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 500, fontSize: 58, color: '#FDFAF4', margin: '10px 0' }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 500, fontSize: isMobile ? 34 : 58, color: '#FDFAF4', margin: '10px 0' }}>
                     {t.your_build}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 38, color: GOLD, fontWeight: 600, letterSpacing: 1 }}>{fmt(totalPrice)}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: isMobile ? 26 : 38, color: GOLD, fontWeight: 600, letterSpacing: 1 }}>{fmt(totalPrice)}</div>
                 </div>
               </div>
             )}
@@ -387,8 +402,18 @@ export default function BuildPage() {
         </div>
 
         {/* ---- Right panel ---- */}
-        <div style={{ width: 288, background: PANEL, borderLeft: '0.5px solid rgba(28,28,26,0.1)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-          <div style={{ padding: 20, flex: 1 }}>
+        <div
+          style={{
+            width: isMobile ? '100%' : 288,
+            order: isMobile ? 3 : 2,
+            background: PANEL,
+            borderLeft: isMobile ? 'none' : '0.5px solid rgba(28,28,26,0.1)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflowY: isMobile ? 'visible' : 'auto',
+          }}
+        >
+          <div style={{ padding: 20, flex: isMobile ? 'none' : 1 }}>
             {activeId && activeComp ? (
               <>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.cat_names[activeId]}</div>

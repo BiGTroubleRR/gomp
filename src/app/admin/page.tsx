@@ -2,6 +2,7 @@
 
 import { CSSProperties, useEffect, useState } from 'react';
 import { useSite } from '@/contexts/SiteContext';
+import { useIsMobile } from '@/lib/use-media-query';
 import TransitionLink from '@/components/TransitionLink';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
@@ -369,6 +370,7 @@ function CompSelect({
 
 export default function AdminPage() {
   const { lang, currency, setLang, setCurrency, fmt } = useSite();
+  const isMobile = useIsMobile();
 
   const [authed, setAuthed] = useState(false);
   const [pwInput, setPwInput] = useState('');
@@ -621,9 +623,10 @@ export default function AdminPage() {
         style={{
           position: 'relative', zIndex: 2, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
           background: 'linear-gradient(135deg,#170809 0%,#2E1114 60%,#3A161A 100%)',
+          padding: isMobile ? '0 16px' : 0, boxSizing: 'border-box',
         }}
       >
-        <div style={{ background: '#FDFAF4', borderRadius: 2, padding: 52, width: 400, border: '0.5px solid rgba(28,28,26,0.1)' }}>
+        <div style={{ background: '#FDFAF4', borderRadius: 2, padding: isMobile ? 28 : 52, width: isMobile ? '100%' : 400, maxWidth: 400, boxSizing: 'border-box', border: '0.5px solid rgba(28,28,26,0.1)' }}>
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: 17, fontWeight: 600, fontStyle: 'italic', letterSpacing: 1.5, color: '#C4A35A', marginBottom: 6 }}>
             GOMP
           </div>
@@ -678,7 +681,7 @@ export default function AdminPage() {
       <nav
         style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: 54, display: 'flex', alignItems: 'center',
-          padding: '0 28px', background: '#170A0C', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+          padding: isMobile ? '0 14px' : '0 28px', background: '#170A0C', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
         }}
       >
         <TransitionLink
@@ -687,74 +690,99 @@ export default function AdminPage() {
         >
           GOMP
         </TransitionLink>
-        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.28)', letterSpacing: 2, textTransform: 'uppercase', marginRight: 'auto' }}>
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.28)', letterSpacing: 2, textTransform: 'uppercase', marginRight: 'auto', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           / {t.admin_crumb}
         </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 20, fontFamily: 'var(--font-sans)', fontSize: 12 }}>
-          <button onClick={() => setLang('en')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'en' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: lang === 'en' ? 600 : 400 }}>EN</button>
-          <span style={{ color: 'rgba(245,240,230,0.25)' }}>/</span>
-          <button onClick={() => setLang('sk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'sk' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: lang === 'sk' ? 600 : 400 }}>SK</button>
-          <span style={{ color: 'rgba(245,240,230,0.18)', marginLeft: 4 }}>|</span>
-          <button onClick={() => setCurrency('eur')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: currency === 'eur' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: currency === 'eur' ? 600 : 400 }}>€</button>
-          <span style={{ color: 'rgba(245,240,230,0.25)' }}>/</span>
-          <button onClick={() => setCurrency('czk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: currency === 'czk' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: currency === 'czk' ? 600 : 400 }}>Kč</button>
-        </div>
-        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-          <TransitionLink href="/shop" style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(245,240,230,0.45)', textDecoration: 'none' }}>
-            {t.view_shop}
-          </TransitionLink>
+        {!isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 20, fontFamily: 'var(--font-sans)', fontSize: 12 }}>
+            <button onClick={() => setLang('en')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'en' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: lang === 'en' ? 600 : 400 }}>EN</button>
+            <span style={{ color: 'rgba(245,240,230,0.25)' }}>/</span>
+            <button onClick={() => setLang('sk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'sk' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: lang === 'sk' ? 600 : 400 }}>SK</button>
+            <span style={{ color: 'rgba(245,240,230,0.18)', marginLeft: 4 }}>|</span>
+            <button onClick={() => setCurrency('eur')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: currency === 'eur' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: currency === 'eur' ? 600 : 400 }}>€</button>
+            <span style={{ color: 'rgba(245,240,230,0.25)' }}>/</span>
+            <button onClick={() => setCurrency('czk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: currency === 'czk' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: currency === 'czk' ? 600 : 400 }}>Kč</button>
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: isMobile ? 10 : 20, alignItems: 'center' }}>
+          {!isMobile && (
+            <TransitionLink href="/shop" style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(245,240,230,0.45)', textDecoration: 'none' }}>
+              {t.view_shop}
+            </TransitionLink>
+          )}
           <button
             onClick={handleLogout}
-            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(245,240,230,0.7)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 2, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(245,240,230,0.7)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 2, padding: isMobile ? '6px 10px' : '6px 14px', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap' }}
           >
             {t.log_out}
           </button>
         </div>
       </nav>
 
-      <div style={{ display: 'flex', minHeight: '100vh', paddingTop: 54 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', minHeight: '100vh', paddingTop: 54 }}>
         {/* Sidebar */}
-        <div style={{ width: 188, flexShrink: 0, background: '#1D0D0F', borderRight: '0.5px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', position: 'sticky', top: 54, height: 'calc(100vh - 54px)', overflowY: 'auto' }}>
-          <div style={{ padding: '20px 16px 10px', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 500, color: 'rgba(245,240,230,0.22)', letterSpacing: 2.5, textTransform: 'uppercase' }}>
-            {t.manage}
-          </div>
-          <button
-            onClick={() => setTab('builds')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '10px 18px',
-              background: tab === 'builds' ? 'rgba(245,240,230,0.07)' : 'transparent',
-              border: 'none', borderLeft: `2px solid ${tab === 'builds' ? '#4A90D9' : 'transparent'}`,
-              color: tab === 'builds' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'builds' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
-            }}
-          >
-            {t.builds_tab}
-          </button>
-          <button
-            onClick={() => setTab('components')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left', padding: '10px 18px',
-              background: tab === 'components' ? 'rgba(245,240,230,0.07)' : 'transparent',
-              border: 'none', borderLeft: `2px solid ${tab === 'components' ? '#4A90D9' : 'transparent'}`,
-              color: tab === 'components' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'components' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
-            }}
-          >
-            {t.components_tab}
-          </button>
-          <div style={{ padding: '24px 18px 0', marginTop: 20, borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(245,240,230,0.22)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
-              {t.database}
+        <div
+          style={{
+            width: isMobile ? '100%' : 188, flexShrink: 0, background: '#1D0D0F',
+            borderRight: isMobile ? 'none' : '0.5px solid rgba(255,255,255,0.06)',
+            borderBottom: isMobile ? '0.5px solid rgba(255,255,255,0.06)' : 'none',
+            display: 'flex', flexDirection: 'column',
+            position: isMobile ? 'static' : 'sticky', top: isMobile ? undefined : 54,
+            height: isMobile ? 'auto' : 'calc(100vh - 54px)', overflowY: isMobile ? 'visible' : 'auto',
+          }}
+        >
+          {!isMobile && (
+            <div style={{ padding: '20px 16px 10px', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 500, color: 'rgba(245,240,230,0.22)', letterSpacing: 2.5, textTransform: 'uppercase' }}>
+              {t.manage}
             </div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 600, color: '#F5F0E6', lineHeight: 1, marginBottom: 3 }}>{builds.length}</div>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.32)', marginBottom: 18 }}>{t.builds_listed}</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 600, color: '#F5F0E6', lineHeight: 1, marginBottom: 3 }}>{totalComps}</div>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.32)' }}>{t.components_word}</div>
+          )}
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'row' : 'column' }}>
+            <button
+              onClick={() => setTab('builds')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 10,
+                width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
+                background: tab === 'builds' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                border: 'none',
+                borderLeft: isMobile ? 'none' : `2px solid ${tab === 'builds' ? '#4A90D9' : 'transparent'}`,
+                borderBottom: isMobile ? `2px solid ${tab === 'builds' ? '#4A90D9' : 'transparent'}` : 'none',
+                color: tab === 'builds' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'builds' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              }}
+            >
+              {t.builds_tab}
+            </button>
+            <button
+              onClick={() => setTab('components')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 10,
+                width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
+                background: tab === 'components' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                border: 'none',
+                borderLeft: isMobile ? 'none' : `2px solid ${tab === 'components' ? '#4A90D9' : 'transparent'}`,
+                borderBottom: isMobile ? `2px solid ${tab === 'components' ? '#4A90D9' : 'transparent'}` : 'none',
+                color: tab === 'components' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'components' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              }}
+            >
+              {t.components_tab}
+            </button>
           </div>
+          {!isMobile && (
+            <div style={{ padding: '24px 18px 0', marginTop: 20, borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(245,240,230,0.22)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
+                {t.database}
+              </div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 600, color: '#F5F0E6', lineHeight: 1, marginBottom: 3 }}>{builds.length}</div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.32)', marginBottom: 18 }}>{t.builds_listed}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 600, color: '#F5F0E6', lineHeight: 1, marginBottom: 3 }}>{totalComps}</div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.32)' }}>{t.components_word}</div>
+            </div>
+          )}
         </div>
 
         {/* Main */}
         <div style={{ flex: 1, background: '#F2EDE3', overflowY: 'auto', minHeight: 'calc(100vh - 54px)' }}>
           {tab === 'builds' && (
-            <div style={{ padding: '36px 44px' }}>
+            <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
                 <div>
                   <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.pc_builds}</h1>
@@ -776,11 +804,11 @@ export default function AdminPage() {
               </div>
 
               {showForm && (
-                <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: 28, marginBottom: 24, borderLeft: '3px solid #6E1423' }}>
+                <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? 16 : 28, marginBottom: 24, borderLeft: '3px solid #6E1423' }}>
                   <div style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 600, color: '#1C1C1A', marginBottom: 22 }}>
                     {editId !== null ? t.edit_build : t.new_build}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
                     <div>
                       <div style={LABEL_STYLE}>{t.name_label}</div>
                       <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="The Apex Predator" style={INPUT_STYLE} />
@@ -790,18 +818,18 @@ export default function AdminPage() {
                       <input value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="Ultimate 4K gaming & creation" style={INPUT_STYLE} />
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
                     <CompSelect label="GPU" value={form.gpu} options={compDb.gpu || []} placeholder="GPU" t={t} fmt={fmt} onChange={(v) => setForm({ ...form, gpu: v })} />
                     <CompSelect label="CPU" value={form.cpu} options={compDb.cpu || []} placeholder="CPU" t={t} fmt={fmt} onChange={(v) => setForm({ ...form, cpu: v })} />
                     <CompSelect label="RAM" value={form.ram} options={compDb.ram || []} placeholder="RAM" t={t} fmt={fmt} onChange={(v) => setForm({ ...form, ram: v })} />
                     <CompSelect label={t.storage_label} value={form.storage} options={compDb.storage || []} placeholder={catLabels.storage} t={t} fmt={fmt} onChange={(v) => setForm({ ...form, storage: v })} />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
                     <CompSelect label={t.mobo_label} value={form.mobo} options={compDb.mobo || []} placeholder={catLabels.mobo} t={t} fmt={fmt} onChange={(v) => setForm({ ...form, mobo: v })} />
                     <CompSelect label={t.cooler_label} value={form.cooler} options={compDb.cooler || []} placeholder={catLabels.cooler} t={t} fmt={fmt} onChange={(v) => setForm({ ...form, cooler: v })} />
                     <CompSelect label="PSU" value={form.psu} options={compDb.psu || []} placeholder="PSU" t={t} fmt={fmt} onChange={(v) => setForm({ ...form, psu: v })} />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 22 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 22 }}>
                     <div>
                       <div style={LABEL_STYLE}>{t.category_label}</div>
                       <select value={form.cat} onChange={(e) => setForm({ ...form, cat: e.target.value as Build['cat'] })} style={INPUT_STYLE}>
@@ -840,87 +868,93 @@ export default function AdminPage() {
               )}
 
               <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.12)', borderRadius: 2, overflow: 'hidden' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 210px 90px 54px 104px 88px 108px', padding: '11px 20px', background: '#EDE7DC', borderBottom: '0.5px solid rgba(28,28,26,0.1)', gap: 12, alignItems: 'center' }}>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_build}</div>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>GPU / CPU</div>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_price}</div>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.tier_label}</div>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_rating}</div>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_status}</div>
-                  <div />
-                </div>
-                {builds.map((b) => {
-                  const tc = tierBadge(b.tier, BUILD_TIER_COLORS);
-                  const visible = b.visible !== false;
-                  const visibleColor = visible ? '#1A7040' : '#9090A0';
-                  return (
-                    <div
-                      key={b.id}
-                      style={{ display: 'grid', gridTemplateColumns: '1fr 210px 90px 54px 104px 88px 108px', padding: '14px 20px', borderBottom: '0.5px solid rgba(28,28,26,0.07)', alignItems: 'center', gap: 12, background: visible ? '#FDFAF4' : 'rgba(240,235,225,0.6)' }}
-                    >
-                      <div>
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: '#1C1C1A', marginBottom: 2 }}>{b.name}</div>
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', lineHeight: 1.4, fontWeight: 300 }}>{b.tagline}</div>
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', lineHeight: 1.8 }}>
-                        {b.gpu}<br />{b.cpu}
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 500, color: '#1C1C1A' }}>{fmt(b.price)}</div>
-                      <div>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: tc.bg, border: `1.5px solid ${tc.border}`, borderRadius: 4 }}>
-                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: tc.text }}>{b.tier}</span>
-                        </div>
-                      </div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#1C1C1A' }}>{typeof b.rating === 'number' ? b.rating.toFixed(1) : b.rating} / 5</div>
-                      <div>
-                        <button
-                          onClick={() => toggleVisible(b.id)}
-                          style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: visibleColor, background: 'transparent', border: `0.5px solid ${visibleColor}`, borderRadius: 2, padding: '4px 10px', cursor: 'pointer' }}
-                        >
-                          {visible ? t.live : t.hidden}
-                        </button>
-                      </div>
-                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                        <button onClick={() => openEditBuild(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#6E1423', background: 'transparent', border: '0.5px solid rgba(110,20,35,0.4)', borderRadius: 2, padding: '5px 12px', cursor: 'pointer' }}>
-                          {t.edit}
-                        </button>
-                        <button onClick={() => deleteBuild(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#CC3333', background: 'transparent', border: '0.5px solid rgba(204,51,51,0.35)', borderRadius: 2, padding: '5px 12px', cursor: 'pointer' }}>
-                          {t.del}
-                        </button>
-                      </div>
+                <div style={{ overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch' }}>
+                  <div style={{ minWidth: isMobile ? 700 : undefined }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 210px 90px 54px 104px 88px 108px', padding: '11px 20px', background: '#EDE7DC', borderBottom: '0.5px solid rgba(28,28,26,0.1)', gap: 12, alignItems: 'center' }}>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_build}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>GPU / CPU</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_price}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.tier_label}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_rating}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_status}</div>
+                      <div />
                     </div>
-                  );
-                })}
+                    {builds.map((b) => {
+                      const tc = tierBadge(b.tier, BUILD_TIER_COLORS);
+                      const visible = b.visible !== false;
+                      const visibleColor = visible ? '#1A7040' : '#9090A0';
+                      return (
+                        <div
+                          key={b.id}
+                          style={{ display: 'grid', gridTemplateColumns: '1fr 210px 90px 54px 104px 88px 108px', padding: '14px 20px', borderBottom: '0.5px solid rgba(28,28,26,0.07)', alignItems: 'center', gap: 12, background: visible ? '#FDFAF4' : 'rgba(240,235,225,0.6)' }}
+                        >
+                          <div>
+                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: '#1C1C1A', marginBottom: 2 }}>{b.name}</div>
+                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', lineHeight: 1.4, fontWeight: 300 }}>{b.tagline}</div>
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', lineHeight: 1.8 }}>
+                            {b.gpu}<br />{b.cpu}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 500, color: '#1C1C1A' }}>{fmt(b.price)}</div>
+                          <div>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: tc.bg, border: `1.5px solid ${tc.border}`, borderRadius: 4 }}>
+                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: tc.text }}>{b.tier}</span>
+                            </div>
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#1C1C1A' }}>{typeof b.rating === 'number' ? b.rating.toFixed(1) : b.rating} / 5</div>
+                          <div>
+                            <button
+                              onClick={() => toggleVisible(b.id)}
+                              style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: visibleColor, background: 'transparent', border: `0.5px solid ${visibleColor}`, borderRadius: 2, padding: '4px 10px', cursor: 'pointer' }}
+                            >
+                              {visible ? t.live : t.hidden}
+                            </button>
+                          </div>
+                          <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                            <button onClick={() => openEditBuild(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#6E1423', background: 'transparent', border: '0.5px solid rgba(110,20,35,0.4)', borderRadius: 2, padding: '5px 12px', cursor: 'pointer' }}>
+                              {t.edit}
+                            </button>
+                            <button onClick={() => deleteBuild(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#CC3333', background: 'transparent', border: '0.5px solid rgba(204,51,51,0.35)', borderRadius: 2, padding: '5px 12px', cursor: 'pointer' }}>
+                              {t.del}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
           {tab === 'components' && (
-            <div style={{ padding: '36px 44px' }}>
+            <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
               <div style={{ marginBottom: 28 }}>
                 <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.components_db}</h1>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300 }}>{t.components_db_desc}</div>
               </div>
 
-              <div style={{ display: 'flex', gap: 0, border: '0.5px solid rgba(28,28,26,0.14)', borderRadius: 2, overflow: 'hidden', marginBottom: 24, width: 'fit-content' }}>
-                {CATEGORY_TAB_ORDER.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setCompCat(cat)}
-                    style={{
-                      padding: '9px 16px', background: cat === compCat ? '#6E1423' : 'transparent', color: cat === compCat ? '#F5F0E6' : '#7A7469',
-                      border: 'none', borderRight: '0.5px solid rgba(28,28,26,0.1)', fontSize: 12, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3, whiteSpace: 'nowrap', fontFamily: 'var(--font-sans)',
-                    }}
-                  >
-                    {catLabels[cat]}
-                  </button>
-                ))}
+              <div style={{ overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch', marginBottom: 24 }}>
+                <div style={{ display: 'flex', gap: 0, border: '0.5px solid rgba(28,28,26,0.14)', borderRadius: 2, overflow: 'hidden', width: 'fit-content' }}>
+                  {CATEGORY_TAB_ORDER.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setCompCat(cat)}
+                      style={{
+                        padding: '9px 16px', background: cat === compCat ? '#6E1423' : 'transparent', color: cat === compCat ? '#F5F0E6' : '#7A7469',
+                        border: 'none', borderRight: '0.5px solid rgba(28,28,26,0.1)', fontSize: 12, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3, whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'var(--font-sans)',
+                      }}
+                    >
+                      {catLabels[cat]}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: '20px 22px', marginBottom: 24 }}>
+              <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? '16px' : '20px 22px', marginBottom: 24 }}>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: '#1C1C1A', marginBottom: 5 }}>{t.margin_title}</div>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', fontWeight: 300, lineHeight: 1.6, marginBottom: 14, maxWidth: 640 }}>{t.margin_desc}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, overflow: 'hidden' }}>
                     <button
                       onClick={() => updateMargin({ type: 'eur' })}
@@ -946,7 +980,7 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
                 {(compDb[compCat] || []).map((comp) => {
                   const tc = tierBadge(comp.tier, TIER_COLORS);
                   const isEditing = comp.id === editCompId;
@@ -994,11 +1028,11 @@ export default function AdminPage() {
                 })}
               </div>
 
-              <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: 26, borderLeft: '3px solid #6E1423' }}>
+              <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? 16 : 26, borderLeft: '3px solid #6E1423' }}>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: '#1C1C1A', marginBottom: 18 }}>
                   {editCompId ? t.edit_prefix + catLabels[compCat] : t.add_prefix + catLabels[compCat] + ' →'}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: 12, marginBottom: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 120px', gap: 12, marginBottom: 12 }}>
                   <div style={{ position: 'relative' }}>
                     <div style={LABEL_STYLE}>{t.name_label}</div>
                     <input
@@ -1060,7 +1094,7 @@ export default function AdminPage() {
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#6E1423', marginTop: 6 }}>{priceAutoNote}</div>
                   )}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px', gap: 12, marginBottom: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 140px', gap: 12, marginBottom: 12 }}>
                   <div>
                     <div style={LABEL_STYLE}>{t.specs_notes}</div>
                     <input

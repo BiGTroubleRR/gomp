@@ -6,6 +6,7 @@ import TransitionLink from '@/components/TransitionLink';
 import Case3DViewer, { type CompDb } from '@/components/Case3DViewer';
 import SiteNav from '@/components/SiteNav';
 import { readJSON, type Currency, type Lang } from '@/lib/gomp-storage';
+import { useIsMobile } from '@/lib/use-media-query';
 
 type ShippingId = 'standard' | 'express' | 'overnight';
 
@@ -312,6 +313,7 @@ function EntryOverlay() {
 export default function CheckoutPage() {
   const { lang, currency, setLang, setCurrency, fmt } = useSite();
   const t = TRANSLATIONS[lang];
+  const isMobile = useIsMobile();
 
   const [build, setBuild] = useState<GompBuild | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
@@ -400,19 +402,20 @@ export default function CheckoutPage() {
     <div style={{ position: 'relative', zIndex: 2, background: PAGE_BG, minHeight: '100vh' }}>
       <SiteNav />
 
-      <div style={{ minHeight: '100vh', paddingTop: 60, display: 'flex', alignItems: 'stretch' }}>
+      <div style={{ minHeight: '100vh', paddingTop: 60, display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'stretch' }}>
         {/* Order Summary sidebar */}
         <div
           style={{
-            width: 420,
+            width: isMobile ? '100%' : 420,
             flexShrink: 0,
             background: PANEL_BG,
-            borderRight: '0.5px solid rgba(28,28,26,0.12)',
-            padding: '48px 36px 48px',
-            position: 'sticky',
-            top: 60,
-            height: 'calc(100vh - 60px)',
-            overflowY: 'auto',
+            borderRight: isMobile ? 'none' : '0.5px solid rgba(28,28,26,0.12)',
+            borderBottom: isMobile ? '0.5px solid rgba(28,28,26,0.12)' : 'none',
+            padding: isMobile ? '28px 20px 32px' : '48px 36px 48px',
+            position: isMobile ? 'static' : 'sticky',
+            top: isMobile ? undefined : 60,
+            height: isMobile ? 'auto' : 'calc(100vh - 60px)',
+            overflowY: isMobile ? 'visible' : 'auto',
             display: 'flex',
             flexDirection: 'column',
           }}
@@ -420,7 +423,7 @@ export default function CheckoutPage() {
           <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 28 }}>
             {t.order_summary}
           </div>
-          <div style={{ ...serif, fontSize: 28, fontWeight: 600, color: INK, lineHeight: 1.15, marginBottom: 6 }}>{t.custom_pc_build}</div>
+          <div style={{ ...serif, fontSize: isMobile ? 22 : 28, fontWeight: 600, color: INK, lineHeight: 1.15, marginBottom: 6 }}>{t.custom_pc_build}</div>
           <div style={{ ...sans, fontSize: 12, color: MUTED, fontWeight: 300, marginBottom: 32 }}>{t.itemCount(buildItems.length)}</div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             {buildItems.map((item, i) => (
@@ -463,19 +466,19 @@ export default function CheckoutPage() {
         </div>
 
         {/* Main step content */}
-        <div style={{ flex: 1, padding: '48px 64px', minWidth: 0, overflowY: 'auto', maxWidth: 680 }}>
+        <div style={{ flex: 1, padding: isMobile ? '28px 20px' : '48px 64px', minWidth: 0, overflowY: 'auto', maxWidth: isMobile ? '100%' : 680 }}>
           {/* Step indicator */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 52 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: isMobile ? 32 : 52 }}>
             {[1, 2, 3].map((n, i) => {
               const done = step > n;
               const active = step === n;
               return (
                 <div key={n} style={{ display: 'flex', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 8 }}>
                     <div
                       style={{
-                        width: 22,
-                        height: 22,
+                        width: isMobile ? 18 : 22,
+                        height: isMobile ? 18 : 22,
                         borderRadius: '50%',
                         background: done || active ? MAROON : 'transparent',
                         border: `0.5px solid ${done || active ? MAROON : 'rgba(28,28,26,0.2)'}`,
@@ -486,13 +489,13 @@ export default function CheckoutPage() {
                         transition: 'background 0.3s, border-color 0.3s',
                       }}
                     >
-                      <span style={{ ...mono, fontSize: 9, fontWeight: 500, color: done || active ? PANEL_BG : MUTED }}>{n}</span>
+                      <span style={{ ...mono, fontSize: isMobile ? 8 : 9, fontWeight: 500, color: done || active ? PANEL_BG : MUTED }}>{n}</span>
                     </div>
-                    <span style={{ ...sans, fontSize: 12, fontWeight: active ? 500 : 400, color: active ? INK : MUTED, letterSpacing: 0.3, whiteSpace: 'nowrap' }}>
+                    <span style={{ ...sans, fontSize: isMobile ? 10 : 12, fontWeight: active ? 500 : 400, color: active ? INK : MUTED, letterSpacing: 0.3, whiteSpace: 'nowrap' }}>
                       {stepLabels[i]}
                     </span>
                   </div>
-                  {n !== 3 && <div style={{ width: 40, height: 0.5, background: 'rgba(28,28,26,0.18)', margin: '0 12px' }} />}
+                  {n !== 3 && <div style={{ width: isMobile ? 14 : 40, height: 0.5, background: 'rgba(28,28,26,0.18)', margin: isMobile ? '0 6px' : '0 12px' }} />}
                 </div>
               );
             })}
@@ -501,7 +504,7 @@ export default function CheckoutPage() {
           {/* Step 1: Shipping Details */}
           {step === 1 && (
             <div style={{ animation: 'gompFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
-              <div style={{ ...serif, fontSize: 32, fontWeight: 600, color: INK, marginBottom: 6 }}>{t.shipping_details}</div>
+              <div style={{ ...serif, fontSize: isMobile ? 24 : 32, fontWeight: 600, color: INK, marginBottom: 6 }}>{t.shipping_details}</div>
               <div style={{ ...sans, fontSize: 13, color: MUTED, fontWeight: 300, marginBottom: 28 }}>{t.shipping_details_desc}</div>
 
               {savedAddresses.length > 0 && (
@@ -559,7 +562,7 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <Field label={t.first_name} value={form.firstName} onChange={(v) => setForm((f) => ({ ...f, firstName: v }))} />
                 <Field label={t.last_name} value={form.lastName} onChange={(v) => setForm((f) => ({ ...f, lastName: v }))} />
               </div>
@@ -569,8 +572,10 @@ export default function CheckoutPage() {
               <div style={{ marginBottom: 16 }}>
                 <Field label={t.street_address} value={form.address} onChange={(v) => setForm((f) => ({ ...f, address: v }))} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 32 }}>
-                <Field label={t.city} value={form.city} onChange={(v) => setForm((f) => ({ ...f, city: v }))} />
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr', gap: 16, marginBottom: 32 }}>
+                <div style={{ gridColumn: isMobile ? '1 / -1' : 'auto' }}>
+                  <Field label={t.city} value={form.city} onChange={(v) => setForm((f) => ({ ...f, city: v }))} />
+                </div>
                 <Field label={t.state_region} value={form.state} onChange={(v) => setForm((f) => ({ ...f, state: v }))} />
                 <Field label={t.zip_postal} value={form.zip} onChange={(v) => setForm((f) => ({ ...f, zip: v }))} />
               </div>
@@ -638,10 +643,10 @@ export default function CheckoutPage() {
           {/* Step 2: Payment */}
           {step === 2 && (
             <div style={{ animation: 'gompFadeUp 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
-              <div style={{ ...serif, fontSize: 32, fontWeight: 600, color: INK, marginBottom: 6 }}>{t.payment}</div>
+              <div style={{ ...serif, fontSize: isMobile ? 24 : 32, fontWeight: 600, color: INK, marginBottom: 6 }}>{t.payment}</div>
               <div style={{ ...sans, fontSize: 13, color: MUTED, fontWeight: 300, marginBottom: 36 }}>{t.payment_desc}</div>
 
-              <div style={{ background: 'linear-gradient(135deg,#6E1423 0%,#8E2A3A 100%)', borderRadius: 4, padding: '24px 24px 20px', marginBottom: 28, position: 'relative', overflow: 'hidden' }}>
+              <div style={{ background: 'linear-gradient(135deg,#6E1423 0%,#8E2A3A 100%)', borderRadius: 4, padding: isMobile ? '20px 18px 16px' : '24px 24px 20px', marginBottom: 28, position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
                 <div style={{ position: 'absolute', bottom: -30, right: 30, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.03)' }} />
                 <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 20 }}>
@@ -747,7 +752,7 @@ export default function CheckoutPage() {
 
           {/* Step 3: Confirmation */}
           {step === 3 && (
-            <div style={{ animation: 'gompFadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both', textAlign: 'center', padding: '40px 0' }}>
+            <div style={{ animation: 'gompFadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both', textAlign: 'center', padding: isMobile ? '20px 0' : '40px 0' }}>
               <div
                 style={{
                   width: 80,
@@ -778,7 +783,7 @@ export default function CheckoutPage() {
               <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 12 }}>
                 {t.order_confirmed}
               </div>
-              <div style={{ ...serif, fontSize: 42, fontWeight: 600, color: INK, lineHeight: 1.1, marginBottom: 10 }}>
+              <div style={{ ...serif, fontSize: isMobile ? 28 : 42, fontWeight: 600, color: INK, lineHeight: 1.1, marginBottom: 10 }}>
                 {t.build_on_way_line1}
                 <br />
                 {t.build_on_way_line2}
@@ -795,7 +800,7 @@ export default function CheckoutPage() {
                   background: PANEL_BG,
                   border: '0.5px solid rgba(28,28,26,0.12)',
                   borderRadius: 2,
-                  padding: '24px 28px',
+                  padding: isMobile ? '20px 20px' : '24px 28px',
                   textAlign: 'left',
                   marginBottom: 36,
                   maxWidth: 420,
@@ -837,7 +842,13 @@ export default function CheckoutPage() {
 
         {/* 3D case preview */}
         {showCaseViewport && build && (
-          <div style={{ flex: 1, minWidth: 120, position: 'relative', pointerEvents: 'none', overflow: 'hidden' }}>
+          <div
+            style={
+              isMobile
+                ? { width: '100%', height: 220, position: 'relative', pointerEvents: 'none', overflow: 'hidden' }
+                : { flex: 1, minWidth: 120, position: 'relative', pointerEvents: 'none', overflow: 'hidden' }
+            }
+          >
             <Case3DViewer config={{ selected: build.selected, selections: build.selections, compDb: build.compDb }} />
           </div>
         )}

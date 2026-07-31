@@ -8,6 +8,7 @@ import SiteNav from '@/components/SiteNav';
 import { navigateWithTransition } from '@/lib/gomp-nav';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
 import { passmarkLookup, TIER_COLORS } from '@/lib/passmark';
+import { useIsMobile } from '@/lib/use-media-query';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -365,6 +366,7 @@ export default function BenchmarksPage() {
   const router = useRouter();
   const pathname = usePathname();
   const t = translations[lang];
+  const isMobile = useIsMobile();
 
   const [selected, setSelected] = useState<Record<string, boolean>>(() => {
     const o: Record<string, boolean> = {};
@@ -602,8 +604,8 @@ export default function BenchmarksPage() {
 
   const cardGridStyle: CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-    gap: 12,
+    gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(200px, 1fr))',
+    gap: isMobile ? 8 : 12,
   };
 
   return (
@@ -613,19 +615,20 @@ export default function BenchmarksPage() {
         {/* Nav */}
         <SiteNav />
 
-        <div style={{ minHeight: '100vh', paddingTop: 60, display: 'flex', alignItems: 'stretch' }}>
+        <div style={{ minHeight: '100vh', paddingTop: 60, display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'stretch' }}>
           {/* Left sidebar */}
           <div
             style={{
-              width: 400,
+              width: isMobile ? '100%' : 400,
               flexShrink: 0,
               background: PANEL_BG,
-              borderRight: '0.5px solid rgba(28,28,26,0.12)',
-              padding: '48px 32px 40px',
-              position: 'sticky',
-              top: 60,
-              height: 'calc(100vh - 60px)',
-              overflowY: 'auto',
+              borderRight: isMobile ? 'none' : '0.5px solid rgba(28,28,26,0.12)',
+              borderBottom: isMobile ? '0.5px solid rgba(28,28,26,0.12)' : 'none',
+              padding: isMobile ? '32px 20px 28px' : '48px 32px 40px',
+              position: isMobile ? 'static' : 'sticky',
+              top: isMobile ? undefined : 60,
+              height: isMobile ? 'auto' : 'calc(100vh - 60px)',
+              overflowY: isMobile ? 'visible' : 'auto',
               display: 'flex',
               flexDirection: 'column',
             }}
@@ -682,9 +685,9 @@ export default function BenchmarksPage() {
           </div>
 
           {/* Right panel */}
-          <div style={{ flex: 1, padding: '48px 64px 80px', minWidth: 0, overflowY: 'auto', maxWidth: 1020 }}>
+          <div style={{ flex: 1, padding: isMobile ? '32px 20px 56px' : '48px 64px 80px', minWidth: 0, overflowY: 'auto', maxWidth: 1020 }}>
             {/* Step indicator */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 40 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: isMobile ? 28 : 40, flexWrap: 'wrap' }}>
               {flowSteps.map((step, i) => {
                 const bgColor = step.state !== 'upcoming' ? MAROON : 'transparent';
                 const borderColor = step.state !== 'upcoming' ? MAROON : 'rgba(28,28,26,0.2)';
@@ -693,23 +696,23 @@ export default function BenchmarksPage() {
                 const labelWeight = step.state === 'active' ? 500 : 400;
                 return (
                   <div key={step.num} style={{ display: 'flex', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 22, height: 22, borderRadius: '50%', background: bgColor, border: `0.5px solid ${borderColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 8 }}>
+                      <div style={{ width: isMobile ? 20 : 22, height: isMobile ? 20 : 22, borderRadius: '50%', background: bgColor, border: `0.5px solid ${borderColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <span style={{ ...mono, fontSize: 9, fontWeight: 500, color: numColor }}>{step.num}</span>
                       </div>
-                      <span style={{ ...sans, fontSize: 12, fontWeight: labelWeight, color: labelColor, letterSpacing: 0.3, whiteSpace: 'nowrap' }}>{step.label}</span>
+                      <span style={{ ...sans, fontSize: isMobile ? 11 : 12, fontWeight: labelWeight, color: labelColor, letterSpacing: 0.3, whiteSpace: 'nowrap' }}>{step.label}</span>
                     </div>
-                    {i < flowSteps.length - 1 && <div style={{ width: 40, height: 0.5, background: 'rgba(28,28,26,0.18)', margin: '0 12px' }} />}
+                    {i < flowSteps.length - 1 && <div style={{ width: isMobile ? 20 : 40, height: 0.5, background: 'rgba(28,28,26,0.18)', margin: isMobile ? '0 8px' : '0 12px' }} />}
                   </div>
                 );
               })}
             </div>
 
             {/* Header */}
-            <div style={{ ...serif, fontSize: 44, fontWeight: 600, color: INK, letterSpacing: '-1px', marginBottom: 10, lineHeight: 1.05 }}>
+            <div style={{ ...serif, fontSize: isMobile ? 30 : 44, fontWeight: 600, color: INK, letterSpacing: '-1px', marginBottom: 10, lineHeight: 1.1 }}>
               {t.choose_title_line1} <span style={{ fontStyle: 'italic', color: MAROON }}>{t.choose_title_em}</span>
             </div>
-            <p style={{ ...sans, fontSize: 15, lineHeight: 1.7, color: MUTED, margin: '0 0 28px', maxWidth: 600, fontWeight: 300 }}>{t.choose_desc}</p>
+            <p style={{ ...sans, fontSize: isMobile ? 13 : 15, lineHeight: 1.7, color: MUTED, margin: '0 0 28px', maxWidth: 600, fontWeight: 300 }}>{t.choose_desc}</p>
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 44 }}>
@@ -730,11 +733,11 @@ export default function BenchmarksPage() {
             {/* FPS section */}
             <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 4 }}>{t.section_fps_title}</div>
             <div style={{ ...sans, fontSize: 12, color: FAINT, fontWeight: 300, marginBottom: 16 }}>{t.section_fps_desc}</div>
-            <div style={{ background: PANEL_BG, border: '0.5px solid rgba(28,28,26,0.14)', borderRadius: 2, padding: '16px 18px', marginBottom: 20 }}>
+            <div style={{ background: PANEL_BG, border: '0.5px solid rgba(28,28,26,0.14)', borderRadius: 2, padding: isMobile ? '14px 16px' : '16px 18px', marginBottom: 20 }}>
               <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>{t.fps_source_title}</div>
               <div style={{ ...sans, fontSize: 12, color: MUTED, fontWeight: 300, lineHeight: 1.6, marginBottom: showFpsPicker ? 14 : 0 }}>{fpsSourceDesc}</div>
               {showFpsPicker && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
                   {needManualGpu && (
                     <div>
                       <div style={{ ...sans, fontSize: 9, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>GPU</div>

@@ -5,6 +5,7 @@ import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import Reveal from '@/components/Reveal';
 import SiteNav from '@/components/SiteNav';
+import { useIsMobile } from '@/lib/use-media-query';
 
 const translations = {
   en: {
@@ -166,6 +167,7 @@ export default function AboutPage() {
   const t = translations[lang];
   const activeColor = MAROON;
   const inactiveColor = MUTED;
+  const isMobile = useIsMobile();
 
   return (
     <div style={{ position: 'relative', zIndex: 2, background: PAGE_BG, minHeight: '100vh' }}>
@@ -193,7 +195,7 @@ export default function AboutPage() {
       {/* Hero */}
       <section
         style={{
-          padding: '140px 60px 100px',
+          padding: isMobile ? '70px 24px 50px' : '140px 60px 100px',
           borderBottom: '0.5px solid rgba(28,28,26,0.12)',
           animation: 'fadeUp 0.8s cubic-bezier(.16,1,.3,1) forwards',
         }}
@@ -207,7 +209,7 @@ export default function AboutPage() {
               color: MUTED,
               letterSpacing: 2.5,
               textTransform: 'uppercase',
-              marginBottom: 40,
+              marginBottom: isMobile ? 24 : 40,
             }}
           >
             {t.about_gomp}
@@ -215,10 +217,10 @@ export default function AboutPage() {
           <h1
             style={{
               ...serif,
-              fontSize: 88,
+              fontSize: isMobile ? 42 : 88,
               fontWeight: 600,
               lineHeight: 0.92,
-              letterSpacing: '-2.5px',
+              letterSpacing: isMobile ? '-1px' : '-2.5px',
               color: INK,
               margin: 0,
               textWrap: 'balance',
@@ -233,14 +235,14 @@ export default function AboutPage() {
       </section>
 
       {/* Origin */}
-      <section style={{ padding: '100px 60px', borderBottom: '0.5px solid rgba(28,28,26,0.12)' }}>
+      <section style={{ padding: isMobile ? '50px 24px' : '100px 60px', borderBottom: '0.5px solid rgba(28,28,26,0.12)' }}>
         <div
           style={{
             maxWidth: 1280,
             margin: '0 auto',
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 100,
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gap: isMobile ? 48 : 100,
             alignItems: 'start',
           }}
         >
@@ -284,21 +286,21 @@ export default function AboutPage() {
                   revealKey={`origin-${i}`}
                   delay={i === 1 ? 90 : i === 2 ? 180 : 0}
                   style={{
-                    padding: '24px 20px',
+                    padding: isMobile ? '16px 8px' : '24px 20px',
                     borderRight: i !== 2 ? '0.5px solid rgba(28,28,26,0.1)' : undefined,
                   }}
                 >
-                  <div style={{ ...serif, fontSize: 36, fontWeight: 600, color: INK, letterSpacing: '-1px', lineHeight: 1 }}>
+                  <div style={{ ...serif, fontSize: isMobile ? 24 : 36, fontWeight: 600, color: INK, letterSpacing: '-1px', lineHeight: 1 }}>
                     {stat.value}
                   </div>
-                  <div style={{ ...sans, fontSize: 12, color: MUTED, marginTop: 4, fontWeight: 300 }}>{stat.label}</div>
+                  <div style={{ ...sans, fontSize: isMobile ? 11 : 12, color: MUTED, marginTop: 4, fontWeight: 300 }}>{stat.label}</div>
                 </Reveal>
               ))}
             </div>
           </div>
-          <div style={{ paddingTop: 8 }}>
-            <div style={{ borderLeft: `2px solid ${MAROON}`, paddingLeft: 36, marginBottom: 48 }}>
-              <div style={{ ...serif, fontSize: 32, fontWeight: 600, fontStyle: 'italic', color: INK, lineHeight: 1.3, marginBottom: 24 }}>
+          <div style={{ paddingTop: isMobile ? 0 : 8 }}>
+            <div style={{ borderLeft: `2px solid ${MAROON}`, paddingLeft: isMobile ? 20 : 36, marginBottom: isMobile ? 32 : 48 }}>
+              <div style={{ ...serif, fontSize: isMobile ? 22 : 32, fontWeight: 600, fontStyle: 'italic', color: INK, lineHeight: 1.3, marginBottom: 24 }}>
                 {t.pull_quote}
               </div>
               <div style={{ ...sans, fontSize: 13, color: MUTED, fontWeight: 300 }}>{t.quote_author}</div>
@@ -311,7 +313,7 @@ export default function AboutPage() {
       {/* Values */}
       <section style={{ borderBottom: '0.5px solid rgba(28,28,26,0.12)', background: PANEL_BG }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ padding: '80px 60px 56px' }}>
+          <div style={{ padding: isMobile ? '40px 24px 28px' : '80px 60px 56px' }}>
             <div
               style={{
                 ...sans,
@@ -325,14 +327,14 @@ export default function AboutPage() {
             >
               {t.what_we_stand}
             </div>
-            <h2 style={{ ...serif, fontSize: 52, fontWeight: 600, letterSpacing: '-1.2px', color: INK, margin: 0, lineHeight: 1 }}>
+            <h2 style={{ ...serif, fontSize: isMobile ? 32 : 52, fontWeight: 600, letterSpacing: '-1.2px', color: INK, margin: 0, lineHeight: 1 }}>
               {t.our_values}
             </h2>
           </div>
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
               borderTop: '0.5px solid rgba(28,28,26,0.12)',
             }}
           >
@@ -342,14 +344,15 @@ export default function AboutPage() {
                 revealKey={`value-${i}`}
                 delay={i * 100}
                 style={{
-                  padding: '52px 48px',
-                  borderRight: i !== values[lang].length - 1 ? '0.5px solid rgba(28,28,26,0.1)' : undefined,
+                  padding: isMobile ? '32px 24px' : '52px 48px',
+                  borderRight: !isMobile && i !== values[lang].length - 1 ? '0.5px solid rgba(28,28,26,0.1)' : undefined,
+                  borderBottom: isMobile && i !== values[lang].length - 1 ? '0.5px solid rgba(28,28,26,0.1)' : undefined,
                 }}
               >
                 <div
                   style={{
                     ...serif,
-                    fontSize: 60,
+                    fontSize: isMobile ? 44 : 60,
                     fontWeight: 400,
                     color: 'rgba(28,28,26,0.08)',
                     letterSpacing: '-2px',
@@ -368,9 +371,9 @@ export default function AboutPage() {
       </section>
 
       {/* Team */}
-      <section style={{ padding: '100px 60px', borderBottom: '0.5px solid rgba(28,28,26,0.12)' }}>
+      <section style={{ padding: isMobile ? '50px 24px' : '100px 60px', borderBottom: '0.5px solid rgba(28,28,26,0.12)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ marginBottom: 60 }}>
+          <div style={{ marginBottom: isMobile ? 32 : 60 }}>
             <div
               style={{
                 ...sans,
@@ -384,14 +387,14 @@ export default function AboutPage() {
             >
               {t.who_builds}
             </div>
-            <h2 style={{ ...serif, fontSize: 52, fontWeight: 600, letterSpacing: '-1.2px', color: INK, margin: 0, lineHeight: 1 }}>
+            <h2 style={{ ...serif, fontSize: isMobile ? 32 : 52, fontWeight: 600, letterSpacing: '-1.2px', color: INK, margin: 0, lineHeight: 1 }}>
               {t.the_team}
             </h2>
           </div>
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
+              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
               gap: 0,
               border: '0.5px solid rgba(28,28,26,0.12)',
               borderRadius: 2,
@@ -404,8 +407,11 @@ export default function AboutPage() {
                 revealKey={`team-${i}`}
                 delay={i * 90}
                 style={{
-                  padding: '36px 28px',
-                  borderRight: i !== team.length - 1 ? '0.5px solid rgba(28,28,26,0.1)' : undefined,
+                  padding: isMobile ? '24px 16px' : '36px 28px',
+                  borderRight: isMobile
+                    ? (i % 2 === 0 ? '0.5px solid rgba(28,28,26,0.1)' : undefined)
+                    : (i !== team.length - 1 ? '0.5px solid rgba(28,28,26,0.1)' : undefined),
+                  borderBottom: isMobile && i < team.length - 2 ? '0.5px solid rgba(28,28,26,0.1)' : undefined,
                 }}
               >
                 <div
@@ -438,25 +444,25 @@ export default function AboutPage() {
       </section>
 
       {/* CTA */}
-      <section style={{ padding: '120px 60px' }}>
+      <section style={{ padding: isMobile ? '60px 24px' : '120px 60px' }}>
         <div
           style={{
             maxWidth: 1280,
             margin: '0 auto',
             display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: 80,
+            gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+            gap: isMobile ? 40 : 80,
             alignItems: 'center',
           }}
         >
           <div>
-            <h2 style={{ ...serif, fontSize: 64, fontWeight: 600, letterSpacing: '-2px', color: INK, margin: '0 0 20px', lineHeight: 0.95 }}>
+            <h2 style={{ ...serif, fontSize: isMobile ? 36 : 64, fontWeight: 600, letterSpacing: '-2px', color: INK, margin: '0 0 20px', lineHeight: 0.95 }}>
               {t.ready_title}
             </h2>
             <p style={{ ...sans, fontSize: 16, color: MUTED, margin: '0 0 40px', lineHeight: 1.75, fontWeight: 300 }}>
               {t.ready_desc}
             </p>
-            <div style={{ display: 'flex', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 14 }}>
               <TransitionLink
                 href="/build"
                 style={{
@@ -491,6 +497,7 @@ export default function AboutPage() {
           <div
             style={{
               ...serif,
+              display: isMobile ? 'none' : 'block',
               fontSize: 80,
               fontWeight: 400,
               fontStyle: 'italic',
@@ -511,9 +518,16 @@ export default function AboutPage() {
       </section>
 
       {/* Footer */}
-      <footer style={{ background: INK, padding: 60, borderTop: '0.5px solid rgba(28,28,26,0.3)' }}>
+      <footer style={{ background: INK, padding: isMobile ? 24 : 60, borderTop: '0.5px solid rgba(28,28,26,0.3)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 40, marginBottom: 48 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr 1fr',
+              gap: isMobile ? 32 : 40,
+              marginBottom: isMobile ? 32 : 48,
+            }}
+          >
             <div>
               <div style={{ ...serif, fontSize: 19, fontWeight: 600, fontStyle: 'italic', color: GOLD, letterSpacing: 1.5, marginBottom: 16 }}>
                 GOMP
@@ -598,7 +612,16 @@ export default function AboutPage() {
               </div>
             </div>
           </div>
-          <div style={{ borderTop: '0.5px solid rgba(245,240,230,0.1)', paddingTop: 24, display: 'flex', justifyContent: 'space-between' }}>
+          <div
+            style={{
+              borderTop: '0.5px solid rgba(245,240,230,0.1)',
+              paddingTop: 24,
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              gap: isMobile ? 8 : 0,
+              justifyContent: 'space-between',
+            }}
+          >
             <span style={{ ...sans, fontSize: 12, color: 'rgba(245,240,230,0.3)', fontWeight: 300 }}>
               © 2026 GOMP. {t.footer_rights}
             </span>

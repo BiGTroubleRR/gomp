@@ -5,6 +5,7 @@ import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
+import { useIsMobile } from '@/lib/use-media-query';
 
 type TabId = 'orders' | 'addresses' | 'profile' | 'security';
 
@@ -313,9 +314,18 @@ function Field({
   );
 }
 
-function TabHeader({ t, title, action }: { t: T; title: string; action?: React.ReactNode }) {
+function TabHeader({ t, title, action, isMobile }: { t: T; title: string; action?: React.ReactNode; isMobile: boolean }) {
   return (
-    <div style={{ marginBottom: 40, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+    <div
+      style={{
+        marginBottom: isMobile ? 24 : 40,
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'flex-start' : 'flex-end',
+        justifyContent: 'space-between',
+        gap: isMobile ? 14 : 0,
+      }}
+    >
       <div>
         <div
           style={{
@@ -333,7 +343,7 @@ function TabHeader({ t, title, action }: { t: T; title: string; action?: React.R
         <h1
           style={{
             fontFamily: 'var(--font-serif)',
-            fontSize: 48,
+            fontSize: isMobile ? 30 : 48,
             fontWeight: 600,
             color: '#1C1C1A',
             letterSpacing: -1.5,
@@ -352,6 +362,7 @@ function TabHeader({ t, title, action }: { t: T; title: string; action?: React.R
 export default function Account() {
   const { lang, currency, setLang, setCurrency, fmt } = useSite();
   const t = TRANSLATIONS[lang];
+  const isMobile = useIsMobile();
 
   const [tab, setTab] = useState<TabId>('orders');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
@@ -482,10 +493,19 @@ export default function Account() {
       {/* Nav */}
       <SiteNav />
 
-      <div style={{ minHeight: '100vh', padding: '100px 60px 80px' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '224px 1fr', gap: 64, alignItems: 'start' }}>
+      <div style={{ minHeight: '100vh', padding: isMobile ? '90px 20px 48px' : '100px 60px 80px' }}>
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: '0 auto',
+            display: 'grid',
+            gridTemplateColumns: isMobile ? '1fr' : '224px 1fr',
+            gap: isMobile ? 32 : 64,
+            alignItems: 'start',
+          }}
+        >
           {/* Sidebar */}
-          <aside style={{ position: 'sticky', top: 84 }}>
+          <aside style={isMobile ? {} : { position: 'sticky', top: 84 }}>
             <div style={{ marginBottom: 36 }}>
               <div
                 style={{
@@ -596,7 +616,7 @@ export default function Account() {
             <div key={tab} style={{ animation: 'fadeUp 0.5s cubic-bezier(.16,1,.3,1) forwards' }}>
               {tab === 'orders' && (
                 <>
-                  <TabHeader t={t} title={t.my_orders} />
+                  <TabHeader t={t} title={t.my_orders} isMobile={isMobile} />
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {ORDERS.map((order) => {
                       const expanded = expandedOrderId === order.id;
@@ -610,12 +630,12 @@ export default function Account() {
                           <div
                             onClick={() => setExpandedOrderId(expanded ? null : order.id)}
                             style={{
-                              padding: '22px 28px',
+                              padding: isMobile ? '16px 16px' : '22px 28px',
                               cursor: 'pointer',
                               display: 'grid',
-                              gridTemplateColumns: '1fr auto auto auto',
-                              gap: 20,
-                              alignItems: 'center',
+                              gridTemplateColumns: isMobile ? '1fr' : '1fr auto',
+                              gap: isMobile ? 12 : 20,
+                              alignItems: isMobile ? 'stretch' : 'center',
                             }}
                           >
                             <div>
@@ -627,39 +647,55 @@ export default function Account() {
                               </div>
                               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', fontWeight: 300 }}>{date}</div>
                             </div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 500, color: '#1C1C1A', whiteSpace: 'nowrap' }}>
-                              {fmt(order.totalEur)}
-                            </div>
-                            <div style={{ padding: '4px 11px', borderRadius: 2, background: s.bg, border: `0.5px solid ${s.border}` }}>
-                              <span
-                                style={{
-                                  fontFamily: 'var(--font-sans)',
-                                  fontSize: 10,
-                                  fontWeight: 600,
-                                  color: s.color,
-                                  letterSpacing: 1.5,
-                                  textTransform: 'uppercase',
-                                }}
-                              >
-                                {status}
-                              </span>
-                            </div>
                             <div
                               style={{
-                                fontFamily: 'var(--font-mono)',
-                                fontSize: 15,
-                                color: '#7A7469',
-                                width: 16,
-                                textAlign: 'center',
-                                userSelect: 'none',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: isMobile ? 12 : 20,
+                                justifyContent: isMobile ? 'space-between' : 'flex-start',
+                                flexWrap: 'wrap',
                               }}
                             >
-                              {expanded ? '−' : '+'}
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 500, color: '#1C1C1A', whiteSpace: 'nowrap' }}>
+                                {fmt(order.totalEur)}
+                              </div>
+                              <div style={{ padding: '4px 11px', borderRadius: 2, background: s.bg, border: `0.5px solid ${s.border}` }}>
+                                <span
+                                  style={{
+                                    fontFamily: 'var(--font-sans)',
+                                    fontSize: 10,
+                                    fontWeight: 600,
+                                    color: s.color,
+                                    letterSpacing: 1.5,
+                                    textTransform: 'uppercase',
+                                  }}
+                                >
+                                  {status}
+                                </span>
+                              </div>
+                              <div
+                                style={{
+                                  fontFamily: 'var(--font-mono)',
+                                  fontSize: 15,
+                                  color: '#7A7469',
+                                  width: 16,
+                                  textAlign: 'center',
+                                  userSelect: 'none',
+                                }}
+                              >
+                                {expanded ? '−' : '+'}
+                              </div>
                             </div>
                           </div>
                           {expanded && (
-                            <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.09)', padding: '20px 28px 24px', background: 'rgba(28,28,26,0.018)' }}>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, marginBottom: 20 }}>
+                            <div
+                              style={{
+                                borderTop: '0.5px solid rgba(28,28,26,0.09)',
+                                padding: isMobile ? '18px 16px 20px' : '20px 28px 24px',
+                                background: 'rgba(28,28,26,0.018)',
+                              }}
+                            >
+                              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 20 : 32, marginBottom: 20 }}>
                                 <div>
                                   <div
                                     style={{
@@ -752,6 +788,7 @@ export default function Account() {
                   <TabHeader
                     t={t}
                     title={t.addresses}
+                    isMobile={isMobile}
                     action={
                       !showAddressForm && (
                         <button
@@ -774,14 +811,14 @@ export default function Account() {
                       )
                     }
                   />
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 20 }}>
                     {addresses.map((addr, idx) => (
                       <div
                         key={`${addr.label}-${idx}`}
                         style={{
                           ...panelStyle,
                           border: `0.5px solid ${addr.default ? 'rgba(110,20,35,0.22)' : 'rgba(28,28,26,0.14)'}`,
-                          padding: '22px 22px 18px',
+                          padding: isMobile ? '18px 16px 16px' : '22px 22px 18px',
                           position: 'relative',
                         }}
                       >
@@ -877,11 +914,11 @@ export default function Account() {
                     ))}
                   </div>
                   {showAddressForm && (
-                    <div style={{ ...panelStyle, border: '0.5px solid rgba(28,28,26,0.18)', padding: 28 }}>
+                    <div style={{ ...panelStyle, border: '0.5px solid rgba(28,28,26,0.18)', padding: isMobile ? 20 : 28 }}>
                       <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: '#1C1C1A', letterSpacing: 0.2, marginBottom: 20 }}>
                         {editingAddressIdx !== null ? t.edit_address : t.new_address}
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
                         <Field
                           label={t.label_field}
                           value={addrDraft.label}
@@ -894,11 +931,25 @@ export default function Account() {
                           onChange={(v) => setAddrDraft((d) => ({ ...d, street: v }))}
                         />
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 22 }}>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr',
+                          gap: 14,
+                          marginBottom: isMobile ? 14 : 22,
+                        }}
+                      >
                         <Field label={t.city} value={addrDraft.city} onChange={(v) => setAddrDraft((d) => ({ ...d, city: v }))} />
                         <Field label={t.zip} value={addrDraft.zip} onChange={(v) => setAddrDraft((d) => ({ ...d, zip: v }))} />
-                        <Field label={t.country} value={addrDraft.country} onChange={(v) => setAddrDraft((d) => ({ ...d, country: v }))} />
+                        {!isMobile && (
+                          <Field label={t.country} value={addrDraft.country} onChange={(v) => setAddrDraft((d) => ({ ...d, country: v }))} />
+                        )}
                       </div>
+                      {isMobile && (
+                        <div style={{ marginBottom: 22 }}>
+                          <Field label={t.country} value={addrDraft.country} onChange={(v) => setAddrDraft((d) => ({ ...d, country: v }))} />
+                        </div>
+                      )}
                       <div style={{ display: 'flex', gap: 10 }}>
                         <button
                           onClick={cancelAddressForm}
@@ -942,6 +993,7 @@ export default function Account() {
                   <TabHeader
                     t={t}
                     title={t.profile}
+                    isMobile={isMobile}
                     action={
                       !editProfile && (
                         <button
@@ -992,14 +1044,16 @@ export default function Account() {
                           key={row.label}
                           style={{
                             display: 'flex',
-                            alignItems: 'center',
-                            padding: '17px 26px',
+                            flexDirection: isMobile ? 'column' : 'row',
+                            alignItems: isMobile ? 'flex-start' : 'center',
+                            gap: isMobile ? 4 : 0,
+                            padding: isMobile ? '14px 16px' : '17px 26px',
                             borderBottom: i === arr.length - 1 ? 'none' : '0.5px solid rgba(28,28,26,0.07)',
                           }}
                         >
                           <div
                             style={{
-                              width: 160,
+                              width: isMobile ? 'auto' : 160,
                               flexShrink: 0,
                               fontFamily: 'var(--font-sans)',
                               fontSize: 10,
@@ -1017,8 +1071,8 @@ export default function Account() {
                     </div>
                   )}
                   {editProfile && (
-                    <div style={{ ...panelStyle, padding: 28 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                    <div style={{ ...panelStyle, padding: isMobile ? 20 : 28 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 16 }}>
                         <Field
                           label={t.first_name}
                           value={profileDraft.firstName}
@@ -1081,8 +1135,8 @@ export default function Account() {
 
               {tab === 'security' && (
                 <>
-                  <TabHeader t={t} title={t.security} />
-                  <div style={{ ...panelStyle, padding: 28, marginBottom: 14 }}>
+                  <TabHeader t={t} title={t.security} isMobile={isMobile} />
+                  <div style={{ ...panelStyle, padding: isMobile ? 20 : 28, marginBottom: 14 }}>
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: '#1C1C1A', marginBottom: 4 }}>
                       {t.change_password}
                     </div>
@@ -1145,7 +1199,7 @@ export default function Account() {
                     </button>
                   </div>
 
-                  <div style={{ ...panelStyle, padding: '20px 26px', marginBottom: 14 }}>
+                  <div style={{ ...panelStyle, padding: isMobile ? '16px 18px' : '20px 26px', marginBottom: 14 }}>
                     <div
                       style={{
                         fontFamily: 'var(--font-sans)',
@@ -1184,18 +1238,26 @@ export default function Account() {
                   </div>
 
                   <div style={{ border: '0.5px solid rgba(176,32,32,0.18)', borderRadius: 2, overflow: 'hidden' }}>
-                    <div style={{ padding: '13px 22px', background: 'rgba(176,32,32,0.03)', borderBottom: '0.5px solid rgba(176,32,32,0.1)' }}>
+                    <div style={{ padding: isMobile ? '12px 16px' : '13px 22px', background: 'rgba(176,32,32,0.03)', borderBottom: '0.5px solid rgba(176,32,32,0.1)' }}>
                       <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: 'rgba(176,32,32,0.6)', letterSpacing: 2, textTransform: 'uppercase' }}>
                         {t.danger_zone}
                       </span>
                     </div>
-                    <div style={{ padding: 22 }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
+                    <div style={{ padding: isMobile ? 16 : 22 }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: isMobile ? 'column' : 'row',
+                          alignItems: isMobile ? 'stretch' : 'flex-start',
+                          justifyContent: 'space-between',
+                          gap: isMobile ? 14 : 24,
+                        }}
+                      >
                         <div>
                           <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: '#1C1C1A', marginBottom: 5 }}>
                             {t.delete_account}
                           </div>
-                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', fontWeight: 300, lineHeight: 1.65, maxWidth: 400 }}>
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', fontWeight: 300, lineHeight: 1.65, maxWidth: isMobile ? '100%' : 400 }}>
                             {t.delete_account_desc}
                           </div>
                         </div>
@@ -1213,6 +1275,7 @@ export default function Account() {
                             color: 'rgba(176,32,32,0.7)',
                             cursor: 'pointer',
                             whiteSpace: 'nowrap',
+                            alignSelf: isMobile ? 'flex-start' : undefined,
                           }}
                         >
                           {t.delete_account}
@@ -1222,7 +1285,7 @@ export default function Account() {
                         <div
                           style={{
                             marginTop: 20,
-                            padding: 18,
+                            padding: isMobile ? 14 : 18,
                             background: 'rgba(176,32,32,0.04)',
                             border: '0.5px solid rgba(176,32,32,0.14)',
                             borderRadius: 2,
@@ -1231,7 +1294,7 @@ export default function Account() {
                           <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#1C1C1A', marginBottom: 12 }}>
                             {t.type_delete} <strong>DELETE</strong> {t.to_confirm}
                           </div>
-                          <div style={{ display: 'flex', gap: 8 }}>
+                          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8 }}>
                             <input
                               ref={deleteInputRef}
                               value={deleteInput}
@@ -1239,6 +1302,7 @@ export default function Account() {
                               placeholder="DELETE"
                               style={{
                                 flex: 1,
+                                width: isMobile ? '100%' : undefined,
                                 padding: '10px 14px',
                                 border: '0.5px solid rgba(176,32,32,0.25)',
                                 borderRadius: 2,
@@ -1249,40 +1313,44 @@ export default function Account() {
                                 letterSpacing: 1,
                               }}
                             />
-                            <button
-                              onClick={cancelDeleteConfirm}
-                              style={{
-                                padding: '10px 16px',
-                                background: 'transparent',
-                                border: '0.5px solid rgba(28,28,26,0.18)',
-                                borderRadius: 2,
-                                fontFamily: 'var(--font-sans)',
-                                fontSize: 12,
-                                color: '#7A7469',
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {t.cancel}
-                            </button>
-                            <button
-                              onClick={executeDelete}
-                              style={{
-                                padding: '10px 18px',
-                                background: 'rgba(176,32,32,0.85)',
-                                color: '#FDFAF4',
-                                border: 'none',
-                                borderRadius: 2,
-                                fontFamily: 'var(--font-sans)',
-                                fontSize: 12,
-                                fontWeight: 500,
-                                cursor: 'pointer',
-                                whiteSpace: 'nowrap',
-                                opacity: deleteReady ? 1 : 0.4,
-                              }}
-                            >
-                              {t.confirm_delete}
-                            </button>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button
+                                onClick={cancelDeleteConfirm}
+                                style={{
+                                  padding: '10px 16px',
+                                  background: 'transparent',
+                                  border: '0.5px solid rgba(28,28,26,0.18)',
+                                  borderRadius: 2,
+                                  fontFamily: 'var(--font-sans)',
+                                  fontSize: 12,
+                                  color: '#7A7469',
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap',
+                                  flex: isMobile ? 1 : undefined,
+                                }}
+                              >
+                                {t.cancel}
+                              </button>
+                              <button
+                                onClick={executeDelete}
+                                style={{
+                                  padding: '10px 18px',
+                                  background: 'rgba(176,32,32,0.85)',
+                                  color: '#FDFAF4',
+                                  border: 'none',
+                                  borderRadius: 2,
+                                  fontFamily: 'var(--font-sans)',
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap',
+                                  opacity: deleteReady ? 1 : 0.4,
+                                  flex: isMobile ? 1 : undefined,
+                                }}
+                              >
+                                {t.confirm_delete}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       )}

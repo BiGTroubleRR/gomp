@@ -6,6 +6,7 @@ import TransitionLink from '@/components/TransitionLink';
 import Reveal from '@/components/Reveal';
 import SiteNav from '@/components/SiteNav';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
+import { useIsMobile } from '@/lib/use-media-query';
 
 type FilterId = 'all' | 'flagship' | 'performance' | 'midrange' | 'entry';
 
@@ -257,6 +258,7 @@ function SpecRow({
 export default function Shop() {
   const { lang, currency, setLang, setCurrency, fmt } = useSite();
   const [filter, setFilter] = useState<FilterId>('all');
+  const isMobile = useIsMobile();
 
   const t = TRANSLATIONS[lang];
   const filtered = filter === 'all' ? PRODUCTS : PRODUCTS.filter((p) => p.cat === filter);
@@ -285,7 +287,7 @@ export default function Shop() {
       />
 
       {/* Header + filter bar */}
-      <div style={{ padding: '110px 60px 0', borderBottom: '0.5px solid rgba(28,28,26,0.12)' }}>
+      <div style={{ padding: isMobile ? '70px 24px 0' : '110px 60px 0', borderBottom: '0.5px solid rgba(28,28,26,0.12)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div
             style={{
@@ -300,11 +302,20 @@ export default function Shop() {
           >
             {t.eyebrow}
           </div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 36 }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: isMobile ? 'flex-start' : 'flex-end',
+              justifyContent: 'space-between',
+              gap: isMobile ? 8 : 0,
+              marginBottom: 36,
+            }}
+          >
             <h1
               style={{
                 fontFamily: 'var(--font-serif)',
-                fontSize: 64,
+                fontSize: isMobile ? 38 : 64,
                 fontWeight: 600,
                 letterSpacing: -2,
                 color: '#1C1C1A',
@@ -314,43 +325,47 @@ export default function Shop() {
             >
               {t.title}
             </h1>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300, marginBottom: 4 }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300, marginBottom: isMobile ? 0 : 4 }}>
               {t.showing(filtered.length)}
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 0, borderTop: '0.5px solid rgba(28,28,26,0.12)' }}>
-            {FILTER_DEFS.map((fd) => {
-              const isActive = filter === fd.id;
-              return (
-                <button
-                  key={fd.id}
-                  onClick={() => setFilter(fd.id)}
-                  style={{
-                    background: isActive ? '#6E1423' : 'transparent',
-                    color: isActive ? '#FDFAF4' : '#7A7469',
-                    border: 'none',
-                    borderRight: '0.5px solid rgba(28,28,26,0.1)',
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: 12,
-                    fontWeight: isActive ? 500 : 400,
-                    padding: '14px 28px',
-                    cursor: 'pointer',
-                    letterSpacing: 0.5,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {t[fd.key]}
-                </button>
-              );
-            })}
+          <div style={{ overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch' as const }}>
+            <div style={{ display: 'flex', gap: 0, borderTop: '0.5px solid rgba(28,28,26,0.12)' }}>
+              {FILTER_DEFS.map((fd) => {
+                const isActive = filter === fd.id;
+                return (
+                  <button
+                    key={fd.id}
+                    onClick={() => setFilter(fd.id)}
+                    style={{
+                      background: isActive ? '#6E1423' : 'transparent',
+                      color: isActive ? '#FDFAF4' : '#7A7469',
+                      border: 'none',
+                      borderRight: '0.5px solid rgba(28,28,26,0.1)',
+                      fontFamily: 'var(--font-sans)',
+                      fontSize: 12,
+                      fontWeight: isActive ? 500 : 400,
+                      padding: '14px 28px',
+                      cursor: 'pointer',
+                      letterSpacing: 0.5,
+                      textTransform: 'uppercase',
+                      flexShrink: isMobile ? 0 : undefined,
+                      whiteSpace: isMobile ? 'nowrap' : undefined,
+                    }}
+                  >
+                    {t[fd.key]}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Product grid */}
-      <div style={{ padding: '0 60px 100px' }}>
+      <div style={{ padding: isMobile ? '0 24px 50px' : '0 60px 100px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderLeft: '0.5px solid rgba(28,28,26,0.12)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', borderLeft: '0.5px solid rgba(28,28,26,0.12)' }}>
             {filtered.map((prod, i) => (
               <Reveal
                 key={prod.id}
@@ -359,7 +374,7 @@ export default function Shop() {
                 style={{
                   borderRight: '0.5px solid rgba(28,28,26,0.12)',
                   borderBottom: '0.5px solid rgba(28,28,26,0.12)',
-                  padding: '36px 32px',
+                  padding: isMobile ? '28px 20px' : '36px 32px',
                   background: '#FDFAF4',
                   display: 'flex',
                   flexDirection: 'column',
@@ -452,13 +467,23 @@ export default function Shop() {
       </div>
 
       {/* Custom prompt CTA */}
-      <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.12)', background: '#FDFAF4', padding: '72px 60px' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 60 }}>
+      <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.12)', background: '#FDFAF4', padding: isMobile ? '36px 24px' : '72px 60px' }}>
+        <div
+          style={{
+            maxWidth: 1280,
+            margin: '0 auto',
+            display: 'flex',
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'flex-start' : 'center',
+            justifyContent: 'space-between',
+            gap: isMobile ? 24 : 60,
+          }}
+        >
           <div>
             <div
               style={{
                 fontFamily: 'var(--font-serif)',
-                fontSize: 40,
+                fontSize: isMobile ? 26 : 40,
                 fontWeight: 600,
                 letterSpacing: -0.8,
                 color: '#1C1C1A',
@@ -493,13 +518,21 @@ export default function Shop() {
       </div>
 
       {/* Footer */}
-      <footer style={{ background: '#1C1C1A', padding: 60, borderTop: '0.5px solid rgba(28,28,26,0.3)' }}>
+      <footer style={{ background: '#1C1C1A', padding: isMobile ? 24 : 60, borderTop: '0.5px solid rgba(28,28,26,0.3)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: isMobile ? 'column' : 'row',
+              alignItems: isMobile ? 'flex-start' : 'center',
+              justifyContent: 'space-between',
+              gap: isMobile ? 20 : 0,
+            }}
+          >
             <div style={{ fontFamily: 'var(--font-serif)', fontSize: 19, fontWeight: 600, fontStyle: 'italic', color: '#C4A35A', letterSpacing: 1.5 }}>
               GOMP
             </div>
-            <div style={{ display: 'flex', gap: 28 }}>
+            <div style={{ display: 'flex', gap: 28, flexWrap: isMobile ? 'wrap' : undefined }}>
               <TransitionLink
                 href="/"
                 style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}

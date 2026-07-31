@@ -7,6 +7,7 @@ import TransitionLink from '@/components/TransitionLink';
 import Reveal from '@/components/Reveal';
 import SiteNav from '@/components/SiteNav';
 import { navigateWithTransition } from '@/lib/gomp-nav';
+import { useIsMobile } from '@/lib/use-media-query';
 
 // ---- Palette (exact literal hex values from the original site) ----
 const BG = '#F5F0E6';
@@ -168,6 +169,7 @@ export default function Home() {
   const { lang, fmt } = useSite();
   const router = useRouter();
   const pathname = usePathname();
+  const isMobile = useIsMobile();
 
   const [swiping, setSwiping] = useState(false);
   const swipingRef = useRef(false);
@@ -265,15 +267,15 @@ export default function Home() {
         />
 
         {/* ---- Hero ---- */}
-        <section style={{ minHeight: '100vh', padding: '140px 60px 100px', display: 'flex', alignItems: 'center', position: 'relative' }}>
+        <section style={{ minHeight: isMobile ? 'auto' : '100vh', padding: isMobile ? '100px 24px 64px' : '140px 60px 100px', display: 'flex', alignItems: 'center', position: 'relative' }}>
           <div
             style={{
               maxWidth: 1280,
               width: '100%',
               margin: '0 auto',
               display: 'grid',
-              gridTemplateColumns: '55fr 45fr',
-              gap: 80,
+              gridTemplateColumns: isMobile ? '1fr' : '55fr 45fr',
+              gap: isMobile ? 56 : 80,
               alignItems: 'center',
               position: 'relative',
             }}
@@ -281,7 +283,7 @@ export default function Home() {
             {/* Left: text */}
             <div style={{ animation: 'fadeUp 0.8s cubic-bezier(.16,1,.3,1) forwards', position: 'relative', zIndex: 2 }}>
               {/* floaties */}
-              <div style={{ position: 'absolute', top: -64, left: -50, width: 250, height: 250, pointerEvents: 'none', zIndex: -1 }}>
+              <div style={{ position: 'absolute', top: -64, left: -50, width: 250, height: 250, pointerEvents: 'none', zIndex: -1, display: isMobile ? 'none' : 'block' }}>
                 <div
                   style={{
                     position: 'absolute',
@@ -313,6 +315,7 @@ export default function Home() {
                   pointerEvents: 'none',
                   zIndex: 1,
                   animation: 'gompPulseDot 5s ease-in-out infinite',
+                  display: isMobile ? 'none' : 'block',
                 }}
               />
               <div
@@ -328,18 +331,19 @@ export default function Home() {
                   pointerEvents: 'none',
                   zIndex: 1,
                   animation: 'gompPulseDot 4.5s ease-in-out infinite 0.8s',
+                  display: isMobile ? 'none' : 'block',
                 }}
               />
 
               <div
                 style={{
                   fontFamily: 'var(--font-sans)',
-                  fontSize: 11,
+                  fontSize: isMobile ? 10 : 11,
                   fontWeight: 500,
                   color: MUTED,
                   letterSpacing: 2.5,
                   textTransform: 'uppercase',
-                  marginBottom: 32,
+                  marginBottom: isMobile ? 20 : 32,
                 }}
               >
                 {t.hero_eyebrow}
@@ -347,22 +351,22 @@ export default function Home() {
               <h1
                 style={{
                   fontFamily: 'var(--font-serif)',
-                  fontSize: 96,
+                  fontSize: isMobile ? 44 : 96,
                   fontWeight: 600,
-                  lineHeight: 0.9,
-                  letterSpacing: -2,
+                  lineHeight: 0.95,
+                  letterSpacing: isMobile ? -1 : -2,
                   color: INK,
-                  margin: '0 0 36px',
+                  margin: isMobile ? '0 0 20px' : '0 0 36px',
                 }}
               >
                 {t.hero_title_line1}
                 <br />
                 <span style={{ fontStyle: 'italic', color: MAROON }}>{t.hero_title_em}</span>
               </h1>
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 17, lineHeight: 1.75, color: MUTED, margin: '0 0 48px', maxWidth: 420, fontWeight: 300 }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: isMobile ? 15 : 17, lineHeight: 1.75, color: MUTED, margin: isMobile ? '0 0 32px' : '0 0 48px', maxWidth: 420, fontWeight: 300 }}>
                 {t.hero_desc}
               </p>
-              <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
                 <button
                   onClick={startBuilding}
                   style={{
@@ -401,7 +405,7 @@ export default function Home() {
             {/* Right: featured build card */}
             <div style={{ animation: 'fadeUp 1s 0.1s cubic-bezier(.16,1,.3,1) both', position: 'relative', zIndex: 2 }}>
               {/* floaties */}
-              <div style={{ position: 'absolute', top: -56, right: -70, width: 260, height: 260, pointerEvents: 'none', zIndex: -1 }}>
+              <div style={{ position: 'absolute', top: -56, right: -70, width: 260, height: 260, pointerEvents: 'none', zIndex: -1, display: isMobile ? 'none' : 'block' }}>
                 <div
                   style={{
                     position: 'absolute',
@@ -434,7 +438,7 @@ export default function Home() {
                   }}
                 />
               </div>
-              <div style={{ position: 'absolute', bottom: -46, left: -56, width: 190, height: 190, pointerEvents: 'none', zIndex: -1 }}>
+              <div style={{ position: 'absolute', bottom: -46, left: -56, width: 190, height: 190, pointerEvents: 'none', zIndex: -1, display: isMobile ? 'none' : 'block' }}>
                 <div
                   style={{
                     position: 'absolute',
@@ -492,7 +496,7 @@ export default function Home() {
                 </span>
               </div>
 
-              <div style={{ background: PANEL, border: '0.5px solid rgba(28,28,26,0.18)', borderRadius: 2, padding: 40, position: 'relative' }}>
+              <div style={{ background: PANEL, border: '0.5px solid rgba(28,28,26,0.18)', borderRadius: 2, padding: isMobile ? 28 : 40, position: 'relative' }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: MAROON, borderRadius: '2px 2px 0 0' }} />
                 <div
                   style={{
@@ -550,27 +554,31 @@ export default function Home() {
 
         {/* ---- Stats strip ---- */}
         <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.12)', borderBottom: '0.5px solid rgba(28,28,26,0.12)' }}>
-          <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
+          <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)' }}>
             {stats.map(([value, label], i) => (
               <Reveal
                 key={label}
                 revealKey={`stat-${i}`}
                 delay={i * 90}
-                style={{ padding: '44px 60px', borderRight: i === stats.length - 1 ? 'none' : '0.5px solid rgba(28,28,26,0.12)' }}
+                style={{
+                  padding: isMobile ? '28px 20px' : '44px 60px',
+                  borderRight: isMobile ? (i % 2 === 1 ? 'none' : '0.5px solid rgba(28,28,26,0.12)') : i === stats.length - 1 ? 'none' : '0.5px solid rgba(28,28,26,0.12)',
+                  borderBottom: isMobile ? (i < 2 ? '0.5px solid rgba(28,28,26,0.12)' : 'none') : 'none',
+                }}
               >
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 52, fontWeight: 600, color: INK, letterSpacing: -1.5, lineHeight: 1 }}>
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 36 : 52, fontWeight: 600, color: INK, letterSpacing: -1.5, lineHeight: 1 }}>
                   {value}
                 </div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, marginTop: 6, fontWeight: 300 }}>{label}</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: isMobile ? 12 : 13, color: MUTED, marginTop: 6, fontWeight: 300 }}>{label}</div>
               </Reveal>
             ))}
           </div>
         </div>
 
         {/* ---- Featured Builds ---- */}
-        <section style={{ padding: '100px 60px' }}>
+        <section style={{ padding: isMobile ? '64px 24px' : '100px 60px' }}>
           <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 56 }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'flex-end', justifyContent: 'space-between', gap: isMobile ? 16 : 0, marginBottom: isMobile ? 32 : 56 }}>
               <div>
                 <div
                   style={{
@@ -585,7 +593,7 @@ export default function Home() {
                 >
                   {t.ready_to_ship}
                 </div>
-                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 52, fontWeight: 600, letterSpacing: -1.2, color: INK, margin: 0, lineHeight: 1 }}>
+                <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 34 : 52, fontWeight: 600, letterSpacing: -1.2, color: INK, margin: 0, lineHeight: 1 }}>
                   {t.featured_builds}
                 </h2>
               </div>
@@ -607,7 +615,7 @@ export default function Home() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(3,1fr)',
+                gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)',
                 gap: 0,
                 border: '0.5px solid rgba(28,28,26,0.14)',
                 borderRadius: 2,
@@ -620,8 +628,9 @@ export default function Home() {
                   revealKey={`featured-${i}`}
                   delay={i * 100}
                   style={{
-                    padding: '36px 32px',
-                    borderRight: i === builds.length - 1 ? 'none' : '0.5px solid rgba(28,28,26,0.1)',
+                    padding: isMobile ? '28px 24px' : '36px 32px',
+                    borderRight: isMobile || i === builds.length - 1 ? 'none' : '0.5px solid rgba(28,28,26,0.1)',
+                    borderBottom: isMobile && i !== builds.length - 1 ? '0.5px solid rgba(28,28,26,0.1)' : 'none',
                     background: PANEL,
                     display: 'flex',
                     flexDirection: 'column',
@@ -689,7 +698,7 @@ export default function Home() {
         {/* ---- Why GOMP / GOMP Standard ---- */}
         <section style={{ borderTop: '0.5px solid rgba(28,28,26,0.12)', backgroundColor: PANEL }}>
           <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-            <div style={{ padding: '80px 60px 56px' }}>
+            <div style={{ padding: isMobile ? '56px 24px 32px' : '80px 60px 56px' }}>
               <div
                 style={{
                   fontFamily: 'var(--font-sans)',
@@ -703,19 +712,23 @@ export default function Home() {
               >
                 {t.why_gomp}
               </div>
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 52, fontWeight: 600, letterSpacing: -1.2, color: INK, margin: 0, lineHeight: 1 }}>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 34 : 52, fontWeight: 600, letterSpacing: -1.2, color: INK, margin: 0, lineHeight: 1 }}>
                 {t.gomp_standard}
               </h2>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', borderTop: '0.5px solid rgba(28,28,26,0.12)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4,1fr)', borderTop: '0.5px solid rgba(28,28,26,0.12)' }}>
               {features.map((feat, i) => (
                 <Reveal
                   key={feat.num}
                   revealKey={`standard-${i}`}
                   delay={i * 90}
-                  style={{ padding: '48px 40px', borderRight: i === features.length - 1 ? 'none' : '0.5px solid rgba(28,28,26,0.1)' }}
+                  style={{
+                    padding: isMobile ? '32px 24px' : '48px 40px',
+                    borderRight: isMobile || i === features.length - 1 ? 'none' : '0.5px solid rgba(28,28,26,0.1)',
+                    borderBottom: isMobile && i !== features.length - 1 ? '0.5px solid rgba(28,28,26,0.1)' : 'none',
+                  }}
                 >
-                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: 64, fontWeight: 400, color: 'rgba(28,28,26,0.1)', letterSpacing: -2, lineHeight: 1, marginBottom: 24 }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 48 : 64, fontWeight: 400, color: 'rgba(28,28,26,0.1)', letterSpacing: -2, lineHeight: 1, marginBottom: isMobile ? 16 : 24 }}>
                     {feat.num}
                   </div>
                   <div style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 600, color: INK, marginBottom: 12 }}>{feat.title}</div>
@@ -727,10 +740,10 @@ export default function Home() {
         </section>
 
         {/* ---- CTA banner ---- */}
-        <section style={{ padding: '120px 60px', borderTop: '0.5px solid rgba(28,28,26,0.12)', backgroundColor: BG }}>
-          <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+        <section style={{ padding: isMobile ? '64px 24px' : '120px 60px', borderTop: '0.5px solid rgba(28,28,26,0.12)', backgroundColor: BG }}>
+          <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 40 : 80, alignItems: 'center' }}>
             <Reveal revealKey="cta-text">
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 64, fontWeight: 600, letterSpacing: -2, color: INK, margin: '0 0 20px', lineHeight: 0.95 }}>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 38 : 64, fontWeight: 600, letterSpacing: isMobile ? -1 : -2, color: INK, margin: '0 0 20px', lineHeight: 0.95 }}>
                 {t.yourbuild_line1}
                 <br />
                 <span style={{ fontStyle: 'italic', color: MAROON }}>{t.yourbuild_line2}</span>
@@ -761,7 +774,7 @@ export default function Home() {
             <Reveal
               revealKey="cta-card"
               delay={120}
-              style={{ border: '0.5px solid rgba(28,28,26,0.14)', borderRadius: 2, padding: 48, background: PANEL }}
+              style={{ border: '0.5px solid rgba(28,28,26,0.14)', borderRadius: 2, padding: isMobile ? 28 : 48, background: PANEL }}
             >
               <div
                 style={{
@@ -776,7 +789,7 @@ export default function Home() {
               >
                 {t.build_from}
               </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 56, fontWeight: 500, color: INK, letterSpacing: -2, lineHeight: 1, marginBottom: 8 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: isMobile ? 40 : 56, fontWeight: 500, color: INK, letterSpacing: -2, lineHeight: 1, marginBottom: 8 }}>
                 {fmt(1039)}
               </div>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, marginBottom: 32, fontWeight: 300 }}>{t.entry_scales}</div>
@@ -790,9 +803,9 @@ export default function Home() {
         </section>
 
         {/* ---- Footer ---- */}
-        <footer style={{ background: INK, padding: 60, borderTop: '0.5px solid rgba(28,28,26,0.3)' }}>
+        <footer style={{ background: INK, padding: isMobile ? '48px 24px' : 60, borderTop: '0.5px solid rgba(28,28,26,0.3)' }}>
           <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 40, marginBottom: 48 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr 1fr', gap: isMobile ? 32 : 40, marginBottom: isMobile ? 32 : 48 }}>
               <div>
                 <div style={{ fontFamily: 'var(--font-serif)', fontSize: 19, fontWeight: 600, fontStyle: 'italic', color: GOLD, letterSpacing: 1.5, marginBottom: 16 }}>
                   GOMP
@@ -844,8 +857,10 @@ export default function Home() {
                 borderTop: '0.5px solid rgba(245,240,230,0.1)',
                 paddingTop: 24,
                 display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                gap: isMobile ? 12 : 0,
                 justifyContent: 'space-between',
-                alignItems: 'center',
+                alignItems: isMobile ? 'flex-start' : 'center',
               }}
             >
               <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(245,240,230,0.3)', fontWeight: 300 }}>
