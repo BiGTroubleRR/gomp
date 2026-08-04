@@ -514,6 +514,39 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     align();
   }
 
+  // ---- Hover picking ----
+  // Prioritizes non-case components over the case shell itself: the case's panels are large
+  // planes that geometrically wrap every component, so without this a ray through the glass
+  // toward e.g. the GPU would report "case" (the nearer, mostly-transparent panel) instead of
+  // the part actually under the cursor.
+  const raycaster = new THREE.Raycaster();
+  const pointerNDC = new THREE.Vector2();
+
+  function pickComponentAt(clientX: number, clientY: number): CompId | null {
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointerNDC, camera);
+
+    const nonCaseIds = SLOTS.filter((id) => id !== 'case' && objects[id]?.selected && objects[id]?.mesh.visible);
+    const nonCaseMeshes = nonCaseIds.map((id) => objects[id]!.mesh);
+    const hits = raycaster.intersectObjects(nonCaseMeshes, true);
+    if (hits.length) {
+      let obj: THREE.Object3D | null = hits[0].object;
+      while (obj) {
+        const found = nonCaseIds.find((id) => objects[id]?.mesh === obj);
+        if (found) return found;
+        obj = obj.parent;
+      }
+    }
+
+    if (objects.case?.selected && objects.case.mesh.visible) {
+      const caseHits = raycaster.intersectObject(objects.case.mesh, true);
+      if (caseHits.length) return 'case';
+    }
+    return null;
+  }
+
   let running = true;
   const clock = new THREE.Clock();
   function tick() {
@@ -568,6 +601,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     updateCase,
     toggleGlass,
     triggerCompletion,
+    pickComponentAt,
     setMotion(on: boolean) {
       motionOn = on;
       ambientGroup.visible = on;

@@ -11,6 +11,7 @@ import { passmarkLookup, tierFromPassmark, TIER_COLORS, type Tier } from '@/lib/
 import { defaultComponentDb, type Category, type Component, type ComponentDb } from '@/lib/component-db-seed';
 import { createBuildScene, SLOTS, CASE_SIZES, type BuildScene, type CompId } from '@/lib/build-scene';
 import { useIsMobile } from '@/lib/use-media-query';
+import { setDustCursorVisible, isDustEnabled } from '@/lib/cursor-dust';
 
 const T = {
   en: {
@@ -111,8 +112,11 @@ export default function BuildPage() {
   const [glassHidden, setGlassHidden] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
   const [completionRunning, setCompletionRunning] = useState(false);
+  const [hoverId, setHoverId] = useState<CompId | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<BuildScene | null>(null);
 
   // Load the shared component catalog (managed by /admin) on mount.
@@ -168,6 +172,13 @@ export default function BuildPage() {
     return () => clearTimeout(timer);
   }, [selected]);
 
+  // Swaps the native cursor for the same gold dot used on nav-link hovers whenever the
+  // pointer is over a built component in the 3D view (see handleViewportPointerMove below).
+  useEffect(() => {
+    setDustCursorVisible(!!hoverId);
+    return () => setDustCursorVisible(false);
+  }, [hoverId]);
+
   const totalPrice = useMemo(() => {
     let sum = 0;
     SLOTS.forEach((id) => {
@@ -222,6 +233,19 @@ export default function BuildPage() {
     sceneRef.current?.toggleGlass(next);
   }
 
+  function handleViewportPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const id = sceneRef.current?.pickComponentAt(e.clientX, e.clientY) ?? null;
+    setHoverId(id);
+    setHoverPos({ x: e.clientX - rect.left, y: e.clientY - rect.top, w: rect.width, h: rect.height });
+  }
+
+  function handleViewportPointerLeave() {
+    setHoverId(null);
+    setHoverPos(null);
+  }
+
   function buildAll() {
     SLOTS.forEach((id, i) => {
       if (selected[id]) return;
@@ -250,6 +274,12 @@ export default function BuildPage() {
   const activeTier: Tier | undefined = activePassmark
     ? tierFromPassmark(activeId === 'gpu', activePassmark.score)
     : (activeComp?.tier as Tier | undefined);
+
+  const hoverComp = hoverId ? findComp(hoverId) : null;
+  const hoverPassmark = hoverComp ? passmarkLookup(hoverComp.name) : null;
+  const hoverTier: Tier | undefined = hoverPassmark
+    ? tierFromPassmark(hoverId === 'gpu', hoverPassmark.score)
+    : (hoverComp?.tier as Tier | undefined);
 
   return (
     <div style={{ position: 'relative', background: BG, minHeight: '100vh' }}>
@@ -348,7 +378,19 @@ export default function BuildPage() {
           </div>
 
         {/* ---- 3D viewport ---- */}
-        <div style={{ flex: isMobile ? 'none' : 1, height: isMobile ? '46vh' : undefined, minHeight: isMobile ? 320 : undefined, order: isMobile ? 0 : 1, position: 'relative' }}>
+        <div
+          ref={viewportRef}
+          onPointerMove={handleViewportPointerMove}
+          onPointerLeave={handleViewportPointerLeave}
+          style={{
+            flex: isMobile ? 'none' : 1,
+            height: isMobile ? '46vh' : undefined,
+            minHeight: isMobile ? 320 : undefined,
+            order: isMobile ? 0 : 1,
+            position: 'relative',
+            cursor: hoverId && isDustEnabled() ? 'none' : undefined,
+          }}
+        >
           <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
             <div style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(28,28,26,0.35)' }}>
@@ -363,6 +405,48 @@ export default function BuildPage() {
             >
               {glassHidden ? t.show_panel : t.hide_panel}
             </button>
+            {hoverId && hoverComp && hoverPos && !isMobile && (
+              <div
+                style={{
+                  position: 'absolute',
+                  ...(hoverPos.x > hoverPos.w / 2 ? { right: hoverPos.w - hoverPos.x + 18 } : { left: hoverPos.x + 18 }),
+                  ...(hoverPos.y > hoverPos.h / 2 ? { bottom: hoverPos.h - hoverPos.y + 18 } : { top: hoverPos.y + 18 }),
+                  minWidth: 190,
+                  maxWidth: 240,
+                  background: 'rgba(20,17,15,0.94)',
+                  backdropFilter: 'blur(6px)',
+                  border: '0.5px solid rgba(196,163,90,0.35)',
+                  borderRadius: 6,
+                  padding: '12px 14px',
+                  boxShadow: '0 16px 36px rgba(0,0,0,0.35)',
+                  zIndex: 20,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: 'rgba(245,240,230,0.55)', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                    {t.cat_names[hoverId]}
+                  </span>
+                  <TierBadge tier={hoverTier} small />
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: GOLD, fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{hoverComp.name}</div>
+                <div style={{ marginBottom: hoverPassmark ? 8 : 0 }}>
+                  {(hoverComp.specs || '').split(' · ').map((s, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(245,240,230,0.85)', marginBottom: 3 }}>
+                      <span style={{ width: 3, height: 3, borderRadius: '50%', background: GOLD, flexShrink: 0 }} /> {s}
+                    </div>
+                  ))}
+                </div>
+                {hoverPassmark && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(245,240,230,0.5)', marginBottom: 8 }}>
+                    <span>{t.passmark_score}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', color: 'rgba(245,240,230,0.9)' }}>{hoverPassmark.score.toLocaleString()}</span>
+                  </div>
+                )}
+                <div style={{ borderTop: '0.5px solid rgba(245,240,230,0.14)', paddingTop: 8, fontFamily: 'var(--font-mono)', fontSize: 14, color: '#FDFAF4', fontWeight: 500 }}>
+                  {fmt(hoverComp.price)}
+                </div>
+              </div>
+            )}
             {showComplete && (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? 16 : 0 }}>
                 <div
