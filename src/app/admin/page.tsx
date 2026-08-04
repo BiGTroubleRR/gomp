@@ -4,6 +4,7 @@ import { CSSProperties, useEffect, useState } from 'react';
 import { useSite } from '@/contexts/SiteContext';
 import { useIsMobile } from '@/lib/use-media-query';
 import TransitionLink from '@/components/TransitionLink';
+import DeviceViewToggle from '@/components/DeviceViewToggle';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
 import {
@@ -710,6 +711,7 @@ export default function AdminPage() {
               {t.view_shop}
             </TransitionLink>
           )}
+          <DeviceViewToggle dark />
           <button
             onClick={handleLogout}
             style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(245,240,230,0.7)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 2, padding: isMobile ? '6px 10px' : '6px 14px', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap' }}

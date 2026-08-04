@@ -5,6 +5,7 @@ import { ReactNode, useState } from 'react';
 import TransitionLink from '@/components/TransitionLink';
 import { useSite } from '@/contexts/SiteContext';
 import { useIsMobile } from '@/lib/use-media-query';
+import DeviceViewToggle from '@/components/DeviceViewToggle';
 
 const INK = '#1C1C1A';
 const MUTED = '#7A7469';
@@ -96,15 +97,18 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
           >
             GOMP
           </TransitionLink>
-          <button
-            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-            onClick={() => setMenuOpen((v) => !v)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end' }}
-          >
-            <span style={{ display: 'block', width: 22, height: 2, background: INK, transition: 'transform 0.25s ease', transform: menuOpen ? 'translateY(7px) rotate(45deg)' : 'none' }} />
-            <span style={{ display: 'block', width: 22, height: 2, background: INK, opacity: menuOpen ? 0 : 1, transition: 'opacity 0.2s ease' }} />
-            <span style={{ display: 'block', width: menuOpen ? 22 : 14, height: 2, background: INK, transition: 'transform 0.25s ease, width 0.25s ease', transform: menuOpen ? 'translateY(-7px) rotate(-45deg)' : 'none' }} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <DeviceViewToggle />
+            <button
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              onClick={() => setMenuOpen((v) => !v)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end' }}
+            >
+              <span style={{ display: 'block', width: 22, height: 2, background: INK, transition: 'transform 0.25s ease', transform: menuOpen ? 'translateY(7px) rotate(45deg)' : 'none' }} />
+              <span style={{ display: 'block', width: 22, height: 2, background: INK, opacity: menuOpen ? 0 : 1, transition: 'opacity 0.2s ease' }} />
+              <span style={{ display: 'block', width: menuOpen ? 22 : 14, height: 2, background: INK, transition: 'transform 0.25s ease, width 0.25s ease', transform: menuOpen ? 'translateY(-7px) rotate(-45deg)' : 'none' }} />
+            </button>
+          </div>
         </nav>
         {menuOpen && (
           <div
@@ -210,6 +214,7 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
           {lang === 'sk' ? 'Účet' : 'Account'}
         </TransitionLink>
         <LangCurrencyRow />
+        <DeviceViewToggle />
         {cta}
       </div>
     </nav>

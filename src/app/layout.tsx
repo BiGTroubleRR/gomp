@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import { Cormorant_Garamond, DM_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { SiteProvider } from '@/contexts/SiteContext';
+import { DeviceViewProvider } from '@/contexts/DeviceViewContext';
 import CursorDustMount from '@/components/CursorDustMount';
+import PhoneFrame from '@/components/PhoneFrame';
 
 const cormorant = Cormorant_Garamond({
   subsets: ['latin'],
@@ -36,8 +38,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${cormorant.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
       <body>
         <SiteProvider>
-          {children}
-          <CursorDustMount />
+          <DeviceViewProvider>
+            <PhoneFrame>{children}</PhoneFrame>
+            <CursorDustMount />
+          </DeviceViewProvider>
         </SiteProvider>
       </body>
     </html>
