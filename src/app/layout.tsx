@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Cormorant_Garamond, DM_Sans, JetBrains_Mono } from 'next/font/google';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 import { SiteProvider } from '@/contexts/SiteContext';
 import { DeviceViewProvider } from '@/contexts/DeviceViewContext';
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </DeviceViewProvider>
           </AuthProvider>
         </SiteProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
