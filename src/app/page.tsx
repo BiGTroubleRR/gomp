@@ -138,6 +138,22 @@ function BuildSpecRow({ label, value, last }: { label: string; value: string; la
   );
 }
 
+function CornerTicks({ color = GOLD, size = 18, inset = -1 }: { color?: string; size?: number; inset?: number }) {
+  const corners: CSSProperties[] = [
+    { top: inset, left: inset, borderTop: `1px solid ${color}`, borderLeft: `1px solid ${color}` },
+    { top: inset, right: inset, borderTop: `1px solid ${color}`, borderRight: `1px solid ${color}` },
+    { bottom: inset, left: inset, borderBottom: `1px solid ${color}`, borderLeft: `1px solid ${color}` },
+    { bottom: inset, right: inset, borderBottom: `1px solid ${color}`, borderRight: `1px solid ${color}` },
+  ];
+  return (
+    <>
+      {corners.map((c, i) => (
+        <div key={i} style={{ position: 'absolute', width: size, height: size, opacity: 0.5, pointerEvents: 'none', ...c }} />
+      ))}
+    </>
+  );
+}
+
 function FooterLink({
   href,
   internal,
@@ -240,6 +256,7 @@ export default function Home() {
           0%,100% { opacity:0.55; transform:scale(0.94); }
           50%     { opacity:1; transform:scale(1.04); }
         }
+        @keyframes gompFloatC { 0%,100% { transform:translate(0,0) rotate(0deg); } 50% { transform:translate(6px,-10px) rotate(6deg); } }
       `}</style>
 
       <div style={{ position: 'relative', zIndex: 2, background: BG, minHeight: '100vh' }}>
@@ -553,7 +570,30 @@ export default function Home() {
         </section>
 
         {/* ---- Stats strip ---- */}
-        <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.12)', borderBottom: '0.5px solid rgba(28,28,26,0.12)' }}>
+        <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.12)', borderBottom: '0.5px solid rgba(28,28,26,0.12)', position: 'relative' }}>
+          {!isMobile && (
+            <>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: -46,
+                  right: 100,
+                  width: 130,
+                  height: 130,
+                  border: '0.5px solid rgba(196,163,90,0.3)',
+                  borderRadius: '50%',
+                  pointerEvents: 'none',
+                  animation: 'gompRotateSlow 95s linear infinite',
+                }}
+              />
+              <div
+                style={{ position: 'absolute', top: -3, left: '25%', width: 6, height: 6, borderRadius: '50%', background: GOLD, pointerEvents: 'none', animation: 'gompPulseDot 4.2s ease-in-out infinite' }}
+              />
+              <div
+                style={{ position: 'absolute', bottom: -3, left: '75%', width: 5, height: 5, borderRadius: '50%', background: MAROON, pointerEvents: 'none', animation: 'gompPulseDot 5.2s ease-in-out infinite 1.1s' }}
+              />
+            </>
+          )}
           <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)' }}>
             {stats.map(([value, label], i) => (
               <Reveal
@@ -576,10 +616,16 @@ export default function Home() {
         </div>
 
         {/* ---- Featured Builds ---- */}
-        <section style={{ padding: isMobile ? '64px 24px' : '100px 60px' }}>
+        <section style={{ padding: isMobile ? '64px 24px' : '100px 60px', position: 'relative' }}>
           <div style={{ maxWidth: 1280, margin: '0 auto' }}>
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'flex-end', justifyContent: 'space-between', gap: isMobile ? 16 : 0, marginBottom: isMobile ? 32 : 56 }}>
-              <div>
+              <div style={{ position: 'relative' }}>
+                {!isMobile && (
+                  <div style={{ position: 'absolute', top: -34, left: -46, width: 150, height: 150, pointerEvents: 'none', zIndex: -1 }}>
+                    <div style={{ position: 'absolute', inset: 0, border: '0.5px solid rgba(110,20,35,0.2)', borderRadius: '50%', animation: 'gompRotateSlow 80s linear infinite' }} />
+                    <div style={{ position: 'absolute', inset: 24, border: '0.5px solid rgba(110,20,35,0.12)', borderRadius: '50%', animation: 'gompRotateSlowRev 60s linear infinite' }} />
+                  </div>
+                )}
                 <div
                   style={{
                     fontFamily: 'var(--font-sans)',
@@ -619,9 +665,11 @@ export default function Home() {
                 gap: 0,
                 border: '0.5px solid rgba(28,28,26,0.14)',
                 borderRadius: 2,
-                overflow: 'hidden',
+                overflow: 'visible',
+                position: 'relative',
               }}
             >
+              {!isMobile && <CornerTicks color={GOLD} size={22} inset={-8} />}
               {builds.map((build, i) => (
                 <Reveal
                   key={build.name}
@@ -696,9 +744,15 @@ export default function Home() {
         </section>
 
         {/* ---- Why GOMP / GOMP Standard ---- */}
-        <section style={{ borderTop: '0.5px solid rgba(28,28,26,0.12)', backgroundColor: PANEL }}>
+        <section style={{ borderTop: '0.5px solid rgba(28,28,26,0.12)', backgroundColor: PANEL, position: 'relative', overflow: 'hidden' }}>
           <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-            <div style={{ padding: isMobile ? '56px 24px 32px' : '80px 60px 56px' }}>
+            <div style={{ padding: isMobile ? '56px 24px 32px' : '80px 60px 56px', position: 'relative' }}>
+              {!isMobile && (
+                <div style={{ position: 'absolute', top: -30, right: 40, width: 170, height: 170, pointerEvents: 'none', zIndex: 0 }}>
+                  <div style={{ position: 'absolute', inset: 0, border: '0.5px solid rgba(196,163,90,0.28)', borderRadius: '50%', animation: 'gompRotateSlowRev 105s linear infinite' }} />
+                  <div style={{ position: 'absolute', inset: 30, border: '0.5px solid rgba(196,163,90,0.16)', borderRadius: '50%', animation: 'gompRotateSlow 70s linear infinite' }} />
+                </div>
+              )}
               <div
                 style={{
                   fontFamily: 'var(--font-sans)',
@@ -716,7 +770,13 @@ export default function Home() {
                 {t.gomp_standard}
               </h2>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4,1fr)', borderTop: '0.5px solid rgba(28,28,26,0.12)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4,1fr)', borderTop: '0.5px solid rgba(28,28,26,0.12)', position: 'relative' }}>
+              {!isMobile && (
+                <>
+                  <div style={{ position: 'absolute', top: -3, left: '50%', width: 5, height: 5, borderRadius: '50%', background: MAROON, pointerEvents: 'none', animation: 'gompPulseDot 4.8s ease-in-out infinite 0.4s' }} />
+                  <div style={{ position: 'absolute', bottom: -3, left: '25%', width: 4, height: 4, borderRadius: '50%', background: GOLD, pointerEvents: 'none', animation: 'gompPulseDot 5.6s ease-in-out infinite 0.9s' }} />
+                </>
+              )}
               {features.map((feat, i) => (
                 <Reveal
                   key={feat.num}
@@ -740,8 +800,37 @@ export default function Home() {
         </section>
 
         {/* ---- CTA banner ---- */}
-        <section style={{ padding: isMobile ? '64px 24px' : '120px 60px', borderTop: '0.5px solid rgba(28,28,26,0.12)', backgroundColor: BG }}>
-          <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 40 : 80, alignItems: 'center' }}>
+        <section style={{ padding: isMobile ? '64px 24px' : '120px 60px', borderTop: '0.5px solid rgba(28,28,26,0.12)', backgroundColor: BG, position: 'relative' }}>
+          <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 40 : 80, alignItems: 'center', position: 'relative' }}>
+            {!isMobile && (
+              <>
+                <div style={{ position: 'absolute', top: -50, left: '38%', width: 200, height: 200, pointerEvents: 'none', zIndex: 0 }}>
+                  <div style={{ position: 'absolute', inset: 0, border: '0.5px solid rgba(110,20,35,0.2)', borderRadius: '50%', animation: 'gompRotateSlow 92s linear infinite' }} />
+                </div>
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: -20,
+                    right: '46%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '9px 16px',
+                    background: 'rgba(253,250,244,0.94)',
+                    backdropFilter: 'blur(6px)',
+                    border: '0.5px solid rgba(28,28,26,0.14)',
+                    borderRadius: 30,
+                    boxShadow: '0 20px 40px -16px rgba(28,28,26,0.16)',
+                    pointerEvents: 'none',
+                    zIndex: 2,
+                    animation: 'gompFloatC 9s ease-in-out infinite',
+                  }}
+                >
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: 0.5, color: MAROON, whiteSpace: 'nowrap' }}>★ 4.9 RATED</span>
+                </div>
+                <div style={{ position: 'absolute', bottom: 30, left: '30%', width: 6, height: 6, borderRadius: '50%', background: GOLD, pointerEvents: 'none', animation: 'gompPulseDot 5.4s ease-in-out infinite 0.6s' }} />
+              </>
+            )}
             <Reveal revealKey="cta-text">
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 38 : 64, fontWeight: 600, letterSpacing: isMobile ? -1 : -2, color: INK, margin: '0 0 20px', lineHeight: 0.95 }}>
                 {t.yourbuild_line1}
@@ -774,8 +863,9 @@ export default function Home() {
             <Reveal
               revealKey="cta-card"
               delay={120}
-              style={{ border: '0.5px solid rgba(28,28,26,0.14)', borderRadius: 2, padding: isMobile ? 28 : 48, background: PANEL }}
+              style={{ border: '0.5px solid rgba(28,28,26,0.14)', borderRadius: 2, padding: isMobile ? 28 : 48, background: PANEL, position: 'relative' }}
             >
+              {!isMobile && <CornerTicks color={MAROON} size={20} inset={-9} />}
               <div
                 style={{
                   fontFamily: 'var(--font-sans)',
@@ -806,8 +896,22 @@ export default function Home() {
         <footer style={{ background: INK, padding: isMobile ? '48px 24px' : 60, borderTop: '0.5px solid rgba(28,28,26,0.3)' }}>
           <div style={{ maxWidth: 1280, margin: '0 auto' }}>
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr 1fr', gap: isMobile ? 32 : 40, marginBottom: isMobile ? 32 : 48 }}>
-              <div>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 19, fontWeight: 600, fontStyle: 'italic', color: GOLD, letterSpacing: 1.5, marginBottom: 16 }}>
+              <div style={{ position: 'relative' }}>
+                {!isMobile && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: -20,
+                      left: -20,
+                      width: 90,
+                      height: 90,
+                      background: 'radial-gradient(circle, rgba(196,163,90,0.16) 0%, transparent 70%)',
+                      pointerEvents: 'none',
+                      animation: 'gompGlowPulse 5s ease-in-out infinite',
+                    }}
+                  />
+                )}
+                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 19, fontWeight: 600, fontStyle: 'italic', color: GOLD, letterSpacing: 1.5, marginBottom: 16, position: 'relative' }}>
                   GOMP
                 </div>
                 <p style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, lineHeight: 1.75, maxWidth: 260, margin: 0, fontWeight: 300 }}>
