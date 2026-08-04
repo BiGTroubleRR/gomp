@@ -1,9 +1,12 @@
+import { clerkMiddleware } from '@clerk/nextjs/server';
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-// Keeps the Supabase auth cookie fresh on every navigation — without this, a session nearing
-// expiry can go stale between client-side navigations since those never hit the server.
-export async function proxy(request: NextRequest) {
+// Clerk owns sign-in/sign-up; this also keeps the Supabase session cookie fresh on every
+// navigation so server-side Supabase calls (still used for profiles/orders data) don't see a
+// stale session — without it, a session nearing expiry can go stale between client-side
+// navigations since those never hit the server.
+export default clerkMiddleware(async (_auth, request: NextRequest) => {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -26,8 +29,13 @@ export async function proxy(request: NextRequest) {
   await supabase.auth.getUser();
 
   return response;
-}
+});
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: [
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for Clerk's auto-proxy path
+    '/__clerk/:path*',
+    '/(api|trpc)(.*)',
+  ],
 };
