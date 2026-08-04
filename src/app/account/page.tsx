@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { useSite } from '@/contexts/SiteContext';
+import { useAuth } from '@/contexts/AuthContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
 import { useIsMobile } from '@/lib/use-media-query';
+import { createClient } from '@/lib/supabase/client';
 
 type TabId = 'orders' | 'addresses' | 'profile' | 'security';
 
@@ -49,63 +51,14 @@ type Order = {
   items: string[];
 };
 
-const ORDERS: Order[] = [
-  {
-    id: 'GOMP-X7K2-8341',
-    name_en: 'Custom Build — The Apex Predator',
-    name_sk: 'Vlastná zostava — The Apex Predator',
-    date_en: 'March 15, 2026',
-    date_sk: '15. marca 2026',
-    totalEur: 3870,
-    status_en: 'Building',
-    status_sk: 'Vo výrobe',
-    eta_en: 'Est. delivery July 8, 2026',
-    eta_sk: 'Predpokladané doručenie 8. júla 2026',
-    items: [
-      'NVIDIA RTX 5090 FE',
-      'AMD Ryzen 9 9950X',
-      'G.Skill Trident Z5 32GB DDR5',
-      'Samsung 990 Pro 2TB NVMe',
-      'NZXT Kraken 360 AIO',
-      'Corsair HX1200i ATX 3.0',
-      'Lian Li PC-O11D XL',
-    ],
-  },
-  {
-    id: 'GOMP-M3N9-2107',
-    name_en: 'Custom Build — The Marauder',
-    name_sk: 'Vlastná zostava — The Marauder',
-    date_en: 'January 8, 2026',
-    date_sk: '8. januára 2026',
-    totalEur: 2739,
-    status_en: 'Delivered',
-    status_sk: 'Doručené',
-    eta_en: 'Delivered January 21, 2026',
-    eta_sk: 'Doručené 21. januára 2026',
-    items: [
-      'NVIDIA RTX 4090 FE',
-      'Intel Core i9-14900K',
-      'Corsair Dominator 32GB DDR5',
-      'WD Black SN850X 2TB',
-      'be quiet! Pure Loop 2 FX 360',
-      'Seasonic Focus GX-1000',
-      'Fractal Design Define 7',
-    ],
-  },
-  {
-    id: 'GOMP-P5J1-4492',
-    name_en: 'Accessories Pack',
-    name_sk: 'Balík príslušenstva',
-    date_en: 'November 2, 2025',
-    date_sk: '2. novembra 2025',
-    totalEur: 286,
-    status_en: 'Delivered',
-    status_sk: 'Doručené',
-    eta_en: 'Delivered November 9, 2025',
-    eta_sk: 'Doručené 9. novembra 2025',
-    items: ['GOMP Cable Management Kit', 'Arctic MX-6 Thermal Paste 3-pack', 'GOMP Branded Mousepad XL'],
-  },
-];
+// Real orders are fetched from Supabase per signed-in user (see the `orders` state below) —
+// each DB row is mapped into this same bilingual shape so the rendering further down needed
+// no changes at all.
+const STATUS_SK: Record<OrderStatus, string> = {
+  Building: 'Vo výrobe',
+  Shipped: 'Expedované',
+  Delivered: 'Doručené',
+};
 
 // Amber/gold for in-progress, muted maroon for shipped (unused by current seed data,
 // kept for completeness), muted green for delivered — consistent with the site palette.
@@ -359,13 +312,230 @@ function TabHeader({ t, title, action, isMobile }: { t: T; title: string; action
   );
 }
 
+// Maps a Supabase `orders` row (joined with its `order_items`) into the bilingual Order
+// shape the Orders tab already renders, so that JSX needed no changes at all.
+function mapOrderRow(
+  row: {
+    order_number: string;
+    name: string;
+    status: OrderStatus;
+    total_eur: number;
+    eta: string | null;
+    created_at: string;
+    order_items: { name: string }[];
+  },
+): Order {
+  const created = new Date(row.created_at);
+  const date_en = created.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const date_sk = created.toLocaleDateString('sk-SK', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const etaDate = row.eta ? new Date(row.eta) : null;
+  const etaStr_en = etaDate ? etaDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+  const etaStr_sk = etaDate ? etaDate.toLocaleDateString('sk-SK', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+  const delivered = row.status === 'Delivered';
+
+  return {
+    id: row.order_number,
+    name_en: row.name,
+    name_sk: row.name,
+    date_en,
+    date_sk,
+    totalEur: row.total_eur,
+    status_en: row.status,
+    status_sk: STATUS_SK[row.status],
+    eta_en: etaDate ? `${delivered ? 'Delivered' : 'Est. delivery'} ${etaStr_en}` : '',
+    eta_sk: etaDate ? `${delivered ? 'Doručené' : 'Predpokladané doručenie'} ${etaStr_sk}` : '',
+    items: row.order_items.map((it) => it.name),
+  };
+}
+
+// Shown instead of the dashboard when nobody is signed in — same panel/field/button
+// primitives as the rest of the page so it doesn't look bolted on.
+function AuthGate({ isMobile }: { isMobile: boolean }) {
+  const { signIn, signUp } = useAuth();
+  const { lang } = useSite();
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const copy =
+    lang === 'sk'
+      ? {
+          title: 'Váš účet',
+          subtitleIn: 'Prihláste sa a spravujte svoje zostavy a objednávky.',
+          subtitleUp: 'Vytvorte si účet a uložte si svoje zostavy a objednávky.',
+          email: 'E-mail',
+          password: 'Heslo',
+          first: 'Meno',
+          last: 'Priezvisko',
+          signIn: 'Prihlásiť sa',
+          signUp: 'Vytvoriť účet',
+          toSignUp: 'Nemáte účet? Zaregistrujte sa',
+          toSignIn: 'Už máte účet? Prihláste sa',
+          checkEmail: 'Skontrolujte si e-mail a potvrďte registráciu, potom sa prihláste.',
+        }
+      : {
+          title: 'Your Account',
+          subtitleIn: 'Sign in to manage your builds and orders.',
+          subtitleUp: 'Create an account to save your builds and orders.',
+          email: 'Email',
+          password: 'Password',
+          first: 'First name',
+          last: 'Last name',
+          signIn: 'Sign in',
+          signUp: 'Create account',
+          toSignUp: "Don't have an account? Sign up",
+          toSignIn: 'Already have an account? Sign in',
+          checkEmail: 'Check your email to confirm your account, then sign in.',
+        };
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setNotice(null);
+    setSubmitting(true);
+    if (mode === 'signin') {
+      const { error } = await signIn(email, password);
+      if (error) setError(error);
+    } else {
+      const { error, needsEmailConfirm } = await signUp(email, password, firstName, lastName);
+      if (error) setError(error);
+      else if (needsEmailConfirm) {
+        setNotice(copy.checkEmail);
+        setMode('signin');
+      }
+    }
+    setSubmitting(false);
+  }
+
+  return (
+    <div style={{ position: 'relative', zIndex: 2, background: '#F5F0E6', minHeight: '100vh' }}>
+      <SiteNav />
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: isMobile ? '90px 20px 48px' : '100px 24px 80px',
+        }}
+      >
+        <div style={{ width: '100%', maxWidth: 400, ...panelStyle, padding: isMobile ? 28 : 40 }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600, color: '#1C1C1A', marginBottom: 6, letterSpacing: -0.4 }}>
+            {copy.title}
+          </div>
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300, marginBottom: 28 }}>
+            {mode === 'signin' ? copy.subtitleIn : copy.subtitleUp}
+          </div>
+
+          {notice && (
+            <div
+              style={{
+                padding: '10px 14px',
+                background: 'rgba(20,83,45,0.07)',
+                border: '0.5px solid rgba(20,83,45,0.2)',
+                borderRadius: 2,
+                marginBottom: 16,
+                fontFamily: 'var(--font-sans)',
+                fontSize: 12,
+                color: '#14532D',
+              }}
+            >
+              {notice}
+            </div>
+          )}
+          {error && (
+            <div
+              style={{
+                padding: '10px 14px',
+                background: 'rgba(110,20,35,0.07)',
+                border: '0.5px solid rgba(110,20,35,0.2)',
+                borderRadius: 2,
+                marginBottom: 16,
+                fontFamily: 'var(--font-sans)',
+                fontSize: 12,
+                color: '#6E1423',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {mode === 'signup' && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <Field label={copy.first} value={firstName} onChange={setFirstName} />
+                <Field label={copy.last} value={lastName} onChange={setLastName} />
+              </div>
+            )}
+            <Field label={copy.email} value={email} onChange={setEmail} type="email" />
+            <Field label={copy.password} value={password} onChange={setPassword} type="password" />
+
+            <button
+              type="submit"
+              disabled={submitting}
+              style={{
+                marginTop: 8,
+                padding: '13px 24px',
+                background: '#6E1423',
+                color: '#FDFAF4',
+                border: 'none',
+                borderRadius: 2,
+                fontFamily: 'var(--font-sans)',
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: submitting ? 'default' : 'pointer',
+                opacity: submitting ? 0.6 : 1,
+              }}
+            >
+              {mode === 'signin' ? copy.signIn : copy.signUp}
+            </button>
+          </form>
+
+          <button
+            onClick={() => {
+              setMode(mode === 'signin' ? 'signup' : 'signin');
+              setError(null);
+              setNotice(null);
+            }}
+            style={{
+              marginTop: 20,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 0,
+              fontFamily: 'var(--font-sans)',
+              fontSize: 12,
+              color: '#7A7469',
+              textDecoration: 'underline',
+              textUnderlineOffset: 3,
+            }}
+          >
+            {mode === 'signin' ? copy.toSignUp : copy.toSignIn}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Account() {
   const { lang, currency, setLang, setCurrency, fmt } = useSite();
   const t = TRANSLATIONS[lang];
   const isMobile = useIsMobile();
+  const { user, profile: authProfile, loading: authLoading, signOut, refreshProfile } = useAuth();
+  const supabase = useMemo(() => createClient(), []);
 
   const [tab, setTab] = useState<TabId>('orders');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
+
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
 
   const [addresses, setAddresses] = useState<Address[]>(DEFAULT_ADDRESSES);
   const [editingAddressIdx, setEditingAddressIdx] = useState<number | null>(null);
@@ -376,9 +546,11 @@ export default function Account() {
   const [profileDraft, setProfileDraft] = useState<Profile>(DEFAULT_PROFILE);
   const [editProfile, setEditProfile] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   const [pwdForm, setPwdForm] = useState<PwdForm>({ current: '', newPass: '', confirm: '' });
   const [passwordChanged, setPasswordChanged] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState('');
@@ -392,6 +564,43 @@ export default function Account() {
   useEffect(() => {
     if (showDeleteConfirm) deleteInputRef.current?.focus();
   }, [showDeleteConfirm]);
+
+  // Adopt the real signed-in user's profile once AuthContext has loaded it.
+  useEffect(() => {
+    if (!authProfile || !user) return;
+    const next: Profile = {
+      firstName: authProfile.first_name,
+      lastName: authProfile.last_name,
+      email: authProfile.email || user.email || '',
+      phone: authProfile.phone,
+    };
+    setProfile(next);
+    setProfileDraft(next);
+  }, [authProfile, user]);
+
+  // Fetch this user's real orders (+ their component line items) from Supabase.
+  useEffect(() => {
+    if (!user) {
+      setOrders([]);
+      setOrdersLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setOrdersLoading(true);
+    supabase
+      .from('orders')
+      .select('order_number, name, status, total_eur, eta, created_at, order_items(name)')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (cancelled) return;
+        setOrders((data ?? []).map((row) => mapOrderRow(row as never)));
+        setOrdersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, supabase]);
 
   const fullName = `${profile.firstName} ${profile.lastName}`;
   const initials = `${(profile.firstName || ' ')[0]}${(profile.lastName || ' ')[0]}`.toUpperCase();
@@ -456,19 +665,35 @@ export default function Account() {
     setProfileSaved(false);
   }
 
-  function saveProfile() {
+  async function saveProfile() {
+    if (!user) return;
+    setProfileError(null);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ first_name: profileDraft.firstName, last_name: profileDraft.lastName, phone: profileDraft.phone })
+      .eq('id', user.id);
+    if (error) {
+      setProfileError(error.message);
+      return;
+    }
+    await refreshProfile();
     setProfile(profileDraft);
     setEditProfile(false);
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 3000);
   }
 
-  function submitPassword() {
-    if (pwdForm.current && pwdForm.newPass && pwdForm.newPass === pwdForm.confirm) {
-      setPasswordChanged(true);
-      setPwdForm({ current: '', newPass: '', confirm: '' });
-      setTimeout(() => setPasswordChanged(false), 3000);
+  async function submitPassword() {
+    if (!(pwdForm.current && pwdForm.newPass && pwdForm.newPass === pwdForm.confirm)) return;
+    setPasswordError(null);
+    const { error } = await supabase.auth.updateUser({ password: pwdForm.newPass });
+    if (error) {
+      setPasswordError(error.message);
+      return;
     }
+    setPasswordChanged(true);
+    setPwdForm({ current: '', newPass: '', confirm: '' });
+    setTimeout(() => setPasswordChanged(false), 3000);
   }
 
   function openDeleteConfirm() {
@@ -481,11 +706,26 @@ export default function Account() {
     setDeleteInput('');
   }
 
+  // Actually deleting the auth.users row requires the service-role key (never exposed to the
+  // browser), so this needs a server-side admin endpoint — left as a UI-only confirmation
+  // until that endpoint exists.
   function executeDelete() {
     if (deleteReady) {
       setShowDeleteConfirm(false);
       setDeleteInput('');
     }
+  }
+
+  if (authLoading) {
+    return (
+      <div style={{ position: 'relative', zIndex: 2, background: '#F5F0E6', minHeight: '100vh' }}>
+        <SiteNav />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthGate isMobile={isMobile} />;
   }
 
   return (
@@ -597,6 +837,7 @@ export default function Account() {
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#1C1C1A', marginBottom: 18 }}>{t.member_date}</div>
               <TransitionLink
                 href="/"
+                onClick={() => signOut()}
                 style={{
                   fontFamily: 'var(--font-sans)',
                   fontSize: 12,
@@ -617,8 +858,15 @@ export default function Account() {
               {tab === 'orders' && (
                 <>
                   <TabHeader t={t} title={t.my_orders} isMobile={isMobile} />
+                  {!ordersLoading && orders.length === 0 && (
+                    <div style={{ ...panelStyle, padding: isMobile ? 24 : 32, textAlign: 'center' }}>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469' }}>
+                        {lang === 'sk' ? 'Zatiaľ nemáte žiadne objednávky.' : "You don't have any orders yet."}
+                      </span>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {ORDERS.map((order) => {
+                    {orders.map((order) => {
                       const expanded = expandedOrderId === order.id;
                       const s = STATUS_COLORS[order.status_en];
                       const name = lang === 'sk' ? order.name_sk : order.name_en;
@@ -1014,6 +1262,19 @@ export default function Account() {
                       )
                     }
                   />
+                  {profileError && (
+                    <div
+                      style={{
+                        padding: '12px 16px',
+                        background: 'rgba(110,20,35,0.07)',
+                        border: '0.5px solid rgba(110,20,35,0.2)',
+                        borderRadius: 2,
+                        marginBottom: 16,
+                      }}
+                    >
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#6E1423' }}>{profileError}</span>
+                    </div>
+                  )}
                   {profileSaved && (
                     <div
                       style={{
@@ -1163,6 +1424,19 @@ export default function Account() {
                         type="password"
                       />
                     </div>
+                    {passwordError && (
+                      <div
+                        style={{
+                          padding: '10px 14px',
+                          background: 'rgba(110,20,35,0.07)',
+                          border: '0.5px solid rgba(110,20,35,0.2)',
+                          borderRadius: 2,
+                          marginBottom: 14,
+                        }}
+                      >
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#6E1423' }}>{passwordError}</span>
+                      </div>
+                    )}
                     {passwordChanged && (
                       <div
                         style={{

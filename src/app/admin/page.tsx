@@ -680,6 +680,7 @@ export default function AdminPage() {
   return (
     <div style={{ position: 'relative', zIndex: 2, minHeight: '100vh' }}>
       <nav
+        className="gomp-nav-bar"
         style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: 54, display: 'flex', alignItems: 'center',
           padding: isMobile ? '0 14px' : '0 28px', background: '#170A0C', borderBottom: '0.5px solid rgba(255,255,255,0.06)',

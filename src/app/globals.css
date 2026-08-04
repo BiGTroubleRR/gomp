@@ -83,19 +83,19 @@ a[data-gomp-nav]:not([style*='background']):hover {
 }
 @media (prefers-reduced-motion: no-preference) {
   :active-view-transition-type(gomp-forward)::view-transition-old(root) {
-    animation: gomp-slide-out-left 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: gomp-slide-out-left 560ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
     z-index: 2;
   }
   :active-view-transition-type(gomp-forward)::view-transition-new(root) {
-    animation: gomp-fade-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: gomp-fade-in 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
     z-index: 1;
   }
   :active-view-transition-type(gomp-backward)::view-transition-old(root) {
-    animation: gomp-slide-out-right 620ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: gomp-slide-out-right 560ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
     z-index: 2;
   }
   :active-view-transition-type(gomp-backward)::view-transition-new(root) {
-    animation: gomp-fade-in 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: gomp-fade-in 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
     z-index: 1;
   }
   @keyframes gomp-slide-out-left {
@@ -122,6 +122,25 @@ a[data-gomp-nav]:not([style*='background']):hover {
   ::view-transition-new(root) {
     animation: none;
   }
+}
+
+/* ---- Persistent top nav during page transitions ----
+   The root view-transition animates two full-page screenshots (old page sliding away,
+   new page fading in). Since the fixed nav bar is baked into both screenshots at the same
+   on-screen position, it was rendering twice at once — the outgoing nav sliding off under/
+   over the incoming one fading in — which read as a double-flicker on every navigation.
+   Tagging it with its own view-transition-name pulls it out of the root screenshot entirely
+   so it just stays put, unanimated, while only the content beneath it transitions. */
+.gomp-nav-bar {
+  view-transition-name: gomp-site-nav;
+}
+::view-transition-group(gomp-site-nav) {
+  animation: none;
+}
+::view-transition-old(gomp-site-nav),
+::view-transition-new(gomp-site-nav) {
+  animation: none;
+  mix-blend-mode: normal;
 }
 
 /* ---- Checkout page: fade-up step transitions + confirmation checkmark draw-in ----

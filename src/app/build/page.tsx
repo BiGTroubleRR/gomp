@@ -111,7 +111,6 @@ export default function BuildPage() {
   const [glassHidden, setGlassHidden] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
   const [completionRunning, setCompletionRunning] = useState(false);
-  const [sidebarHidden, setSidebarHidden] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<BuildScene | null>(null);
@@ -259,19 +258,18 @@ export default function BuildPage() {
 
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: isMobile ? 'auto' : '100vh', minHeight: isMobile ? '100vh' : undefined, paddingTop: 60 }}>
         {/* ---- Sidebar ---- */}
-        {(!sidebarHidden || isMobile) && (
-          <div
-            style={{
-              width: isMobile ? '100%' : 264,
-              order: isMobile ? 2 : 0,
-              background: PANEL,
-              borderRight: isMobile ? 'none' : '0.5px solid rgba(28,28,26,0.1)',
-              borderTop: isMobile ? '0.5px solid rgba(28,28,26,0.1)' : 'none',
-              borderBottom: isMobile ? '0.5px solid rgba(28,28,26,0.1)' : 'none',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
+        <div
+          style={{
+            width: isMobile ? '100%' : 264,
+            order: isMobile ? 2 : 0,
+            background: PANEL,
+            borderRight: isMobile ? 'none' : '0.5px solid rgba(28,28,26,0.1)',
+            borderTop: isMobile ? '0.5px solid rgba(28,28,26,0.1)' : 'none',
+            borderBottom: isMobile ? '0.5px solid rgba(28,28,26,0.1)' : 'none',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
             <div style={{ padding: isMobile ? '20px 20px 10px' : '20px 20px 14px' }}>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase' }}>{t.pc_builder}</div>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#A09890', marginTop: 4 }}>{t.select_components}</div>
@@ -348,7 +346,6 @@ export default function BuildPage() {
               </button>
             </div>
           </div>
-        )}
 
         {/* ---- 3D viewport ---- */}
         <div style={{ flex: isMobile ? 'none' : 1, height: isMobile ? '46vh' : undefined, minHeight: isMobile ? 320 : undefined, order: isMobile ? 0 : 1, position: 'relative' }}>
@@ -366,14 +363,6 @@ export default function BuildPage() {
             >
               {glassHidden ? t.show_panel : t.hide_panel}
             </button>
-            {!isMobile && (
-              <button
-                onClick={() => setSidebarHidden((v) => !v)}
-                style={{ position: 'absolute', top: 16, left: 16, pointerEvents: 'all', background: 'rgba(253,250,244,0.9)', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 4, padding: '7px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: INK, cursor: 'pointer' }}
-              >
-                {sidebarHidden ? t.show_panel : t.hide_panel}
-              </button>
-            )}
             {showComplete && (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? 16 : 0 }}>
                 <div

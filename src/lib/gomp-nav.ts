@@ -1,3 +1,5 @@
+import { flushSync } from 'react-dom';
+
 // Shared nav order + direction, single source of truth for every page's transitions.
 // Mirrors gomp-nav.js's NAV_ORDER/FUNNEL_INDEX from the static site, translated to Next.js
 // route paths. Since Next.js App Router navigation never does a real cross-document load,
@@ -59,7 +61,16 @@ export function navigateWithTransition(fromPath: string, toPath: string, navigat
   const fromIdx = resolveIdx(fromPath);
   const toIdx = resolveIdx(toPath);
   const dir = fromIdx !== -1 && toIdx !== -1 ? (toIdx > fromIdx ? 'gomp-forward' : 'gomp-backward') : null;
-  const transition = doc.startViewTransition(navigate);
+  // startViewTransition captures its "new" screenshot right after this callback returns —
+  // but router.push() only *schedules* the route's re-render, it doesn't wait for it. Left
+  // alone, the browser grabs the "new" snapshot while the old page is still on screen, plays
+  // the whole slide/fade animation on that stale frame, and only then does the real page
+  // content pop in unanimated — that pop is exactly the flash/jitter this was producing.
+  // flushSync forces the router's state update (and React's commit) to finish synchronously
+  // before we return, so the snapshot the browser captures is already the real new page.
+  const transition = doc.startViewTransition(() => {
+    flushSync(navigate);
+  });
   if (dir && transition.types) {
     try {
       transition.types.add(dir);

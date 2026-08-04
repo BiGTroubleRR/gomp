@@ -34,13 +34,16 @@ export function setCurrency(currency: Currency) {
   } catch {}
 }
 
-// Same conversion/rounding/locale rules used across every original page.
+// Same conversion/rounding/locale rules used across every original page. The number and
+// currency symbol are joined with a non-breaking space, not a plain one, so the pair can
+// never wrap onto separate lines at narrow widths (a plain space let the symbol drop onto
+// its own line mid-resize, which read as the currency sign "jumping around").
 export function fmtPrice(eur: number, currency: Currency): string {
   if (currency === 'czk') {
     const czk = Math.round((eur * 24.3) / 10) * 10;
-    return czk.toLocaleString('cs-CZ') + ' Kč';
+    return czk.toLocaleString('cs-CZ') + ' Kč';
   }
-  return eur.toLocaleString('sk-SK') + ' €';
+  return eur.toLocaleString('sk-SK') + ' €';
 }
 
 export function readJSON<T>(key: string, fallback: T): T {

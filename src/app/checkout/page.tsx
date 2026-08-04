@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useSite } from '@/contexts/SiteContext';
+import { useAuth } from '@/contexts/AuthContext';
 import TransitionLink from '@/components/TransitionLink';
 import Case3DViewer, { type CompDb } from '@/components/Case3DViewer';
 import SiteNav from '@/components/SiteNav';
 import { readJSON, type Currency, type Lang } from '@/lib/gomp-storage';
 import { useIsMobile } from '@/lib/use-media-query';
+import { createClient } from '@/lib/supabase/client';
 
 type ShippingId = 'standard' | 'express' | 'overnight';
 
@@ -314,6 +316,8 @@ export default function CheckoutPage() {
   const { lang, currency, setLang, setCurrency, fmt } = useSite();
   const t = TRANSLATIONS[lang];
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+  const supabase = useMemo(() => createClient(), []);
 
   const [build, setBuild] = useState<GompBuild | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
@@ -323,6 +327,7 @@ export default function CheckoutPage() {
   const [promoApplied, setPromoApplied] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
+  const [orderError, setOrderError] = useState<string | null>(null);
   const [selectedSavedAddr, setSelectedSavedAddr] = useState<number | null>(null);
   const [form, setForm] = useState<CheckoutForm>(EMPTY_FORM);
 
@@ -388,14 +393,49 @@ export default function CheckoutPage() {
     if (form.promo.trim().toLowerCase() === 'gomp2026') setPromoApplied(true);
   }
 
-  function handlePlaceOrder() {
-    if (placing) return;
+  async function handlePlaceOrder() {
+    if (placing || !user) return;
     setPlacing(true);
+    setOrderError(null);
+
+    const orderNum = generateOrderNum(Math.floor(Math.random() * 1e9));
+    const eta = new Date();
+    eta.setDate(eta.getDate() + (shipping === 'overnight' ? 3 : shipping === 'express' ? 7 : 14));
+
+    const { data: order, error } = await supabase
+      .from('orders')
+      .insert({
+        user_id: user.id,
+        order_number: orderNum,
+        name: lang === 'sk' ? 'Vlastná zostava' : 'Custom PC Build',
+        total_eur: grandTotalEur,
+        eta: eta.toISOString(),
+      })
+      .select('id')
+      .single();
+
+    if (error || !order) {
+      setOrderError(error?.message ?? (lang === 'sk' ? 'Objednávku sa nepodarilo vytvoriť.' : 'Something went wrong placing your order.'));
+      setPlacing(false);
+      return;
+    }
+
+    if (buildItems.length) {
+      const { error: itemsError } = await supabase.from('order_items').insert(
+        buildItems.map((item) => ({ order_id: order.id, category: item.category, name: item.name, price_eur: item.priceEur })),
+      );
+      if (itemsError) {
+        setOrderError(itemsError.message);
+        setPlacing(false);
+        return;
+      }
+    }
+
     placeOrderTimeout.current = setTimeout(() => {
-      setOrderNumber(generateOrderNum(Math.floor(Math.random() * 1e9)));
+      setOrderNumber(orderNum);
       setStep(3);
       setPlacing(false);
-    }, 1800);
+    }, 1200);
   }
 
   return (
@@ -733,6 +773,37 @@ export default function CheckoutPage() {
                 <span style={{ ...sans, fontSize: 11, color: MUTED }}>{t.ssl_note}</span>
               </div>
 
+              {!user && (
+                <div
+                  style={{
+                    padding: '12px 16px',
+                    background: 'rgba(110,20,35,0.06)',
+                    border: '0.5px solid rgba(110,20,35,0.18)',
+                    borderRadius: 2,
+                    marginBottom: 16,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <span style={{ ...sans, fontSize: 12, color: MAROON }}>
+                    {lang === 'sk' ? 'Pre dokončenie objednávky sa prihláste.' : 'Sign in to place your order.'}
+                  </span>
+                  <TransitionLink
+                    href="/account"
+                    style={{ ...sans, fontSize: 12, fontWeight: 500, color: MAROON, textDecoration: 'underline', textUnderlineOffset: 2 }}
+                  >
+                    {lang === 'sk' ? 'Prihlásiť sa →' : 'Sign in →'}
+                  </TransitionLink>
+                </div>
+              )}
+              {orderError && (
+                <div style={{ padding: '12px 16px', background: 'rgba(110,20,35,0.06)', border: '0.5px solid rgba(110,20,35,0.18)', borderRadius: 2, marginBottom: 16 }}>
+                  <span style={{ ...sans, fontSize: 12, color: MAROON }}>{orderError}</span>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   onClick={() => setStep(1)}
@@ -742,7 +813,21 @@ export default function CheckoutPage() {
                 </button>
                 <button
                   onClick={handlePlaceOrder}
-                  style={{ flex: 1, padding: 15, background: MAROON, color: PANEL_BG, border: 'none', borderRadius: 2, ...sans, fontSize: 14, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3 }}
+                  disabled={!user || placing}
+                  style={{
+                    flex: 1,
+                    padding: 15,
+                    background: MAROON,
+                    color: PANEL_BG,
+                    border: 'none',
+                    borderRadius: 2,
+                    ...sans,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    cursor: !user || placing ? 'default' : 'pointer',
+                    letterSpacing: 0.3,
+                    opacity: !user ? 0.5 : 1,
+                  }}
                 >
                   {placing ? t.processing : `${t.place_order}${fmt(grandTotalEur)}`}
                 </button>

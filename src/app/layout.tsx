@@ -3,6 +3,7 @@ import { Cormorant_Garamond, DM_Sans, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { SiteProvider } from '@/contexts/SiteContext';
 import { DeviceViewProvider } from '@/contexts/DeviceViewContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 import CursorDustMount from '@/components/CursorDustMount';
 import PhoneFrame from '@/components/PhoneFrame';
 
@@ -38,10 +39,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${cormorant.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
       <body>
         <SiteProvider>
-          <DeviceViewProvider>
-            <PhoneFrame>{children}</PhoneFrame>
-            <CursorDustMount />
-          </DeviceViewProvider>
+          <AuthProvider>
+            <DeviceViewProvider>
+              <PhoneFrame>{children}</PhoneFrame>
+              <CursorDustMount />
+            </DeviceViewProvider>
+          </AuthProvider>
         </SiteProvider>
       </body>
     </html>
