@@ -6,9 +6,10 @@ import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
 import { navigateWithTransition } from '@/lib/gomp-nav';
-import { readJSON, writeJSON } from '@/lib/gomp-storage';
+import { writeJSON } from '@/lib/gomp-storage';
+import { fetchComponentDb, subscribeComponents } from '@/lib/supabase/components';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS, type Tier } from '@/lib/passmark';
-import { defaultComponentDb, type Category, type Component, type ComponentDb } from '@/lib/component-db-seed';
+import { defaultComponentDb, caseFitsFormFactor, type Category, type Component, type ComponentDb } from '@/lib/component-db-seed';
 import { createBuildScene, SLOTS, CASE_SIZES, type BuildScene, type CompId } from '@/lib/build-scene';
 import { useIsMobile } from '@/lib/use-media-query';
 import { setDustCursorVisible, isDustEnabled } from '@/lib/cursor-dust';
@@ -41,6 +42,10 @@ const T = {
     ],
     installed: (n: number) => `${n} / 8 installed`,
     ofComponents: (n: number) => `${n} of 8 components`,
+    step_of: (n: number) => `Step ${n} of 8`,
+    back: 'Back', next: 'Next', size: 'Size',
+    no_socket_match: (socket: string) => `No CPUs match the ${socket} socket of your selected motherboard — pick a different motherboard, or check Admin.`,
+    no_case_fit: (formFactor: string) => `No cases fit a ${formFactor} motherboard at this size — try a larger size, or a smaller motherboard.`,
   },
   sk: {
     nav_home: 'Domov', nav_shop: 'Obchod', nav_build: 'Zostaviť', nav_about: 'O nás', nav_account: 'Účet',
@@ -69,6 +74,10 @@ const T = {
     ],
     installed: (n: number) => `${n} / 8 nainštalovaných`,
     ofComponents: (n: number) => `${n} z 8 komponentov`,
+    step_of: (n: number) => `Krok ${n} z 8`,
+    back: 'Späť', next: 'Ďalej', size: 'Veľkosť',
+    no_socket_match: (socket: string) => `Žiadne CPU nesedí na pätici ${socket} vybranej základnej dosky — zvoľte inú dosku, alebo skontrolujte Admin.`,
+    no_case_fit: (formFactor: string) => `Žiadna skriňa tejto veľkosti neposkytne miesto pre dosku ${formFactor} — skúste väčšiu veľkosť alebo menšiu dosku.`,
   },
 } as const;
 
@@ -96,6 +105,21 @@ function TierBadge({ tier, small }: { tier?: Tier; small?: boolean }) {
   );
 }
 
+// Small monospace tag for a CPU/motherboard's socket or a motherboard's form factor — shown
+// right next to the tier badge on picker cards so compatibility is visible before you click.
+function SpecPill({ label }: { label: string }) {
+  return (
+    <div
+      style={{
+        padding: '2px 6px', borderRadius: 3, border: '1px solid rgba(28,28,26,0.2)',
+        fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 9, color: MUTED, whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
+    </div>
+  );
+}
+
 export default function BuildPage() {
   const { lang, fmt } = useSite();
   const router = useRouter();
@@ -119,6 +143,7 @@ export default function BuildPage() {
   const [selections, setSelections] = useState<Record<CompId, string>>({} as Record<CompId, string>);
   const [caseCat, setCaseCat] = useState('Mid Tower');
   const [activeId, setActiveId] = useState<CompId | null>(null);
+  const [activeStep, setActiveStep] = useState<CompId>(SLOTS[0]);
   const [ordering, setOrdering] = useState(false);
   const [glassHidden, setGlassHidden] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
@@ -130,20 +155,38 @@ export default function BuildPage() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<BuildScene | null>(null);
 
-  // Load the shared component catalog (managed by /admin) on mount.
+  // Load the shared component catalog from Supabase (managed by /admin) on mount, and keep it
+  // live: any Admin edit (insert/update/delete) broadcasts over Realtime and gets refetched
+  // here, so an already-open /build tab picks up new prices/stock without a reload. Per-slot
+  // selections are only seeded once, from that very first load — later catalog refreshes must
+  // not silently reset whatever the visitor has already picked.
+  const catalogInitializedRef = useRef(false);
   useEffect(() => {
-    const db = readJSON<ComponentDb>('gomp_components_db', defaultComponentDb());
-    setCompDb(db);
-    const initSelections = {} as Record<CompId, string>;
-    SLOTS.forEach((id) => {
-      const list = db[id] || [];
-      // The case model must match the default caseCat filter, or the dropdown (which only
-      // renders 'Mid Tower' options initially) would show a different item than what's
-      // actually stored in state/passed to the 3D scene.
-      const pick = id === 'case' ? list.find((c) => c.category === 'Mid Tower') || list[0] : list[0];
-      if (pick) initSelections[id] = pick.name;
-    });
-    setSelections(initSelections);
+    let cancelled = false;
+    async function load() {
+      const db = await fetchComponentDb();
+      if (cancelled) return;
+      setCompDb(db);
+      if (!catalogInitializedRef.current) {
+        catalogInitializedRef.current = true;
+        const initSelections = {} as Record<CompId, string>;
+        SLOTS.forEach((id) => {
+          const list = db[id] || [];
+          // The case model must match the default caseCat filter, or the picker (which only
+          // shows 'Mid Tower' options initially) would show a different item than what's
+          // actually stored in state/passed to the 3D scene.
+          const pick = id === 'case' ? list.find((c) => c.category === 'Mid Tower') || list[0] : list[0];
+          if (pick) initSelections[id] = pick.name;
+        });
+        setSelections(initSelections);
+      }
+    }
+    load();
+    const unsubscribe = subscribeComponents(load);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -238,6 +281,49 @@ export default function BuildPage() {
     }
   }
 
+  // Picking a card in the progressive picker: swap the selection, install it into the 3D
+  // scene if this category isn't already on (a re-pick of the same category just swaps the
+  // SKU, matching the old dropdown's behavior), and auto-advance to the next category —
+  // picking a category's card twice in a row deselects it instead, since the one-by-one flow
+  // has no other obvious "remove" affordance.
+  function selectCard(id: CompId, name: string) {
+    if (selected[id] && selections[id] === name) {
+      setSelected((s) => ({ ...s, [id]: false }));
+      sceneRef.current?.toggleComponent(id, false);
+      return;
+    }
+    changeSelection(id, name);
+    setActiveId(id);
+    if (!selected[id]) {
+      setSelected((s) => ({ ...s, [id]: true }));
+      sceneRef.current?.toggleComponent(id, true);
+    }
+
+    // Swapping the motherboard can strand an already-picked CPU (wrong socket) or case (too
+    // small for the new board's form factor) — drop those picks rather than silently keeping
+    // an invalid pairing installed.
+    if (id === 'mobo') {
+      const newMobo = (compDb.mobo || []).find((c) => c.name === name);
+      if (selected.cpu) {
+        const currentCpu = (compDb.cpu || []).find((c) => c.name === selections.cpu);
+        if (currentCpu?.socket && newMobo?.socket && currentCpu.socket !== newMobo.socket) {
+          setSelected((s) => ({ ...s, cpu: false }));
+          sceneRef.current?.toggleComponent('cpu', false);
+        }
+      }
+      if (selected.case) {
+        const currentCase = (compDb.case || []).find((c) => c.name === selections.case);
+        if (!caseFitsFormFactor(currentCase?.category, newMobo?.formFactor)) {
+          setSelected((s) => ({ ...s, case: false }));
+          sceneRef.current?.toggleComponent('case', false);
+        }
+      }
+    }
+
+    const idx = SLOTS.indexOf(id);
+    if (idx < SLOTS.length - 1) setActiveStep(SLOTS[idx + 1]);
+  }
+
   function toggleGlassPanel() {
     const next = !glassHidden;
     setGlassHidden(next);
@@ -262,6 +348,7 @@ export default function BuildPage() {
       if (selected[id]) return;
       setTimeout(() => toggleComponent(id), i * 90);
     });
+    setActiveStep(SLOTS[SLOTS.length - 1]);
   }
 
   function clearAll() {
@@ -271,6 +358,7 @@ export default function BuildPage() {
       setTimeout(() => toggleComponent(id), i * 80);
     });
     setShowComplete(false);
+    setActiveStep(SLOTS[0]);
   }
 
   function handleOrder() {
@@ -325,64 +413,156 @@ export default function BuildPage() {
               <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase' }}>{t.pc_builder}</div>
               <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#A09890', marginTop: 4 }}>{t.select_components}</div>
             </div>
-            <div style={{ flex: isMobile ? 'none' : 1, overflowY: isMobile ? 'visible' : 'auto', padding: '0 12px' }}>
-              {SLOTS.map((id) => {
-                const list = compDb[id] || [];
-                const isSelected = !!selected[id];
-                const comp = findComp(id);
-                return (
-                  <div
-                    key={id}
-                    onClick={(e) => {
-                      if ((e.target as HTMLElement).closest('select')) return;
-                      toggleComponent(id);
-                    }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 8px', cursor: 'pointer', borderRadius: 4 }}
-                  >
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: isSelected ? MAROON : 'transparent', border: `1.5px solid ${isSelected ? MAROON : 'rgba(28,28,26,0.25)'}`, flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: isSelected ? 600 : 400, color: isSelected ? INK : MUTED }}>{t.cat_names[id]}</div>
-                      {id === 'case' ? (
-                        <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
-                          <select
-                            value={caseCat}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => changeCaseCat(e.target.value)}
-                            style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, flex: 1, background: 'transparent', border: 'none', color: MUTED }}
-                          >
-                            {t.case_cats.map((c) => (
-                              <option key={c.id} value={c.id}>{c.label}</option>
-                            ))}
-                          </select>
-                        </div>
-                      ) : null}
-                      <select
-                        value={selections[id] || ''}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => changeSelection(id, e.target.value)}
-                        style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, width: '100%', background: 'transparent', border: 'none', color: MUTED, marginTop: 2 }}
-                      >
-                        {list.length === 0 && <option value="">{t.none_add_admin}</option>}
-                        {list
-                          .filter((c) => id !== 'case' || c.category === caseCat)
-                          .map((c) => (
-                            <option key={c.id} value={c.name}>{c.name}</option>
-                          ))}
-                      </select>
-                    </div>
-                    <TierBadge tier={comp?.tier as Tier} small />
-                    <div
+            <div style={{ flex: isMobile ? 'none' : 1, overflowY: isMobile ? 'visible' : 'auto', padding: '0 20px 16px' }}>
+              {/* ---- Step pills — free-jump between categories, green/checked once picked ---- */}
+              <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, letterSpacing: 1, marginBottom: 8 }}>
+                {t.step_of(SLOTS.indexOf(activeStep) + 1)}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+                {SLOTS.map((id) => {
+                  const done = !!selected[id];
+                  const isActive = id === activeStep;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setActiveStep(id)}
                       style={{
-                        width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: isSelected ? MAROON : 'transparent', border: `1px solid ${isSelected ? MAROON : 'rgba(28,28,26,0.3)'}`,
-                        color: isSelected ? '#FDFAF4' : MUTED, fontSize: 10, fontWeight: 700,
+                        ...textPop,
+                        display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20,
+                        border: `1px solid ${isActive ? MAROON : done ? 'rgba(110,20,35,0.4)' : 'rgba(28,28,26,0.2)'}`,
+                        background: isActive ? MAROON : done ? 'rgba(110,20,35,0.08)' : 'transparent',
+                        color: isActive ? '#FDFAF4' : done ? MAROON : MUTED,
+                        fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: isActive ? 600 : 500, cursor: 'pointer',
                       }}
                     >
-                      {isSelected ? '✓' : '+'}
+                      {done && !isActive && <span style={{ fontSize: 9 }}>✓</span>}
+                      {t.cat_names[id]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* ---- Active category ---- */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 20, color: INK }}>{t.cat_names[activeStep]}</div>
+                <p style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginTop: 4, lineHeight: 1.4 }}>{t.cat_desc[activeStep]}</p>
+              </div>
+
+              {activeStep === 'case' && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  {t.case_cats.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => changeCaseCat(c.id)}
+                      style={{
+                        ...textPop, padding: '4px 9px', borderRadius: 4,
+                        border: `1px solid ${caseCat === c.id ? MAROON : 'rgba(28,28,26,0.2)'}`,
+                        background: caseCat === c.id ? 'rgba(110,20,35,0.08)' : 'transparent',
+                        color: caseCat === c.id ? MAROON : MUTED,
+                        fontFamily: 'var(--font-mono)', fontSize: 9, cursor: 'pointer',
+                      }}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* ---- Product cards for the active category only ----
+                  CPU is filtered to the selected motherboard's socket (once one is picked),
+                  and Case is filtered to sizes that actually fit the selected motherboard's
+                  form factor — a case can host a smaller board than it's rated for, never a
+                  bigger one. Both stay unfiltered until a motherboard is chosen. */}
+              {(() => {
+                const selectedMobo = selected.mobo ? (compDb.mobo || []).find((c) => c.name === selections.mobo) : undefined;
+                let list = (compDb[activeStep] || []);
+                if (activeStep === 'case') {
+                  list = list.filter((c) => c.category === caseCat);
+                  if (selectedMobo?.formFactor) {
+                    list = list.filter((c) => caseFitsFormFactor(c.category, selectedMobo.formFactor));
+                  }
+                } else if (activeStep === 'cpu' && selectedMobo?.socket) {
+                  list = list.filter((c) => c.socket === selectedMobo.socket);
+                }
+                if (list.length === 0) {
+                  const reason =
+                    activeStep === 'cpu' && selectedMobo?.socket
+                      ? t.no_socket_match(selectedMobo.socket)
+                      : activeStep === 'case' && selectedMobo?.formFactor
+                        ? t.no_case_fit(selectedMobo.formFactor)
+                        : t.none_add_admin;
+                  return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', padding: '12px 0' }}>{reason}</div>;
+                }
+                return list.map((c) => {
+                  const isThisSelected = selected[activeStep] && selections[activeStep] === c.name;
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() => selectCard(activeStep, c.name)}
+                      style={{
+                        border: `1.5px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.12)'}`,
+                        background: isThisSelected ? 'rgba(110,20,35,0.06)' : 'transparent',
+                        borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: isThisSelected ? MAROON : INK }}>{c.name}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                          {c.formFactor && <SpecPill label={c.formFactor} />}
+                          {c.socket && <SpecPill label={c.socket} />}
+                          <TierBadge tier={c.tier} small />
+                        </div>
+                      </div>
+                      <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {c.specs}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                        <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
+                        <div
+                          style={{
+                            width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: isThisSelected ? MAROON : 'transparent', border: `1px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.3)'}`,
+                            color: isThisSelected ? '#FDFAF4' : MUTED, fontSize: 10, fontWeight: 700,
+                          }}
+                        >
+                          {isThisSelected ? '✓' : '+'}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
+
+              {/* ---- Back / Next ---- */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button
+                  onClick={() => { const i = SLOTS.indexOf(activeStep); if (i > 0) setActiveStep(SLOTS[i - 1]); }}
+                  disabled={SLOTS.indexOf(activeStep) === 0}
+                  style={{
+                    ...textPop, flex: 1, padding: '9px', background: 'transparent',
+                    color: SLOTS.indexOf(activeStep) === 0 ? '#c9c2b4' : MUTED,
+                    border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3,
+                    fontFamily: 'var(--font-sans)', fontSize: 11,
+                    cursor: SLOTS.indexOf(activeStep) === 0 ? 'default' : 'pointer',
+                  }}
+                >
+                  ← {t.back}
+                </button>
+                <button
+                  onClick={() => { const i = SLOTS.indexOf(activeStep); if (i < SLOTS.length - 1) setActiveStep(SLOTS[i + 1]); }}
+                  disabled={SLOTS.indexOf(activeStep) === SLOTS.length - 1}
+                  style={{
+                    ...textPop, flex: 1, padding: '9px',
+                    background: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? 'transparent' : MAROON,
+                    color: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? '#c9c2b4' : '#FDFAF4',
+                    border: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? '0.5px solid rgba(28,28,26,0.2)' : 'none',
+                    borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600,
+                    cursor: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? 'default' : 'pointer',
+                  }}
+                >
+                  {t.next} →
+                </button>
+              </div>
             </div>
             <div style={{ padding: 16, borderTop: '0.5px solid rgba(28,28,26,0.1)' }}>
               <button onClick={buildAll} style={{ width: '100%', padding: '11px', background: MAROON, color: '#FDFAF4', border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>

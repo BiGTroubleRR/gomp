@@ -6,6 +6,7 @@ import { useIsMobile } from '@/lib/use-media-query';
 import TransitionLink from '@/components/TransitionLink';
 import DeviceViewToggle from '@/components/DeviceViewToggle';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
+import { fetchComponentDb, subscribeComponents, insertComponent, updateComponentRow, deleteComponentRow } from '@/lib/supabase/components';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
 import {
   defaultComponentDb,
@@ -314,20 +315,6 @@ function computeNextBuildId(builds: Build[]): number {
   return builds.reduce((m, b) => Math.max(m, b.id || 0), 0) + 1;
 }
 
-// Independent from the build-id counter (unlike the original, which shared one counter for
-// both numeric build ids and 'u'-prefixed component ids — a latent collision risk this
-// avoids). Derived from the highest existing 'uN' id so re-loading never collides.
-function computeNextCompId(db: ComponentDb): number {
-  let max = 0;
-  (Object.keys(db) as Category[]).forEach((cat) => {
-    (db[cat] || []).forEach((c) => {
-      const m = /^u(\d+)$/.exec(c.id);
-      if (m) max = Math.max(max, parseInt(m[1], 10));
-    });
-  });
-  return max + 1;
-}
-
 const LABEL_STYLE: CSSProperties = {
   fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469',
   letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6,
@@ -391,7 +378,6 @@ export default function AdminPage() {
 
   const [saveMsg, setSaveMsg] = useState('');
   const [nextBuildId, setNextBuildId] = useState(1);
-  const [nextCompId, setNextCompId] = useState(1);
 
   const [margin, setMarginState] = useState<Margin>(defaultMargin());
   const [marginValueInput, setMarginValueInput] = useState('0');
@@ -408,23 +394,36 @@ export default function AdminPage() {
     }
   }, []);
 
-  // Load + migrate the shared DB once authed (fresh login or restored session).
+  // Load the build list from localStorage (unchanged) and the component catalog from
+  // Supabase, once authed. The catalog stays live via Realtime — if this same catalog is
+  // being edited from another tab or another admin, this view converges instead of going
+  // stale. `migrateComponentDb` recomputes each item's tier/passmark against the current
+  // passmark.ts table for display; it's deliberately NOT written back automatically — only an
+  // explicit Save persists anything, so opening this page never silently mutates shared data.
   useEffect(() => {
     if (!authed) return;
     const storedMargin = readJSON<Margin>('gomp_margin', defaultMargin());
     const hadBuilds = typeof window !== 'undefined' && localStorage.getItem('gomp_builds_db') != null;
     const loadedBuilds = readJSON<Build[]>('gomp_builds_db', defaultBuilds());
     if (!hadBuilds) writeJSON('gomp_builds_db', loadedBuilds);
-    const rawCompDb = readJSON<ComponentDb>('gomp_components_db', defaultComponentDb());
-    const migrated = migrateComponentDb(rawCompDb, storedMargin);
-    writeJSON('gomp_components_db', migrated);
 
     setMarginState(storedMargin);
     setMarginValueInput(String(storedMargin.value));
     setBuilds(loadedBuilds);
-    setCompDb(migrated);
     setNextBuildId(computeNextBuildId(loadedBuilds));
-    setNextCompId(computeNextCompId(migrated));
+
+    let cancelled = false;
+    async function loadCatalog() {
+      const rawCompDb = await fetchComponentDb();
+      if (cancelled) return;
+      setCompDb(migrateComponentDb(rawCompDb, storedMargin));
+    }
+    loadCatalog();
+    const unsubscribe = subscribeComponents(loadCatalog);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [authed]);
 
   // ---- auth ----
@@ -476,7 +475,6 @@ export default function AdminPage() {
     };
     const newBuilds = editId !== null ? builds.map((b) => (b.id === editId ? build : b)) : [...builds, build];
     writeJSON('gomp_builds_db', newBuilds);
-    writeJSON('gomp_components_db', compDb);
     const wasEditing = editId !== null;
     setBuilds(newBuilds);
     setShowForm(false);
@@ -491,38 +489,47 @@ export default function AdminPage() {
     if (!window.confirm(`Delete "${b ? b.name : ''}"?`)) return;
     const newBuilds = builds.filter((x) => x.id !== id);
     writeJSON('gomp_builds_db', newBuilds);
-    writeJSON('gomp_components_db', compDb);
     setBuilds(newBuilds);
   }
 
   function toggleVisible(id: number) {
     const newBuilds = builds.map((b) => (b.id === id ? { ...b, visible: !b.visible } : b));
     writeJSON('gomp_builds_db', newBuilds);
-    writeJSON('gomp_components_db', compDb);
     setBuilds(newBuilds);
   }
 
   // ---- margin ----
 
-  function updateMargin(patch: Partial<Margin>) {
+  // Only components with a manual market price actually change on a margin edit — push just
+  // those back to Supabase (rather than the whole catalog) so everyone else's /build reflects
+  // the new pricing too, without a wasted write per unaffected row.
+  async function updateMargin(patch: Partial<Margin>) {
     const newMargin = { ...margin, ...patch };
     writeJSON('gomp_margin', newMargin);
     const newCompDb = recomputeMarginPrices(compDb, newMargin);
-    writeJSON('gomp_builds_db', builds);
-    writeJSON('gomp_components_db', newCompDb);
     setMarginState(newMargin);
     setCompDb(newCompDb);
+    const updates: Promise<unknown>[] = [];
+    (Object.keys(newCompDb) as Category[]).forEach((cat) => {
+      newCompDb[cat].forEach((c, i) => {
+        const before = compDb[cat]?.[i];
+        if (before && before.id === c.id && before.price !== c.price) {
+          updates.push(updateComponentRow(c.id, cat, c));
+        }
+      });
+    });
+    await Promise.all(updates);
   }
 
   // ---- components CRUD ----
 
-  function addComponent() {
+  async function addComponent() {
     if (!compForm.name.trim()) return;
     const marketPrice = compForm.marketPrice !== '' ? parseFloat(compForm.marketPrice) : null;
     const derived = marketPrice != null ? computePrice(marketPrice, margin) : null;
     const tier: Tier = compForm.passmark ? tierFromPassmark(compCat === 'gpu', compForm.passmark) : compForm.tier;
     const comp: Component = {
-      id: 'u' + nextCompId,
+      id: '', // placeholder — Supabase assigns the real id on insert
       name: compForm.name.trim(),
       price: derived != null ? derived : parseFloat(compForm.price) || 0,
       marketPrice,
@@ -531,19 +538,18 @@ export default function AdminPage() {
       ...(compForm.passmark ? { passmark: compForm.passmark, passmarkUrl: compForm.passmarkUrl || '' } : {}),
       ...(compCat === 'case' ? { category: compForm.category || 'Mid Tower' } : {}),
     };
-    const newCompDb: ComponentDb = { ...compDb, [compCat]: [...(compDb[compCat] || []), comp] };
-    writeJSON('gomp_builds_db', builds);
-    writeJSON('gomp_components_db', newCompDb);
-    setCompDb(newCompDb);
+    const sortOrder = (compDb[compCat] || []).length;
+    const saved = await insertComponent(compCat, comp, sortOrder);
+    setCompDb((db) => ({ ...db, [compCat]: [...(db[compCat] || []), saved] }));
     setCompForm(initialCompForm());
-    setNextCompId(nextCompId + 1);
   }
 
-  function updateComponent() {
+  async function updateComponent() {
     if (!editCompId || !compForm.name.trim()) return;
     const marketPrice = compForm.marketPrice !== '' ? parseFloat(compForm.marketPrice) : null;
     const derived = marketPrice != null ? computePrice(marketPrice, margin) : null;
     const tier: Tier = compForm.passmark ? tierFromPassmark(compCat === 'gpu', compForm.passmark) : compForm.tier;
+    const existing = (compDb[compCat] || []).find((c) => c.id === editCompId);
     const updated: Component = {
       id: editCompId,
       name: compForm.name.trim(),
@@ -553,20 +559,21 @@ export default function AdminPage() {
       tier,
       ...(compForm.passmark ? { passmark: compForm.passmark, passmarkUrl: compForm.passmarkUrl || '' } : {}),
       ...(compCat === 'case' ? { category: compForm.category || 'Mid Tower' } : {}),
+      // socket/formFactor have no edit fields in this form yet — carry the existing values
+      // forward so an otherwise-unrelated edit can't silently strip a CPU/motherboard's
+      // socket or form-factor compatibility data.
+      ...(existing?.socket ? { socket: existing.socket } : {}),
+      ...(existing?.formFactor ? { formFactor: existing.formFactor } : {}),
     };
-    const newCompDb: ComponentDb = { ...compDb, [compCat]: (compDb[compCat] || []).map((c) => (c.id === editCompId ? updated : c)) };
-    writeJSON('gomp_builds_db', builds);
-    writeJSON('gomp_components_db', newCompDb);
-    setCompDb(newCompDb);
+    const saved = await updateComponentRow(editCompId, compCat, updated);
+    setCompDb((db) => ({ ...db, [compCat]: (db[compCat] || []).map((c) => (c.id === editCompId ? saved : c)) }));
     setEditCompId(null);
     setCompForm(initialCompForm());
   }
 
-  function deleteComponent(cat: Category, id: string) {
-    const newCompDb: ComponentDb = { ...compDb, [cat]: (compDb[cat] || []).filter((c) => c.id !== id) };
-    writeJSON('gomp_builds_db', builds);
-    writeJSON('gomp_components_db', newCompDb);
-    setCompDb(newCompDb);
+  async function deleteComponent(cat: Category, id: string) {
+    await deleteComponentRow(id);
+    setCompDb((db) => ({ ...db, [cat]: (db[cat] || []).filter((c) => c.id !== id) }));
   }
 
   function openEditComp(cat: Category, id: string) {

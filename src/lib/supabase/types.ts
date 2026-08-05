@@ -110,6 +110,55 @@ export type Database = {
           },
         ];
       };
+      components: {
+        Row: {
+          id: string;
+          category: string;
+          name: string;
+          price: number;
+          specs: string;
+          tier: string;
+          passmark: number | null;
+          passmark_url: string | null;
+          market_price: number | null;
+          case_size: string | null;
+          socket: string | null;
+          form_factor: string | null;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          category: string;
+          name: string;
+          price?: number;
+          specs?: string;
+          tier?: string;
+          passmark?: number | null;
+          passmark_url?: string | null;
+          market_price?: number | null;
+          case_size?: string | null;
+          socket?: string | null;
+          form_factor?: string | null;
+          sort_order?: number;
+        };
+        Update: {
+          category?: string;
+          name?: string;
+          price?: number;
+          specs?: string;
+          tier?: string;
+          passmark?: number | null;
+          passmark_url?: string | null;
+          market_price?: number | null;
+          case_size?: string | null;
+          socket?: string | null;
+          form_factor?: string | null;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
