@@ -161,3 +161,13 @@ export function burstDust(e: MouseEvent, targetEl: HTMLElement, done: () => void
 export function isDustEnabled() {
   return enabled;
 }
+
+// Imperative show/hide for the same gold dot, for hover targets that aren't plain DOM anchors
+// (e.g. a canvas where "hovering a component" is resolved via raycasting, not native :hover) —
+// the dot's position is already kept in sync by the global mousemove listener above, so this
+// only needs to toggle visibility.
+export function setDustCursorVisible(visible: boolean) {
+  initCursorDust();
+  if (!dot || !enabled) return;
+  dot.style.display = visible ? 'block' : 'none';
+}

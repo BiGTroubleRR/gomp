@@ -296,7 +296,7 @@ function EntryOverlay() {
         background: 'radial-gradient(circle at 50% 45%, #8E2A3A 0%, #6E1423 55%, #4A0E1A 100%)',
         pointerEvents: 'none',
         overflow: 'hidden',
-        animation: 'gompOverlayOut 0.9s 0.1s cubic-bezier(.16,1,.3,1) forwards',
+        animation: 'gompOverlayOut 0.45s 0.05s cubic-bezier(.16,1,.3,1) forwards',
       }}
     >
       <div style={{ position: 'absolute', top: '50%', left: '50%', width: 640, height: 640, margin: '-320px 0 0 -320px', border: '0.5px solid rgba(196,163,90,0.22)', borderRadius: '50%', animation: 'gompRotateSlow 8s linear infinite' }} />
