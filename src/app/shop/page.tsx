@@ -129,6 +129,8 @@ const TRANSLATIONS = {
     need_specific_desc:
       'Use the 3D PC Builder to configure every component to your exact specification. Watch it come together in real time.',
     open_3d: 'Open 3D Builder →',
+    footer_terms: 'Terms & Conditions',
+    footer_privacy: 'Privacy Policy',
     footer_disclaimer:
       'Prices are shown for guidance only, converted at approximate market rates (1 € ≈ 24.30 Kč, reference Jul 2026). Final price confirmed at checkout.',
     filter_all: 'All',
@@ -158,6 +160,8 @@ const TRANSLATIONS = {
     need_specific_desc:
       'Použite 3D konfigurátor a nastavte každý komponent presne podľa vašich požiadaviek. Sledujte, ako sa zostava skladá v reálnom čase.',
     open_3d: 'Otvoriť 3D konfigurátor →',
+    footer_terms: 'Obchodné podmienky',
+    footer_privacy: 'Ochrana osobných údajov',
     footer_disclaimer:
       'Ceny slúžia len na orientáciu, prepočítané približným trhovým kurzom (1 € ≈ 24,30 Kč, referenčný júl 2026). Konečná cena bude potvrdená pri objednávke.',
     filter_all: 'Všetky',
@@ -550,6 +554,18 @@ export default function Shop() {
                 style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}
               >
                 {t.nav_about}
+              </TransitionLink>
+              <TransitionLink
+                href="/terms"
+                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}
+              >
+                {t.footer_terms}
+              </TransitionLink>
+              <TransitionLink
+                href="/privacy"
+                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}
+              >
+                {t.footer_privacy}
               </TransitionLink>
             </div>
             <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(245,240,230,0.3)', fontWeight: 300 }}>
