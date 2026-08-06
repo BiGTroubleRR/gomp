@@ -218,6 +218,26 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Server-only request counter (see supabase/schema.sql) — no RLS policy,
+      // so only the service-role client ever touches this table.
+      rate_limit_hits: {
+        Row: {
+          key: string;
+          window_start: string;
+          count: number;
+        };
+        Insert: {
+          key: string;
+          window_start?: string;
+          count?: number;
+        };
+        Update: {
+          key?: string;
+          window_start?: string;
+          count?: number;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
