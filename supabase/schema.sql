@@ -255,11 +255,15 @@ create table if not exists public.checkout_intents (
 
 alter table public.checkout_intents enable row level security;
 
--- Public may submit, but NOT read back — hence insert-only, and the client must
--- not chain .select() onto its insert (that would be a read and would fail).
+-- Submission goes through src/app/api/checkout/route.ts, NOT a direct anon
+-- insert: the anon key has no insert policy on this table. That route rate
+-- limits by IP and recomputes parts_total_eur/shipping_eur/assembly_eur/
+-- discount_eur/total_eur from the authoritative `components` catalog before
+-- inserting with the service-role key (bypasses RLS). Do not add a public
+-- insert policy back here — that was a known, since-closed gap where a client
+-- could submit any price it wanted for a real build, with no rate limit on
+-- top of it.
 drop policy if exists "checkout_intents_insert_public" on public.checkout_intents;
-create policy "checkout_intents_insert_public" on public.checkout_intents
-  for insert with check (true);
 
 -- A signed-in visitor may see their own submissions; anonymous rows
 -- (user_id is null) stay unreadable to everyone via the anon key.
@@ -269,3 +273,20 @@ create policy "checkout_intents_select_own" on public.checkout_intents
 
 create index if not exists checkout_intents_created_at_idx
   on public.checkout_intents (created_at desc);
+
+-- ---------------------------------------------------------------------------
+-- rate_limit_hits — generic per-key request counter for public endpoints.
+--
+-- Used today by src/app/api/checkout/route.ts to throttle checkout
+-- submissions per IP (key = 'checkout:<ip>'); any other public write route
+-- can reuse it the same way with its own key prefix. Server-only: no RLS
+-- policy is defined, so only the service-role key (which bypasses RLS) can
+-- read or write it — there is nothing here for the anon key to see or touch.
+-- ---------------------------------------------------------------------------
+create table if not exists public.rate_limit_hits (
+  key text primary key,
+  window_start timestamptz not null default now(),
+  count integer not null default 0
+);
+
+alter table public.rate_limit_hits enable row level security;

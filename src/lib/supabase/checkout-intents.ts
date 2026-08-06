@@ -30,12 +30,7 @@
 // money on its own).
 'use client';
 
-import { createClient } from './client';
-import type { Database } from './types';
-
 export type PaymentMethod = 'card' | 'google_pay' | 'apple_pay';
-
-type CheckoutIntentInsert = Database['public']['Tables']['checkout_intents']['Insert'];
 
 export type CheckoutIntentInput = {
   userId: string | null;
@@ -61,34 +56,21 @@ export type CheckoutIntentInput = {
   contactConsent: boolean;
 };
 
+// Posts to /api/checkout rather than inserting into Supabase directly: the
+// anon key has no insert policy on checkout_intents anymore (see
+// supabase/schema.sql). That route rate-limits by IP and recomputes the price
+// fields from the authoritative catalog before inserting with the
+// service-role key — the partsTotalEur/shippingEur/assemblyEur/discountEur/
+// totalEur below are sent along only so the route can fall back to them for
+// line items it can't find in the live catalog (e.g. the /checkout page's
+// static demo fallback); they are not trusted as the final price.
 export async function submitCheckoutIntent(input: CheckoutIntentInput): Promise<{ error: string | null }> {
-  const supabase = createClient();
-  const row: CheckoutIntentInsert = {
-    user_id: input.userId,
-    first_name: input.firstName.trim(),
-    last_name: input.lastName.trim(),
-    email: input.email.trim(),
-    phone: input.phone.trim(),
-    address: input.address.trim(),
-    city: input.city.trim(),
-    region: input.region.trim(),
-    zip: input.zip.trim(),
-    payment_method: input.paymentMethod,
-    shipping_method: input.shippingMethod,
-    parts_total_eur: input.partsTotalEur,
-    shipping_eur: input.shippingEur,
-    assembly_eur: input.assemblyEur,
-    discount_eur: input.discountEur,
-    total_eur: input.totalEur,
-    promo_code: input.promoCode.trim(),
-    build_items: input.buildItems.map((i) => ({ category: i.category, name: i.name, price_eur: i.priceEur })),
-    display_currency: input.displayCurrency,
-    lang: input.lang,
-    contact_consent: input.contactConsent,
-  };
-
-  // No .select() chained on purpose: the table's RLS grants insert but not read
-  // to the anon key, so asking for the row back would fail the whole call.
-  const { error } = await supabase.from('checkout_intents').insert(row);
-  return { error: error ? error.message : null };
+  const res = await fetch('/api/checkout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  const body = await res.json().catch(() => ({}) as { error?: string });
+  if (!res.ok) return { error: body.error ?? `Request failed (${res.status}).` };
+  return { error: null };
 }
