@@ -187,3 +187,85 @@ begin
     alter publication supabase_realtime add table public.components;
   end if;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- checkout_intents — demand signal from /checkout.
+--
+-- This is deliberately NOT a payment table. The checkout flow takes no money:
+-- a visitor picks how they *would* like to pay (card / Google Pay / Apple Pay)
+-- and we record that intent plus their contact + delivery details, so we can
+-- measure whether there's real interest before wiring up a payment provider.
+--
+-- NO CARD DATA IS STORED HERE, BY DESIGN. There is deliberately no column for
+-- a card number, expiry, CVV, or any equivalent. Handling raw card data would
+-- put this project in PCI DSS scope; when payments go live, the card details
+-- must go straight to a payment provider (Stripe/Adyen/GoPay/Comgate) via
+-- their own hosted fields or redirect, and only that provider's opaque
+-- reference (e.g. a PaymentIntent id) should ever land in this database. If
+-- you later add a `payment_reference text` column, that is the right shape —
+-- never the card itself.
+--
+-- RLS shape differs from `components` on purpose: this table holds personal
+-- data (name, email, phone, address), so it is WRITE-ONLY to the public.
+-- Anyone may insert their own intent (that's the whole point — no signup wall
+-- in front of a demand test), but nobody can read the table with the anon key.
+-- Read the submissions in the Supabase dashboard's Table Editor, or add a
+-- policy keyed on a real admin identity once /admin has actual auth.
+-- ---------------------------------------------------------------------------
+create table if not exists public.checkout_intents (
+  id uuid primary key default gen_random_uuid(),
+  -- Nullable: an intent from a signed-out visitor is still a valid signal.
+  user_id uuid references auth.users (id) on delete set null,
+
+  -- contact
+  first_name text not null default '',
+  last_name text not null default '',
+  email text not null,
+  phone text not null default '',
+
+  -- delivery
+  address text not null default '',
+  city text not null default '',
+  region text not null default '',
+  zip text not null default '',
+
+  -- what they'd have paid with, and how they'd have received it
+  payment_method text not null check (payment_method in ('card', 'google_pay', 'apple_pay')),
+  shipping_method text not null default 'standard' check (shipping_method in ('standard', 'express', 'overnight')),
+
+  -- price snapshot, in EUR (the site's base currency) at submission time, so a
+  -- later catalog price change doesn't rewrite history on an old intent
+  parts_total_eur numeric(10, 2) not null default 0,
+  shipping_eur numeric(10, 2) not null default 0,
+  assembly_eur numeric(10, 2) not null default 0,
+  discount_eur numeric(10, 2) not null default 0,
+  total_eur numeric(10, 2) not null default 0,
+  promo_code text not null default '',
+
+  -- the configured build itself: [{ category, name, price_eur }, ...]
+  build_items jsonb not null default '[]'::jsonb,
+
+  -- provenance + consent
+  display_currency text not null default 'EUR',
+  lang text not null default 'en',
+  contact_consent boolean not null default false,
+  status text not null default 'new' check (status in ('new', 'contacted', 'converted', 'archived')),
+  created_at timestamptz not null default now()
+);
+
+alter table public.checkout_intents enable row level security;
+
+-- Public may submit, but NOT read back — hence insert-only, and the client must
+-- not chain .select() onto its insert (that would be a read and would fail).
+drop policy if exists "checkout_intents_insert_public" on public.checkout_intents;
+create policy "checkout_intents_insert_public" on public.checkout_intents
+  for insert with check (true);
+
+-- A signed-in visitor may see their own submissions; anonymous rows
+-- (user_id is null) stay unreadable to everyone via the anon key.
+drop policy if exists "checkout_intents_select_own" on public.checkout_intents;
+create policy "checkout_intents_select_own" on public.checkout_intents
+  for select using (auth.uid() is not null and auth.uid() = user_id);
+
+create index if not exists checkout_intents_created_at_idx
+  on public.checkout_intents (created_at desc);

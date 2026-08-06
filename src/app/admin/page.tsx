@@ -1,11 +1,13 @@
 'use client';
 
-import { CSSProperties, useEffect, useState } from 'react';
+import { CSSProperties, useCallback, useEffect, useState } from 'react';
 import { useSite } from '@/contexts/SiteContext';
 import { useIsMobile } from '@/lib/use-media-query';
 import TransitionLink from '@/components/TransitionLink';
 import DeviceViewToggle from '@/components/DeviceViewToggle';
+import { useUser, SignInButton, UserButton } from '@clerk/nextjs';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
+import { fetchIntents, updateIntentStatus, type CheckoutIntent, type IntentStatus } from '@/lib/admin-intents';
 import { fetchComponentDb, subscribeComponents, insertComponent, updateComponentRow, deleteComponentRow } from '@/lib/supabase/components';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
 import {
@@ -169,8 +171,8 @@ const SUGGESTIONS: Record<Category, Suggestion[]> = {
 // ---------------------------------------------------------------------------
 
 type Translations = {
-  admin_panel: string; sign_in_desc: string; password: string; wrong_password: string; sign_in: string;
-  default_password: string; admin_crumb: string; view_shop: string; log_out: string;
+  admin_panel: string; sign_in: string;
+  admin_crumb: string; view_shop: string;
   manage: string; builds_tab: string; components_tab: string;
   database: string; builds_listed: string; components_word: string;
   pc_builds: string; add_build: string;
@@ -193,13 +195,25 @@ type Translations = {
   select_prefix: string; select_suffix: string;
   listings: (n: number) => string;
   price_auto_note: (mp: number, m: number) => string;
+  // Clerk-based admin gate
+  checking_access: string; sign_in_clerk_desc: string; not_admin_desc: string;
+  not_admin_hint: string; switch_account: string;
+  // Order requests tab
+  requests_tab: string; order_requests: string; refresh: string; loading: string;
+  no_requests: string; setup_needed: string; error_word: string; no_name: string;
+  contact_word: string; deliver_to_word: string; totals_word: string; meta_word: string;
+  parts_word: string; shipping_word: string; assembly_word: string; discount_word: string;
+  total_word: string; consent_word: string; signed_in_word: string; build_word: string;
+  set_status: string;
+  status_labels: Record<IntentStatus, string>;
+  method_labels: Record<'card' | 'google_pay' | 'apple_pay', string>;
+  requests_count: (total: number, fresh: number) => string;
 };
 
 const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
   en: {
-    admin_panel: 'Admin Panel', sign_in_desc: 'Sign in to manage builds and components.',
-    password: 'Password', wrong_password: 'Incorrect password. Try again.', sign_in: 'Sign In →',
-    default_password: 'Default password:', admin_crumb: 'Admin', view_shop: 'View Shop ↗', log_out: 'Log out',
+    admin_panel: 'Admin Panel', sign_in: 'Sign In →',
+    admin_crumb: 'Admin', view_shop: 'View Shop ↗',
     manage: 'Manage', builds_tab: 'Builds', components_tab: 'Components',
     database: 'Database', builds_listed: 'Builds listed', components_word: 'Components',
     pc_builds: 'PC Builds', add_build: '+ Add Build',
@@ -224,11 +238,25 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     select_prefix: '— Select ', select_suffix: ' —',
     listings: (n) => `${n} listings · changes save to localStorage and sync to Shop`,
     price_auto_note: (mp, m) => `Auto: €${mp} market + margin = €${m} sell price`,
+    checking_access: 'Checking access…',
+    sign_in_clerk_desc: 'Sign in with your GOMP account. Admin access is granted per account.',
+    not_admin_desc: 'You are signed in, but this account does not have admin access.',
+    not_admin_hint: 'To grant access: in the Clerk dashboard open this user and set Public metadata to {"role":"admin"} — or add the email to ADMIN_EMAILS.',
+    switch_account: 'Switch account',
+    requests_tab: 'Requests', order_requests: 'Order Requests', refresh: 'Refresh', loading: 'Loading…',
+    no_requests: 'No order requests yet. They appear here as soon as someone submits one at checkout.',
+    setup_needed: 'Setup needed', error_word: 'Error', no_name: '(no name given)',
+    contact_word: 'Contact', deliver_to_word: 'Deliver to', totals_word: 'Totals', meta_word: 'Details',
+    parts_word: 'Parts', shipping_word: 'Shipping', assembly_word: 'Assembly', discount_word: 'Discount',
+    total_word: 'Total', consent_word: 'Contact consent', signed_in_word: 'Submitted while signed in',
+    build_word: 'Configured build', set_status: 'Set status',
+    status_labels: { new: 'New', contacted: 'Contacted', converted: 'Converted', archived: 'Archived' },
+    method_labels: { card: 'Card', google_pay: 'Google Pay', apple_pay: 'Apple Pay' },
+    requests_count: (total, fresh) => `${total} total · ${fresh} new`,
   },
   sk: {
-    admin_panel: 'Admin panel', sign_in_desc: 'Prihláste sa a správajte zostavy a komponenty.',
-    password: 'Heslo', wrong_password: 'Nesprávne heslo. Skúste znova.', sign_in: 'Prihlásiť sa →',
-    default_password: 'Predvolené heslo:', admin_crumb: 'Admin', view_shop: 'Zobraziť obchod ↗', log_out: 'Odhlásiť sa',
+    admin_panel: 'Admin panel', sign_in: 'Prihlásiť sa →',
+    admin_crumb: 'Admin', view_shop: 'Zobraziť obchod ↗',
     manage: 'Správa', builds_tab: 'Zostavy', components_tab: 'Komponenty',
     database: 'Databáza', builds_listed: 'Uvedených zostáv', components_word: 'Komponenty',
     pc_builds: 'Zostavy PC', add_build: '+ Pridať zostavu',
@@ -253,6 +281,21 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     select_prefix: '— Vybrať ', select_suffix: ' —',
     listings: (n) => `${n} položiek · zmeny sa ukladajú do localStorage a synchronizujú s obchodom`,
     price_auto_note: (mp, m) => `Auto: €${mp} trh + marža = €${m} predajná cena`,
+    checking_access: 'Kontrolujeme prístup…',
+    sign_in_clerk_desc: 'Prihláste sa svojím GOMP účtom. Prístup do administrácie sa udeľuje jednotlivým účtom.',
+    not_admin_desc: 'Ste prihlásený, ale tento účet nemá prístup do administrácie.',
+    not_admin_hint: 'Udelenie prístupu: v Clerk dashboarde otvorte tohto používateľa a do Public metadata uložte {"role":"admin"} — alebo pridajte e-mail do ADMIN_EMAILS.',
+    switch_account: 'Prepnúť účet',
+    requests_tab: 'Žiadosti', order_requests: 'Žiadosti o objednávku', refresh: 'Obnoviť', loading: 'Načítava sa…',
+    no_requests: 'Zatiaľ žiadne žiadosti. Zobrazia sa tu hneď, ako niekto odošle objednávku v pokladni.',
+    setup_needed: 'Potrebné nastavenie', error_word: 'Chyba', no_name: '(bez mena)',
+    contact_word: 'Kontakt', deliver_to_word: 'Doručiť na', totals_word: 'Sumy', meta_word: 'Podrobnosti',
+    parts_word: 'Komponenty', shipping_word: 'Doprava', assembly_word: 'Montáž', discount_word: 'Zľava',
+    total_word: 'Spolu', consent_word: 'Súhlas s kontaktom', signed_in_word: 'Odoslané prihláseným používateľom',
+    build_word: 'Zostava', set_status: 'Nastaviť stav',
+    status_labels: { new: 'Nová', contacted: 'Kontaktovaný', converted: 'Premenená', archived: 'Archivovaná' },
+    method_labels: { card: 'Karta', google_pay: 'Google Pay', apple_pay: 'Apple Pay' },
+    requests_count: (total, fresh) => `${total} celkovo · ${fresh} nových`,
   },
 };
 
@@ -325,6 +368,23 @@ const INPUT_STYLE: CSSProperties = {
   fontSize: 13, background: '#F5F0E6', color: '#1C1C1A', fontFamily: 'var(--font-sans)',
 };
 
+// Order-request detail panel: small caps label over a plain value block.
+const ADMIN_LABEL: CSSProperties = {
+  fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: '#A09890',
+  letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 5,
+};
+
+const ADMIN_VALUE: CSSProperties = {
+  fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1C1C1A', lineHeight: 1.7,
+};
+
+const STATUS_COLORS: Record<IntentStatus, { bg: string; text: string; border: string }> = {
+  new: { bg: '#FFF0EE', text: '#8B2020', border: 'rgba(204,51,51,0.3)' },
+  contacted: { bg: '#E8F0FF', text: '#1A3080', border: 'rgba(51,102,204,0.3)' },
+  converted: { bg: '#E8FFF0', text: '#1A5030', border: 'rgba(51,153,102,0.35)' },
+  archived: { bg: '#F2F2F6', text: '#505060', border: 'rgba(144,144,160,0.35)' },
+};
+
 function tierBadge(tier: Tier | undefined, palette: Record<Tier, { bg: string; text: string; border: string }>) {
   return palette[tier || 'D'] || palette.D;
 }
@@ -360,11 +420,26 @@ export default function AdminPage() {
   const { lang, currency, setLang, setCurrency, fmt } = useSite();
   const isMobile = useIsMobile();
 
-  const [authed, setAuthed] = useState(false);
-  const [pwInput, setPwInput] = useState('');
-  const [pwError, setPwError] = useState(false);
+  // Admin access is decided server-side (Clerk identity + role) via
+  // /api/admin/session. This client state only drives what the UI shows —
+  // every admin data endpoint re-checks on the server, so a tampered client
+  // can't read or write anything it shouldn't.
+  const { isLoaded: clerkLoaded, isSignedIn } = useUser();
+  // Only the server's answer is stored; the rest is derived, so a signed-out
+  // visitor resolves to 'no' without an extra render pass.
+  const [serverSaysAdmin, setServerSaysAdmin] = useState<boolean | null>(null);
+  const adminState: 'checking' | 'yes' | 'no' = !clerkLoaded
+    ? 'checking'
+    : !isSignedIn
+      ? 'no'
+      : serverSaysAdmin === null
+        ? 'checking'
+        : serverSaysAdmin
+          ? 'yes'
+          : 'no';
+  const authed = adminState === 'yes';
 
-  const [tab, setTab] = useState<'builds' | 'components'>('builds');
+  const [tab, setTab] = useState<'builds' | 'components' | 'requests'>('requests');
   const [builds, setBuilds] = useState<Build[]>([]);
   const [compDb, setCompDb] = useState<ComponentDb>(defaultComponentDb());
 
@@ -384,15 +459,33 @@ export default function AdminPage() {
 
   const [nameDropdownOpen, setNameDropdownOpen] = useState(false);
 
+  const [intents, setIntents] = useState<CheckoutIntent[]>([]);
+  const [intentsLoading, setIntentsLoading] = useState(false);
+  const [intentsError, setIntentsError] = useState<string | null>(null);
+  const [needsServiceKey, setNeedsServiceKey] = useState(false);
+  const [expandedIntent, setExpandedIntent] = useState<string | null>(null);
+
   const t = TRANSLATIONS[lang];
   const catLabels = CAT_LABELS[lang];
 
-  // Restore session on refresh (client-only, avoids SSR mismatch).
+  // Ask the server whether this Clerk user is an admin. Re-runs when the Clerk
+  // session settles or changes (sign-in / sign-out / switch user).
   useEffect(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('gomp_admin_auth') === '1') {
-      setAuthed(true);
-    }
-  }, []);
+    if (!clerkLoaded || !isSignedIn) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/session', { cache: 'no-store' });
+        const body = (await res.json()) as { isAdmin?: boolean };
+        if (!cancelled) setServerSaysAdmin(!!body.isAdmin);
+      } catch {
+        if (!cancelled) setServerSaysAdmin(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [clerkLoaded, isSignedIn]);
 
   // Load the build list from localStorage (unchanged) and the component catalog from
   // Supabase, once authed. The catalog stays live via Realtime — if this same catalog is
@@ -426,23 +519,35 @@ export default function AdminPage() {
     };
   }, [authed]);
 
-  // ---- auth ----
+  // ---- order requests (checkout_intents) ----
 
-  function handleLogin() {
-    if (pwInput === 'gomp2026') {
-      sessionStorage.setItem('gomp_admin_auth', '1');
-      setPwError(false);
-      setAuthed(true);
+  const loadIntents = useCallback(async () => {
+    setIntentsLoading(true);
+    const res = await fetchIntents();
+    if (res.ok) {
+      setIntents(res.intents);
+      setIntentsError(null);
+      setNeedsServiceKey(false);
     } else {
-      setPwError(true);
+      setIntentsError(res.error);
+      setNeedsServiceKey(!!res.needsServiceRoleKey);
     }
-  }
+    setIntentsLoading(false);
+  }, []);
 
-  function handleLogout() {
-    sessionStorage.removeItem('gomp_admin_auth');
-    setAuthed(false);
-    setPwInput('');
-    setPwError(false);
+  useEffect(() => {
+    if (authed) loadIntents();
+  }, [authed, loadIntents]);
+
+  async function changeIntentStatus(id: string, status: IntentStatus) {
+    // Optimistic: reflect immediately, roll back if the server refuses.
+    const previous = intents;
+    setIntents((list) => list.map((i) => (i.id === id ? { ...i, status } : i)));
+    const { error } = await updateIntentStatus(id, status);
+    if (error) {
+      setIntents(previous);
+      setIntentsError(error);
+    }
   }
 
   // ---- builds CRUD ----
@@ -620,12 +725,14 @@ export default function AdminPage() {
   const priceAutoNote = hasManualMarketPrice ? t.price_auto_note(mpParsed, computePrice(mpParsed, margin) ?? 0) : '';
 
   const totalComps = (Object.values(compDb) as Component[][]).reduce((sum, arr) => sum + (arr ? arr.length : 0), 0);
+  const newIntentCount = intents.filter((i) => i.status === 'new').length;
 
   // ---------------------------------------------------------------------------
   // Login screen
   // ---------------------------------------------------------------------------
 
   if (!authed) {
+    const checking = adminState === 'checking' || !clerkLoaded;
     return (
       <div
         style={{
@@ -641,35 +748,39 @@ export default function AdminPage() {
           <div style={{ fontFamily: 'var(--font-sans)', fontSize: 26, fontWeight: 600, color: '#1C1C1A', marginBottom: 6, letterSpacing: -0.5 }}>
             {t.admin_panel}
           </div>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', marginBottom: 40, fontWeight: 300 }}>
-            {t.sign_in_desc}
-          </div>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>
-            {t.password}
-          </div>
-          <input
-            type="password"
-            value={pwInput}
-            onChange={(e) => setPwInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleLogin(); }}
-            placeholder="••••••••"
-            autoFocus
-            style={{ width: '100%', padding: '11px 14px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 14, background: '#F5F0E6', color: '#1C1C1A', marginBottom: 10 }}
-          />
-          {pwError && (
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#CC3333', marginBottom: 10, padding: '8px 12px', background: '#FFF0EE', borderRadius: 2, border: '0.5px solid rgba(204,51,51,0.25)' }}>
-              {t.wrong_password}
+
+          {checking ? (
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300, marginTop: 18 }}>
+              {t.checking_access}
             </div>
+          ) : !isSignedIn ? (
+            <>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', marginBottom: 32, fontWeight: 300, lineHeight: 1.6 }}>
+                {t.sign_in_clerk_desc}
+              </div>
+              <SignInButton mode="modal">
+                <button
+                  style={{ width: '100%', background: '#6E1423', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3, fontFamily: 'var(--font-sans)' }}
+                >
+                  {t.sign_in}
+                </button>
+              </SignInButton>
+            </>
+          ) : (
+            <>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', marginBottom: 16, fontWeight: 300, lineHeight: 1.6 }}>
+                {t.not_admin_desc}
+              </div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#8A6D2F', background: 'rgba(196,163,90,0.12)', border: '0.5px solid rgba(196,163,90,0.5)', borderRadius: 2, padding: '10px 12px', lineHeight: 1.6, marginBottom: 20 }}>
+                {t.not_admin_hint}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <UserButton />
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469' }}>{t.switch_account}</span>
+              </div>
+            </>
           )}
-          <button
-            onClick={handleLogin}
-            style={{ width: '100%', background: '#6E1423', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3, marginTop: 4, fontFamily: 'var(--font-sans)' }}
-          >
-            {t.sign_in}
-          </button>
-          <div style={{ marginTop: 20, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#B0A898' }}>
-            {t.default_password} <span style={{ fontFamily: 'var(--font-mono)', background: '#F0EBE1', padding: '2px 7px', borderRadius: 2 }}>gomp2026</span>
-          </div>
+
           <div style={{ marginTop: 24, paddingTop: 16, borderTop: '0.5px solid rgba(28,28,26,0.1)', display: 'flex', gap: 6, justifyContent: 'center' }}>
             <button onClick={() => setLang('en')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 6px', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'en' ? '#6E1423' : '#7A7469' }}>EN</button>
             <span style={{ color: 'rgba(28,28,26,0.25)' }}>/</span>
@@ -720,12 +831,7 @@ export default function AdminPage() {
             </TransitionLink>
           )}
           <DeviceViewToggle dark />
-          <button
-            onClick={handleLogout}
-            style={{ background: 'rgba(255,255,255,0.06)', color: 'rgba(245,240,230,0.7)', border: '0.5px solid rgba(255,255,255,0.1)', borderRadius: 2, padding: isMobile ? '6px 10px' : '6px 14px', fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap' }}
-          >
-            {t.log_out}
-          </button>
+          <UserButton />
         </div>
       </nav>
 
@@ -747,6 +853,30 @@ export default function AdminPage() {
             </div>
           )}
           <div style={{ display: 'flex', flexDirection: isMobile ? 'row' : 'column' }}>
+            <button
+              onClick={() => setTab('requests')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'space-between', gap: 10,
+                width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
+                background: tab === 'requests' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                border: 'none',
+                borderLeft: isMobile ? 'none' : `2px solid ${tab === 'requests' ? '#4A90D9' : 'transparent'}`,
+                borderBottom: isMobile ? `2px solid ${tab === 'requests' ? '#4A90D9' : 'transparent'}` : 'none',
+                color: tab === 'requests' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'requests' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              }}
+            >
+              <span>{t.requests_tab}</span>
+              {newIntentCount > 0 && (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, background: '#6E1423', color: '#FDFAF4',
+                    borderRadius: 10, padding: '2px 7px', lineHeight: 1.4,
+                  }}
+                >
+                  {newIntentCount}
+                </span>
+              )}
+            </button>
             <button
               onClick={() => setTab('builds')}
               style={{
@@ -791,6 +921,143 @@ export default function AdminPage() {
 
         {/* Main */}
         <div style={{ flex: 1, background: '#F2EDE3', overflowY: 'auto', minHeight: 'calc(100vh - 54px)' }}>
+          {tab === 'requests' && (
+            <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.order_requests}</h1>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300 }}>{t.requests_count(intents.length, newIntentCount)}</div>
+                </div>
+                <button
+                  onClick={loadIntents}
+                  disabled={intentsLoading}
+                  style={{ background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, padding: '8px 16px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', cursor: intentsLoading ? 'default' : 'pointer' }}
+                >
+                  {intentsLoading ? t.loading : t.refresh}
+                </button>
+              </div>
+
+              {intentsError && (
+                <div style={{ background: needsServiceKey ? 'rgba(196,163,90,0.12)' : '#FFF0EE', border: `0.5px solid ${needsServiceKey ? 'rgba(196,163,90,0.5)' : 'rgba(204,51,51,0.25)'}`, borderRadius: 2, padding: '14px 16px', marginBottom: 20 }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: needsServiceKey ? '#8A6D2F' : '#CC3333', marginBottom: 4 }}>
+                    {needsServiceKey ? t.setup_needed : t.error_word}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: needsServiceKey ? '#6B5526' : '#8B2020', lineHeight: 1.6 }}>{intentsError}</div>
+                </div>
+              )}
+
+              {!intentsError && intents.length === 0 && !intentsLoading && (
+                <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 2, padding: '40px 24px', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#7A7469', fontWeight: 300 }}>{t.no_requests}</div>
+                </div>
+              )}
+
+              {intents.map((it) => {
+                const open = expandedIntent === it.id;
+                const badge = STATUS_COLORS[it.status];
+                return (
+                  <div key={it.id} style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 2, marginBottom: 10, overflow: 'hidden' }}>
+                    <div
+                      onClick={() => setExpandedIntent(open ? null : it.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isMobile ? '14px 14px' : '16px 20px', cursor: 'pointer', flexWrap: 'wrap' }}
+                    >
+                      <div style={{ flex: 1, minWidth: 180 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: '#1C1C1A' }}>
+                            {[it.first_name, it.last_name].filter(Boolean).join(' ') || t.no_name}
+                          </span>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', background: badge.bg, color: badge.text, border: `0.5px solid ${badge.border}`, borderRadius: 2, padding: '2px 6px' }}>
+                            {t.status_labels[it.status]}
+                          </span>
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', marginTop: 3 }}>{it.email}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 15, color: '#1C1C1A' }}>{fmt(Number(it.total_eur))}</div>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890', marginTop: 2 }}>
+                          {t.method_labels[it.payment_method]} · {new Date(it.created_at).toLocaleDateString(lang === 'sk' ? 'sk-SK' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                      </div>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#A09890', width: 12, textAlign: 'center' }}>{open ? '−' : '+'}</span>
+                    </div>
+
+                    {open && (
+                      <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.08)', padding: isMobile ? '14px' : '18px 20px', background: '#F8F4EA' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 18, marginBottom: 18 }}>
+                          <div>
+                            <div style={ADMIN_LABEL}>{t.contact_word}</div>
+                            <div style={ADMIN_VALUE}>
+                              {it.email}
+                              {it.phone ? <><br />{it.phone}</> : null}
+                            </div>
+                            <div style={{ ...ADMIN_LABEL, marginTop: 14 }}>{t.deliver_to_word}</div>
+                            <div style={ADMIN_VALUE}>
+                              {it.address || '—'}
+                              <br />
+                              {[it.city, it.region, it.zip].filter(Boolean).join(', ')}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={ADMIN_LABEL}>{t.totals_word}</div>
+                            <div style={ADMIN_VALUE}>
+                              {t.parts_word}: {fmt(Number(it.parts_total_eur))}
+                              <br />
+                              {t.shipping_word}: {fmt(Number(it.shipping_eur))} · {t.assembly_word}: {fmt(Number(it.assembly_eur))}
+                              {Number(it.discount_eur) > 0 ? <><br />{t.discount_word}: −{fmt(Number(it.discount_eur))} {it.promo_code ? `(${it.promo_code})` : ''}</> : null}
+                              <br />
+                              <strong>{t.total_word}: {fmt(Number(it.total_eur))}</strong>
+                            </div>
+                            <div style={{ ...ADMIN_LABEL, marginTop: 14 }}>{t.meta_word}</div>
+                            <div style={ADMIN_VALUE}>
+                              {t.shipping_word}: {it.shipping_method} · {it.lang.toUpperCase()} · {it.display_currency}
+                              <br />
+                              {t.consent_word}: {it.contact_consent ? '✓' : '—'}
+                              {it.user_id ? <><br />{t.signed_in_word}</> : null}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={ADMIN_LABEL}>{t.build_word}</div>
+                        <div style={{ marginBottom: 18 }}>
+                          {it.build_items.length === 0 && <div style={ADMIN_VALUE}>—</div>}
+                          {it.build_items.map((bi, idx) => (
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '5px 0', borderBottom: '0.5px solid rgba(28,28,26,0.06)' }}>
+                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', minWidth: 90 }}>{bi.category}</span>
+                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1C1C1A', flex: 1 }}>{bi.name}</span>
+                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#1C1C1A' }}>{fmt(Number(bi.price_eur))}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div style={ADMIN_LABEL}>{t.set_status}</div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {(['new', 'contacted', 'converted', 'archived'] as IntentStatus[]).map((s) => {
+                            const active = it.status === s;
+                            return (
+                              <button
+                                key={s}
+                                onClick={() => changeIntentStatus(it.id, s)}
+                                style={{
+                                  background: active ? '#6E1423' : 'transparent',
+                                  color: active ? '#FDFAF4' : '#7A7469',
+                                  border: `0.5px solid ${active ? '#6E1423' : 'rgba(28,28,26,0.2)'}`,
+                                  borderRadius: 2, padding: '6px 12px', fontFamily: 'var(--font-sans)', fontSize: 11,
+                                  cursor: active ? 'default' : 'pointer',
+                                }}
+                              >
+                                {t.status_labels[s]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {tab === 'builds' && (
             <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>

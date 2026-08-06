@@ -159,6 +159,65 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Demand-signal rows from /checkout. Intentionally has no card-data
+      // fields — see the table comment in supabase/schema.sql.
+      checkout_intents: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          first_name: string;
+          last_name: string;
+          email: string;
+          phone: string;
+          address: string;
+          city: string;
+          region: string;
+          zip: string;
+          payment_method: 'card' | 'google_pay' | 'apple_pay';
+          shipping_method: 'standard' | 'express' | 'overnight';
+          parts_total_eur: number;
+          shipping_eur: number;
+          assembly_eur: number;
+          discount_eur: number;
+          total_eur: number;
+          promo_code: string;
+          build_items: { category: string; name: string; price_eur: number }[];
+          display_currency: string;
+          lang: string;
+          contact_consent: boolean;
+          status: 'new' | 'contacted' | 'converted' | 'archived';
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          first_name?: string;
+          last_name?: string;
+          email: string;
+          phone?: string;
+          address?: string;
+          city?: string;
+          region?: string;
+          zip?: string;
+          payment_method: 'card' | 'google_pay' | 'apple_pay';
+          shipping_method?: 'standard' | 'express' | 'overnight';
+          parts_total_eur?: number;
+          shipping_eur?: number;
+          assembly_eur?: number;
+          discount_eur?: number;
+          total_eur?: number;
+          promo_code?: string;
+          build_items?: { category: string; name: string; price_eur: number }[];
+          display_currency?: string;
+          lang?: string;
+          contact_consent?: boolean;
+          status?: 'new' | 'contacted' | 'converted' | 'archived';
+        };
+        Update: {
+          status?: 'new' | 'contacted' | 'converted' | 'archived';
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
