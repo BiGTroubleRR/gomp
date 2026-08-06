@@ -311,7 +311,7 @@ function EntryOverlay() {
         background: overlayBg,
         pointerEvents: 'none',
         overflow: 'hidden',
-        animation: 'gompOverlayOut 0.9s 0.1s cubic-bezier(.16,1,.3,1) forwards',
+        animation: 'gompOverlayOut 0.45s 0.05s cubic-bezier(.16,1,.3,1) forwards',
       }}
     >
       <EmberRings />
@@ -348,7 +348,7 @@ function ExitOverlay({ label }: { label: string }) {
           textTransform: 'uppercase',
           position: 'relative',
           zIndex: 1,
-          animation: 'gompCompleteFadeIn 0.7s 0.15s cubic-bezier(0.16,1,0.3,1) both',
+          animation: 'gompCompleteFadeIn 0.35s 0.05s cubic-bezier(0.16,1,0.3,1) both',
         }}
       >
         {label}
@@ -472,7 +472,7 @@ export default function BenchmarksPage() {
     setExiting(true);
     setTimeout(() => {
       navigateWithTransition(pathname, '/checkout', () => router.push('/checkout'));
-    }, 600);
+    }, 300);
   }
 
   function renderCard(b: Benchmark) {

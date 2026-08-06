@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { ReactNode, useState } from 'react';
+import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs';
 import TransitionLink from '@/components/TransitionLink';
 import { useSite } from '@/contexts/SiteContext';
 import { useIsMobile, useMediaQuery } from '@/lib/use-media-query';
@@ -56,6 +57,58 @@ function LangCurrencyRow({ stacked }: { stacked?: boolean }) {
         </button>
       </div>
     </div>
+  );
+}
+
+// Clerk-backed sign-in/sign-up/account controls — separate from the existing "Account" link
+// (which still points at the Supabase-backed /account page) until the two auth paths are
+// unified. Kept as its own component since both nav variants need the same signed-in/
+// signed-out pair.
+function ClerkAuthControls({ stacked }: { stacked?: boolean }) {
+  const { lang } = useSite();
+  const fontSize = stacked ? 16 : 13;
+  return (
+    <>
+      <Show when="signed-out">
+        <div style={{ display: 'flex', alignItems: 'center', gap: stacked ? 18 : 14 }}>
+          <SignInButton mode="modal">
+            <button
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                fontFamily: 'var(--font-sans)',
+                fontSize,
+                color: MUTED,
+              }}
+            >
+              {lang === 'sk' ? 'Prihlásiť sa' : 'Sign In'}
+            </button>
+          </SignInButton>
+          <SignUpButton mode="modal">
+            <button
+              style={{
+                background: MAROON,
+                color: '#FDFAF4',
+                border: 'none',
+                cursor: 'pointer',
+                padding: stacked ? '10px 18px' : '7px 16px',
+                borderRadius: 2,
+                fontFamily: 'var(--font-sans)',
+                fontSize,
+                fontWeight: 500,
+              }}
+            >
+              {lang === 'sk' ? 'Zaregistrovať sa' : 'Sign Up'}
+            </button>
+          </SignUpButton>
+        </div>
+      </Show>
+      <Show when="signed-in">
+        <UserButton />
+      </Show>
+    </>
   );
 }
 
@@ -157,6 +210,9 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
               </TransitionLink>
             </div>
             <div style={{ marginTop: 40, paddingTop: 28, borderTop: '0.5px solid rgba(28,28,26,0.14)' }}>
+              <ClerkAuthControls stacked />
+            </div>
+            <div style={{ marginTop: 28 }}>
               <LangCurrencyRow />
             </div>
             {cta && (
@@ -223,6 +279,7 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
         >
           {lang === 'sk' ? 'Účet' : 'Account'}
         </TransitionLink>
+        <ClerkAuthControls />
         <LangCurrencyRow />
         <DeviceViewToggle />
         {cta}

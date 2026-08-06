@@ -5,6 +5,7 @@ import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import Reveal from '@/components/Reveal';
 import SiteNav from '@/components/SiteNav';
+import SiteFooter from '@/components/SiteFooter';
 import { useIsMobile } from '@/lib/use-media-query';
 
 const translations = {
@@ -42,20 +43,6 @@ const translations = {
     watermark_line1: 'Build',
     watermark_line2: 'your',
     watermark_line3: 'Legend.',
-    footer_blurb: 'Hand-built gaming PCs configured to your exact specifications. Built by gamers, for gamers.',
-    footer_products: 'Products',
-    footer_prebuilt: 'Prebuilt PCs',
-    footer_custom: 'Custom Builder',
-    footer_company: 'Company',
-    footer_aboutus: 'About Us',
-    footer_careers: 'Careers',
-    footer_support: 'Support',
-    footer_warranty: 'Warranty',
-    footer_contact: 'Contact',
-    footer_rights: 'All rights reserved.',
-    footer_madein: 'Hand-built in Prague, CZ',
-    footer_disclaimer:
-      'Prices are shown for guidance only, converted at approximate market rates (1 € ≈ 24.30 Kč, reference Jul 2026). Final price confirmed at checkout.',
   },
   sk: {
     nav_home: 'Domov',
@@ -91,20 +78,6 @@ const translations = {
     watermark_line1: 'Postav si',
     watermark_line2: 'svoju',
     watermark_line3: 'Legendu.',
-    footer_blurb: 'Ručne stavané herné počítače presne podľa vašich požiadaviek. Staviame ich hráči pre hráčov.',
-    footer_products: 'Produkty',
-    footer_prebuilt: 'Hotové zostavy',
-    footer_custom: 'Vlastná konfigurácia',
-    footer_company: 'Spoločnosť',
-    footer_aboutus: 'O nás',
-    footer_careers: 'Kariéra',
-    footer_support: 'Podpora',
-    footer_warranty: 'Záruka',
-    footer_contact: 'Kontakt',
-    footer_rights: 'Všetky práva vyhradené.',
-    footer_madein: 'Ručne vyrábané v Prahe, ČR',
-    footer_disclaimer:
-      'Ceny slúžia len na orientáciu, prepočítané približným trhovým kurzom (1 € ≈ 24,30 Kč, referenčný júl 2026). Konečná cena bude potvrdená pri objednávke.',
   },
 } as const;
 
@@ -153,7 +126,6 @@ const team = [
 ] as const;
 
 const MAROON = '#6E1423';
-const GOLD = '#C4A35A';
 const INK = '#1C1C1A';
 const MUTED = '#7A7469';
 const PAGE_BG = '#F5F0E6';
@@ -517,123 +489,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer style={{ background: INK, padding: isMobile ? 24 : 60, borderTop: '0.5px solid rgba(28,28,26,0.3)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr 1fr 1fr',
-              gap: isMobile ? 32 : 40,
-              marginBottom: isMobile ? 32 : 48,
-            }}
-          >
-            <div>
-              <div style={{ ...serif, fontSize: 19, fontWeight: 600, fontStyle: 'italic', color: GOLD, letterSpacing: 1.5, marginBottom: 16 }}>
-                GOMP
-              </div>
-              <p style={{ ...sans, fontSize: 13, color: MUTED, lineHeight: 1.75, maxWidth: 260, margin: 0, fontWeight: 300 }}>
-                {t.footer_blurb}
-              </p>
-            </div>
-            <div>
-              <div
-                style={{
-                  ...sans,
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: MUTED,
-                  letterSpacing: 2,
-                  textTransform: 'uppercase',
-                  marginBottom: 20,
-                }}
-              >
-                {t.footer_products}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <TransitionLink href="/shop" style={{ ...sans, fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}>
-                  {t.footer_prebuilt}
-                </TransitionLink>
-                <TransitionLink href="/build" style={{ ...sans, fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}>
-                  {t.footer_custom}
-                </TransitionLink>
-              </div>
-            </div>
-            <div>
-              <div
-                style={{
-                  ...sans,
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: MUTED,
-                  letterSpacing: 2,
-                  textTransform: 'uppercase',
-                  marginBottom: 20,
-                }}
-              >
-                {t.footer_company}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <TransitionLink href="/about" style={{ ...sans, fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}>
-                  {t.footer_aboutus}
-                </TransitionLink>
-                <a href="#" style={{ ...sans, fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}>
-                  Blog
-                </a>
-                <a href="#" style={{ ...sans, fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}>
-                  {t.footer_careers}
-                </a>
-              </div>
-            </div>
-            <div>
-              <div
-                style={{
-                  ...sans,
-                  fontSize: 11,
-                  fontWeight: 500,
-                  color: MUTED,
-                  letterSpacing: 2,
-                  textTransform: 'uppercase',
-                  marginBottom: 20,
-                }}
-              >
-                {t.footer_support}
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <a href="#" style={{ ...sans, fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}>
-                  FAQ
-                </a>
-                <a href="#" style={{ ...sans, fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}>
-                  {t.footer_warranty}
-                </a>
-                <a href="#" style={{ ...sans, fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}>
-                  {t.footer_contact}
-                </a>
-              </div>
-            </div>
-          </div>
-          <div
-            style={{
-              borderTop: '0.5px solid rgba(245,240,230,0.1)',
-              paddingTop: 24,
-              display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              gap: isMobile ? 8 : 0,
-              justifyContent: 'space-between',
-            }}
-          >
-            <span style={{ ...sans, fontSize: 12, color: 'rgba(245,240,230,0.3)', fontWeight: 300 }}>
-              © 2026 GOMP. {t.footer_rights}
-            </span>
-            <span style={{ ...sans, fontSize: 12, color: 'rgba(245,240,230,0.3)', fontWeight: 300 }}>{t.footer_madein}</span>
-          </div>
-          <div style={{ borderTop: '0.5px solid rgba(245,240,230,0.08)', marginTop: 20, paddingTop: 20 }}>
-            <span style={{ ...sans, fontSize: 11, color: 'rgba(245,240,230,0.28)', fontWeight: 300, lineHeight: 1.6 }}>
-              {t.footer_disclaimer}
-            </span>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

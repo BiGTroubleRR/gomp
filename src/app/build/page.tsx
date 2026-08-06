@@ -1,16 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
 import { navigateWithTransition } from '@/lib/gomp-nav';
-import { readJSON, writeJSON } from '@/lib/gomp-storage';
+import { writeJSON } from '@/lib/gomp-storage';
+import { fetchComponentDb, subscribeComponents } from '@/lib/supabase/components';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS, type Tier } from '@/lib/passmark';
-import { defaultComponentDb, type Category, type Component, type ComponentDb } from '@/lib/component-db-seed';
+import { defaultComponentDb, caseFitsFormFactor, type Category, type Component, type ComponentDb } from '@/lib/component-db-seed';
 import { createBuildScene, SLOTS, CASE_SIZES, type BuildScene, type CompId } from '@/lib/build-scene';
 import { useIsMobile } from '@/lib/use-media-query';
+import { setDustCursorVisible, isDustEnabled } from '@/lib/cursor-dust';
 
 const T = {
   en: {
@@ -40,6 +42,10 @@ const T = {
     ],
     installed: (n: number) => `${n} / 8 installed`,
     ofComponents: (n: number) => `${n} of 8 components`,
+    step_of: (n: number) => `Step ${n} of 8`,
+    back: 'Back', next: 'Next', size: 'Size',
+    no_socket_match: (socket: string) => `No CPUs match the ${socket} socket of your selected motherboard — pick a different motherboard, or check Admin.`,
+    no_case_fit: (formFactor: string) => `No cases fit a ${formFactor} motherboard at this size — try a larger size, or a smaller motherboard.`,
   },
   sk: {
     nav_home: 'Domov', nav_shop: 'Obchod', nav_build: 'Zostaviť', nav_about: 'O nás', nav_account: 'Účet',
@@ -68,6 +74,10 @@ const T = {
     ],
     installed: (n: number) => `${n} / 8 nainštalovaných`,
     ofComponents: (n: number) => `${n} z 8 komponentov`,
+    step_of: (n: number) => `Krok ${n} z 8`,
+    back: 'Späť', next: 'Ďalej', size: 'Veľkosť',
+    no_socket_match: (socket: string) => `Žiadne CPU nesedí na pätici ${socket} vybranej základnej dosky — zvoľte inú dosku, alebo skontrolujte Admin.`,
+    no_case_fit: (formFactor: string) => `Žiadna skriňa tejto veľkosti neposkytne miesto pre dosku ${formFactor} — skúste väčšiu veľkosť alebo menšiu dosku.`,
   },
 } as const;
 
@@ -95,40 +105,88 @@ function TierBadge({ tier, small }: { tier?: Tier; small?: boolean }) {
   );
 }
 
+// Small monospace tag for a CPU/motherboard's socket or a motherboard's form factor — shown
+// right next to the tier badge on picker cards so compatibility is visible before you click.
+function SpecPill({ label }: { label: string }) {
+  return (
+    <div
+      style={{
+        padding: '2px 6px', borderRadius: 3, border: '1px solid rgba(28,28,26,0.2)',
+        fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 9, color: MUTED, whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
+    </div>
+  );
+}
+
 export default function BuildPage() {
   const { lang, fmt } = useSite();
   const router = useRouter();
   const pathname = usePathname();
   const t = T[lang];
   const isMobile = useIsMobile();
+  // Desktop's sidebar/right panel float semi-transparently over the 3D scene — a hard cream
+  // outline (four offset copies, not just a soft blur) keeps the text legible against both the
+  // light empty scene and the dark case body, since a single soft halo isn't opaque enough at
+  // small sizes to beat a mid-gray backdrop. Mobile keeps a fully opaque panel (see below), so
+  // it needs no such treatment.
+  const textPop: CSSProperties = !isMobile
+    ? {
+        textShadow:
+          '0 0 4px #FDFAF4, 0 0 4px #FDFAF4, 1px 1px 1px #FDFAF4, -1px -1px 1px #FDFAF4, 1px -1px 1px #FDFAF4, -1px 1px 1px #FDFAF4',
+      }
+    : {};
 
   const [compDb, setCompDb] = useState<ComponentDb>(defaultComponentDb());
   const [selected, setSelected] = useState<Record<CompId, boolean>>({} as Record<CompId, boolean>);
   const [selections, setSelections] = useState<Record<CompId, string>>({} as Record<CompId, string>);
   const [caseCat, setCaseCat] = useState('Mid Tower');
   const [activeId, setActiveId] = useState<CompId | null>(null);
+  const [activeStep, setActiveStep] = useState<CompId>(SLOTS[0]);
   const [ordering, setOrdering] = useState(false);
   const [glassHidden, setGlassHidden] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
   const [completionRunning, setCompletionRunning] = useState(false);
+  const [hoverId, setHoverId] = useState<CompId | null>(null);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<BuildScene | null>(null);
 
-  // Load the shared component catalog (managed by /admin) on mount.
+  // Load the shared component catalog from Supabase (managed by /admin) on mount, and keep it
+  // live: any Admin edit (insert/update/delete) broadcasts over Realtime and gets refetched
+  // here, so an already-open /build tab picks up new prices/stock without a reload. Per-slot
+  // selections are only seeded once, from that very first load — later catalog refreshes must
+  // not silently reset whatever the visitor has already picked.
+  const catalogInitializedRef = useRef(false);
   useEffect(() => {
-    const db = readJSON<ComponentDb>('gomp_components_db', defaultComponentDb());
-    setCompDb(db);
-    const initSelections = {} as Record<CompId, string>;
-    SLOTS.forEach((id) => {
-      const list = db[id] || [];
-      // The case model must match the default caseCat filter, or the dropdown (which only
-      // renders 'Mid Tower' options initially) would show a different item than what's
-      // actually stored in state/passed to the 3D scene.
-      const pick = id === 'case' ? list.find((c) => c.category === 'Mid Tower') || list[0] : list[0];
-      if (pick) initSelections[id] = pick.name;
-    });
-    setSelections(initSelections);
+    let cancelled = false;
+    async function load() {
+      const db = await fetchComponentDb();
+      if (cancelled) return;
+      setCompDb(db);
+      if (!catalogInitializedRef.current) {
+        catalogInitializedRef.current = true;
+        const initSelections = {} as Record<CompId, string>;
+        SLOTS.forEach((id) => {
+          const list = db[id] || [];
+          // The case model must match the default caseCat filter, or the picker (which only
+          // shows 'Mid Tower' options initially) would show a different item than what's
+          // actually stored in state/passed to the 3D scene.
+          const pick = id === 'case' ? list.find((c) => c.category === 'Mid Tower') || list[0] : list[0];
+          if (pick) initSelections[id] = pick.name;
+        });
+        setSelections(initSelections);
+      }
+    }
+    load();
+    const unsubscribe = subscribeComponents(load);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -167,6 +225,13 @@ export default function BuildPage() {
     const timer = setTimeout(() => sceneRef.current?.triggerCompletion(), 1400);
     return () => clearTimeout(timer);
   }, [selected]);
+
+  // Swaps the native cursor for the same gold dot used on nav-link hovers whenever the
+  // pointer is over a built component in the 3D view (see handleViewportPointerMove below).
+  useEffect(() => {
+    setDustCursorVisible(!!hoverId);
+    return () => setDustCursorVisible(false);
+  }, [hoverId]);
 
   const totalPrice = useMemo(() => {
     let sum = 0;
@@ -216,10 +281,66 @@ export default function BuildPage() {
     }
   }
 
+  // Picking a card in the progressive picker: swap the selection, install it into the 3D
+  // scene if this category isn't already on (a re-pick of the same category just swaps the
+  // SKU, matching the old dropdown's behavior), and auto-advance to the next category —
+  // picking a category's card twice in a row deselects it instead, since the one-by-one flow
+  // has no other obvious "remove" affordance.
+  function selectCard(id: CompId, name: string) {
+    if (selected[id] && selections[id] === name) {
+      setSelected((s) => ({ ...s, [id]: false }));
+      sceneRef.current?.toggleComponent(id, false);
+      return;
+    }
+    changeSelection(id, name);
+    setActiveId(id);
+    if (!selected[id]) {
+      setSelected((s) => ({ ...s, [id]: true }));
+      sceneRef.current?.toggleComponent(id, true);
+    }
+
+    // Swapping the motherboard can strand an already-picked CPU (wrong socket) or case (too
+    // small for the new board's form factor) — drop those picks rather than silently keeping
+    // an invalid pairing installed.
+    if (id === 'mobo') {
+      const newMobo = (compDb.mobo || []).find((c) => c.name === name);
+      if (selected.cpu) {
+        const currentCpu = (compDb.cpu || []).find((c) => c.name === selections.cpu);
+        if (currentCpu?.socket && newMobo?.socket && currentCpu.socket !== newMobo.socket) {
+          setSelected((s) => ({ ...s, cpu: false }));
+          sceneRef.current?.toggleComponent('cpu', false);
+        }
+      }
+      if (selected.case) {
+        const currentCase = (compDb.case || []).find((c) => c.name === selections.case);
+        if (!caseFitsFormFactor(currentCase?.category, newMobo?.formFactor)) {
+          setSelected((s) => ({ ...s, case: false }));
+          sceneRef.current?.toggleComponent('case', false);
+        }
+      }
+    }
+
+    const idx = SLOTS.indexOf(id);
+    if (idx < SLOTS.length - 1) setActiveStep(SLOTS[idx + 1]);
+  }
+
   function toggleGlassPanel() {
     const next = !glassHidden;
     setGlassHidden(next);
     sceneRef.current?.toggleGlass(next);
+  }
+
+  function handleViewportPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const id = sceneRef.current?.pickComponentAt(e.clientX, e.clientY) ?? null;
+    setHoverId(id);
+    setHoverPos({ x: e.clientX - rect.left, y: e.clientY - rect.top, w: rect.width, h: rect.height });
+  }
+
+  function handleViewportPointerLeave() {
+    setHoverId(null);
+    setHoverPos(null);
   }
 
   function buildAll() {
@@ -227,6 +348,7 @@ export default function BuildPage() {
       if (selected[id]) return;
       setTimeout(() => toggleComponent(id), i * 90);
     });
+    setActiveStep(SLOTS[SLOTS.length - 1]);
   }
 
   function clearAll() {
@@ -236,13 +358,14 @@ export default function BuildPage() {
       setTimeout(() => toggleComponent(id), i * 80);
     });
     setShowComplete(false);
+    setActiveStep(SLOTS[0]);
   }
 
   function handleOrder() {
     if (ordering) return;
     writeJSON('gomp_build', { selected, selections, compDb, totalPrice });
     setOrdering(true);
-    setTimeout(() => navigateWithTransition(pathname, '/benchmarks', () => router.push('/benchmarks')), 600);
+    setTimeout(() => navigateWithTransition(pathname, '/benchmarks', () => router.push('/benchmarks')), 300);
   }
 
   const activeComp = activeId ? findComp(activeId) : null;
@@ -251,18 +374,34 @@ export default function BuildPage() {
     ? tierFromPassmark(activeId === 'gpu', activePassmark.score)
     : (activeComp?.tier as Tier | undefined);
 
+  const hoverComp = hoverId ? findComp(hoverId) : null;
+  const hoverPassmark = hoverComp ? passmarkLookup(hoverComp.name) : null;
+  const hoverTier: Tier | undefined = hoverPassmark
+    ? tierFromPassmark(hoverId === 'gpu', hoverPassmark.score)
+    : (hoverComp?.tier as Tier | undefined);
+
   return (
     <div style={{ position: 'relative', background: BG, minHeight: '100vh' }}>
       {/* ---- Nav ---- */}
       <SiteNav />
 
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: isMobile ? 'auto' : '100vh', minHeight: isMobile ? '100vh' : undefined, paddingTop: 60 }}>
-        {/* ---- Sidebar ---- */}
+        {/* ---- Sidebar ----
+            Desktop: floats over the full-bleed 3D viewport, semi-transparent + blurred, rather
+            than sitting beside it. Mobile: opaque and in normal flow — the see-through look
+            made component names and specs unreadable against the scene, so mobile keeps a
+            solid panel instead. */}
         <div
           style={{
             width: isMobile ? '100%' : 264,
             order: isMobile ? 2 : 0,
-            background: PANEL,
+            position: isMobile ? 'static' : 'absolute',
+            top: isMobile ? undefined : 60,
+            bottom: isMobile ? undefined : 0,
+            left: isMobile ? undefined : 0,
+            zIndex: isMobile ? undefined : 10,
+            background: isMobile ? PANEL : 'rgba(253,250,244,0.5)',
+            backdropFilter: isMobile ? undefined : 'blur(20px)',
             borderRight: isMobile ? 'none' : '0.5px solid rgba(28,28,26,0.1)',
             borderTop: isMobile ? '0.5px solid rgba(28,28,26,0.1)' : 'none',
             borderBottom: isMobile ? '0.5px solid rgba(28,28,26,0.1)' : 'none',
@@ -271,67 +410,159 @@ export default function BuildPage() {
           }}
         >
             <div style={{ padding: isMobile ? '20px 20px 10px' : '20px 20px 14px' }}>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase' }}>{t.pc_builder}</div>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#A09890', marginTop: 4 }}>{t.select_components}</div>
+              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase' }}>{t.pc_builder}</div>
+              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#A09890', marginTop: 4 }}>{t.select_components}</div>
             </div>
-            <div style={{ flex: isMobile ? 'none' : 1, overflowY: isMobile ? 'visible' : 'auto', padding: '0 12px' }}>
-              {SLOTS.map((id) => {
-                const list = compDb[id] || [];
-                const isSelected = !!selected[id];
-                const comp = findComp(id);
-                return (
-                  <div
-                    key={id}
-                    onClick={(e) => {
-                      if ((e.target as HTMLElement).closest('select')) return;
-                      toggleComponent(id);
-                    }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 8px', cursor: 'pointer', borderRadius: 4 }}
-                  >
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: isSelected ? MAROON : 'transparent', border: `1.5px solid ${isSelected ? MAROON : 'rgba(28,28,26,0.25)'}`, flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: isSelected ? 600 : 400, color: isSelected ? INK : MUTED }}>{t.cat_names[id]}</div>
-                      {id === 'case' ? (
-                        <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
-                          <select
-                            value={caseCat}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => changeCaseCat(e.target.value)}
-                            style={{ fontFamily: 'var(--font-mono)', fontSize: 9, flex: 1, background: 'transparent', border: 'none', color: MUTED }}
-                          >
-                            {t.case_cats.map((c) => (
-                              <option key={c.id} value={c.id}>{c.label}</option>
-                            ))}
-                          </select>
-                        </div>
-                      ) : null}
-                      <select
-                        value={selections[id] || ''}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => changeSelection(id, e.target.value)}
-                        style={{ fontFamily: 'var(--font-mono)', fontSize: 9, width: '100%', background: 'transparent', border: 'none', color: MUTED, marginTop: 2 }}
-                      >
-                        {list.length === 0 && <option value="">{t.none_add_admin}</option>}
-                        {list
-                          .filter((c) => id !== 'case' || c.category === caseCat)
-                          .map((c) => (
-                            <option key={c.id} value={c.name}>{c.name}</option>
-                          ))}
-                      </select>
-                    </div>
-                    <TierBadge tier={comp?.tier as Tier} small />
-                    <div
+            <div style={{ flex: isMobile ? 'none' : 1, overflowY: isMobile ? 'visible' : 'auto', padding: '0 20px 16px' }}>
+              {/* ---- Step pills — free-jump between categories, green/checked once picked ---- */}
+              <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, letterSpacing: 1, marginBottom: 8 }}>
+                {t.step_of(SLOTS.indexOf(activeStep) + 1)}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+                {SLOTS.map((id) => {
+                  const done = !!selected[id];
+                  const isActive = id === activeStep;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setActiveStep(id)}
                       style={{
-                        width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: isSelected ? MAROON : 'transparent', border: `1px solid ${isSelected ? MAROON : 'rgba(28,28,26,0.3)'}`,
-                        color: isSelected ? '#FDFAF4' : MUTED, fontSize: 10, fontWeight: 700,
+                        ...textPop,
+                        display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20,
+                        border: `1px solid ${isActive ? MAROON : done ? 'rgba(110,20,35,0.4)' : 'rgba(28,28,26,0.2)'}`,
+                        background: isActive ? MAROON : done ? 'rgba(110,20,35,0.08)' : 'transparent',
+                        color: isActive ? '#FDFAF4' : done ? MAROON : MUTED,
+                        fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: isActive ? 600 : 500, cursor: 'pointer',
                       }}
                     >
-                      {isSelected ? '✓' : '+'}
+                      {done && !isActive && <span style={{ fontSize: 9 }}>✓</span>}
+                      {t.cat_names[id]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* ---- Active category ---- */}
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 20, color: INK }}>{t.cat_names[activeStep]}</div>
+                <p style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginTop: 4, lineHeight: 1.4 }}>{t.cat_desc[activeStep]}</p>
+              </div>
+
+              {activeStep === 'case' && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  {t.case_cats.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => changeCaseCat(c.id)}
+                      style={{
+                        ...textPop, padding: '4px 9px', borderRadius: 4,
+                        border: `1px solid ${caseCat === c.id ? MAROON : 'rgba(28,28,26,0.2)'}`,
+                        background: caseCat === c.id ? 'rgba(110,20,35,0.08)' : 'transparent',
+                        color: caseCat === c.id ? MAROON : MUTED,
+                        fontFamily: 'var(--font-mono)', fontSize: 9, cursor: 'pointer',
+                      }}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* ---- Product cards for the active category only ----
+                  CPU is filtered to the selected motherboard's socket (once one is picked),
+                  and Case is filtered to sizes that actually fit the selected motherboard's
+                  form factor — a case can host a smaller board than it's rated for, never a
+                  bigger one. Both stay unfiltered until a motherboard is chosen. */}
+              {(() => {
+                const selectedMobo = selected.mobo ? (compDb.mobo || []).find((c) => c.name === selections.mobo) : undefined;
+                let list = (compDb[activeStep] || []);
+                if (activeStep === 'case') {
+                  list = list.filter((c) => c.category === caseCat);
+                  if (selectedMobo?.formFactor) {
+                    list = list.filter((c) => caseFitsFormFactor(c.category, selectedMobo.formFactor));
+                  }
+                } else if (activeStep === 'cpu' && selectedMobo?.socket) {
+                  list = list.filter((c) => c.socket === selectedMobo.socket);
+                }
+                if (list.length === 0) {
+                  const reason =
+                    activeStep === 'cpu' && selectedMobo?.socket
+                      ? t.no_socket_match(selectedMobo.socket)
+                      : activeStep === 'case' && selectedMobo?.formFactor
+                        ? t.no_case_fit(selectedMobo.formFactor)
+                        : t.none_add_admin;
+                  return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', padding: '12px 0' }}>{reason}</div>;
+                }
+                return list.map((c) => {
+                  const isThisSelected = selected[activeStep] && selections[activeStep] === c.name;
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() => selectCard(activeStep, c.name)}
+                      style={{
+                        border: `1.5px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.12)'}`,
+                        background: isThisSelected ? 'rgba(110,20,35,0.06)' : 'transparent',
+                        borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: isThisSelected ? MAROON : INK }}>{c.name}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                          {c.formFactor && <SpecPill label={c.formFactor} />}
+                          {c.socket && <SpecPill label={c.socket} />}
+                          <TierBadge tier={c.tier} small />
+                        </div>
+                      </div>
+                      <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {c.specs}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                        <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
+                        <div
+                          style={{
+                            width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: isThisSelected ? MAROON : 'transparent', border: `1px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.3)'}`,
+                            color: isThisSelected ? '#FDFAF4' : MUTED, fontSize: 10, fontWeight: 700,
+                          }}
+                        >
+                          {isThisSelected ? '✓' : '+'}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
+
+              {/* ---- Back / Next ---- */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button
+                  onClick={() => { const i = SLOTS.indexOf(activeStep); if (i > 0) setActiveStep(SLOTS[i - 1]); }}
+                  disabled={SLOTS.indexOf(activeStep) === 0}
+                  style={{
+                    ...textPop, flex: 1, padding: '9px', background: 'transparent',
+                    color: SLOTS.indexOf(activeStep) === 0 ? '#c9c2b4' : MUTED,
+                    border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3,
+                    fontFamily: 'var(--font-sans)', fontSize: 11,
+                    cursor: SLOTS.indexOf(activeStep) === 0 ? 'default' : 'pointer',
+                  }}
+                >
+                  ← {t.back}
+                </button>
+                <button
+                  onClick={() => { const i = SLOTS.indexOf(activeStep); if (i < SLOTS.length - 1) setActiveStep(SLOTS[i + 1]); }}
+                  disabled={SLOTS.indexOf(activeStep) === SLOTS.length - 1}
+                  style={{
+                    ...textPop, flex: 1, padding: '9px',
+                    background: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? 'transparent' : MAROON,
+                    color: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? '#c9c2b4' : '#FDFAF4',
+                    border: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? '0.5px solid rgba(28,28,26,0.2)' : 'none',
+                    borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600,
+                    cursor: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? 'default' : 'pointer',
+                  }}
+                >
+                  {t.next} →
+                </button>
+              </div>
             </div>
             <div style={{ padding: 16, borderTop: '0.5px solid rgba(28,28,26,0.1)' }}>
               <button onClick={buildAll} style={{ width: '100%', padding: '11px', background: MAROON, color: '#FDFAF4', border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>
@@ -340,7 +571,7 @@ export default function BuildPage() {
               <button
                 onClick={clearAll}
                 disabled={completionRunning}
-                style={{ width: '100%', padding: '10px', background: 'transparent', color: completionRunning ? '#c9c2b4' : MUTED, border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 12, cursor: completionRunning ? 'default' : 'pointer' }}
+                style={{ ...textPop, width: '100%', padding: '10px', background: 'transparent', color: completionRunning ? '#c9c2b4' : MUTED, border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 12, cursor: completionRunning ? 'default' : 'pointer' }}
               >
                 {t.clear_all}
               </button>
@@ -348,10 +579,22 @@ export default function BuildPage() {
           </div>
 
         {/* ---- 3D viewport ---- */}
-        <div style={{ flex: isMobile ? 'none' : 1, height: isMobile ? '46vh' : undefined, minHeight: isMobile ? 320 : undefined, order: isMobile ? 0 : 1, position: 'relative' }}>
+        <div
+          ref={viewportRef}
+          onPointerMove={handleViewportPointerMove}
+          onPointerLeave={handleViewportPointerLeave}
+          style={{
+            flex: isMobile ? 'none' : 1,
+            height: isMobile ? '46vh' : undefined,
+            minHeight: isMobile ? 320 : undefined,
+            order: isMobile ? 0 : 1,
+            position: 'relative',
+            cursor: hoverId && isDustEnabled() ? 'none' : undefined,
+          }}
+        >
           <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-            <div style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(28,28,26,0.35)' }}>
+            <div style={{ ...textPop, position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(28,28,26,0.35)' }}>
               {t.installed(installedCount)}
             </div>
             <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', background: 'rgba(253,250,244,0.85)', padding: '6px 14px', borderRadius: 20, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED }}>
@@ -359,10 +602,52 @@ export default function BuildPage() {
             </div>
             <button
               onClick={toggleGlassPanel}
-              style={{ position: 'absolute', top: 16, right: 16, pointerEvents: 'all', background: 'rgba(253,250,244,0.9)', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 4, padding: '7px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: INK, cursor: 'pointer' }}
+              style={{ position: 'absolute', top: 16, right: isMobile ? 16 : 288 + 16, pointerEvents: 'all', background: 'rgba(253,250,244,0.9)', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 4, padding: '7px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: INK, cursor: 'pointer' }}
             >
               {glassHidden ? t.show_panel : t.hide_panel}
             </button>
+            {hoverId && hoverComp && hoverPos && !isMobile && (
+              <div
+                style={{
+                  position: 'absolute',
+                  ...(hoverPos.x > hoverPos.w / 2 ? { right: hoverPos.w - hoverPos.x + 18 } : { left: hoverPos.x + 18 }),
+                  ...(hoverPos.y > hoverPos.h / 2 ? { bottom: hoverPos.h - hoverPos.y + 18 } : { top: hoverPos.y + 18 }),
+                  minWidth: 190,
+                  maxWidth: 240,
+                  background: 'rgba(20,17,15,0.94)',
+                  backdropFilter: 'blur(6px)',
+                  border: '0.5px solid rgba(196,163,90,0.35)',
+                  borderRadius: 6,
+                  padding: '12px 14px',
+                  boxShadow: '0 16px 36px rgba(0,0,0,0.35)',
+                  zIndex: 20,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: 'rgba(245,240,230,0.55)', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                    {t.cat_names[hoverId]}
+                  </span>
+                  <TierBadge tier={hoverTier} small />
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: GOLD, fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{hoverComp.name}</div>
+                <div style={{ marginBottom: hoverPassmark ? 8 : 0 }}>
+                  {(hoverComp.specs || '').split(' · ').map((s, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(245,240,230,0.85)', marginBottom: 3 }}>
+                      <span style={{ width: 3, height: 3, borderRadius: '50%', background: GOLD, flexShrink: 0 }} /> {s}
+                    </div>
+                  ))}
+                </div>
+                {hoverPassmark && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(245,240,230,0.5)', marginBottom: 8 }}>
+                    <span>{t.passmark_score}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', color: 'rgba(245,240,230,0.9)' }}>{hoverPassmark.score.toLocaleString()}</span>
+                  </div>
+                )}
+                <div style={{ borderTop: '0.5px solid rgba(245,240,230,0.14)', paddingTop: 8, fontFamily: 'var(--font-mono)', fontSize: 14, color: '#FDFAF4', fontWeight: 500 }}>
+                  {fmt(hoverComp.price)}
+                </div>
+              </div>
+            )}
             {showComplete && (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? 16 : 0 }}>
                 <div
@@ -395,7 +680,13 @@ export default function BuildPage() {
           style={{
             width: isMobile ? '100%' : 288,
             order: isMobile ? 3 : 2,
-            background: PANEL,
+            position: isMobile ? 'static' : 'absolute',
+            top: isMobile ? undefined : 60,
+            bottom: isMobile ? undefined : 0,
+            right: isMobile ? undefined : 0,
+            zIndex: isMobile ? undefined : 10,
+            background: isMobile ? PANEL : 'rgba(253,250,244,0.5)',
+            backdropFilter: isMobile ? undefined : 'blur(20px)',
             borderLeft: isMobile ? 'none' : '0.5px solid rgba(28,28,26,0.1)',
             display: 'flex',
             flexDirection: 'column',
@@ -405,36 +696,36 @@ export default function BuildPage() {
           <div style={{ padding: 20, flex: isMobile ? 'none' : 1 }}>
             {activeId && activeComp ? (
               <>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.cat_names[activeId]}</div>
+                <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.cat_names[activeId]}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, color: MAROON, fontWeight: 600 }}>{activeComp.name}</div>
+                  <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: MAROON, fontWeight: 600 }}>{activeComp.name}</div>
                   <TierBadge tier={activeTier} small />
                 </div>
-                <p style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{t.cat_desc[activeId]}</p>
+                <p style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{t.cat_desc[activeId]}</p>
                 <div style={{ marginTop: 12 }}>
                   {(activeComp.specs || '').split(' · ').map((s, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: INK, marginBottom: 4 }}>
+                    <div key={i} style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: INK, marginBottom: 4 }}>
                       <span style={{ width: 3, height: 3, borderRadius: '50%', background: MAROON }} /> {s}
                     </div>
                   ))}
                 </div>
                 {activePassmark && (
                   <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.passmark_score}</div>
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 16, color: activeTier ? TIER_COLORS[activeTier].text : INK, fontWeight: 600 }}>{activePassmark.score.toLocaleString()}</div>
-                    <a href={activePassmark.url} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: MAROON }}>{t.verify_passmark}</a>
+                    <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.passmark_score}</div>
+                    <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 16, color: activeTier ? TIER_COLORS[activeTier].text : INK, fontWeight: 600 }}>{activePassmark.score.toLocaleString()}</div>
+                    <a href={activePassmark.url} target="_blank" rel="noopener noreferrer" style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MAROON }}>{t.verify_passmark}</a>
                   </div>
                 )}
-                <div style={{ marginTop: 12, fontFamily: 'var(--font-mono)', fontSize: 15, color: INK }}>{fmt(activeComp.price)}</div>
+                <div style={{ ...textPop, marginTop: 12, fontFamily: 'var(--font-mono)', fontSize: 15, color: INK }}>{fmt(activeComp.price)}</div>
               </>
             ) : (
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#A09890' }}>{t.select_components}</div>
+              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#A09890' }}>{t.select_components}</div>
             )}
           </div>
           <div style={{ padding: 20, borderTop: '0.5px solid rgba(28,28,26,0.1)', marginTop: 'auto' }}>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.build_total}</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 40, color: INK, fontWeight: 500, margin: '4px 0' }}>{fmt(totalPrice)}</div>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', marginBottom: 14 }}>{t.ofComponents(installedCount)}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.build_total}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 40, color: INK, fontWeight: 500, margin: '4px 0' }}>{fmt(totalPrice)}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', marginBottom: 14 }}>{t.ofComponents(installedCount)}</div>
             <button onClick={handleOrder} style={{ width: '100%', padding: 13, background: MAROON, color: '#FDFAF4', border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>
               {t.continue_benchmarks}
             </button>
@@ -451,7 +742,7 @@ export default function BuildPage() {
           <div style={{ position: 'absolute', top: '50%', left: '50%', width: 640, height: 640, margin: '-320px 0 0 -320px', border: '0.5px solid rgba(196,163,90,0.22)', borderRadius: '50%', animation: 'gompRotateSlow 8s linear infinite' }} />
           <div style={{ position: 'absolute', top: '50%', left: '50%', width: 420, height: 420, margin: '-210px 0 0 -210px', border: '0.5px solid rgba(196,163,90,0.32)', borderRadius: '50%', animation: 'gompRotateSlowRev 6s linear infinite' }} />
           <div style={{ position: 'absolute', top: '50%', left: '50%', width: 960, height: 960, margin: '-480px 0 0 -480px', background: 'radial-gradient(circle, rgba(196,163,90,0.16) 0%, transparent 60%)', animation: 'gompGlowPulse 2.2s ease-in-out infinite' }} />
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 13, fontWeight: 500, color: 'rgba(245,240,230,0.75)', letterSpacing: 6, textTransform: 'uppercase', position: 'relative', zIndex: 1, animation: 'gompCompleteFadeIn 0.7s 0.15s cubic-bezier(0.16,1,0.3,1) both' }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 13, fontWeight: 500, color: 'rgba(245,240,230,0.75)', letterSpacing: 6, textTransform: 'uppercase', position: 'relative', zIndex: 1, animation: 'gompCompleteFadeIn 0.35s 0.05s cubic-bezier(0.16,1,0.3,1) both' }}>
             {t.preparing_order}
           </div>
         </div>
