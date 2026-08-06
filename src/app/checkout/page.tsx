@@ -8,7 +8,7 @@ import Case3DViewer, { type CompDb } from '@/components/Case3DViewer';
 import SiteNav from '@/components/SiteNav';
 import { readJSON, type Currency, type Lang } from '@/lib/gomp-storage';
 import { useIsMobile } from '@/lib/use-media-query';
-import { createClient } from '@/lib/supabase/client';
+import { submitCheckoutIntent, type PaymentMethod } from '@/lib/supabase/checkout-intents';
 
 type ShippingId = 'standard' | 'express' | 'overnight';
 
@@ -28,18 +28,19 @@ type SavedAddress = {
   default: boolean;
 };
 
+// Deliberately no card fields. The payment step records which method the
+// visitor *would* use; card details are never collected (see
+// src/lib/supabase/checkout-intents.ts for the reasoning and the path to a
+// real payment integration).
 type CheckoutForm = {
   firstName: string;
   lastName: string;
   email: string;
+  phone: string;
   address: string;
   city: string;
   state: string;
   zip: string;
-  cardNumber: string;
-  cardName: string;
-  expiry: string;
-  cvv: string;
   promo: string;
 };
 
@@ -47,14 +48,11 @@ const EMPTY_FORM: CheckoutForm = {
   firstName: '',
   lastName: '',
   email: '',
+  phone: '',
   address: '',
   city: '',
   state: '',
   zip: '',
-  cardNumber: '',
-  cardName: '',
-  expiry: '',
-  cvv: '',
   promo: '',
 };
 
@@ -113,29 +111,43 @@ const TRANSLATIONS = {
     state_region: 'State / Region',
     zip_postal: 'ZIP / Postal',
     shipping_method: 'Shipping Method',
+    phone_number: 'Phone',
     continue_payment: 'Continue to Payment →',
     payment: 'Payment',
-    payment_desc: 'Secure, encrypted payment processing.',
-    card_holder: 'Card Holder',
-    expires: 'Expires',
-    card_number: 'Card Number',
-    name_on_card: 'Name on Card',
-    expiry_date: 'Expiry Date',
+    payment_desc: 'Choose your payment method.',
+    // Sits as quiet fine print beside the submit button rather than a banner:
+    // the visitor is told what will and won't happen at the moment they decide,
+    // without the page shouting "this is a mockup" at them.
+    submit_note:
+      'Payment is not live yet, so nothing is charged now. The GOMP team will contact you to confirm availability and complete the order — the final price may vary.',
+    method_card: 'Card',
+    method_card_desc: 'Visa · Mastercard',
+    method_google: 'Google Pay',
+    method_google_desc: 'Pay with a saved Google account',
+    method_apple: 'Apple Pay',
+    method_apple_desc: 'Pay with Touch ID or Face ID',
+    contact_details: 'Contact',
     promo_code: 'Promo Code',
     optional: 'optional',
     apply: 'Apply',
     promo_success: 'GOMP2026 — 5% discount applied',
-    ssl_note: '256-bit SSL encryption · PCI DSS compliant',
+    consent_label: 'You may email me about this order and when GOMP starts selling.',
+    consent_required: 'Please confirm we may contact you.',
+    email_required: 'Please enter an email address so we can reach you.',
     back: '← Back',
-    processing: 'Processing…',
-    place_order: 'Place Order  →  ',
-    order_confirmed: 'Order Confirmed',
-    build_on_way_line1: 'Your Build is',
-    build_on_way_line2: 'On Its Way.',
-    confirmation_sent: 'Confirmation sent to',
-    order: 'Order',
-    delivering_to: 'Delivering to',
-    estimated_arrival: 'Estimated arrival',
+    processing: 'Submitting…',
+    submit_request: 'Submit Order Request  ·  ',
+    request_received: 'Order Request Received',
+    thanks_line1: "We'll Take It",
+    thanks_line2: 'From Here.',
+    we_will_contact: 'The GOMP team will reach out at',
+    outcome_note:
+      'Card and wallet payments are not live on GOMP yet, so nothing has been charged. Your configuration is saved and the GOMP team will contact you to confirm availability and complete the order. The final price may vary from the estimate above, depending on component prices and availability at the time of assembly.',
+    reference: 'Reference',
+    your_build: 'Your build',
+    delivering_to: 'For delivery to',
+    estimated_arrival: 'Indicative build time',
+    would_pay_with: 'Preferred payment',
     build_another: '← Build Another',
     go_home: 'Go to Home',
     itemCount: (n: number) => `${n} components · assembled & tested`,
@@ -165,29 +177,40 @@ const TRANSLATIONS = {
     state_region: 'Kraj / Región',
     zip_postal: 'PSČ',
     shipping_method: 'Spôsob dopravy',
+    phone_number: 'Telefón',
     continue_payment: 'Pokračovať na platbu →',
     payment: 'Platba',
-    payment_desc: 'Bezpečné, šifrované spracovanie platby.',
-    card_holder: 'Držiteľ karty',
-    expires: 'Platnosť do',
-    card_number: 'Číslo karty',
-    name_on_card: 'Meno na karte',
-    expiry_date: 'Dátum platnosti',
+    payment_desc: 'Vyberte spôsob platby.',
+    submit_note:
+      'Platba ešte nie je aktívna, takže sa teraz nič nestrhne. Tím GOMP vás bude kontaktovať, aby potvrdil dostupnosť a dokončil objednávku — konečná cena sa môže líšiť.',
+    method_card: 'Karta',
+    method_card_desc: 'Visa · Mastercard',
+    method_google: 'Google Pay',
+    method_google_desc: 'Platba uloženým účtom Google',
+    method_apple: 'Apple Pay',
+    method_apple_desc: 'Platba pomocou Touch ID alebo Face ID',
+    contact_details: 'Kontakt',
     promo_code: 'Zľavový kód',
     optional: 'nepovinné',
     apply: 'Použiť',
     promo_success: 'GOMP2026 — uplatnená zľava 5 %',
-    ssl_note: '256-bitové šifrovanie SSL · v súlade s PCI DSS',
+    consent_label: 'Môžete mi napísať o tejto objednávke a keď GOMP začne predávať.',
+    consent_required: 'Potvrďte, prosím, že vás môžeme kontaktovať.',
+    email_required: 'Zadajte, prosím, e-mail, aby sme vás vedeli kontaktovať.',
     back: '← Späť',
-    processing: 'Spracúva sa…',
-    place_order: 'Odoslať objednávku  →  ',
-    order_confirmed: 'Objednávka potvrdená',
-    build_on_way_line1: 'Vaša zostava je',
-    build_on_way_line2: 'na ceste.',
-    confirmation_sent: 'Potvrdenie odoslané na',
-    order: 'Objednávka',
-    delivering_to: 'Doručuje sa na',
-    estimated_arrival: 'Predpokladaný príchod',
+    processing: 'Odosiela sa…',
+    submit_request: 'Odoslať žiadosť  ·  ',
+    request_received: 'Žiadosť prijatá',
+    thanks_line1: 'Ďalej sa',
+    thanks_line2: 'postaráme my.',
+    we_will_contact: 'Tím GOMP sa ozve na',
+    outcome_note:
+      'Platby kartou a peňaženkou na GOMP ešte nie sú aktívne, takže sa nič nestrhlo. Vaša konfigurácia je uložená a tím GOMP vás bude kontaktovať, aby potvrdil dostupnosť a dokončil objednávku. Konečná cena sa môže líšiť od uvedeného odhadu podľa cien a dostupnosti komponentov v čase montáže.',
+    reference: 'Referencia',
+    your_build: 'Vaša zostava',
+    delivering_to: 'Na doručenie na',
+    estimated_arrival: 'Orientačný čas zostavenia',
+    would_pay_with: 'Preferovaná platba',
     build_another: '← Zostaviť ďalšiu',
     go_home: 'Prejsť na domovskú stránku',
     itemCount: (n: number) => `${n} komponentov · zostavené a otestované`,
@@ -236,20 +259,11 @@ const monoInputStyle: CSSProperties = {
   letterSpacing: 2,
 };
 
-function formatCardNumber(raw: string) {
-  return raw
-    .replace(/\D/g, '')
-    .slice(0, 16)
-    .replace(/(.{4})/g, '$1 ')
-    .trim();
-}
-
-function formatExpiry(raw: string) {
-  const digits = raw.replace(/\D/g, '').slice(0, 4);
-  return digits.length > 2 ? `${digits.slice(0, 2)} / ${digits.slice(2)}` : digits;
-}
-
-function generateOrderNum(seed: number) {
+// Owns its own randomness so callers stay pure — the reference is cosmetic (a
+// human-friendly handle for the thank-you screen and support emails), not an
+// identifier anything looks up by.
+function generateRefNum() {
+  const seed = Math.floor(Math.random() * 1e9);
   return `GOMP-${seed.toString(36).toUpperCase().slice(0, 4)}-${String(seed).slice(-4)}`;
 }
 
@@ -317,7 +331,6 @@ export default function CheckoutPage() {
   const t = TRANSLATIONS[lang];
   const isMobile = useIsMobile();
   const { user } = useAuth();
-  const supabase = useMemo(() => createClient(), []);
 
   const [build, setBuild] = useState<GompBuild | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
@@ -326,10 +339,12 @@ export default function CheckoutPage() {
   const [shipping, setShipping] = useState<ShippingId>('standard');
   const [promoApplied, setPromoApplied] = useState(false);
   const [placing, setPlacing] = useState(false);
-  const [orderNumber, setOrderNumber] = useState('');
+  const [refNumber, setRefNumber] = useState('');
   const [orderError, setOrderError] = useState<string | null>(null);
   const [selectedSavedAddr, setSelectedSavedAddr] = useState<number | null>(null);
   const [form, setForm] = useState<CheckoutForm>(EMPTY_FORM);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
+  const [consent, setConsent] = useState(false);
 
   const placeOrderTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -375,13 +390,12 @@ export default function CheckoutPage() {
 
   const stepLabels = lang === 'sk' ? ['Doprava', 'Platba', 'Potvrdenie'] : ['Shipping', 'Payment', 'Confirm'];
 
-  const cardDigits = form.cardNumber.replace(/\D/g, '');
-  const cardPreview = cardDigits
-    .padEnd(16, '•')
-    .replace(/(.{4})/g, '$1 ')
-    .trim();
-  const cardHolderPreview = form.cardName || '— — — —';
-  const expiryPreview = form.expiry || 'MM / YY';
+  const PAYMENT_METHODS: { id: PaymentMethod; label: string; desc: string }[] = [
+    { id: 'card', label: t.method_card, desc: t.method_card_desc },
+    { id: 'google_pay', label: t.method_google, desc: t.method_google_desc },
+    { id: 'apple_pay', label: t.method_apple, desc: t.method_apple_desc },
+  ];
+  const methodLabel = PAYMENT_METHODS.find((m) => m.id === paymentMethod)?.label ?? '';
 
   function handleSelectSavedAddr(i: number) {
     setSelectedSavedAddr(i);
@@ -393,49 +407,58 @@ export default function CheckoutPage() {
     if (form.promo.trim().toLowerCase() === 'gomp2026') setPromoApplied(true);
   }
 
-  async function handlePlaceOrder() {
-    if (placing || !user) return;
+  // Records the visitor's interest — no payment is created or captured. Works
+  // signed-in or anonymous on purpose: putting a signup wall in front of a
+  // demand test would suppress the very signal we're trying to measure.
+  async function handleRegisterInterest() {
+    if (placing) return;
+    if (!form.email.trim()) {
+      setOrderError(t.email_required);
+      return;
+    }
+    if (!consent) {
+      setOrderError(t.consent_required);
+      return;
+    }
     setPlacing(true);
     setOrderError(null);
 
-    const orderNum = generateOrderNum(Math.floor(Math.random() * 1e9));
-    const eta = new Date();
-    eta.setDate(eta.getDate() + (shipping === 'overnight' ? 3 : shipping === 'express' ? 7 : 14));
+    const { error } = await submitCheckoutIntent({
+      userId: user?.id ?? null,
+      firstName: form.firstName,
+      lastName: form.lastName,
+      email: form.email,
+      phone: form.phone,
+      address: form.address,
+      city: form.city,
+      region: form.state,
+      zip: form.zip,
+      paymentMethod,
+      shippingMethod: shipping,
+      partsTotalEur: partsTotal,
+      shippingEur: shippingCostEur,
+      assemblyEur: ASSEMBLY_FEE_EUR,
+      discountEur: discount,
+      totalEur: grandTotalEur,
+      promoCode: promoApplied ? form.promo : '',
+      buildItems,
+      displayCurrency: currency,
+      lang,
+      contactConsent: consent,
+    });
 
-    const { data: order, error } = await supabase
-      .from('orders')
-      .insert({
-        user_id: user.id,
-        order_number: orderNum,
-        name: lang === 'sk' ? 'Vlastná zostava' : 'Custom PC Build',
-        total_eur: grandTotalEur,
-        eta: eta.toISOString(),
-      })
-      .select('id')
-      .single();
-
-    if (error || !order) {
-      setOrderError(error?.message ?? (lang === 'sk' ? 'Objednávku sa nepodarilo vytvoriť.' : 'Something went wrong placing your order.'));
+    if (error) {
+      setOrderError(error);
       setPlacing(false);
       return;
     }
 
-    if (buildItems.length) {
-      const { error: itemsError } = await supabase.from('order_items').insert(
-        buildItems.map((item) => ({ order_id: order.id, category: item.category, name: item.name, price_eur: item.priceEur })),
-      );
-      if (itemsError) {
-        setOrderError(itemsError.message);
-        setPlacing(false);
-        return;
-      }
-    }
-
+    const ref = generateRefNum();
     placeOrderTimeout.current = setTimeout(() => {
-      setOrderNumber(orderNum);
+      setRefNumber(ref);
       setStep(3);
       setPlacing(false);
-    }, 1200);
+    }, 700);
   }
 
   return (
@@ -606,8 +629,14 @@ export default function CheckoutPage() {
                 <Field label={t.first_name} value={form.firstName} onChange={(v) => setForm((f) => ({ ...f, firstName: v }))} />
                 <Field label={t.last_name} value={form.lastName} onChange={(v) => setForm((f) => ({ ...f, lastName: v }))} />
               </div>
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16, marginBottom: 16 }}>
                 <Field label={t.email_address} value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))} type="email" />
+                <Field
+                  label={`${t.phone_number} (${t.optional})`}
+                  value={form.phone}
+                  onChange={(v) => setForm((f) => ({ ...f, phone: v }))}
+                  type="tel"
+                />
               </div>
               <div style={{ marginBottom: 16 }}>
                 <Field label={t.street_address} value={form.address} onChange={(v) => setForm((f) => ({ ...f, address: v }))} />
@@ -686,60 +715,57 @@ export default function CheckoutPage() {
               <div style={{ ...serif, fontSize: isMobile ? 24 : 32, fontWeight: 600, color: INK, marginBottom: 6 }}>{t.payment}</div>
               <div style={{ ...sans, fontSize: 13, color: MUTED, fontWeight: 300, marginBottom: 36 }}>{t.payment_desc}</div>
 
-              <div style={{ background: 'linear-gradient(135deg,#6E1423 0%,#8E2A3A 100%)', borderRadius: 4, padding: isMobile ? '20px 18px 16px' : '24px 24px 20px', marginBottom: 28, position: 'relative', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
-                <div style={{ position: 'absolute', bottom: -30, right: 30, width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,255,255,0.03)' }} />
-                <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.5)', letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 20 }}>
-                  GOMP SECURE
-                </div>
-                <div style={{ ...mono, fontSize: 18, color: 'rgba(255,255,255,0.9)', letterSpacing: 4, marginBottom: 20 }}>{cardPreview}</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                  <div>
-                    <div style={{ ...sans, fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 2 }}>
-                      {t.card_holder}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 32 }}>
+                {PAYMENT_METHODS.map((m) => {
+                  const selected = m.id === paymentMethod;
+                  return (
+                    <div
+                      key={m.id}
+                      onClick={() => setPaymentMethod(m.id)}
+                      role="radio"
+                      aria-checked={selected}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setPaymentMethod(m.id);
+                        }
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '16px 18px',
+                        border: `0.5px solid ${selected ? 'rgba(110,20,35,0.3)' : 'rgba(28,28,26,0.15)'}`,
+                        borderRadius: 2,
+                        background: selected ? 'rgba(110,20,35,0.05)' : 'transparent',
+                        cursor: 'pointer',
+                        transition: 'border-color 0.2s, background 0.2s',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div
+                          style={{
+                            width: 14,
+                            height: 14,
+                            borderRadius: '50%',
+                            border: `0.5px solid ${selected ? MAROON : 'rgba(28,28,26,0.25)'}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {selected && <div style={{ width: 7, height: 7, borderRadius: '50%', background: MAROON }} />}
+                        </div>
+                        <div>
+                          <div style={{ ...sans, fontSize: 13, fontWeight: 500, color: INK }}>{m.label}</div>
+                          <div style={{ ...sans, fontSize: 11, color: MUTED, marginTop: 1 }}>{m.desc}</div>
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ ...sans, fontSize: 13, color: 'rgba(255,255,255,0.85)' }}>{cardHolderPreview}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ ...sans, fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 2 }}>
-                      {t.expires}
-                    </div>
-                    <div style={{ ...mono, fontSize: 13, color: 'rgba(255,255,255,0.85)' }}>{expiryPreview}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: 16 }}>
-                <Field
-                  label={t.card_number}
-                  value={form.cardNumber}
-                  onChange={(v) => setForm((f) => ({ ...f, cardNumber: formatCardNumber(v) }))}
-                  placeholder="0000  0000  0000  0000"
-                  maxLength={19}
-                  monospace
-                />
-              </div>
-              <div style={{ marginBottom: 16 }}>
-                <Field label={t.name_on_card} value={form.cardName} onChange={(v) => setForm((f) => ({ ...f, cardName: v }))} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 32 }}>
-                <Field
-                  label={t.expiry_date}
-                  value={form.expiry}
-                  onChange={(v) => setForm((f) => ({ ...f, expiry: formatExpiry(v) }))}
-                  placeholder="MM / YY"
-                  maxLength={7}
-                  monospace
-                />
-                <Field
-                  label="CVV"
-                  value={form.cvv}
-                  onChange={(v) => setForm((f) => ({ ...f, cvv: v.replace(/\D/g, '').slice(0, 4) }))}
-                  placeholder="•••"
-                  maxLength={4}
-                  type="password"
-                  monospace
-                />
+                  );
+                })}
               </div>
 
               <div style={{ marginBottom: 32 }}>
@@ -765,40 +791,32 @@ export default function CheckoutPage() {
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
-                <svg width={14} height={14} viewBox="0 0 14 14" fill="none">
-                  <rect x={1} y={5} width={12} height={8} rx={1} stroke={MUTED} strokeWidth={0.8} />
-                  <path d="M4 5V3.5a3 3 0 0 1 6 0V5" stroke={MUTED} strokeWidth={0.8} />
-                </svg>
-                <span style={{ ...sans, fontSize: 11, color: MUTED }}>{t.ssl_note}</span>
-              </div>
-
-              {!user && (
-                <div
-                  style={{
-                    padding: '12px 16px',
-                    background: 'rgba(110,20,35,0.06)',
-                    border: '0.5px solid rgba(110,20,35,0.18)',
-                    borderRadius: 2,
-                    marginBottom: 16,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 12,
-                    flexWrap: 'wrap',
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                  marginBottom: 24,
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => {
+                    setConsent(e.target.checked);
+                    if (e.target.checked) setOrderError(null);
                   }}
-                >
-                  <span style={{ ...sans, fontSize: 12, color: MAROON }}>
-                    {lang === 'sk' ? 'Pre dokončenie objednávky sa prihláste.' : 'Sign in to place your order.'}
-                  </span>
-                  <TransitionLink
-                    href="/account"
-                    style={{ ...sans, fontSize: 12, fontWeight: 500, color: MAROON, textDecoration: 'underline', textUnderlineOffset: 2 }}
-                  >
-                    {lang === 'sk' ? 'Prihlásiť sa →' : 'Sign in →'}
+                  style={{ marginTop: 2, accentColor: MAROON, width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }}
+                />
+                <span style={{ ...sans, fontSize: 12, color: MUTED, lineHeight: 1.6 }}>
+                  {t.consent_label}{' '}
+                  <TransitionLink href="/privacy" style={{ color: MAROON, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                    {lang === 'sk' ? 'Zásady ochrany osobných údajov' : 'Privacy Policy'}
                   </TransitionLink>
-                </div>
-              )}
+                </span>
+              </label>
+
               {orderError && (
                 <div style={{ padding: '12px 16px', background: 'rgba(110,20,35,0.06)', border: '0.5px solid rgba(110,20,35,0.18)', borderRadius: 2, marginBottom: 16 }}>
                   <span style={{ ...sans, fontSize: 12, color: MAROON }}>{orderError}</span>
@@ -812,8 +830,8 @@ export default function CheckoutPage() {
                   {t.back}
                 </button>
                 <button
-                  onClick={handlePlaceOrder}
-                  disabled={!user || placing}
+                  onClick={handleRegisterInterest}
+                  disabled={placing}
                   style={{
                     flex: 1,
                     padding: 15,
@@ -824,13 +842,17 @@ export default function CheckoutPage() {
                     ...sans,
                     fontSize: 14,
                     fontWeight: 500,
-                    cursor: !user || placing ? 'default' : 'pointer',
+                    cursor: placing ? 'default' : 'pointer',
                     letterSpacing: 0.3,
-                    opacity: !user ? 0.5 : 1,
+                    opacity: placing ? 0.6 : 1,
                   }}
                 >
-                  {placing ? t.processing : `${t.place_order}${fmt(grandTotalEur)}`}
+                  {placing ? t.processing : `${t.submit_request}${fmt(grandTotalEur)}`}
                 </button>
+              </div>
+
+              <div style={{ ...sans, fontSize: 10.5, color: MUTED, fontWeight: 300, lineHeight: 1.65, marginTop: 14 }}>
+                {t.submit_note}
               </div>
             </div>
           )}
@@ -866,19 +888,19 @@ export default function CheckoutPage() {
                 </svg>
               </div>
               <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 12 }}>
-                {t.order_confirmed}
+                {t.request_received}
               </div>
               <div style={{ ...serif, fontSize: isMobile ? 28 : 42, fontWeight: 600, color: INK, lineHeight: 1.1, marginBottom: 10 }}>
-                {t.build_on_way_line1}
+                {t.thanks_line1}
                 <br />
-                {t.build_on_way_line2}
+                {t.thanks_line2}
               </div>
               <div style={{ ...sans, fontSize: 13, color: MUTED, fontWeight: 300, marginBottom: 8 }}>
-                {t.confirmation_sent} {form.email}
+                {t.we_will_contact} {form.email}
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 40 }}>
-                <span style={{ ...sans, fontSize: 12, color: MUTED }}>{t.order}</span>
-                <span style={{ ...mono, fontSize: 13, color: INK, background: 'rgba(110,20,35,0.07)', padding: '4px 10px', borderRadius: 2 }}>{orderNumber}</span>
+                <span style={{ ...sans, fontSize: 12, color: MUTED }}>{t.reference}</span>
+                <span style={{ ...mono, fontSize: 13, color: INK, background: 'rgba(110,20,35,0.07)', padding: '4px 10px', borderRadius: 2 }}>{refNumber}</span>
               </div>
               <div
                 style={{
@@ -904,10 +926,29 @@ export default function CheckoutPage() {
                   {form.city}, {form.state} {form.zip}
                 </div>
                 <div style={{ height: 0.5, background: 'rgba(28,28,26,0.1)', margin: '16px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ ...sans, fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.would_pay_with}</span>
+                  <span style={{ ...sans, fontSize: 14, fontWeight: 500, color: INK }}>{methodLabel}</span>
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ ...sans, fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.estimated_arrival}</span>
                   <span style={{ ...serif, fontSize: 16, fontWeight: 500, color: INK }}>{deliveryDate}</span>
                 </div>
+              </div>
+
+              <div
+                style={{
+                  ...sans,
+                  fontSize: 11.5,
+                  color: MUTED,
+                  fontWeight: 300,
+                  lineHeight: 1.75,
+                  maxWidth: 420,
+                  margin: '0 auto 32px',
+                  textAlign: 'left',
+                }}
+              >
+                {t.outcome_note}
               </div>
               <TransitionLink
                 href="/build"
