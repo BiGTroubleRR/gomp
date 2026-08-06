@@ -120,15 +120,14 @@ create policy "order_items_insert_own" on public.order_items
 -- single user owns — so its RLS shape is deliberately different: anyone
 -- (including anonymous visitors) can read it, since /build has no login wall.
 --
--- Writes are also left open to the anon key for now. /admin's own gate is a
--- client-side password check (not real auth), so there is currently no
--- server-side identity to key a write policy on — locking writes down to
--- `authenticated` would just make /admin unable to save anything. This is a
--- known, deliberate gap: anyone with the (public, client-bundled) anon key
--- could write to this table directly via the Supabase REST API, bypassing
--- the admin password entirely. Tighten this once /admin has real auth
--- (Supabase Auth or Clerk) to check against, by replacing the write policy's
--- `using (true)` with an auth-based condition.
+-- Writes are NOT open to the anon key: there is deliberately no insert/update/
+-- delete policy on this table for anon/authenticated at all. /admin now has
+-- real auth (Clerk), but that only gates the UI — the write path is
+-- src/app/api/admin/components/route.ts, which checks Clerk admin status
+-- server-side and writes with the service-role key (bypasses RLS). Do not add
+-- a public write policy back here; that was a known, since-closed hole where
+-- anyone with the client-bundled anon key could write to this table directly
+-- via the Supabase REST API, bypassing admin auth entirely.
 -- ---------------------------------------------------------------------------
 create table if not exists public.components (
   id uuid primary key default gen_random_uuid(),
@@ -154,9 +153,10 @@ drop policy if exists "components_select_public" on public.components;
 create policy "components_select_public" on public.components
   for select using (true);
 
+-- No write policy for anon/authenticated. Only the service-role key (used
+-- exclusively by /api/admin/components, after a Clerk admin check) can write;
+-- it bypasses RLS entirely, so it needs no policy of its own.
 drop policy if exists "components_write_public" on public.components;
-create policy "components_write_public" on public.components
-  for all using (true) with check (true);
 
 -- Bumps updated_at on every UPDATE, so Admin's "last changed" info (if ever
 -- surfaced) and Realtime payloads both reflect a true modification time.

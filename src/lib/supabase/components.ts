@@ -3,48 +3,22 @@
 // Build and Admin: the catalog now lives in Supabase, so an Admin edit is visible to every
 // visitor immediately (via fetch on load) and live (via the Realtime subscription below),
 // instead of being trapped in whichever single browser made the edit.
+//
+// Reads (fetchComponentDb/subscribeComponents) go straight to Supabase with the anon key —
+// the catalog is public data, /build has no login wall. Writes go through /api/admin/components
+// instead: the anon key has no write access to this table (see supabase/schema.sql), so the
+// insert/update/delete calls below are proxied through a route that checks Clerk admin status
+// server-side and writes with the service-role key. Do not add direct Supabase writes here.
 'use client';
 
 import { createClient } from './client';
-import { defaultComponentDb, type Category, type Component, type ComponentDb, type Tier, type FormFactor } from '@/lib/component-db-seed';
-import type { Database } from './types';
+import { defaultComponentDb, type Category, type Component, type ComponentDb } from '@/lib/component-db-seed';
+import { rowToComponent } from './component-mapping';
 
-type ComponentRow = Database['public']['Tables']['components']['Row'];
-type ComponentInsert = Database['public']['Tables']['components']['Insert'];
-type ComponentUpdate = Database['public']['Tables']['components']['Update'];
-
-function rowToComponent(row: ComponentRow): Component {
-  const comp: Component = {
-    id: row.id,
-    name: row.name,
-    price: Number(row.price),
-    specs: row.specs,
-    tier: row.tier as Tier,
-  };
-  if (row.passmark != null) comp.passmark = row.passmark;
-  if (row.passmark_url) comp.passmarkUrl = row.passmark_url;
-  if (row.market_price != null) comp.marketPrice = Number(row.market_price);
-  if (row.case_size) comp.category = row.case_size;
-  if (row.socket) comp.socket = row.socket;
-  if (row.form_factor) comp.formFactor = row.form_factor as FormFactor;
-  return comp;
-}
-
-function componentToRow(category: Category, comp: Component, sortOrder: number): ComponentInsert {
-  return {
-    category,
-    name: comp.name,
-    price: comp.price,
-    specs: comp.specs,
-    tier: comp.tier,
-    passmark: comp.passmark ?? null,
-    passmark_url: comp.passmarkUrl ?? null,
-    market_price: comp.marketPrice ?? null,
-    case_size: category === 'case' ? comp.category ?? null : null,
-    socket: comp.socket ?? null,
-    form_factor: comp.formFactor ?? null,
-    sort_order: sortOrder,
-  };
+async function parseJsonOrThrow(res: Response, fallbackMessage: string): Promise<{ component?: Component; error?: string }> {
+  const body = await res.json().catch(() => ({}) as { error?: string });
+  if (!res.ok) throw new Error(body.error ?? fallbackMessage);
+  return body;
 }
 
 // Reads the whole catalog, grouped back into the same ComponentDb shape Build/Admin already
@@ -82,23 +56,32 @@ export function subscribeComponents(onChange: () => void): () => void {
 }
 
 export async function insertComponent(category: Category, comp: Component, sortOrder: number): Promise<Component> {
-  const supabase = createClient();
-  const { data, error } = await supabase.from('components').insert(componentToRow(category, comp, sortOrder)).select().single();
-  if (error || !data) throw error ?? new Error('insertComponent: no row returned');
-  return rowToComponent(data);
+  const res = await fetch('/api/admin/components', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category, comp, sortOrder }),
+  });
+  const body = await parseJsonOrThrow(res, 'insertComponent: request failed');
+  if (!body.component) throw new Error('insertComponent: no component returned');
+  return body.component;
 }
 
 export async function updateComponentRow(id: string, category: Category, comp: Component): Promise<Component> {
-  const supabase = createClient();
-  const patch: ComponentUpdate = componentToRow(category, comp, 0);
-  delete (patch as { sort_order?: number }).sort_order; // never touch ordering on a content edit
-  const { data, error } = await supabase.from('components').update(patch).eq('id', id).select().single();
-  if (error || !data) throw error ?? new Error('updateComponentRow: no row returned');
-  return rowToComponent(data);
+  const res = await fetch('/api/admin/components', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, category, comp }),
+  });
+  const body = await parseJsonOrThrow(res, 'updateComponentRow: request failed');
+  if (!body.component) throw new Error('updateComponentRow: no component returned');
+  return body.component;
 }
 
 export async function deleteComponentRow(id: string): Promise<void> {
-  const supabase = createClient();
-  const { error } = await supabase.from('components').delete().eq('id', id);
-  if (error) throw error;
+  const res = await fetch('/api/admin/components', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id }),
+  });
+  await parseJsonOrThrow(res, 'deleteComponentRow: request failed');
 }
