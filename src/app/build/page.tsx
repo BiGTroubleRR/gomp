@@ -10,7 +10,7 @@ import { writeJSON } from '@/lib/gomp-storage';
 import { fetchComponentDb, subscribeComponents } from '@/lib/supabase/components';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS, type Tier } from '@/lib/passmark';
 import { defaultComponentDb, caseFitsFormFactor, type Category, type Component, type ComponentDb } from '@/lib/component-db-seed';
-import { createBuildScene, SLOTS, CASE_SIZES, type BuildScene, type CompId } from '@/lib/build-scene';
+import { createBuildScene, SLOTS, CASE_SIZES, mmToUnits, sizeScaleFor, type BuildScene, type CompId } from '@/lib/build-scene';
 import { useIsMobile } from '@/lib/use-media-query';
 import { setDustCursorVisible, isDustEnabled } from '@/lib/cursor-dust';
 
@@ -118,6 +118,16 @@ function SpecPill({ label }: { label: string }) {
       {label}
     </div>
   );
+}
+
+// Real per-SKU dimensions when the selected case has them (sourced from buildcores-open-db —
+// see the attribution note on /about), falling back to the old category-bucket size for a case
+// that doesn't (e.g. one added in Admin without dimension fields filled in yet).
+function caseUnitsFor(comp: Component | undefined, category: string) {
+  if (comp?.caseWidthMm && comp?.caseHeightMm && comp?.caseDepthMm) {
+    return { w: mmToUnits(comp.caseWidthMm), h: mmToUnits(comp.caseHeightMm), d: mmToUnits(comp.caseDepthMm) };
+  }
+  return CASE_SIZES[category] || CASE_SIZES['Mid Tower'];
 }
 
 export default function BuildPage() {
@@ -256,17 +266,25 @@ export default function BuildPage() {
       const next = !selected[id];
       setSelected((s) => ({ ...s, [id]: next }));
       setActiveId(id);
-      sceneRef.current?.toggleComponent(id, next);
+      const comp = next ? findComp(id) : undefined;
+      sceneRef.current?.toggleComponent(id, next, comp ? sizeScaleFor(id, comp) : undefined);
     },
-    [selected],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selected, compDb, selections],
   );
 
   function changeSelection(id: CompId, name: string) {
     setSelections((s) => ({ ...s, [id]: name }));
     if (id === 'case') {
       const comp = (compDb.case || []).find((c) => c.name === name);
-      const size = comp?.category ? CASE_SIZES[comp.category] || CASE_SIZES['Mid Tower'] : CASE_SIZES['Mid Tower'];
+      const size = caseUnitsFor(comp, comp?.category || 'Mid Tower');
       sceneRef.current?.updateCase(size.w, size.h, size.d);
+    } else if (id === 'gpu' || id === 'cooler' || id === 'psu') {
+      // Swapping a SKU within an already-installed category doesn't go through
+      // toggleComponent (see selectCard) — this is the only path that picks up the new
+      // part's real size in that case.
+      const comp = (compDb[id] || []).find((c) => c.name === name);
+      if (comp) sceneRef.current?.setSizeScale(id, sizeScaleFor(id, comp));
     }
   }
 
@@ -276,7 +294,7 @@ export default function BuildPage() {
     const pick = list[0] || (compDb.case || [])[0];
     if (pick) {
       setSelections((s) => ({ ...s, case: pick.name }));
-      const size = CASE_SIZES[cat] || CASE_SIZES['Mid Tower'];
+      const size = caseUnitsFor(pick, cat);
       sceneRef.current?.updateCase(size.w, size.h, size.d);
     }
   }
