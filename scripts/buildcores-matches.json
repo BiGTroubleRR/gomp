@@ -1,0 +1,205 @@
+{
+  "case": {
+    "Fractal Design Meshify 2": {
+      "matchedName": "Fractal Design Meshify 2 ATX Mid Tower Case",
+      "dimensions_mm": {
+        "width": 210,
+        "height": 475,
+        "depth": 424
+      },
+      "max_video_card_length": 467,
+      "max_cpu_cooler_height": 169,
+      "max_psu_length": null,
+      "volume": 61.658
+    },
+    "Fractal Design Pop Air": {
+      "matchedName": "Fractal Design Pop Air ATX Mid Tower WHITE",
+      "dimensions_mm": {
+        "width": 215,
+        "height": 454,
+        "depth": 473.5
+      },
+      "max_video_card_length": 405,
+      "max_cpu_cooler_height": 170,
+      "max_psu_length": null,
+      "volume": 46.218
+    },
+    "NZXT H1 V2": {
+      "matchedName": "NZXT H1 V2 (manually verified — open-db has no H1 V2 record, only the discontinued H1 2019; auto-match incorrectly picked the unrelated H2 Flow. Dimensions from NZXT's own H1 V2 spec page; max GPU length from Tom's Hardware's H1 V2 review, which confirms 324mm as the V2-specific increase over the 2019 model's 305mm)",
+      "dimensions_mm": {
+        "width": 196,
+        "height": 405,
+        "depth": 196
+      },
+      "max_video_card_length": 324,
+      "max_cpu_cooler_height": 45,
+      "max_psu_length": null,
+      "volume": null
+    },
+    "Lian Li O11D EVO XL": {
+      "matchedName": "Lian Li O11D XL-A ATX Full Tower Silver / Black Tempered Glass",
+      "dimensions_mm": {
+        "width": 285,
+        "height": 517,
+        "depth": 490
+      },
+      "max_video_card_length": 446,
+      "max_cpu_cooler_height": 167,
+      "max_psu_length": null,
+      "volume": 68.863
+    }
+  },
+  "gpu": {
+    "NVIDIA RTX 3060 Ti": {
+      "matchedFrom": "1 card(s) at score 4, e.g. \"NVIDIA GeForce RTX 3060 Ti Founders Edition 8GB GDDR6\"",
+      "length": 242,
+      "total_slot_width": 2
+    },
+    "NVIDIA RTX 4080": {
+      "matchedFrom": "2 card(s) at score 3, e.g. \"NVIDIA GeForce RTX 4080 Founders Edition 16GB\"",
+      "length": 304,
+      "total_slot_width": 3
+    },
+    "AMD Radeon RX 7900 XTX": {
+      "matchedFrom": "6 card(s) at score 5, e.g. \"XFX SPEEDSTER MERC 310 AMD Radeon RX 7900 XTX Black Edition 24GB GDDR6\"",
+      "length": 320,
+      "total_slot_width": 3
+    },
+    "NVIDIA RTX 5070 Ti": {
+      "matchedFrom": "88 card(s) at score 3, e.g. \"PNY GeForce RTX 5070 Ti EPIC-X RGB Triple Fan Plus 16GB GDDR7 Black\"",
+      "length": 310,
+      "total_slot_width": 3
+    },
+    "NVIDIA RTX 4070 Ti Super": {
+      "matchedFrom": "63 card(s) at score 4, e.g. \"Zotac GAMING SOLID GeForce RTX 4070 Ti SUPER 16GB GDDR6X Black / Gray\"",
+      "length": 307,
+      "total_slot_width": 3
+    },
+    "NVIDIA RTX 4070 Ti": {
+      "matchedFrom": "145 card(s) at score 3, e.g. \"MSI GeForce RTX 4070 Ti VENTUS 3X E OC 12GB GDDR6X Silver / Black\"",
+      "length": 308,
+      "total_slot_width": 3
+    },
+    "NVIDIA RTX 3090 Ti": {
+      "matchedFrom": "3 card(s) at score 4, e.g. \"NVIDIA Founders Edition GeForce RTX 3090 Ti 24GB GDDR6X\"",
+      "length": 313,
+      "total_slot_width": 3
+    },
+    "AMD Radeon RX 7900 XT": {
+      "matchedFrom": "10 card(s) at score 5, e.g. \"AMD RADEON RX 7900 XT Gaming Graphics Card 3x Displayport\"",
+      "length": 317,
+      "total_slot_width": 2.8
+    },
+    "NVIDIA RTX 4070 Super": {
+      "matchedFrom": "1 card(s) at score 4, e.g. \"NVIDIA GeForce RTX 4070 SUPER 12GB Founders Edition Black\"",
+      "length": 244,
+      "total_slot_width": 2
+    },
+    "NVIDIA RTX 5070": {
+      "matchedFrom": "1 card(s) at score 3, e.g. \"NVIDIA GeForce RTX 5070 Founders Edition 12GB GDDR7\"",
+      "length": 242,
+      "total_slot_width": 2
+    },
+    "AMD Radeon RX 9070 XT": {
+      "matchedFrom": "20 card(s) at score 5, e.g. \"XFX Quicksilver AMD Radeon RX 9070 XT White Magnetic Air Edition 16GB GDDR6\"",
+      "length": 338,
+      "total_slot_width": 3.5
+    },
+    "NVIDIA RTX 3080 Ti": {
+      "matchedFrom": "1 card(s) at score 4, e.g. \"NVIDIA Founders Edition GeForce RTX 3080 Ti 12GB GDDR6X\"",
+      "length": 285,
+      "total_slot_width": 2
+    },
+    "NVIDIA RTX 4070": {
+      "matchedFrom": "3 card(s) at score 3, e.g. \"NVIDIA Founders Edition GeForce RTX 4070 12GB GDDR6X\"",
+      "length": 244,
+      "total_slot_width": 2
+    },
+    "AMD Radeon RX 9070": {
+      "matchedFrom": "34 card(s) at score 4, e.g. \"XFX Quicksilver AMD Radeon RX 9070 XT White Magnetic Air Edition 16GB GDDR6\"",
+      "length": 343,
+      "total_slot_width": 3.5
+    },
+    "AMD Radeon RX 6800 XT": {
+      "matchedFrom": "6 card(s) at score 5, e.g. \"AMD Radeon RX 6800 XT Black / Silver 16GB GDDR6\"",
+      "length": 325,
+      "total_slot_width": 3
+    },
+    "AMD Radeon RX 7800 XT": {
+      "matchedFrom": "4 card(s) at score 5, e.g. \"PowerColor Red Devil Limited Edition AMD Radeon RX 7800 XT 16GB GDDR6 Graphics Card\"",
+      "length": 274,
+      "total_slot_width": 2.5
+    },
+    "NVIDIA RTX 5060 Ti 16GB": {
+      "matchedFrom": "38 card(s) at score 4, e.g. \"ASUS TUF Gaming GeForce RTX 5060 Ti 16GB GDDR7\"",
+      "length": 232,
+      "total_slot_width": 2
+    },
+    "NVIDIA RTX 4060 Ti": {
+      "matchedFrom": "1 card(s) at score 4, e.g. \"NVIDIA Founders Edition GeForce RTX 4060 Ti 8GB GDDR6\"",
+      "length": 244,
+      "total_slot_width": 2
+    },
+    "NVIDIA RTX 3070 Ti": {
+      "matchedFrom": "1 card(s) at score 4, e.g. \"NVIDIA Founders Edition GeForce RTX 3070 Ti 8GB GDDR6X\"",
+      "length": 267,
+      "total_slot_width": 2
+    },
+    "NVIDIA RTX 5060": {
+      "matchedFrom": "224 card(s) at score 2, e.g. \"PNY NVIDIA RTX 6000 Ada Generation 48GB GDDR6\"",
+      "length": 247,
+      "total_slot_width": 2
+    },
+    "NVIDIA RTX 4080 Super": {
+      "matchedFrom": "1 card(s) at score 4, e.g. \"NVIDIA Founders Edition GeForce RTX 4080 SUPER 16GB GDDR6 Black\"",
+      "length": 304,
+      "total_slot_width": 3
+    },
+    "NVIDIA RTX 4060": {
+      "matchedFrom": "1 card(s) at score 3, e.g. \"NVIDIA Founders Edition GeForce RTX 4060 Ti 8GB GDDR6\"",
+      "length": 244,
+      "total_slot_width": 2
+    },
+    "NVIDIA RTX 5090 FE": {
+      "matchedFrom": "1 card(s) at score 3, e.g. \"NVIDIA GeForce RTX 5090 Founders Edition 32 GDDR7\"",
+      "length": 304,
+      "total_slot_width": 2
+    },
+    "NVIDIA RTX 5080": {
+      "matchedFrom": "1 card(s) at score 3, e.g. \"NVIDIA Founders Edition GeForce RTX 5080 16GB GDDR7\"",
+      "length": 304,
+      "total_slot_width": 2
+    },
+    "NVIDIA RTX 4090": {
+      "matchedFrom": "1 card(s) at score 3, e.g. \"NVIDIA Founders Edition GeForce RTX 4090 24GB GDDR6X\"",
+      "length": 304,
+      "total_slot_width": 3
+    }
+  },
+  "cooler": {
+    "Noctua NH-D15 chromax": {
+      "matchedName": "Noctua NH-D15 chromax.black Air 165mm Black",
+      "height": 165,
+      "radiator_size": null,
+      "water_cooled": false
+    },
+    "NZXT Kraken 360 RGB": {
+      "matchedName": "NZXT Kraken Core 360 RGB Black",
+      "height": 64.24,
+      "radiator_size": 360,
+      "water_cooled": true
+    }
+  },
+  "psu": {
+    "Seasonic FOCUS GX-850": {
+      "matchedName": "SeaSonic FOCUS GX-850 ATX 3.0 850W Fully Modular 80+ Gold Certified",
+      "length": 140,
+      "form_factor": "ATX"
+    },
+    "Corsair HX1200i ATX 3.0": {
+      "matchedName": "Corsair HX1200i (2025) Black 1200W Fully Modular 80+ Platinum Certified ATX (manually corrected — auto-match's top score tied with an unrelated generic OEM unit that had a populated but wrong length; 3 real Corsair HX1200i entries in open-db agree on 200mm)",
+      "length": 200,
+      "form_factor": "ATX"
+    }
+  }
+}

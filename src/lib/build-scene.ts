@@ -18,12 +18,52 @@ const BASE_POS: Record<Exclude<CompId, 'case'>, [number, number, number]> = {
   psu: [0.1, -1.88, 0.0],
 };
 
+// Category-bucket fallback, used only when a specific case has no real dimensions on file yet
+// (e.g. a newly admin-added case). Calibrated against real mid-tower dimensions (~105mm/unit —
+// see MM_PER_UNIT) so the fallback and real-dimension paths produce comparably-sized cases.
 const SIZES: Record<string, { w: number; h: number; d: number }> = {
-  'Full Tower': { w: 2.3, h: 5.5, d: 2.2 },
-  'Mid Tower': { w: 2.0, h: 4.5, d: 2.0 },
-  'Mini Tower': { w: 1.7, h: 3.9, d: 1.8 },
-  SFF: { w: 1.4, h: 3.2, d: 1.5 },
+  'Full Tower': { w: 2.3, h: 5.5, d: 4.6 },
+  'Mid Tower': { w: 2.0, h: 4.5, d: 4.2 },
+  'Mini Tower': { w: 1.7, h: 3.9, d: 3.8 },
+  SFF: { w: 1.4, h: 3.2, d: 1.4 },
 };
+
+// mm-per-scene-unit, calibrated so a real mid-tower's width/height (~210mm / ~475mm) lands on
+// the same scale the old fixed-bucket dimensions used (2.0 / 4.5 units) — real depth is a lot
+// deeper than the old buckets assumed (cases are closer to as-deep-as-tall than as-deep-as-wide),
+// which is a correction, not a regression: BASE_POS/compScale below are already ratio-driven off
+// whatever w/h/d gets passed in, so nothing besides the case's own proportions changes.
+export const MM_PER_UNIT = 105;
+export function mmToUnits(mm: number): number {
+  return mm / MM_PER_UNIT;
+}
+
+// Reference lengths components are scaled relative to, so a component 20% longer than a
+// "typical" part actually renders ~20% longer rather than every SKU in a category sharing one
+// fixed mesh size regardless of its real dimensions. Ratios are clamped (see sizeScaleFor) so a
+// data outlier can't make a part comically large/small next to the case.
+const REF_GPU_LENGTH_MM = 300;
+const REF_COOLER_HEIGHT_MM = 165;
+const REF_PSU_LENGTH_MM = 160;
+
+export type SizeScale = { x: number; y: number; z: number };
+
+function clampRatio(mm: number | undefined, ref: number): number {
+  if (!mm || !isFinite(mm) || mm <= 0) return 1;
+  return Math.min(1.4, Math.max(0.7, mm / ref));
+}
+
+// GPU length maps to local Z (the group's rotation.z below only ever swaps X/Y, so Z — the
+// axis every gpu sub-mesh's length dimension is built along — stays the "length" axis in world
+// space regardless). Cooler height maps to Y; only air towers have a height figure to scale by
+// (an AIO's radiator isn't a separate mesh in this placeholder geometry, so radiator size has
+// no visual analog to scale here). PSU length maps to Z.
+export function sizeScaleFor(id: CompId, comp: { gpuLengthMm?: number; coolerHeightMm?: number; psuLengthMm?: number }): SizeScale {
+  if (id === 'gpu') return { x: 1, y: 1, z: clampRatio(comp.gpuLengthMm, REF_GPU_LENGTH_MM) };
+  if (id === 'cooler') return { x: 1, y: clampRatio(comp.coolerHeightMm, REF_COOLER_HEIGHT_MM), z: 1 };
+  if (id === 'psu') return { x: 1, y: 1, z: clampRatio(comp.psuLengthMm, REF_PSU_LENGTH_MM) };
+  return { x: 1, y: 1, z: 1 };
+}
 
 type ObjRecord = {
   mesh: THREE.Object3D;
@@ -39,6 +79,9 @@ type ObjRecord = {
   selected: boolean;
   baseMats: THREE.Material[];
   selMats: THREE.Material[];
+  // Per-axis multiplier on top of compScale, from sizeScaleFor — {1,1,1} for categories with
+  // no per-SKU dimension data (mobo/cpu/ram/storage), real-ratio-derived for gpu/cooler/psu.
+  sizeScale: SizeScale;
 };
 
 function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
@@ -360,6 +403,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       selected: false,
       baseMats: [],
       selMats: cloneWithEmissiveGlow(mesh),
+      sizeScale: { x: 1, y: 1, z: 1 },
     };
   });
   // Case is tracked as a pseudo-object so SLOTS-driven logic stays uniform.
@@ -372,6 +416,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     selected: false,
     baseMats: [],
     selMats: [],
+    sizeScale: { x: 1, y: 1, z: 1 },
   };
 
   function scaleComponentPositions() {
@@ -383,7 +428,8 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       if (obj.selected) {
         obj.targetPos.copy(obj.finalPos);
         obj.mesh.position.copy(obj.finalPos);
-        obj.mesh.scale.setScalar(compScale);
+        const s = obj.sizeScale;
+        obj.mesh.scale.set(compScale * s.x, compScale * s.y, compScale * s.z);
       }
     });
   }
@@ -405,10 +451,11 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     scaleComponentPositions();
   }
 
-  function toggleComponent(id: CompId, nextSelected: boolean) {
+  function toggleComponent(id: CompId, nextSelected: boolean, sizeScale?: SizeScale) {
     const obj = objects[id];
     if (!obj) return;
     obj.selected = nextSelected;
+    if (sizeScale) obj.sizeScale = sizeScale;
     if (id === 'case') {
       caseGroup.visible = true;
       obj.targetPos.copy(nextSelected ? obj.finalPos : obj.startPos);
@@ -426,7 +473,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       mesh.position.copy(obj.startPos);
       mesh.scale.setScalar(0.001);
       obj.targetPos = obj.finalPos.clone();
-      obj.targetScale = new THREE.Vector3(compScale, compScale, compScale);
+      obj.targetScale = new THREE.Vector3(compScale * obj.sizeScale.x, compScale * obj.sizeScale.y, compScale * obj.sizeScale.z);
       obj.exiting = false;
       let i = 0;
       mesh.traverse((child) => {
@@ -596,12 +643,26 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   }
   window.addEventListener('resize', onResize);
 
+  // For a same-category SKU swap while already installed (e.g. GPU already on, user picks a
+  // different card): toggleComponent only runs the install/remove animation on a selected
+  // state change, so a swap needs its own path to pick up the new part's real size without
+  // replaying the fly-in.
+  function setSizeScale(id: CompId, sizeScale: SizeScale) {
+    const obj = objects[id];
+    if (!obj) return;
+    obj.sizeScale = sizeScale;
+    if (obj.selected && obj.moveStart == null) {
+      obj.mesh.scale.set(compScale * sizeScale.x, compScale * sizeScale.y, compScale * sizeScale.z);
+    }
+  }
+
   return {
     toggleComponent,
     updateCase,
     toggleGlass,
     triggerCompletion,
     pickComponentAt,
+    setSizeScale,
     setMotion(on: boolean) {
       motionOn = on;
       ambientGroup.visible = on;

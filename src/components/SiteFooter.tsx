@@ -34,6 +34,11 @@ const T = {
     madein: 'Hand-built in Prague, CZ',
     disclaimer:
       'Prices are shown for guidance only, converted at approximate market rates (1 € ≈ 24.30 Kč, reference Jul 2026). Final price confirmed at checkout.',
+    data_attribution_pre: 'Component dimensions and specifications include information from ',
+    data_attribution_name: 'BuildCores OpenDB',
+    data_attribution_mid: ', made available under the ',
+    data_attribution_license: 'ODC Attribution License',
+    data_attribution_post: '.',
   },
   sk: {
     blurb: 'Ručne stavané herné počítače presne podľa vašich požiadaviek. Staviame ich hráči pre hráčov.',
@@ -55,6 +60,11 @@ const T = {
     madein: 'Ručne vyrábané v Prahe, ČR',
     disclaimer:
       'Ceny slúžia len na orientáciu, prepočítané približným trhovým kurzom (1 € ≈ 24,30 Kč, referenčný júl 2026). Konečná cena bude potvrdená pri objednávke.',
+    data_attribution_pre: 'Rozmery a parametre komponentov obsahujú informácie z databázy ',
+    data_attribution_name: 'BuildCores OpenDB',
+    data_attribution_mid: ', dostupnej pod licenciou ',
+    data_attribution_license: 'ODC Attribution License',
+    data_attribution_post: '.',
   },
 } as const;
 
@@ -135,6 +145,18 @@ export default function SiteFooter() {
         </div>
         <div style={{ borderTop: '0.5px solid rgba(245,240,230,0.08)', marginTop: 20, paddingTop: 20 }}>
           <span style={{ ...sans, fontSize: 11, color: 'rgba(245,240,230,0.28)', fontWeight: 300, lineHeight: 1.6 }}>{t.disclaimer}</span>
+          <br />
+          <span style={{ ...sans, fontSize: 11, color: 'rgba(245,240,230,0.28)', fontWeight: 300, lineHeight: 1.6 }}>
+            {t.data_attribution_pre}
+            <a href="https://github.com/buildcores/buildcores-open-db" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(245,240,230,0.42)' }}>
+              {t.data_attribution_name}
+            </a>
+            {t.data_attribution_mid}
+            <a href="https://opendatacommons.org/licenses/by/1-0/" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(245,240,230,0.42)' }}>
+              {t.data_attribution_license}
+            </a>
+            {t.data_attribution_post}
+          </span>
         </div>
       </div>
     </footer>

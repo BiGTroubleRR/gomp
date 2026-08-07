@@ -29,7 +29,7 @@ const translations = {
     builds_shipped: 'Builds shipped',
     hq_workshop: 'HQ & workshop',
     pull_quote: '"We don’t build PCs to a price. We build them to a standard."',
-    quote_author: 'Martin K. — Co-founder & Lead Builder',
+    quote_author: 'Jakub G. — Founder',
     origin_p3:
       "That standard means a printed benchmark sheet with every build. It means 24-hour stress testing. It means using the same PSU we'd put in our own machines, not a budget unit because the margin looks better.",
     what_we_stand: 'What we stand for',
@@ -64,7 +64,7 @@ const translations = {
     builds_shipped: 'Expedovaných zostáv',
     hq_workshop: 'Sídlo a dielňa',
     pull_quote: '„Počítače nestaviame na cenu. Staviame ich pre štandard.“',
-    quote_author: 'Martin K. — spoluzakladateľ a hlavný technik',
+    quote_author: 'Jakub G. — zakladateľ',
     origin_p3:
       'Tento štandard znamená tlačený protokol o benchmarkoch pri každej zostave. Znamená rigorózne záťažové testovanie. Znamená použitie takého zdroja, aký by sme dali do vlastného počítača, nie lacnejšieho kus len preto, že sa tým zlepší marža.',
     what_we_stand: 'Za čím si stojíme',
@@ -119,10 +119,8 @@ const values = {
 } as const;
 
 const team = [
-  { initial: 'M', name: 'Martin K.', role_en: 'Co-founder · Lead Builder', role_sk: 'Spoluzakladateľ · Hlavný technik', opacity: 1 },
-  { initial: 'J', name: 'Jana V.', role_en: 'Co-founder · Operations', role_sk: 'Spoluzakladateľka · Prevádzka', opacity: 0.7 },
-  { initial: 'T', name: 'Tomáš N.', role_en: 'Senior Technician', role_sk: 'Senior technik', opacity: 0.5 },
-  { initial: 'P', name: 'Pavel S.', role_en: 'QA & Benchmarking', role_sk: 'QA a benchmarking', opacity: 0.4 },
+  { initial: 'J', name: 'Jakub G.', role_en: 'Founder', role_sk: 'Zakladateľ', opacity: 1 },
+  { initial: 'M', name: 'Max G.', role_en: 'Second in Command', role_sk: 'Druhý v poradí', opacity: 1 },
 ] as const;
 
 const MAROON = '#6E1423';
@@ -366,7 +364,7 @@ export default function AboutPage() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+              gridTemplateColumns: 'repeat(2, 1fr)',
               gap: 0,
               border: '0.5px solid rgba(28,28,26,0.12)',
               borderRadius: 2,

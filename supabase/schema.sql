@@ -142,6 +142,23 @@ create table if not exists public.components (
   case_size text, -- case only: Full Tower | Mid Tower | Mini Tower | SFF
   socket text, -- cpu + mobo only: AM5 | AM4 | LGA1700 | LGA1851
   form_factor text, -- mobo only: E-ATX | ATX | mATX | Mini-ITX
+  -- Real physical dimensions (mm), sourced from buildcores-open-db (ODC-By
+  -- licensed — see the attribution note on /about) for the categories where
+  -- per-SKU size actually varies enough to matter: case, gpu, cooler, psu.
+  -- Motherboard/CPU/RAM/storage are close enough to standardized by form
+  -- factor that per-SKU dimensions wouldn't change anything visually, so
+  -- those are left to the existing form_factor/socket fields instead.
+  case_width_mm numeric(6, 1), -- case only
+  case_height_mm numeric(6, 1), -- case only
+  case_depth_mm numeric(6, 1), -- case only
+  max_gpu_length_mm numeric(6, 1), -- case only: longest GPU it can fit
+  max_cooler_height_mm numeric(6, 1), -- case only: tallest air cooler it can fit
+  max_psu_length_mm numeric(6, 1), -- case only: longest PSU it can fit
+  gpu_length_mm numeric(6, 1), -- gpu only
+  gpu_slot_width numeric(3, 1), -- gpu only: how many expansion slots it occupies
+  cooler_height_mm numeric(6, 1), -- cooler only: air towers
+  cooler_radiator_mm numeric(6, 1), -- cooler only: AIO radiator size
+  psu_length_mm numeric(6, 1), -- psu only
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -174,6 +191,20 @@ drop trigger if exists components_set_updated_at on public.components;
 create trigger components_set_updated_at
   before update on public.components
   for each row execute procedure public.set_updated_at();
+
+-- Migration for the dimension columns above, since `create table if not
+-- exists` is a no-op against the already-live components table.
+alter table public.components add column if not exists case_width_mm numeric(6, 1);
+alter table public.components add column if not exists case_height_mm numeric(6, 1);
+alter table public.components add column if not exists case_depth_mm numeric(6, 1);
+alter table public.components add column if not exists max_gpu_length_mm numeric(6, 1);
+alter table public.components add column if not exists max_cooler_height_mm numeric(6, 1);
+alter table public.components add column if not exists max_psu_length_mm numeric(6, 1);
+alter table public.components add column if not exists gpu_length_mm numeric(6, 1);
+alter table public.components add column if not exists gpu_slot_width numeric(3, 1);
+alter table public.components add column if not exists cooler_height_mm numeric(6, 1);
+alter table public.components add column if not exists cooler_radiator_mm numeric(6, 1);
+alter table public.components add column if not exists psu_length_mm numeric(6, 1);
 
 -- Required for Supabase Realtime to broadcast INSERT/UPDATE/DELETE on this
 -- table — without this, postgres_changes subscriptions silently receive
