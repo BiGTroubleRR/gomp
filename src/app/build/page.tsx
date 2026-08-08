@@ -557,7 +557,7 @@ export default function BuildPage() {
                       key={id}
                       onClick={() => setActiveStep(id)}
                       style={{
-                        ...textPop,
+                        ...(isActive ? {} : textPop),
                         display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20,
                         border: `1px solid ${isActive ? MAROON : done ? 'rgba(110,20,35,0.4)' : 'rgba(28,28,26,0.2)'}`,
                         background: isActive ? MAROON : done ? 'rgba(110,20,35,0.08)' : 'transparent',
@@ -687,7 +687,7 @@ export default function BuildPage() {
                   onClick={() => { const i = SLOTS.indexOf(activeStep); if (i < SLOTS.length - 1) setActiveStep(SLOTS[i + 1]); }}
                   disabled={SLOTS.indexOf(activeStep) === SLOTS.length - 1}
                   style={{
-                    ...textPop, flex: 1, padding: '9px',
+                    ...(SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? textPop : {}), flex: 1, padding: '9px',
                     background: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? 'transparent' : MAROON,
                     color: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? '#c9c2b4' : '#FDFAF4',
                     border: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? '0.5px solid rgba(28,28,26,0.2)' : 'none',
