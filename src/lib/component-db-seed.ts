@@ -69,6 +69,23 @@ export const MOBO_FORM_FACTOR_SIZE_MM: Record<FormFactor, { width: number; depth
   'Mini-ITX': { width: 170, depth: 170 },
 };
 
+// Standardized CPU package dimensions (mm) by socket — the die itself varies, but the outer
+// package/IHS a socket accepts is fixed by spec, same reasoning as motherboard form factors.
+export const CPU_PACKAGE_SIZE_MM: Record<string, { width: number; depth: number }> = {
+  AM5: { width: 40, depth: 40 },
+  AM4: { width: 40, depth: 40 },
+  LGA1700: { width: 37.5, depth: 45 },
+  LGA1851: { width: 37.5, depth: 45 },
+};
+
+// Standardized desktop UDIMM size (mm) — every DDR4/DDR5 desktop stick is this size regardless
+// of capacity or speed; only tall RGB heatsinks add a few mm of height, not modeled here.
+export const RAM_DIMM_SIZE_MM = { length: 133.35, height: 31.25 };
+
+// Standardized M.2 2280 SSD size (mm) — "2280" literally encodes 22mm x 80mm; every drive GOMP
+// carries is this form factor.
+export const STORAGE_M2_SIZE_MM = { length: 80, width: 22 };
+
 export function defaultComponentDb(): ComponentDb {
   return {
     gpu: [
