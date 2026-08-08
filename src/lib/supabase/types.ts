@@ -129,6 +129,7 @@ export type Database = {
           case_depth_mm: number | null;
           max_gpu_length_mm: number | null;
           max_cooler_height_mm: number | null;
+          max_radiator_mm: number | null;
           max_psu_length_mm: number | null;
           gpu_length_mm: number | null;
           gpu_slot_width: number | null;
@@ -157,6 +158,7 @@ export type Database = {
           case_depth_mm?: number | null;
           max_gpu_length_mm?: number | null;
           max_cooler_height_mm?: number | null;
+          max_radiator_mm?: number | null;
           max_psu_length_mm?: number | null;
           gpu_length_mm?: number | null;
           gpu_slot_width?: number | null;
@@ -182,6 +184,7 @@ export type Database = {
           case_depth_mm?: number | null;
           max_gpu_length_mm?: number | null;
           max_cooler_height_mm?: number | null;
+          max_radiator_mm?: number | null;
           max_psu_length_mm?: number | null;
           gpu_length_mm?: number | null;
           gpu_slot_width?: number | null;
