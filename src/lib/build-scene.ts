@@ -65,6 +65,111 @@ export function sizeScaleFor(id: CompId, comp: { gpuLengthMm?: number; coolerHei
   return { x: 1, y: 1, z: 1 };
 }
 
+// ---------------------------------------------------------------------------
+// Blueprint-style dimension annotations — quoted measurements (extension
+// ticks + a dimension line + a centered "N.N cm" label) next to a part or the
+// reference can, the way an engineering drawing calls out a measurement.
+// These are independent scene objects (not children of the animated
+// component groups), sized directly from real mm data via mmToUnits, so they
+// stay correctly sized and legible regardless of how a placeholder mesh's own
+// compScale/sizeScale happens to be animating.
+// ---------------------------------------------------------------------------
+export type DimensionSpec = { axis: 'x' | 'y' | 'z'; mm: number; label?: string };
+
+const DIM_COLOR = 0xc4a35a; // GOMP gold — matches the site's accent color
+
+// Text size scales with what's being measured — a case's "47.5 cm" label and a RAM stick's
+// "3.1 cm" label were previously the same fixed size, which both crowded the small parts with
+// oversized text and added to the overall "wall of numbers" feel. Clamped so a tiny part's
+// label never becomes unreadable and a huge case's label never gets comically large; readers
+// are expected to zoom in on small parts rather than have every label pinned to one size.
+function makeTextSprite(text: string, targetHeight: number): THREE.Sprite {
+  const canvas = document.createElement('canvas');
+  const scale = 4; // supersample so the label stays crisp when the camera zooms in
+  canvas.width = 220 * scale;
+  canvas.height = 56 * scale;
+  const ctx = canvas.getContext('2d')!;
+  ctx.font = `${34 * scale}px "JetBrains Mono", monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = 8 * scale;
+  ctx.strokeStyle = 'rgba(253,250,244,0.95)';
+  ctx.strokeText(text, canvas.width / 2, canvas.height / 2);
+  ctx.fillStyle = '#6E1423';
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
+  const sprite = new THREE.Sprite(material);
+  const aspect = canvas.width / canvas.height;
+  const height = Math.min(0.26, Math.max(0.05, targetHeight));
+  sprite.scale.set(height * aspect, height, 1);
+  return sprite;
+}
+
+// One quoted measurement: two short perpendicular extension ticks at the ends, a line joining
+// them, and a centered cm label — built along `spec.axis` in local space, centered at origin
+// (the caller positions the whole group flush against the measured object's edge).
+function buildDimensionAnnotation(spec: DimensionSpec): THREE.Group {
+  const group = new THREE.Group();
+  const lengthUnits = mmToUnits(spec.mm);
+  const half = lengthUnits / 2;
+  const tick = Math.min(0.05, lengthUnits * 0.15);
+  const lineMat = new THREE.LineBasicMaterial({ color: DIM_COLOR, transparent: true, opacity: 0.85, depthTest: false });
+
+  const axisVec = spec.axis === 'x' ? new THREE.Vector3(1, 0, 0) : spec.axis === 'y' ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(0, 0, 1);
+  const tickVec = spec.axis === 'y' ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+
+  const main = new THREE.BufferGeometry().setFromPoints([axisVec.clone().multiplyScalar(-half), axisVec.clone().multiplyScalar(half)]);
+  group.add(new THREE.Line(main, lineMat));
+
+  [-half, half].forEach((p) => {
+    const center = axisVec.clone().multiplyScalar(p);
+    const capGeo = new THREE.BufferGeometry().setFromPoints([
+      center.clone().addScaledVector(tickVec, -tick),
+      center.clone().addScaledVector(tickVec, tick),
+    ]);
+    group.add(new THREE.Line(capGeo, lineMat));
+  });
+
+  const label = spec.label ?? `${(spec.mm / 10).toFixed(1)} cm`;
+  const sprite = makeTextSprite(label, lengthUnits * 0.22);
+  sprite.position.copy(tickVec.clone().multiplyScalar(tick * 2.4));
+  group.add(sprite);
+
+  return group;
+}
+
+// Builds every dimension callout for one part, positioned flush against the real edges of a
+// box exactly the size of the part being measured — each line runs the object's full,
+// correctly-centered length along its own axis, offset only on the OTHER two axes by a small
+// fixed gap so it sits just outside that face rather than floating off to one side (the gap is
+// a small constant regardless of part size, matching how extension lines work on a real
+// blueprint — it doesn't scale up for a big case or shrink to nothing for a tiny RAM stick).
+// Axes with no measurement of their own default to a small assumed half-extent so the gap still
+// lands just outside a reasonable guess at that face, rather than at the object's exact center.
+function buildDimensionSet(specs: DimensionSpec[]): THREE.Group {
+  const set = new THREE.Group();
+  const gap = 0.06;
+  const defaultHalfExtentUnits = 0.09;
+  const halfExtent: Record<'x' | 'y' | 'z', number> = { x: defaultHalfExtentUnits, y: defaultHalfExtentUnits, z: defaultHalfExtentUnits };
+  specs.forEach((spec) => {
+    halfExtent[spec.axis] = mmToUnits(spec.mm) / 2;
+  });
+
+  specs.forEach((spec) => {
+    const annotation = buildDimensionAnnotation(spec);
+    const pos = new THREE.Vector3(0, 0, 0);
+    if (spec.axis !== 'x') pos.x = halfExtent.x + gap;
+    if (spec.axis !== 'y') pos.y = -(halfExtent.y + gap);
+    if (spec.axis !== 'z') pos.z = halfExtent.z + gap;
+    annotation.position.copy(pos);
+    set.add(annotation);
+  });
+  return set;
+}
+
 type ObjRecord = {
   mesh: THREE.Object3D;
   finalPos: THREE.Vector3;
@@ -226,6 +331,69 @@ function cloneWithEmissiveGlow(mesh: THREE.Object3D): THREE.Material[] {
     mats.push(glow);
   });
   return mats;
+}
+
+// A real 500ml beverage can (66mm diameter x 168mm tall — Crown Cork's own published spec for
+// the standard 16.9oz/500ml can) as a familiar object to gauge every other part's size against.
+// Branded "GOMPA COLA" purely as an in-scene joke — deliberately GOMP's own maroon/gold instead
+// of copying an actual soft-drink brand's real trade dress, since this ships to a live site.
+export const CAN_DIAMETER_MM = 66;
+export const CAN_HEIGHT_MM = 168;
+
+function makeCanLabelTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#6E1423';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#C4A35A';
+  ctx.fillRect(0, canvas.height * 0.38, canvas.width, canvas.height * 0.1);
+  ctx.fillRect(0, canvas.height * 0.7, canvas.width, canvas.height * 0.03);
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height * 0.24);
+  ctx.font = 'italic bold 64px Georgia, serif';
+  ctx.fillStyle = '#FDFAF4';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('GOMPA', 0, 0);
+  ctx.restore();
+  ctx.save();
+  ctx.translate(canvas.width / 2, canvas.height * 0.58);
+  // A generic flowing script gives it a fun soda-label feel without tracing any real brand's
+  // specific lettering — the exact Coca-Cola script is itself the protected trade dress, not
+  // just the wordmark, so this deliberately doesn't reach for that.
+  ctx.font = 'bold 92px "Brush Script MT", "Segoe Script", cursive';
+  ctx.fillStyle = '#6E1423';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Cola', 0, 0);
+  ctx.restore();
+  ctx.font = '600 22px "JetBrains Mono", monospace';
+  ctx.fillStyle = 'rgba(253,250,244,0.8)';
+  ctx.textAlign = 'center';
+  ctx.fillText('500 ml · NET 0.5 L', canvas.width / 2, canvas.height * 0.86);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function buildCanMesh(): THREE.Group {
+  const group = new THREE.Group();
+  const radius = mmToUnits(CAN_DIAMETER_MM) / 2;
+  const height = mmToUnits(CAN_HEIGHT_MM);
+  const bodyGeo = new THREE.CylinderGeometry(radius, radius, height, 32);
+  const bodyMat = new THREE.MeshStandardMaterial({ map: makeCanLabelTexture(), roughness: 0.35, metalness: 0.6 });
+  group.add(new THREE.Mesh(bodyGeo, bodyMat));
+  const capMat = new THREE.MeshStandardMaterial({ color: 0xd8d2c4, roughness: 0.3, metalness: 0.8 });
+  const topCap = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.96, radius, height * 0.03, 32), capMat);
+  topCap.position.y = height / 2;
+  group.add(topCap);
+  const botCap = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius * 0.96, height * 0.03, 32), capMat);
+  botCap.position.y = -height / 2;
+  group.add(botCap);
+  return group;
 }
 
 export type SceneCallbacks = {
@@ -419,6 +587,80 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     sizeScale: { x: 1, y: 1, z: 1 },
   };
 
+  // ---- Dimension annotations ----
+  let dimensionsVisible = true;
+  const dimensionGroups: Partial<Record<CompId | 'can', THREE.Group>> = {};
+  let lastCaseSize = { w: 2.0, h: 4.5, d: 2.0 };
+
+  function clearDimensionGroup(id: CompId | 'can') {
+    const existing = dimensionGroups[id];
+    if (!existing) return;
+    existing.traverse((child) => {
+      const line = child as THREE.Line;
+      if ((line as THREE.Object3D).type === 'Line' && line.geometry) line.geometry.dispose();
+      const sprite = child as THREE.Sprite;
+      if (sprite.material) {
+        const mat = sprite.material as THREE.SpriteMaterial;
+        mat.map?.dispose();
+        mat.dispose();
+      }
+    });
+    scene.remove(existing);
+    delete dimensionGroups[id];
+  }
+
+  function setComponentDimensions(id: CompId, specs: DimensionSpec[]) {
+    clearDimensionGroup(id);
+    if (!dimensionsVisible || !specs.length || !objects[id]?.selected) return;
+    const set = buildDimensionSet(specs);
+    // buildDimensionSet already offsets each line to sit just outside the part's own edges —
+    // the set itself just needs to sit at the part's actual center (the case's local origin
+    // IS its center; every other part's finalPos already is its center too).
+    set.position.copy(id === 'case' ? new THREE.Vector3(0, 0, 0) : objects[id]!.finalPos);
+    scene.add(set);
+    dimensionGroups[id] = set;
+  }
+
+  function setDimensionsVisible(visible: boolean) {
+    dimensionsVisible = visible;
+    Object.values(dimensionGroups).forEach((g) => {
+      if (g) g.visible = visible;
+    });
+    refreshCanDimensions();
+  }
+
+  // ---- Reference can ----
+  let canVisible = false;
+  const canGroup = buildCanMesh();
+  canGroup.visible = false;
+  scene.add(canGroup);
+
+  function positionCan() {
+    const { w, h } = lastCaseSize;
+    const radius = mmToUnits(CAN_DIAMETER_MM) / 2;
+    const height = mmToUnits(CAN_HEIGHT_MM);
+    canGroup.position.set(w / 2 + radius + 0.4, floorMesh.position.y + height / 2 + 0.02, 0);
+  }
+
+  function refreshCanDimensions() {
+    clearDimensionGroup('can');
+    if (!canVisible || !dimensionsVisible) return;
+    const set = buildDimensionSet([
+      { axis: 'y', mm: CAN_HEIGHT_MM },
+      { axis: 'x', mm: CAN_DIAMETER_MM, label: `Ø ${(CAN_DIAMETER_MM / 10).toFixed(1)} cm` },
+    ]);
+    set.position.copy(canGroup.position);
+    scene.add(set);
+    dimensionGroups.can = set;
+  }
+
+  function setCanVisible(visible: boolean) {
+    canVisible = visible;
+    positionCan();
+    canGroup.visible = visible;
+    refreshCanDimensions();
+  }
+
   function scaleComponentPositions() {
     (Object.keys(BASE_POS) as Exclude<CompId, 'case'>[]).forEach((id) => {
       const obj = objects[id];
@@ -439,6 +681,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     const sy = h / 4.5;
     const sz = d / 2.0;
     compScale = Math.min(sx, sy, sz);
+    lastCaseSize = { w, h, d };
     buildCase(w, h, d);
     if (objects.case) {
       objects.case.mesh = caseGroup;
@@ -449,6 +692,8 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       }
     }
     scaleComponentPositions();
+    positionCan();
+    refreshCanDimensions();
   }
 
   function toggleComponent(id: CompId, nextSelected: boolean, sizeScale?: SizeScale) {
@@ -456,6 +701,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     if (!obj) return;
     obj.selected = nextSelected;
     if (sizeScale) obj.sizeScale = sizeScale;
+    if (!nextSelected) clearDimensionGroup(id);
     if (id === 'case') {
       caseGroup.visible = true;
       obj.targetPos.copy(nextSelected ? obj.finalPos : obj.startPos);
@@ -663,6 +909,9 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     triggerCompletion,
     pickComponentAt,
     setSizeScale,
+    setComponentDimensions,
+    setDimensionsVisible,
+    setCanVisible,
     setMotion(on: boolean) {
       motionOn = on;
       ambientGroup.visible = on;
@@ -672,6 +921,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     dispose() {
       running = false;
       window.removeEventListener('resize', onResize);
+      (Object.keys(dimensionGroups) as (CompId | 'can')[]).forEach(clearDimensionGroup);
       controls.dispose();
       renderer.dispose();
       if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);

@@ -9,8 +9,18 @@ import { navigateWithTransition } from '@/lib/gomp-nav';
 import { writeJSON } from '@/lib/gomp-storage';
 import { fetchComponentDb, subscribeComponents } from '@/lib/supabase/components';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS, type Tier } from '@/lib/passmark';
-import { defaultComponentDb, caseFitsFormFactor, type Category, type Component, type ComponentDb } from '@/lib/component-db-seed';
-import { createBuildScene, SLOTS, CASE_SIZES, mmToUnits, sizeScaleFor, type BuildScene, type CompId } from '@/lib/build-scene';
+import {
+  defaultComponentDb,
+  caseFitsFormFactor,
+  MOBO_FORM_FACTOR_SIZE_MM,
+  CPU_PACKAGE_SIZE_MM,
+  RAM_DIMM_SIZE_MM,
+  STORAGE_M2_SIZE_MM,
+  type Category,
+  type Component,
+  type ComponentDb,
+} from '@/lib/component-db-seed';
+import { createBuildScene, SLOTS, CASE_SIZES, mmToUnits, sizeScaleFor, type BuildScene, type CompId, type DimensionSpec } from '@/lib/build-scene';
 import { useIsMobile } from '@/lib/use-media-query';
 import { setDustCursorVisible, isDustEnabled } from '@/lib/cursor-dust';
 
@@ -20,7 +30,8 @@ const T = {
     pc_builder: 'PC Builder', select_components: 'Select components to add', build_complete: 'Build Complete PC',
     clear_all: 'Clear All', drag_to_orbit: 'Drag to orbit  ·  Scroll to zoom', hide_panel: 'Hide Side Panel',
     show_panel: 'Show Side Panel', complete: 'Complete', your_build: 'Your Build', selected_part: 'Selected Part',
-    build_total: 'Build Total', passmark_score: 'PassMark Score', verify_passmark: 'Verify on PassMark ↗',
+    build_total: 'Build Total', passmark_score: 'PassMark Score', verify_passmark: 'Verify on PassMark ↗', dimensions: 'Dimensions',
+    show_can: 'Add Can for Scale', hide_can: 'Remove Can', show_dims: 'Show Dimensions', hide_dims: 'Hide Dimensions',
     continue_benchmarks: 'Continue to Benchmarks →', save_build: 'Save Build', preparing_order: 'Booting up your legend...',
     no_components: '(no components — add in Admin)', none_add_admin: '(none — add in Admin)',
     cat_names: { mobo: 'Motherboard', cpu: 'CPU', cooler: 'CPU Cooler', ram: 'RAM', gpu: 'GPU', storage: 'Storage', psu: 'PSU', case: 'Case' },
@@ -52,7 +63,8 @@ const T = {
     pc_builder: 'Konfigurátor PC', select_components: 'Vyberte komponenty na pridanie', build_complete: 'Zostaviť kompletné PC',
     clear_all: 'Vymazať všetko', drag_to_orbit: 'Ťahaním otáčať  ·  Kolieskom priblížiť', hide_panel: 'Skryť bočný panel',
     show_panel: 'Zobraziť bočný panel', complete: 'Dokončené', your_build: 'Vaša zostava', selected_part: 'Vybraný diel',
-    build_total: 'Celková cena', passmark_score: 'Skóre PassMark', verify_passmark: 'Overiť na PassMark ↗',
+    build_total: 'Celková cena', passmark_score: 'Skóre PassMark', verify_passmark: 'Overiť na PassMark ↗', dimensions: 'Rozmery',
+    show_can: 'Vložiť plechovku pre mierku', hide_can: 'Odstrániť plechovku', show_dims: 'Zobraziť rozmery', hide_dims: 'Skryť rozmery',
     continue_benchmarks: 'Pokračovať na benchmarky →', save_build: 'Uložiť zostavu', preparing_order: 'Spúšťame vašu legendu...',
     no_components: '(žiadne komponenty — pridajte v Admine)', none_add_admin: '(žiadne — pridajte v Admine)',
     cat_names: { mobo: 'Základná doska', cpu: 'CPU', cooler: 'Chladič CPU', ram: 'RAM', gpu: 'GPU', storage: 'Úložisko', psu: 'Zdroj', case: 'Skriňa' },
@@ -130,6 +142,81 @@ function caseUnitsFor(comp: Component | undefined, category: string) {
   return CASE_SIZES[category] || CASE_SIZES['Mid Tower'];
 }
 
+// mm -> a "N.N cm" string, the unit every dimension in the Build page (side panel, hover
+// tooltip, and the 3D blueprint annotations) is shown in.
+function cm(mm: number): string {
+  return `${(mm / 10).toFixed(1)} cm`;
+}
+
+// Every category's real physical dimension(s) — case/gpu/cooler/psu from the per-SKU data
+// sourced from buildcores-open-db, mobo/cpu/ram/storage from the standardized form-factor/
+// socket tables in component-db-seed.ts (real, industry-standard sizes that barely vary within
+// a form factor, so a per-SKU fetch wouldn't add anything). Returns [] when nothing is known
+// yet (e.g. an Admin-added case with no dimensions filled in).
+function dimensionSpecsFor(id: CompId, comp: Component | undefined): DimensionSpec[] {
+  if (!comp) return [];
+  if (id === 'case' && comp.caseWidthMm && comp.caseHeightMm && comp.caseDepthMm) {
+    return [
+      { axis: 'x', mm: comp.caseWidthMm },
+      { axis: 'y', mm: comp.caseHeightMm },
+      { axis: 'z', mm: comp.caseDepthMm },
+    ];
+  }
+  if (id === 'gpu' && comp.gpuLengthMm) return [{ axis: 'z', mm: comp.gpuLengthMm }];
+  if (id === 'cooler') {
+    if (comp.coolerRadiatorMm) return [{ axis: 'x', mm: comp.coolerRadiatorMm, label: `Ø ${cm(comp.coolerRadiatorMm)}` }];
+    if (comp.coolerHeightMm) return [{ axis: 'y', mm: comp.coolerHeightMm }];
+  }
+  if (id === 'psu' && comp.psuLengthMm) return [{ axis: 'z', mm: comp.psuLengthMm }];
+  // The remaining categories' placeholder meshes (build-scene.ts's buildComponentMesh) each
+  // have one genuinely thin "thickness" local axis (the PCB/package thinness — mobo's local X
+  // is 0.04 units, cpu's ~0.06-0.1, ram's ~0.04-0.05, storage's ~0.04) and two much larger axes
+  // that form the part's actual real-world footprint. The real width/length/depth numbers below
+  // are mapped onto those two larger axes specifically — never onto the thin one, or the
+  // annotation ends up perpendicular to how the part actually looks (a real physical fix, not
+  // just a display tweak: mobo/cpu use local Y+Z, ram/storage use local Y+Z too but paired with
+  // a different real dimension each since ram's long axis is Y while storage's is Z).
+  if (id === 'mobo' && comp.formFactor) {
+    const size = MOBO_FORM_FACTOR_SIZE_MM[comp.formFactor];
+    return size ? [{ axis: 'y', mm: size.width }, { axis: 'z', mm: size.depth }] : [];
+  }
+  if (id === 'cpu' && comp.socket) {
+    const size = CPU_PACKAGE_SIZE_MM[comp.socket];
+    return size ? [{ axis: 'y', mm: size.width }, { axis: 'z', mm: size.depth }] : [];
+  }
+  if (id === 'ram') return [{ axis: 'y', mm: RAM_DIMM_SIZE_MM.length }, { axis: 'z', mm: RAM_DIMM_SIZE_MM.height }];
+  if (id === 'storage') return [{ axis: 'z', mm: STORAGE_M2_SIZE_MM.length }, { axis: 'y', mm: STORAGE_M2_SIZE_MM.width }];
+  return [];
+}
+
+// Same data, formatted as a single line of text for the side panel / hover tooltip (the 3D
+// annotations above are the blueprint-style version of the same numbers).
+function dimensionLabel(id: CompId, comp: Component | undefined): string | null {
+  if (!comp) return null;
+  if (id === 'case' && comp.caseWidthMm && comp.caseHeightMm && comp.caseDepthMm) {
+    return `${cm(comp.caseWidthMm)} × ${cm(comp.caseHeightMm)} × ${cm(comp.caseDepthMm)}`;
+  }
+  if (id === 'gpu' && comp.gpuLengthMm) {
+    return comp.gpuSlotWidth ? `${cm(comp.gpuLengthMm)} long · ${comp.gpuSlotWidth}-slot` : `${cm(comp.gpuLengthMm)} long`;
+  }
+  if (id === 'cooler') {
+    if (comp.coolerRadiatorMm) return `${cm(comp.coolerRadiatorMm)} radiator`;
+    if (comp.coolerHeightMm) return `${cm(comp.coolerHeightMm)} tall`;
+  }
+  if (id === 'psu' && comp.psuLengthMm) return `${cm(comp.psuLengthMm)} long`;
+  if (id === 'mobo' && comp.formFactor) {
+    const size = MOBO_FORM_FACTOR_SIZE_MM[comp.formFactor];
+    return size ? `${cm(size.width)} × ${cm(size.depth)}` : null;
+  }
+  if (id === 'cpu' && comp.socket) {
+    const size = CPU_PACKAGE_SIZE_MM[comp.socket];
+    return size ? `${cm(size.width)} × ${cm(size.depth)}` : null;
+  }
+  if (id === 'ram') return `${cm(RAM_DIMM_SIZE_MM.length)} × ${cm(RAM_DIMM_SIZE_MM.height)}`;
+  if (id === 'storage') return `${cm(STORAGE_M2_SIZE_MM.length)} × ${cm(STORAGE_M2_SIZE_MM.width)}`;
+  return null;
+}
+
 export default function BuildPage() {
   const { lang, fmt } = useSite();
   const router = useRouter();
@@ -156,6 +243,8 @@ export default function BuildPage() {
   const [activeStep, setActiveStep] = useState<CompId>(SLOTS[0]);
   const [ordering, setOrdering] = useState(false);
   const [glassHidden, setGlassHidden] = useState(false);
+  const [canVisible, setCanVisible] = useState(false);
+  const [dimensionsVisible, setDimensionsVisible] = useState(true);
   const [showComplete, setShowComplete] = useState(false);
   const [completionRunning, setCompletionRunning] = useState(false);
   const [hoverId, setHoverId] = useState<CompId | null>(null);
@@ -268,24 +357,28 @@ export default function BuildPage() {
       setActiveId(id);
       const comp = next ? findComp(id) : undefined;
       sceneRef.current?.toggleComponent(id, next, comp ? sizeScaleFor(id, comp) : undefined);
+      sceneRef.current?.setComponentDimensions(id, comp ? dimensionSpecsFor(id, comp) : []);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [selected, compDb, selections],
   );
 
+  // Only takes effect immediately when `id` is already selected in the scene (a same-category
+  // SKU swap) — a first-time select is handled by selectCard right after it calls
+  // toggleComponent(id, true), since the scene doesn't mark itself selected until then.
   function changeSelection(id: CompId, name: string) {
     setSelections((s) => ({ ...s, [id]: name }));
+    const comp = (compDb[id] || []).find((c) => c.name === name);
     if (id === 'case') {
-      const comp = (compDb.case || []).find((c) => c.name === name);
       const size = caseUnitsFor(comp, comp?.category || 'Mid Tower');
       sceneRef.current?.updateCase(size.w, size.h, size.d);
     } else if (id === 'gpu' || id === 'cooler' || id === 'psu') {
       // Swapping a SKU within an already-installed category doesn't go through
       // toggleComponent (see selectCard) — this is the only path that picks up the new
       // part's real size in that case.
-      const comp = (compDb[id] || []).find((c) => c.name === name);
       if (comp) sceneRef.current?.setSizeScale(id, sizeScaleFor(id, comp));
     }
+    sceneRef.current?.setComponentDimensions(id, comp ? dimensionSpecsFor(id, comp) : []);
   }
 
   function changeCaseCat(cat: string) {
@@ -296,6 +389,7 @@ export default function BuildPage() {
       setSelections((s) => ({ ...s, case: pick.name }));
       const size = caseUnitsFor(pick, cat);
       sceneRef.current?.updateCase(size.w, size.h, size.d);
+      sceneRef.current?.setComponentDimensions('case', dimensionSpecsFor('case', pick));
     }
   }
 
@@ -315,6 +409,8 @@ export default function BuildPage() {
     if (!selected[id]) {
       setSelected((s) => ({ ...s, [id]: true }));
       sceneRef.current?.toggleComponent(id, true);
+      const comp = (compDb[id] || []).find((c) => c.name === name);
+      sceneRef.current?.setComponentDimensions(id, comp ? dimensionSpecsFor(id, comp) : []);
     }
 
     // Swapping the motherboard can strand an already-picked CPU (wrong socket) or case (too
@@ -346,6 +442,22 @@ export default function BuildPage() {
     const next = !glassHidden;
     setGlassHidden(next);
     sceneRef.current?.toggleGlass(next);
+  }
+
+  // Reference can: a real 500ml can placed beside the case purely as a familiar object to
+  // gauge every other part's size against.
+  function toggleCan() {
+    const next = !canVisible;
+    setCanVisible(next);
+    sceneRef.current?.setCanVisible(next);
+  }
+
+  // Hides every blueprint-style measurement (case/gpu/cooler/psu/mobo/cpu/ram/storage, and the
+  // can's own) at once, for a cleaner look once you've seen the numbers you needed.
+  function toggleDimensions() {
+    const next = !dimensionsVisible;
+    setDimensionsVisible(next);
+    sceneRef.current?.setDimensionsVisible(next);
   }
 
   function handleViewportPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
@@ -534,6 +646,11 @@ export default function BuildPage() {
                       <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {c.specs}
                       </div>
+                      {dimensionLabel(activeStep, c) && (
+                        <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: '#A89A78', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {dimensionLabel(activeStep, c)}
+                        </div>
+                      )}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
                         <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
                         <div
@@ -618,12 +735,43 @@ export default function BuildPage() {
             <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', background: 'rgba(253,250,244,0.85)', padding: '6px 14px', borderRadius: 20, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED }}>
               {t.drag_to_orbit}
             </div>
-            <button
-              onClick={toggleGlassPanel}
-              style={{ position: 'absolute', top: 16, right: isMobile ? 16 : 288 + 16, pointerEvents: 'all', background: 'rgba(253,250,244,0.9)', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 4, padding: '7px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: INK, cursor: 'pointer' }}
+            <div
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: isMobile ? 16 : 288 + 16,
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'flex-end',
+                gap: 8,
+                maxWidth: isMobile ? 'calc(100% - 32px)' : 320,
+                pointerEvents: 'all',
+              }}
             >
-              {glassHidden ? t.show_panel : t.hide_panel}
-            </button>
+              <button
+                onClick={toggleGlassPanel}
+                style={{ background: 'rgba(253,250,244,0.9)', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 4, padding: '7px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: INK, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                {glassHidden ? t.show_panel : t.hide_panel}
+              </button>
+              <button
+                onClick={toggleCan}
+                style={{
+                  background: canVisible ? MAROON : 'rgba(253,250,244,0.9)',
+                  border: `0.5px solid ${canVisible ? MAROON : 'rgba(28,28,26,0.15)'}`,
+                  borderRadius: 4, padding: '7px 12px', fontFamily: 'var(--font-sans)', fontSize: 11,
+                  color: canVisible ? '#FDFAF4' : INK, cursor: 'pointer', whiteSpace: 'nowrap',
+                }}
+              >
+                {canVisible ? t.hide_can : t.show_can}
+              </button>
+              <button
+                onClick={toggleDimensions}
+                style={{ background: 'rgba(253,250,244,0.9)', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 4, padding: '7px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: INK, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                {dimensionsVisible ? t.hide_dims : t.show_dims}
+              </button>
+            </div>
             {hoverId && hoverComp && hoverPos && !isMobile && (
               <div
                 style={{
@@ -648,13 +796,19 @@ export default function BuildPage() {
                   <TierBadge tier={hoverTier} small />
                 </div>
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: GOLD, fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{hoverComp.name}</div>
-                <div style={{ marginBottom: hoverPassmark ? 8 : 0 }}>
+                <div style={{ marginBottom: hoverPassmark || dimensionLabel(hoverId, hoverComp) ? 8 : 0 }}>
                   {(hoverComp.specs || '').split(' · ').map((s, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(245,240,230,0.85)', marginBottom: 3 }}>
                       <span style={{ width: 3, height: 3, borderRadius: '50%', background: GOLD, flexShrink: 0 }} /> {s}
                     </div>
                   ))}
                 </div>
+                {dimensionLabel(hoverId, hoverComp) && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(245,240,230,0.5)', marginBottom: 8 }}>
+                    <span>{t.dimensions}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', color: 'rgba(245,240,230,0.9)' }}>{dimensionLabel(hoverId, hoverComp)}</span>
+                  </div>
+                )}
                 {hoverPassmark && (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(245,240,230,0.5)', marginBottom: 8 }}>
                     <span>{t.passmark_score}</span>
@@ -727,6 +881,12 @@ export default function BuildPage() {
                     </div>
                   ))}
                 </div>
+                {dimensionLabel(activeId, activeComp) && (
+                  <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
+                    <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.dimensions}</div>
+                    <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: INK, fontWeight: 600 }}>{dimensionLabel(activeId, activeComp)}</div>
+                  </div>
+                )}
                 {activePassmark && (
                   <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
                     <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.passmark_score}</div>
