@@ -153,6 +153,7 @@ create table if not exists public.components (
   case_depth_mm numeric(6, 1), -- case only
   max_gpu_length_mm numeric(6, 1), -- case only: longest GPU it can fit
   max_cooler_height_mm numeric(6, 1), -- case only: tallest air cooler it can fit
+  max_radiator_mm numeric(6, 1), -- case only: largest AIO radiator any mount position takes
   max_psu_length_mm numeric(6, 1), -- case only: longest PSU it can fit
   gpu_length_mm numeric(6, 1), -- gpu only
   gpu_slot_width numeric(3, 1), -- gpu only: how many expansion slots it occupies
@@ -199,6 +200,7 @@ alter table public.components add column if not exists case_height_mm numeric(6,
 alter table public.components add column if not exists case_depth_mm numeric(6, 1);
 alter table public.components add column if not exists max_gpu_length_mm numeric(6, 1);
 alter table public.components add column if not exists max_cooler_height_mm numeric(6, 1);
+alter table public.components add column if not exists max_radiator_mm numeric(6, 1);
 alter table public.components add column if not exists max_psu_length_mm numeric(6, 1);
 alter table public.components add column if not exists gpu_length_mm numeric(6, 1);
 alter table public.components add column if not exists gpu_slot_width numeric(3, 1);

@@ -31,12 +31,13 @@ export type Component = {
   caseHeightMm?: number; // case only
   caseDepthMm?: number; // case only
   maxGpuLengthMm?: number; // case only
-  maxCoolerHeightMm?: number; // case only
+  maxCoolerHeightMm?: number; // case only, air towers
+  maxRadiatorMm?: number; // case only — largest radiator size any mounting position takes, AIO
   maxPsuLengthMm?: number; // case only
   gpuLengthMm?: number; // gpu only
   gpuSlotWidth?: number; // gpu only
   coolerHeightMm?: number; // cooler only, air towers
-  coolerRadiatorMm?: number; // cooler only, AIO
+  coolerRadiatorMm?: number; // cooler only, AIO — the radiator that mounts on the case, not the pump block
   psuLengthMm?: number; // psu only
 };
 
@@ -57,6 +58,25 @@ export function caseFitsFormFactor(caseCategory: string | undefined, formFactor:
   if (!caseCategory || !formFactor) return true;
   const supported = CASE_FORM_FACTOR_SUPPORT[caseCategory];
   return supported ? supported.includes(formFactor) : true;
+}
+
+// Physical clearance check between a part and a case — gpu length, cooler height (air) or
+// radiator size (AIO), and psu length all have a real mm figure on both sides (the part's own
+// size, and the case's clearance for that category); missing data on either side is treated as
+// "no known conflict" rather than a false block, since most SKUs won't have every field filled.
+export function fitsInCase(category: Category, comp: Component, caseComp: Component | undefined): boolean {
+  if (!caseComp) return true;
+  if (category === 'gpu') {
+    if (comp.gpuLengthMm && caseComp.maxGpuLengthMm) return comp.gpuLengthMm <= caseComp.maxGpuLengthMm;
+  } else if (category === 'cooler') {
+    if (comp.coolerHeightMm && caseComp.maxCoolerHeightMm) return comp.coolerHeightMm <= caseComp.maxCoolerHeightMm;
+    if (comp.coolerRadiatorMm && caseComp.maxRadiatorMm) return comp.coolerRadiatorMm <= caseComp.maxRadiatorMm;
+  } else if (category === 'psu') {
+    if (comp.psuLengthMm && caseComp.maxPsuLengthMm) return comp.psuLengthMm <= caseComp.maxPsuLengthMm;
+  } else if (category === 'mobo') {
+    return caseFitsFormFactor(caseComp.category, comp.formFactor);
+  }
+  return true;
 }
 
 // Standardized motherboard dimensions (mm) per the ATX spec family — unlike case/GPU/cooler/
@@ -190,7 +210,7 @@ export function defaultComponentDb(): ComponentDb {
         id: 'ca1',
         name: 'NZXT H1 V2',
         price: 217,
-        specs: 'Mini-ITX · Tempered Glass · 280mm AIO Ready',
+        specs: 'Mini-ITX · Tempered Glass · 140mm AIO (pre-installed)',
         tier: 'A',
         category: 'SFF',
         caseWidthMm: 196,
@@ -198,12 +218,14 @@ export function defaultComponentDb(): ComponentDb {
         caseDepthMm: 196,
         maxGpuLengthMm: 324,
         maxCoolerHeightMm: 45,
+        maxRadiatorMm: 140,
+        maxPsuLengthMm: 100,
       },
       {
         id: 'ca2',
         name: 'Fractal Design Pop Air',
         price: 95,
-        specs: 'Micro-ATX · Mesh Front · 360mm AIO Ready',
+        specs: 'Micro-ATX · Mesh Front · 280mm AIO Ready',
         tier: 'B',
         category: 'Mini Tower',
         caseWidthMm: 215,
@@ -211,12 +233,14 @@ export function defaultComponentDb(): ComponentDb {
         caseDepthMm: 473.5,
         maxGpuLengthMm: 405,
         maxCoolerHeightMm: 170,
+        maxRadiatorMm: 280,
+        maxPsuLengthMm: 170,
       },
       {
         id: 'ca3',
         name: 'Fractal Design Meshify 2',
         price: 130,
-        specs: 'Mid-Tower ATX · Mesh Front · 360mm AIO Ready',
+        specs: 'Mid-Tower ATX · Mesh Front · 420mm AIO Ready',
         tier: 'A',
         category: 'Mid Tower',
         caseWidthMm: 210,
@@ -224,6 +248,8 @@ export function defaultComponentDb(): ComponentDb {
         caseDepthMm: 424,
         maxGpuLengthMm: 467,
         maxCoolerHeightMm: 169,
+        maxRadiatorMm: 420,
+        maxPsuLengthMm: 250,
       },
       {
         id: 'ca4',
@@ -235,8 +261,10 @@ export function defaultComponentDb(): ComponentDb {
         caseWidthMm: 285,
         caseHeightMm: 517,
         caseDepthMm: 490,
-        maxGpuLengthMm: 446,
+        maxGpuLengthMm: 460,
         maxCoolerHeightMm: 167,
+        maxRadiatorMm: 420,
+        maxPsuLengthMm: 220,
       },
     ],
   };

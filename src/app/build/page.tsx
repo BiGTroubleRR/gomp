@@ -12,6 +12,7 @@ import { passmarkLookup, tierFromPassmark, TIER_COLORS, type Tier } from '@/lib/
 import {
   defaultComponentDb,
   caseFitsFormFactor,
+  fitsInCase,
   MOBO_FORM_FACTOR_SIZE_MM,
   CPU_PACKAGE_SIZE_MM,
   RAM_DIMM_SIZE_MM,
@@ -20,7 +21,7 @@ import {
   type Component,
   type ComponentDb,
 } from '@/lib/component-db-seed';
-import { createBuildScene, SLOTS, CASE_SIZES, mmToUnits, sizeScaleFor, type BuildScene, type CompId, type DimensionSpec } from '@/lib/build-scene';
+import { createBuildScene, SLOTS, CASE_SIZES, mmToUnits, type BuildScene, type CompId, type DimensionSpec } from '@/lib/build-scene';
 import { useIsMobile } from '@/lib/use-media-query';
 import { setDustCursorVisible, isDustEnabled } from '@/lib/cursor-dust';
 
@@ -57,6 +58,8 @@ const T = {
     back: 'Back', next: 'Next', size: 'Size',
     no_socket_match: (socket: string) => `No CPUs match the ${socket} socket of your selected motherboard — pick a different motherboard, or check Admin.`,
     no_case_fit: (formFactor: string) => `No cases fit a ${formFactor} motherboard at this size — try a larger size, or a smaller motherboard.`,
+    no_part_fit: (caseName: string) => `Nothing here fits inside the ${caseName} — pick a bigger case, or a smaller part.`,
+    no_case_fit_part: 'No cases at this size fit everything you already picked — try a larger size, or remove a part.',
   },
   sk: {
     nav_home: 'Domov', nav_shop: 'Obchod', nav_build: 'Zostaviť', nav_about: 'O nás', nav_account: 'Účet',
@@ -90,6 +93,8 @@ const T = {
     back: 'Späť', next: 'Ďalej', size: 'Veľkosť',
     no_socket_match: (socket: string) => `Žiadne CPU nesedí na pätici ${socket} vybranej základnej dosky — zvoľte inú dosku, alebo skontrolujte Admin.`,
     no_case_fit: (formFactor: string) => `Žiadna skriňa tejto veľkosti neposkytne miesto pre dosku ${formFactor} — skúste väčšiu veľkosť alebo menšiu dosku.`,
+    no_part_fit: (caseName: string) => `Nič tu sa nezmestí do skrine ${caseName} — zvoľte väčšiu skriňu alebo menší diel.`,
+    no_case_fit_part: 'Žiadna skriňa tejto veľkosti neposkytne miesto pre všetko, čo ste už vybrali — skúste väčšiu veľkosť alebo odstráňte diel.',
   },
 } as const;
 
@@ -164,7 +169,10 @@ function dimensionSpecsFor(id: CompId, comp: Component | undefined): DimensionSp
   }
   if (id === 'gpu' && comp.gpuLengthMm) return [{ axis: 'z', mm: comp.gpuLengthMm }];
   if (id === 'cooler') {
-    if (comp.coolerRadiatorMm) return [{ axis: 'x', mm: comp.coolerRadiatorMm, label: `Ø ${cm(comp.coolerRadiatorMm)}` }];
+    // scalesMesh: false — the placeholder cooler mesh is a pump block, not a radiator; there's
+    // no matching geometry to scale by radiator length, so this quotes the real size without
+    // resizing the mesh (unlike every other spec here).
+    if (comp.coolerRadiatorMm) return [{ axis: 'x', mm: comp.coolerRadiatorMm, label: `Ø ${cm(comp.coolerRadiatorMm)}`, scalesMesh: false }];
     if (comp.coolerHeightMm) return [{ axis: 'y', mm: comp.coolerHeightMm }];
   }
   if (id === 'psu' && comp.psuLengthMm) return [{ axis: 'z', mm: comp.psuLengthMm }];
@@ -345,9 +353,31 @@ export default function BuildPage() {
 
   const installedCount = SLOTS.filter((id) => selected[id]).length;
 
+  // Falls back to a compatible default rather than always list[0] — otherwise "Build Complete
+  // PC" (which just toggles every unpicked category via its list-item default) could default
+  // into a combo the picker itself would never let you click together, e.g. a 360mm-radiator
+  // cooler defaulted before a case that only clears 140mm.
   function findComp(id: CompId): Component | undefined {
     const list = compDb[id] || [];
-    return list.find((c) => c.name === selections[id]) || list[0];
+    const preferred = list.find((c) => c.name === selections[id]);
+    if (preferred) return preferred;
+    if (id === 'case') {
+      const mobo = selected.mobo ? (compDb.mobo || []).find((c) => c.name === selections.mobo) : undefined;
+      const compatible = list.find((c) => {
+        if (mobo?.formFactor && !caseFitsFormFactor(c.category, mobo.formFactor)) return false;
+        return (['gpu', 'cooler', 'psu'] as Category[]).every((otherId) => {
+          if (!selected[otherId]) return true;
+          const otherComp = (compDb[otherId] || []).find((x) => x.name === selections[otherId]);
+          return !otherComp || fitsInCase(otherId, otherComp, c);
+        });
+      });
+      if (compatible) return compatible;
+    } else if ((id === 'gpu' || id === 'cooler' || id === 'psu') && selected.case) {
+      const caseComp = (compDb.case || []).find((c) => c.name === selections.case);
+      const compatible = caseComp && list.find((c) => fitsInCase(id, c, caseComp));
+      if (compatible) return compatible;
+    }
+    return list[0];
   }
 
   const toggleComponent = useCallback(
@@ -356,7 +386,8 @@ export default function BuildPage() {
       setSelected((s) => ({ ...s, [id]: next }));
       setActiveId(id);
       const comp = next ? findComp(id) : undefined;
-      sceneRef.current?.toggleComponent(id, next, comp ? sizeScaleFor(id, comp) : undefined);
+      if (comp) sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp));
+      sceneRef.current?.toggleComponent(id, next);
       sceneRef.current?.setComponentDimensions(id, comp ? dimensionSpecsFor(id, comp) : []);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -372,11 +403,11 @@ export default function BuildPage() {
     if (id === 'case') {
       const size = caseUnitsFor(comp, comp?.category || 'Mid Tower');
       sceneRef.current?.updateCase(size.w, size.h, size.d);
-    } else if (id === 'gpu' || id === 'cooler' || id === 'psu') {
-      // Swapping a SKU within an already-installed category doesn't go through
-      // toggleComponent (see selectCard) — this is the only path that picks up the new
-      // part's real size in that case.
-      if (comp) sceneRef.current?.setSizeScale(id, sizeScaleFor(id, comp));
+    } else if (comp) {
+      // Also covers a same-category SKU swap while already installed (e.g. GPU already on,
+      // user picks a different card) — that path doesn't go through toggleComponent (see
+      // selectCard), so this is what picks up the new part's real size in that case.
+      sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp));
     }
     sceneRef.current?.setComponentDimensions(id, comp ? dimensionSpecsFor(id, comp) : []);
   }
@@ -599,20 +630,31 @@ export default function BuildPage() {
               )}
 
               {/* ---- Product cards for the active category only ----
-                  CPU is filtered to the selected motherboard's socket (once one is picked),
-                  and Case is filtered to sizes that actually fit the selected motherboard's
-                  form factor — a case can host a smaller board than it's rated for, never a
-                  bigger one. Both stay unfiltered until a motherboard is chosen. */}
+                  CPU is filtered to the selected motherboard's socket (once one is picked).
+                  Case is filtered to sizes that fit the selected motherboard's form factor
+                  (never a smaller-rated case for a bigger board) AND to cases with enough
+                  clearance for whichever gpu/cooler/psu are already installed. GPU/cooler/psu
+                  are filtered the other way — to parts that fit inside the selected case — so
+                  an incompatible pairing can never be selected in either direction. Everything
+                  stays unfiltered until the part(s) it depends on are actually picked. */}
               {(() => {
                 const selectedMobo = selected.mobo ? (compDb.mobo || []).find((c) => c.name === selections.mobo) : undefined;
+                const selectedCase = selected.case ? (compDb.case || []).find((c) => c.name === selections.case) : undefined;
                 let list = (compDb[activeStep] || []);
                 if (activeStep === 'case') {
                   list = list.filter((c) => c.category === caseCat);
                   if (selectedMobo?.formFactor) {
                     list = list.filter((c) => caseFitsFormFactor(c.category, selectedMobo.formFactor));
                   }
+                  (['gpu', 'cooler', 'psu'] as Category[]).forEach((otherId) => {
+                    if (!selected[otherId]) return;
+                    const otherComp = (compDb[otherId] || []).find((c) => c.name === selections[otherId]);
+                    if (otherComp) list = list.filter((c) => fitsInCase(otherId, otherComp, c));
+                  });
                 } else if (activeStep === 'cpu' && selectedMobo?.socket) {
                   list = list.filter((c) => c.socket === selectedMobo.socket);
+                } else if (activeStep === 'gpu' || activeStep === 'cooler' || activeStep === 'psu') {
+                  if (selectedCase) list = list.filter((c) => fitsInCase(activeStep, c, selectedCase));
                 }
                 if (list.length === 0) {
                   const reason =
@@ -620,7 +662,11 @@ export default function BuildPage() {
                       ? t.no_socket_match(selectedMobo.socket)
                       : activeStep === 'case' && selectedMobo?.formFactor
                         ? t.no_case_fit(selectedMobo.formFactor)
-                        : t.none_add_admin;
+                        : activeStep === 'case'
+                          ? t.no_case_fit_part
+                          : (activeStep === 'gpu' || activeStep === 'cooler' || activeStep === 'psu') && selectedCase
+                            ? t.no_part_fit(selectedCase.name)
+                            : t.none_add_admin;
                   return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', padding: '12px 0' }}>{reason}</div>;
                 }
                 return list.map((c) => {

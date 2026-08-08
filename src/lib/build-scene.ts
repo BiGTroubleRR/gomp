@@ -28,42 +28,15 @@ const SIZES: Record<string, { w: number; h: number; d: number }> = {
   SFF: { w: 1.4, h: 3.2, d: 1.4 },
 };
 
-// mm-per-scene-unit, calibrated so a real mid-tower's width/height (~210mm / ~475mm) lands on
-// the same scale the old fixed-bucket dimensions used (2.0 / 4.5 units) — real depth is a lot
-// deeper than the old buckets assumed (cases are closer to as-deep-as-tall than as-deep-as-wide),
-// which is a correction, not a regression: BASE_POS/compScale below are already ratio-driven off
-// whatever w/h/d gets passed in, so nothing besides the case's own proportions changes.
+// mm-per-scene-unit — the single absolute scale every component AND the case are sized in, so
+// a part's rendered size and its quoted dimension always agree regardless of which case is
+// picked (a bigger case just means more empty space around the same real-size parts).
 export const MM_PER_UNIT = 105;
 export function mmToUnits(mm: number): number {
   return mm / MM_PER_UNIT;
 }
 
-// Reference lengths components are scaled relative to, so a component 20% longer than a
-// "typical" part actually renders ~20% longer rather than every SKU in a category sharing one
-// fixed mesh size regardless of its real dimensions. Ratios are clamped (see sizeScaleFor) so a
-// data outlier can't make a part comically large/small next to the case.
-const REF_GPU_LENGTH_MM = 300;
-const REF_COOLER_HEIGHT_MM = 165;
-const REF_PSU_LENGTH_MM = 160;
-
 export type SizeScale = { x: number; y: number; z: number };
-
-function clampRatio(mm: number | undefined, ref: number): number {
-  if (!mm || !isFinite(mm) || mm <= 0) return 1;
-  return Math.min(1.4, Math.max(0.7, mm / ref));
-}
-
-// GPU length maps to local Z (the group's rotation.z below only ever swaps X/Y, so Z — the
-// axis every gpu sub-mesh's length dimension is built along — stays the "length" axis in world
-// space regardless). Cooler height maps to Y; only air towers have a height figure to scale by
-// (an AIO's radiator isn't a separate mesh in this placeholder geometry, so radiator size has
-// no visual analog to scale here). PSU length maps to Z.
-export function sizeScaleFor(id: CompId, comp: { gpuLengthMm?: number; coolerHeightMm?: number; psuLengthMm?: number }): SizeScale {
-  if (id === 'gpu') return { x: 1, y: 1, z: clampRatio(comp.gpuLengthMm, REF_GPU_LENGTH_MM) };
-  if (id === 'cooler') return { x: 1, y: clampRatio(comp.coolerHeightMm, REF_COOLER_HEIGHT_MM), z: 1 };
-  if (id === 'psu') return { x: 1, y: 1, z: clampRatio(comp.psuLengthMm, REF_PSU_LENGTH_MM) };
-  return { x: 1, y: 1, z: 1 };
-}
 
 // ---------------------------------------------------------------------------
 // Blueprint-style dimension annotations — quoted measurements (extension
@@ -72,9 +45,13 @@ export function sizeScaleFor(id: CompId, comp: { gpuLengthMm?: number; coolerHei
 // These are independent scene objects (not children of the animated
 // component groups), sized directly from real mm data via mmToUnits, so they
 // stay correctly sized and legible regardless of how a placeholder mesh's own
-// compScale/sizeScale happens to be animating.
+// sizeScale happens to be animating.
 // ---------------------------------------------------------------------------
-export type DimensionSpec = { axis: 'x' | 'y' | 'z'; mm: number; label?: string };
+// scalesMesh: false marks a spec that should still draw its annotation but must NOT drive the
+// placeholder mesh's scale — e.g. an AIO's radiator length has no matching geometry on the
+// pump-block placeholder mesh, so treating it as a real axis-length would balloon the whole
+// part rather than actually depict a radiator.
+export type DimensionSpec = { axis: 'x' | 'y' | 'z'; mm: number; label?: string; scalesMesh?: boolean };
 
 const DIM_COLOR = 0xc4a35a; // GOMP gold — matches the site's accent color
 
@@ -184,8 +161,9 @@ type ObjRecord = {
   selected: boolean;
   baseMats: THREE.Material[];
   selMats: THREE.Material[];
-  // Per-axis multiplier on top of compScale, from sizeScaleFor — {1,1,1} for categories with
-  // no per-SKU dimension data (mobo/cpu/ram/storage), real-ratio-derived for gpu/cooler/psu.
+  // Per-axis scale that makes the placeholder mesh's real-world footprint match the same mm
+  // figures its dimension annotation quotes — see sizeScaleFromSpecs. {1,1,1} until the first
+  // setSizeScale call for this part.
   sizeScale: SizeScale;
 };
 
@@ -552,10 +530,34 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
 
   // ---- Per-component objects ----
   const objects: Partial<Record<CompId, ObjRecord>> = {};
-  let compScale = 1;
+
+  // Each placeholder mesh's own bounding size at scale 1 — measured once, right after it's
+  // built and before any position/scale mutation, so it reflects whatever internal rotation/
+  // scale buildComponentMesh already baked in (e.g. the gpu group's -90° z-rotation, which
+  // swaps its local x/y extents in world space). sizeScaleFromSpecs divides a part's real mm
+  // size by this to get the exact per-axis scale that makes the mesh true to its own quoted
+  // dimension, rather than every SKU in a category sharing one fixed placeholder size.
+  const naturalSize: Partial<Record<Exclude<CompId, 'case'>, SizeScale>> = {};
+
+  // Axes with no real-mm spec of their own (e.g. a mobo's PCB thickness, or a GPU's width/
+  // height) are left at scale 1 — their own placeholder size — rather than inheriting some
+  // other axis's ratio: that ratio belongs to a different real-world measurement and applying
+  // it here would distort an axis nothing actually verified.
+  function sizeScaleFromSpecs(id: Exclude<CompId, 'case'>, specs: DimensionSpec[]): SizeScale {
+    const natural = naturalSize[id];
+    const scale: SizeScale = { x: 1, y: 1, z: 1 };
+    if (!natural) return scale;
+    specs.forEach((spec) => {
+      if (spec.scalesMesh === false) return;
+      const nat = natural[spec.axis];
+      if (nat > 0.0001) scale[spec.axis] = mmToUnits(spec.mm) / nat;
+    });
+    return scale;
+  }
 
   (Object.keys(BASE_POS) as Exclude<CompId, 'case'>[]).forEach((id) => {
     const mesh = buildComponentMesh(id);
+    naturalSize[id] = new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3());
     const finalPos = new THREE.Vector3(...BASE_POS[id]);
     const startPos = finalPos.clone().add(new THREE.Vector3(id === 'psu' ? 0 : 8, id === 'cooler' ? 8 : 0, id === 'mobo' || id === 'storage' ? -8 : 0));
     mesh.position.copy(startPos);
@@ -661,7 +663,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     refreshCanDimensions();
   }
 
-  function scaleComponentPositions() {
+  function resetComponentPositions() {
     (Object.keys(BASE_POS) as Exclude<CompId, 'case'>[]).forEach((id) => {
       const obj = objects[id];
       if (!obj) return;
@@ -670,17 +672,11 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       if (obj.selected) {
         obj.targetPos.copy(obj.finalPos);
         obj.mesh.position.copy(obj.finalPos);
-        const s = obj.sizeScale;
-        obj.mesh.scale.set(compScale * s.x, compScale * s.y, compScale * s.z);
       }
     });
   }
 
   function updateCase(w: number, h: number, d: number) {
-    const sx = w / 2.0;
-    const sy = h / 4.5;
-    const sz = d / 2.0;
-    compScale = Math.min(sx, sy, sz);
     lastCaseSize = { w, h, d };
     buildCase(w, h, d);
     if (objects.case) {
@@ -691,16 +687,18 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
         objects.case.targetPos.set(0, 0, 0);
       }
     }
-    scaleComponentPositions();
+    resetComponentPositions();
     positionCan();
     refreshCanDimensions();
   }
 
-  function toggleComponent(id: CompId, nextSelected: boolean, sizeScale?: SizeScale) {
+  // sizeScale is set by a prior setSizeScale(id, specs) call (see changeSelection in the page,
+  // which always calls it before installing a part) — true-to-size scale doesn't depend on
+  // which case is selected, so there is nothing case-relative left to apply here.
+  function toggleComponent(id: CompId, nextSelected: boolean) {
     const obj = objects[id];
     if (!obj) return;
     obj.selected = nextSelected;
-    if (sizeScale) obj.sizeScale = sizeScale;
     if (!nextSelected) clearDimensionGroup(id);
     if (id === 'case') {
       caseGroup.visible = true;
@@ -719,7 +717,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       mesh.position.copy(obj.startPos);
       mesh.scale.setScalar(0.001);
       obj.targetPos = obj.finalPos.clone();
-      obj.targetScale = new THREE.Vector3(compScale * obj.sizeScale.x, compScale * obj.sizeScale.y, compScale * obj.sizeScale.z);
+      obj.targetScale = new THREE.Vector3(obj.sizeScale.x, obj.sizeScale.y, obj.sizeScale.z);
       obj.exiting = false;
       let i = 0;
       mesh.traverse((child) => {
@@ -889,16 +887,20 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   }
   window.addEventListener('resize', onResize);
 
-  // For a same-category SKU swap while already installed (e.g. GPU already on, user picks a
-  // different card): toggleComponent only runs the install/remove animation on a selected
-  // state change, so a swap needs its own path to pick up the new part's real size without
-  // replaying the fly-in.
-  function setSizeScale(id: CompId, sizeScale: SizeScale) {
+  // Computes and stores this part's true-to-size scale from its real-mm specs, applying it
+  // immediately if it's already installed (a same-category SKU swap, e.g. GPU already on and
+  // the user picks a different card — toggleComponent only runs the install/remove animation
+  // on a selected-state change, so a swap needs its own path to pick up the new part's real
+  // size without replaying the fly-in). For a first-time install, the page calls this before
+  // toggleComponent(id, true), so the stored sizeScale is already correct when the install
+  // animation reads it.
+  function setSizeScale(id: CompId, specs: DimensionSpec[]) {
     const obj = objects[id];
-    if (!obj) return;
+    if (!obj || id === 'case') return;
+    const sizeScale = sizeScaleFromSpecs(id, specs);
     obj.sizeScale = sizeScale;
     if (obj.selected && obj.moveStart == null) {
-      obj.mesh.scale.set(compScale * sizeScale.x, compScale * sizeScale.y, compScale * sizeScale.z);
+      obj.mesh.scale.set(sizeScale.x, sizeScale.y, sizeScale.z);
     }
   }
 
