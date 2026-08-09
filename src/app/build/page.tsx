@@ -15,7 +15,6 @@ import {
   caseHasVerticalGpuMount,
   fitsInCase,
   MOBO_FORM_FACTOR_SIZE_MM,
-  CPU_PACKAGE_SIZE_MM,
   RAM_DIMM_SIZE_MM,
   STORAGE_M2_SIZE_MM,
   PSU_ATX_SIZE_MM,
@@ -220,10 +219,8 @@ function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVertical 
     const size = MOBO_FORM_FACTOR_SIZE_MM[comp.formFactor];
     return size ? [{ axis: 'y', mm: size.width }, { axis: 'z', mm: size.depth }] : [];
   }
-  if (id === 'cpu' && comp.socket) {
-    const size = CPU_PACKAGE_SIZE_MM[comp.socket];
-    return size ? [{ axis: 'y', mm: size.width }, { axis: 'z', mm: size.depth }] : [];
-  }
+  // CPU package size is deliberately not quoted — it barely varies (a few mm across every
+  // socket) and isn't a dimension anyone building a PC actually needs to check.
   if (id === 'ram') return [{ axis: 'y', mm: RAM_DIMM_SIZE_MM.length }, { axis: 'z', mm: comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height }];
   if (id === 'storage') return [{ axis: 'z', mm: STORAGE_M2_SIZE_MM.length }, { axis: 'y', mm: STORAGE_M2_SIZE_MM.width }];
   return [];
@@ -246,10 +243,6 @@ function dimensionLabel(id: CompId, comp: Component | undefined): string | null 
   if (id === 'psu' && comp.psuLengthMm) return `${cm(PSU_ATX_SIZE_MM.width)} × ${cm(PSU_ATX_SIZE_MM.height)} × ${cm(comp.psuLengthMm)}`;
   if (id === 'mobo' && comp.formFactor) {
     const size = MOBO_FORM_FACTOR_SIZE_MM[comp.formFactor];
-    return size ? `${cm(size.width)} × ${cm(size.depth)}` : null;
-  }
-  if (id === 'cpu' && comp.socket) {
-    const size = CPU_PACKAGE_SIZE_MM[comp.socket];
     return size ? `${cm(size.width)} × ${cm(size.depth)}` : null;
   }
   if (id === 'ram') return `${cm(RAM_DIMM_SIZE_MM.length)} × ${cm(comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height)}`;
