@@ -35,6 +35,7 @@ export function rowToComponent(row: ComponentRow): Component {
   if (row.cooler_height_mm != null) comp.coolerHeightMm = Number(row.cooler_height_mm);
   if (row.cooler_radiator_mm != null) comp.coolerRadiatorMm = Number(row.cooler_radiator_mm);
   if (row.psu_length_mm != null) comp.psuLengthMm = Number(row.psu_length_mm);
+  if (row.ram_height_mm != null) comp.ramHeightMm = Number(row.ram_height_mm);
   return comp;
 }
 
@@ -63,6 +64,7 @@ export function componentToRow(category: Category, comp: Component, sortOrder: n
     cooler_height_mm: comp.coolerHeightMm ?? null,
     cooler_radiator_mm: comp.coolerRadiatorMm ?? null,
     psu_length_mm: comp.psuLengthMm ?? null,
+    ram_height_mm: comp.ramHeightMm ?? null,
     sort_order: sortOrder,
   };
 }

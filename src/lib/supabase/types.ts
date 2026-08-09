@@ -136,6 +136,7 @@ export type Database = {
           cooler_height_mm: number | null;
           cooler_radiator_mm: number | null;
           psu_length_mm: number | null;
+          ram_height_mm: number | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -165,6 +166,7 @@ export type Database = {
           cooler_height_mm?: number | null;
           cooler_radiator_mm?: number | null;
           psu_length_mm?: number | null;
+          ram_height_mm?: number | null;
           sort_order?: number;
         };
         Update: {
@@ -191,6 +193,7 @@ export type Database = {
           cooler_height_mm?: number | null;
           cooler_radiator_mm?: number | null;
           psu_length_mm?: number | null;
+          ram_height_mm?: number | null;
           sort_order?: number;
         };
         Relationships: [];

@@ -160,6 +160,7 @@ create table if not exists public.components (
   cooler_height_mm numeric(6, 1), -- cooler only: air towers
   cooler_radiator_mm numeric(6, 1), -- cooler only: AIO radiator size
   psu_length_mm numeric(6, 1), -- psu only
+  ram_height_mm numeric(6, 1), -- ram only: per-SKU heatsink height (RAM_DIMM_SIZE_MM.height is the bare-PCB fallback)
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -207,6 +208,7 @@ alter table public.components add column if not exists gpu_slot_width numeric(3,
 alter table public.components add column if not exists cooler_height_mm numeric(6, 1);
 alter table public.components add column if not exists cooler_radiator_mm numeric(6, 1);
 alter table public.components add column if not exists psu_length_mm numeric(6, 1);
+alter table public.components add column if not exists ram_height_mm numeric(6, 1);
 
 -- Required for Supabase Realtime to broadcast INSERT/UPDATE/DELETE on this
 -- table — without this, postgres_changes subscriptions silently receive
