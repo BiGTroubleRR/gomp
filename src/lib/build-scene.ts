@@ -390,37 +390,54 @@ function buildCanMesh(): THREE.Group {
   return group;
 }
 
-// A simple case fan — square frame, a dark blade disc, a few blade-line indicators, and a gold
-// hub (matching the site accent) — built facing local +Z so a caller can rotate the whole group
-// to face whichever case wall it's mounted on.
+// A real case fan reads as a square shroud around a round blade cavity, not a flat disc — this
+// gives it that shroud (with real ~21%-of-width thickness, matching a typical 25mm-thick
+// 120/140mm fan), a bezel ring marking the cavity edge, corner mounting screws, and a hub with
+// pitched (not flat) blades so they look swept rather than like radial spokes. Built facing
+// local +Z so a caller can rotate the whole group to face whichever case wall it's mounted on.
 function buildFanMesh(sizeMm: number): THREE.Group {
   const T = THREE;
   const group = new T.Group();
   const size = mmToUnits(sizeMm);
   const radius = size / 2;
-  const depth = size * 0.12;
-  const frameMat = new T.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.4, metalness: 0.3 });
-  const bladeMat = new T.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.5, metalness: 0.2 });
-  const bladeLineMat = new T.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.6 });
-  const hubMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.3, metalness: 0.7 });
+  const depth = size * 0.21;
+  const frameMat = new T.MeshStandardMaterial({ color: 0x141414, roughness: 0.45, metalness: 0.25 });
+  const bezelMat = new T.MeshStandardMaterial({ color: 0x232323, roughness: 0.3, metalness: 0.4 });
+  const bladeMat = new T.MeshStandardMaterial({ color: 0x090909, roughness: 0.55, metalness: 0.15 });
+  const hubMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.25, metalness: 0.75 });
+  const screwMat = new T.MeshStandardMaterial({ color: 0x050505, roughness: 0.5, metalness: 0.5 });
 
-  group.add(new T.Mesh(new T.BoxGeometry(size, size, depth * 0.5), frameMat));
+  group.add(new T.Mesh(new T.BoxGeometry(size, size, depth), frameMat));
 
-  const blade = new T.Mesh(new T.CylinderGeometry(radius * 0.86, radius * 0.86, depth * 0.3, 24), bladeMat);
-  blade.rotation.x = Math.PI / 2;
-  group.add(blade);
+  const bezel = new T.Mesh(new T.TorusGeometry(radius * 0.88, radius * 0.045, 12, 32), bezelMat);
+  bezel.position.z = depth / 2;
+  group.add(bezel);
 
-  for (let i = 0; i < 7; i++) {
-    const angle = (i / 7) * Math.PI * 2;
-    const bl = new T.Mesh(new T.BoxGeometry(radius * 0.62, radius * 0.16, depth * 0.32), bladeLineMat);
-    bl.position.set(Math.cos(angle) * radius * 0.32, Math.sin(angle) * radius * 0.32, 0);
-    bl.rotation.z = angle;
-    group.add(bl);
+  // Recessed slightly behind the bezel so the blades read as spinning inside the frame rather
+  // than floating in front of it.
+  const hubGroup = new T.Group();
+  hubGroup.position.z = depth * 0.15;
+  const bladeCount = 9;
+  for (let i = 0; i < bladeCount; i++) {
+    const angle = (i / bladeCount) * Math.PI * 2;
+    const blade = new T.Mesh(new T.BoxGeometry(radius * 0.7, radius * 0.22, depth * 0.22), bladeMat);
+    blade.position.set(Math.cos(angle) * radius * 0.4, Math.sin(angle) * radius * 0.4, 0);
+    blade.rotation.z = angle;
+    blade.rotation.x = 0.5; // pitch, so each blade looks angled/scooped instead of a flat spoke
+    hubGroup.add(blade);
   }
-
-  const hub = new T.Mesh(new T.CylinderGeometry(radius * 0.12, radius * 0.12, depth * 0.4, 16), hubMat);
+  const hub = new T.Mesh(new T.CylinderGeometry(radius * 0.14, radius * 0.14, depth * 0.5, 16), hubMat);
   hub.rotation.x = Math.PI / 2;
-  group.add(hub);
+  hubGroup.add(hub);
+  group.add(hubGroup);
+
+  const inset = size * 0.42;
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
+    const screw = new T.Mesh(new T.CylinderGeometry(size * 0.025, size * 0.025, depth * 1.02, 10), screwMat);
+    screw.rotation.x = Math.PI / 2;
+    screw.position.set(sx * inset, sy * inset, 0);
+    group.add(screw);
+  });
 
   return group;
 }
