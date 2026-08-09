@@ -62,6 +62,9 @@ const T = {
     no_case_fit: (formFactor: string) => `No cases fit a ${formFactor} motherboard at this size — try a larger size, or a smaller motherboard.`,
     no_part_fit: (caseName: string) => `Nothing here fits inside the ${caseName} — pick a bigger case, or a smaller part.`,
     no_case_fit_part: 'No cases at this size fit everything you already picked — try a larger size, or remove a part.',
+    power_draw: 'Estimated power draw',
+    psu_ok: 'Comfortably within your PSU’s capacity.',
+    psu_insufficient: 'Over your PSU’s rated capacity — pick a higher-wattage unit.',
   },
   sk: {
     nav_home: 'Domov', nav_shop: 'Obchod', nav_build: 'Zostaviť', nav_about: 'O nás', nav_account: 'Účet',
@@ -97,6 +100,9 @@ const T = {
     no_case_fit: (formFactor: string) => `Žiadna skriňa tejto veľkosti neposkytne miesto pre dosku ${formFactor} — skúste väčšiu veľkosť alebo menšiu dosku.`,
     no_part_fit: (caseName: string) => `Nič tu sa nezmestí do skrine ${caseName} — zvoľte väčšiu skriňu alebo menší diel.`,
     no_case_fit_part: 'Žiadna skriňa tejto veľkosti neposkytne miesto pre všetko, čo ste už vybrali — skúste väčšiu veľkosť alebo odstráňte diel.',
+    power_draw: 'Odhadovaný príkon',
+    psu_ok: 'S rezervou v rámci kapacity vášho zdroja.',
+    psu_insufficient: 'Nad menovitú kapacitu vášho zdroja — zvoľte silnejší zdroj.',
   },
 } as const;
 
@@ -154,6 +160,24 @@ function caseUnitsFor(comp: Component | undefined, category: string) {
 function cm(mm: number): string {
   return `${(mm / 10).toFixed(1)} cm`;
 }
+
+// GPU/CPU/PSU specs already quote their wattage as a plain "570W"-style token (the same text
+// the picker card displays), so this pulls the number straight from there instead of adding a
+// parallel structured field that could drift out of sync with what's shown on screen.
+function extractWatts(specs: string): number | null {
+  const m = specs.match(/(\d+)\s?W\b/);
+  return m ? Number(m[1]) : null;
+}
+
+// Flat per-category draw for the parts that don't quote their own wattage — small next to a
+// GPU/CPU, so a rough industry-typical estimate is enough for a "will my PSU handle this"
+// gut-check rather than a precise measurement.
+const BASE_WATTS: Partial<Record<CompId, number>> = {
+  mobo: 50,
+  ram: 6,
+  storage: 6,
+  cooler: 8,
+};
 
 // Every category's real physical dimension(s) — case/gpu/cooler/psu from the per-SKU data
 // sourced from buildcores-open-db, mobo/cpu/ram/storage from the standardized form-factor/
@@ -357,6 +381,23 @@ export default function BuildPage() {
       if (comp) sum += comp.price;
     });
     return sum;
+  }, [selected, selections, compDb]);
+
+  // Estimated system draw vs. the selected PSU's rated wattage — a buildcores-style "will this
+  // PSU handle it" gut-check, not a precise measurement (see BASE_WATTS/extractWatts above).
+  const { estimatedWatts, psuWatts } = useMemo(() => {
+    let watts = 0;
+    let psu: number | null = null;
+    SLOTS.forEach((id) => {
+      if (!selected[id]) return;
+      const list = compDb[id] || [];
+      const comp = list.find((c) => c.name === selections[id]) || list[0];
+      if (!comp) return;
+      if (id === 'gpu' || id === 'cpu') watts += extractWatts(comp.specs) ?? 0;
+      else if (id === 'psu') psu = extractWatts(comp.specs);
+      else watts += BASE_WATTS[id] ?? 0;
+    });
+    return { estimatedWatts: watts, psuWatts: psu };
   }, [selected, selections, compDb]);
 
   const installedCount = SLOTS.filter((id) => selected[id]).length;
@@ -985,7 +1026,34 @@ export default function BuildPage() {
               <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#A09890' }}>{t.select_components}</div>
             )}
           </div>
-          <div style={{ padding: 20, borderTop: '0.5px solid rgba(28,28,26,0.1)', marginTop: 'auto' }}>
+          {estimatedWatts > 0 && (
+            <div style={{ padding: '16px 20px 0', borderTop: '0.5px solid rgba(28,28,26,0.1)' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.power_draw}</div>
+                <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: psuWatts && estimatedWatts > psuWatts ? MAROON : INK, fontWeight: 600 }}>
+                  {estimatedWatts}W{psuWatts ? ` / ${psuWatts}W` : ''}
+                </div>
+              </div>
+              {psuWatts != null && (
+                <>
+                  <div style={{ height: 5, borderRadius: 3, background: 'rgba(28,28,26,0.08)', marginTop: 6, overflow: 'hidden' }}>
+                    <div
+                      style={{
+                        height: '100%',
+                        width: `${Math.min(100, (estimatedWatts / psuWatts) * 100)}%`,
+                        background: estimatedWatts > psuWatts ? MAROON : estimatedWatts > psuWatts * 0.7 ? GOLD : INK,
+                        transition: 'width 0.3s',
+                      }}
+                    />
+                  </div>
+                  <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: estimatedWatts > psuWatts ? MAROON : MUTED, marginTop: 5, marginBottom: 2 }}>
+                    {estimatedWatts > psuWatts ? t.psu_insufficient : t.psu_ok}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          <div style={{ padding: 20, borderTop: estimatedWatts > 0 ? 'none' : '0.5px solid rgba(28,28,26,0.1)', marginTop: 'auto' }}>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.build_total}</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 40, color: INK, fontWeight: 500, margin: '4px 0' }}>{fmt(totalPrice)}</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', marginBottom: 14 }}>{t.ofComponents(installedCount)}</div>
