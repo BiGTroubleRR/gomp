@@ -24,7 +24,10 @@ export type Component = {
   name: string;
   price: number;
   specs: string;
-  tier: Tier;
+  // Optional rather than required: SKUs mined in bulk from buildcores-open-db (see the
+  // manufacturer-coverage import) have no PassMark score to derive a tier from, unlike the
+  // original hand-curated catalog — TierBadge/passmark UI already render nothing when unset.
+  tier?: Tier;
   passmark?: number;
   passmarkUrl?: string;
   marketPrice?: number | null;

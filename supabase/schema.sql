@@ -135,7 +135,7 @@ create table if not exists public.components (
   name text not null,
   price numeric(10, 2) not null default 0,
   specs text not null default '',
-  tier text not null default 'B' check (tier in ('S', 'A', 'B', 'C', 'D')),
+  tier text check (tier is null or tier in ('S', 'A', 'B', 'C', 'D')), -- null for bulk-imported SKUs with no PassMark score to derive a tier from
   passmark integer,
   passmark_url text,
   market_price numeric(10, 2),
@@ -211,6 +211,13 @@ alter table public.components add column if not exists cooler_radiator_mm numeri
 alter table public.components add column if not exists psu_length_mm numeric(6, 1);
 alter table public.components add column if not exists ram_height_mm numeric(6, 1);
 alter table public.components add column if not exists fan_mounts jsonb;
+
+-- Tier used to be not-null-default-'B', which would silently mislabel every bulk-imported SKU
+-- (no PassMark score to derive a real tier from) as tier B instead of leaving it unset.
+alter table public.components alter column tier drop not null;
+alter table public.components alter column tier drop default;
+alter table public.components drop constraint if exists components_tier_check;
+alter table public.components add constraint components_tier_check check (tier is null or tier in ('S', 'A', 'B', 'C', 'D'));
 
 -- Required for Supabase Realtime to broadcast INSERT/UPDATE/DELETE on this
 -- table — without this, postgres_changes subscriptions silently receive
