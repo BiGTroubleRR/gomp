@@ -18,6 +18,12 @@ const BASE_POS: Record<Exclude<CompId, 'case'>, [number, number, number]> = {
   psu: [0.1, -1.88, 0.0],
 };
 
+// Riser-mounted vertical-GPU cases (NZXT H1 V2 and similar dual-chamber designs) put the card
+// in its own chamber, upright, opposite the motherboard tray — the horizontal BASE_POS.gpu
+// above puts a real-length card outside a case this shallow, since gpu length maps to world Z
+// (case depth) there. This is the card's position/orientation for that chamber instead.
+const GPU_VERTICAL_POS: [number, number, number] = [0.55, 0, 0];
+
 // Category-bucket fallback, used only when a specific case has no real dimensions on file yet
 // (e.g. a newly admin-added case). Calibrated against real mid-tower dimensions (~105mm/unit —
 // see MM_PER_UNIT) so the fallback and real-dimension paths produce comparably-sized cases.
@@ -270,7 +276,12 @@ function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
       g.add(pcie2);
       g.rotation.z = -Math.PI / 2;
       g.scale.setScalar(0.88);
-      return g;
+      // Wrapped in an outer group so setGpuOrientation can tip the card onto its side (world Z
+      // -> world Y) for riser-mounted vertical-GPU cases without touching g's own rotation,
+      // which already exists purely to keep the bracket/ports cosmetically oriented correctly.
+      const wrapper = new T.Group();
+      wrapper.add(g);
+      return wrapper;
     }
     case 'storage': {
       const g = new T.Group();
@@ -904,6 +915,23 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     }
   }
 
+  // Tips the GPU wrapper onto its side for a riser-mounted vertical case (world Z, where its
+  // length normally sits, becomes world Y) and moves it into that layout's own chamber. The
+  // page decides `vertical` from the selected case's name and keeps the dimension annotation's
+  // axis in sync separately (setComponentDimensions/dimensionSpecsFor) — this only touches the
+  // mesh, not the quoted measurement.
+  function setGpuOrientation(vertical: boolean) {
+    const obj = objects.gpu;
+    if (!obj) return;
+    obj.mesh.rotation.set(vertical ? -Math.PI / 2 : 0, 0, 0);
+    const pos = new THREE.Vector3(...(vertical ? GPU_VERTICAL_POS : BASE_POS.gpu));
+    obj.finalPos.copy(pos);
+    if (obj.selected && obj.moveStart == null) {
+      obj.mesh.position.copy(pos);
+      obj.targetPos.copy(pos);
+    }
+  }
+
   return {
     toggleComponent,
     updateCase,
@@ -911,6 +939,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     triggerCompletion,
     pickComponentAt,
     setSizeScale,
+    setGpuOrientation,
     setComponentDimensions,
     setDimensionsVisible,
     setCanVisible,
