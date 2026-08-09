@@ -61,6 +61,16 @@ export function caseFitsFormFactor(caseCategory: string | undefined, formFactor:
   return supported ? supported.includes(formFactor) : true;
 }
 
+// Cases that mount the GPU vertically via a PCIe riser, in their own chamber, instead of
+// horizontally below the motherboard (e.g. the NZXT H1 V2's dual-chamber layout) — by name
+// since this is a fixed fact about a specific case's physical design, not a per-row admin
+// attribute. A card mounted this way needs a different 3D position/orientation (see
+// setGpuOrientation in build-scene.ts) or it renders outside a case this shallow.
+const VERTICAL_GPU_MOUNT_CASES = new Set(['NZXT H1 V2']);
+export function caseHasVerticalGpuMount(caseName: string | undefined): boolean {
+  return !!caseName && VERTICAL_GPU_MOUNT_CASES.has(caseName);
+}
+
 // Physical clearance check between a part and a case — gpu length, cooler height (air) or
 // radiator size (AIO), and psu length all have a real mm figure on both sides (the part's own
 // size, and the case's clearance for that category); missing data on either side is treated as

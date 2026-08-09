@@ -12,6 +12,7 @@ import { passmarkLookup, tierFromPassmark, TIER_COLORS, type Tier } from '@/lib/
 import {
   defaultComponentDb,
   caseFitsFormFactor,
+  caseHasVerticalGpuMount,
   fitsInCase,
   MOBO_FORM_FACTOR_SIZE_MM,
   CPU_PACKAGE_SIZE_MM,
@@ -159,7 +160,7 @@ function cm(mm: number): string {
 // socket tables in component-db-seed.ts (real, industry-standard sizes that barely vary within
 // a form factor, so a per-SKU fetch wouldn't add anything). Returns [] when nothing is known
 // yet (e.g. an Admin-added case with no dimensions filled in).
-function dimensionSpecsFor(id: CompId, comp: Component | undefined): DimensionSpec[] {
+function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVertical = false): DimensionSpec[] {
   if (!comp) return [];
   if (id === 'case' && comp.caseWidthMm && comp.caseHeightMm && comp.caseDepthMm) {
     return [
@@ -168,7 +169,7 @@ function dimensionSpecsFor(id: CompId, comp: Component | undefined): DimensionSp
       { axis: 'z', mm: comp.caseDepthMm },
     ];
   }
-  if (id === 'gpu' && comp.gpuLengthMm) return [{ axis: 'z', mm: comp.gpuLengthMm }];
+  if (id === 'gpu' && comp.gpuLengthMm) return [{ axis: gpuVertical ? 'y' : 'z', mm: comp.gpuLengthMm }];
   if (id === 'cooler') {
     // scalesMesh: false — the placeholder cooler mesh is a pump block, not a radiator; there's
     // no matching geometry to scale by radiator length, so this quotes the real size without
@@ -393,9 +394,14 @@ export default function BuildPage() {
       setSelected((s) => ({ ...s, [id]: next }));
       setActiveId(id);
       const comp = next ? findComp(id) : undefined;
+      if (id === 'case' && next) sceneRef.current?.setGpuOrientation(caseHasVerticalGpuMount(comp?.name));
       if (comp) sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp));
       sceneRef.current?.toggleComponent(id, next);
-      sceneRef.current?.setComponentDimensions(id, comp ? dimensionSpecsFor(id, comp) : []);
+      const gpuVertical =
+        id === 'gpu' && selected.case
+          ? caseHasVerticalGpuMount((compDb.case || []).find((c) => c.name === selections.case)?.name)
+          : false;
+      sceneRef.current?.setComponentDimensions(id, comp ? dimensionSpecsFor(id, comp, gpuVertical) : []);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [selected, compDb, selections],
@@ -410,13 +416,25 @@ export default function BuildPage() {
     if (id === 'case') {
       const size = caseUnitsFor(comp, comp?.category || 'Mid Tower');
       sceneRef.current?.updateCase(size.w, size.h, size.d);
+      const vertical = caseHasVerticalGpuMount(comp?.name);
+      sceneRef.current?.setGpuOrientation(vertical);
+      // The card's own dimension annotation axis depends on the case it's mounted in — refresh
+      // it here too, since changing the case doesn't otherwise touch the gpu selection at all.
+      if (selected.gpu) {
+        const gpuComp = (compDb.gpu || []).find((c) => c.name === selections.gpu);
+        sceneRef.current?.setComponentDimensions('gpu', gpuComp ? dimensionSpecsFor('gpu', gpuComp, vertical) : []);
+      }
     } else if (comp) {
       // Also covers a same-category SKU swap while already installed (e.g. GPU already on,
       // user picks a different card) — that path doesn't go through toggleComponent (see
       // selectCard), so this is what picks up the new part's real size in that case.
       sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp));
     }
-    sceneRef.current?.setComponentDimensions(id, comp ? dimensionSpecsFor(id, comp) : []);
+    const gpuVertical =
+      id === 'gpu' && selected.case
+        ? caseHasVerticalGpuMount((compDb.case || []).find((c) => c.name === selections.case)?.name)
+        : false;
+    sceneRef.current?.setComponentDimensions(id, comp ? dimensionSpecsFor(id, comp, gpuVertical) : []);
   }
 
   function changeCaseCat(cat: string) {
@@ -428,6 +446,12 @@ export default function BuildPage() {
       const size = caseUnitsFor(pick, cat);
       sceneRef.current?.updateCase(size.w, size.h, size.d);
       sceneRef.current?.setComponentDimensions('case', dimensionSpecsFor('case', pick));
+      const vertical = caseHasVerticalGpuMount(pick.name);
+      sceneRef.current?.setGpuOrientation(vertical);
+      if (selected.gpu) {
+        const gpuComp = (compDb.gpu || []).find((c) => c.name === selections.gpu);
+        sceneRef.current?.setComponentDimensions('gpu', gpuComp ? dimensionSpecsFor('gpu', gpuComp, vertical) : []);
+      }
     }
   }
 
@@ -442,13 +466,21 @@ export default function BuildPage() {
       sceneRef.current?.toggleComponent(id, false);
       return;
     }
+    // changeSelection (above) already applies this pick's size/scale/orientation, but the scene
+    // only builds a dimension annotation once the part is marked selected — which toggleComponent
+    // below is what actually does for a first-time install — so the annotation still needs
+    // setting again here, after that flip (changeSelection's own call was a no-op until now).
     changeSelection(id, name);
     setActiveId(id);
     if (!selected[id]) {
       setSelected((s) => ({ ...s, [id]: true }));
       sceneRef.current?.toggleComponent(id, true);
       const comp = (compDb[id] || []).find((c) => c.name === name);
-      sceneRef.current?.setComponentDimensions(id, comp ? dimensionSpecsFor(id, comp) : []);
+      const gpuVertical =
+        id === 'gpu' && selected.case
+          ? caseHasVerticalGpuMount((compDb.case || []).find((c) => c.name === selections.case)?.name)
+          : false;
+      sceneRef.current?.setComponentDimensions(id, comp ? dimensionSpecsFor(id, comp, gpuVertical) : []);
     }
 
     // Swapping the motherboard can strand an already-picked CPU (wrong socket) or case (too
