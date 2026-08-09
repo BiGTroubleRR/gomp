@@ -100,15 +100,6 @@ export const MOBO_FORM_FACTOR_SIZE_MM: Record<FormFactor, { width: number; depth
   'Mini-ITX': { width: 170, depth: 170 },
 };
 
-// Standardized CPU package dimensions (mm) by socket — the die itself varies, but the outer
-// package/IHS a socket accepts is fixed by spec, same reasoning as motherboard form factors.
-export const CPU_PACKAGE_SIZE_MM: Record<string, { width: number; depth: number }> = {
-  AM5: { width: 40, depth: 40 },
-  AM4: { width: 40, depth: 40 },
-  LGA1700: { width: 37.5, depth: 45 },
-  LGA1851: { width: 37.5, depth: 45 },
-};
-
 // Standardized desktop UDIMM size (mm) — length is fixed regardless of capacity/speed for every
 // DDR4/DDR5 desktop stick. Height is the bare-PCB fallback for a SKU with no per-SKU heatsink
 // height on file (Component.ramHeightMm) — real RGB heatsink heights vary a lot by model (e.g.
