@@ -390,46 +390,74 @@ function buildCanMesh(): THREE.Group {
   return group;
 }
 
-// A real case fan reads as a square shroud around a round blade cavity, not a flat disc — this
-// gives it that shroud (with real ~21%-of-width thickness, matching a typical 25mm-thick
-// 120/140mm fan), a bezel ring marking the cavity edge, corner mounting screws, and a hub with
-// pitched (not flat) blades so they look swept rather than like radial spokes. Built facing
-// local +Z so a caller can rotate the whole group to face whichever case wall it's mounted on.
+// A curved, tapered blade profile (wide at the hub end, narrowing to a rounded tip) extruded to
+// a thickness — instead of a flat rectangular box, which reads as a crude paddle sticking out
+// past the fan's circular silhouette rather than a blade curving within it.
+function makeBladeGeometry(length: number, width: number, thickness: number): THREE.ExtrudeGeometry {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, -width * 0.5);
+  shape.quadraticCurveTo(length * 0.55, -width * 0.55, length, -width * 0.05);
+  shape.quadraticCurveTo(length * 1.03, 0, length, width * 0.05);
+  shape.quadraticCurveTo(length * 0.55, width * 0.32, 0, width * 0.5);
+  shape.closePath();
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false, curveSegments: 10 });
+  geo.translate(0, 0, -thickness / 2);
+  return geo;
+}
+
+// A real case fan reads as a square shroud around a round blade cavity, not a flat disc. The
+// frame is built as 4 border bars — an actual open ring, NOT a solid box — because a solid box
+// spanning the full footprint would sit directly in front of the blades and hide them entirely
+// regardless of what's drawn behind it. Colors lean on the site's own maroon/gold palette (a
+// maroon shroud, gold trim) rather than flat black, matching every other component's finish.
+// Built facing local +Z so a caller can rotate the whole group to face whichever case wall it's
+// mounted on.
 function buildFanMesh(sizeMm: number): THREE.Group {
   const T = THREE;
   const group = new T.Group();
   const size = mmToUnits(sizeMm);
   const radius = size / 2;
-  const depth = size * 0.21;
-  const frameMat = new T.MeshStandardMaterial({ color: 0x141414, roughness: 0.45, metalness: 0.25 });
-  const bezelMat = new T.MeshStandardMaterial({ color: 0x232323, roughness: 0.3, metalness: 0.4 });
-  const bladeMat = new T.MeshStandardMaterial({ color: 0x090909, roughness: 0.55, metalness: 0.15 });
-  const hubMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.25, metalness: 0.75 });
-  const screwMat = new T.MeshStandardMaterial({ color: 0x050505, roughness: 0.5, metalness: 0.5 });
+  const depth = size * 0.21; // real 120/140mm fans are ~25mm thick — roughly a fifth of the frame width
+  const frameMat = new T.MeshStandardMaterial({ color: 0x241318, roughness: 0.4, metalness: 0.45 });
+  const bezelMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.25, metalness: 0.85 });
+  const bladeMat = new T.MeshStandardMaterial({ color: 0x2e181d, roughness: 0.45, metalness: 0.3 });
+  const hubMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.2, metalness: 0.85 });
+  const screwMat = new T.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.4, metalness: 0.6 });
 
-  group.add(new T.Mesh(new T.BoxGeometry(size, size, depth), frameMat));
+  const borderWidth = size * 0.12;
+  const topBar = new T.Mesh(new T.BoxGeometry(size, borderWidth, depth), frameMat);
+  topBar.position.y = radius - borderWidth / 2;
+  group.add(topBar);
+  const botBar = new T.Mesh(new T.BoxGeometry(size, borderWidth, depth), frameMat);
+  botBar.position.y = -(radius - borderWidth / 2);
+  group.add(botBar);
+  const sideLen = size - 2 * borderWidth;
+  const leftBar = new T.Mesh(new T.BoxGeometry(borderWidth, sideLen, depth), frameMat);
+  leftBar.position.x = -(radius - borderWidth / 2);
+  group.add(leftBar);
+  const rightBar = new T.Mesh(new T.BoxGeometry(borderWidth, sideLen, depth), frameMat);
+  rightBar.position.x = radius - borderWidth / 2;
+  group.add(rightBar);
 
-  const bezel = new T.Mesh(new T.TorusGeometry(radius * 0.88, radius * 0.045, 12, 32), bezelMat);
-  bezel.position.z = depth / 2;
+  // Gold bezel ring sitting right at the cavity's edge, flush with the frame — since the middle
+  // is now actually open, this reads as the visible trim of the blade housing rather than
+  // floating decoration in front of a solid wall.
+  const bezel = new T.Mesh(new T.TorusGeometry(radius * 0.82, radius * 0.028, 12, 32), bezelMat);
   group.add(bezel);
 
-  // Recessed slightly behind the bezel so the blades read as spinning inside the frame rather
-  // than floating in front of it.
-  const hubGroup = new T.Group();
-  hubGroup.position.z = depth * 0.15;
-  const bladeCount = 9;
+  // Blades kept just inside the bezel's own radius so their tips never poke past the fan's
+  // circular silhouette, tapering toward the tip so they read as blades rather than paddles.
+  const bladeCount = 7;
+  const bladeGeo = makeBladeGeometry(radius * 0.68, radius * 0.34, depth * 0.5);
   for (let i = 0; i < bladeCount; i++) {
     const angle = (i / bladeCount) * Math.PI * 2;
-    const blade = new T.Mesh(new T.BoxGeometry(radius * 0.7, radius * 0.22, depth * 0.22), bladeMat);
-    blade.position.set(Math.cos(angle) * radius * 0.4, Math.sin(angle) * radius * 0.4, 0);
+    const blade = new T.Mesh(bladeGeo, bladeMat);
     blade.rotation.z = angle;
-    blade.rotation.x = 0.5; // pitch, so each blade looks angled/scooped instead of a flat spoke
-    hubGroup.add(blade);
+    group.add(blade);
   }
-  const hub = new T.Mesh(new T.CylinderGeometry(radius * 0.14, radius * 0.14, depth * 0.5, 16), hubMat);
+  const hub = new T.Mesh(new T.CylinderGeometry(radius * 0.15, radius * 0.15, depth * 0.65, 16), hubMat);
   hub.rotation.x = Math.PI / 2;
-  hubGroup.add(hub);
-  group.add(hubGroup);
+  group.add(hub);
 
   const inset = size * 0.42;
   [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
