@@ -161,6 +161,7 @@ create table if not exists public.components (
   cooler_radiator_mm numeric(6, 1), -- cooler only: AIO radiator size
   psu_length_mm numeric(6, 1), -- psu only
   ram_height_mm numeric(6, 1), -- ram only: per-SKU heatsink height (RAM_DIMM_SIZE_MM.height is the bare-PCB fallback)
+  fan_mounts jsonb, -- case only: [{position, maxCount, sizesMm}] — real per-case fan slots, hand-sourced (not in buildcores-open-db)
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -209,6 +210,7 @@ alter table public.components add column if not exists cooler_height_mm numeric(
 alter table public.components add column if not exists cooler_radiator_mm numeric(6, 1);
 alter table public.components add column if not exists psu_length_mm numeric(6, 1);
 alter table public.components add column if not exists ram_height_mm numeric(6, 1);
+alter table public.components add column if not exists fan_mounts jsonb;
 
 -- Required for Supabase Realtime to broadcast INSERT/UPDATE/DELETE on this
 -- table — without this, postgres_changes subscriptions silently receive

@@ -4,6 +4,7 @@
 // per-component mesh; exposes an imperative API the page's React state changes call into.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import type { FanMountPosition } from './component-db-seed';
 
 export type CompId = 'mobo' | 'cpu' | 'cooler' | 'ram' | 'gpu' | 'storage' | 'psu' | 'case';
 export const SLOTS: CompId[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case'];
@@ -56,8 +57,12 @@ export type SizeScale = { x: number; y: number; z: number };
 // scalesMesh: false marks a spec that should still draw its annotation but must NOT drive the
 // placeholder mesh's scale — e.g. an AIO's radiator length has no matching geometry on the
 // pump-block placeholder mesh, so treating it as a real axis-length would balloon the whole
-// part rather than actually depict a radiator.
-export type DimensionSpec = { axis: 'x' | 'y' | 'z'; mm: number; label?: string; scalesMesh?: boolean };
+// part rather than actually depict a radiator. lineLengthMm overrides how long the tick+line
+// itself is drawn, independent of `mm` (which always drives the label text) — for that same
+// radiator case, the label must still quote the true 360mm spec, but the line has no real
+// geometry to span, so it draws at a small placeholder length instead of stretching across
+// the whole case.
+export type DimensionSpec = { axis: 'x' | 'y' | 'z'; mm: number; label?: string; scalesMesh?: boolean; lineLengthMm?: number };
 
 const DIM_COLOR = 0xc4a35a; // GOMP gold — matches the site's accent color
 
@@ -96,7 +101,7 @@ function makeTextSprite(text: string, targetHeight: number): THREE.Sprite {
 // (the caller positions the whole group flush against the measured object's edge).
 function buildDimensionAnnotation(spec: DimensionSpec): THREE.Group {
   const group = new THREE.Group();
-  const lengthUnits = mmToUnits(spec.mm);
+  const lengthUnits = mmToUnits(spec.lineLengthMm ?? spec.mm);
   const half = lengthUnits / 2;
   const tick = Math.min(0.05, lengthUnits * 0.15);
   const lineMat = new THREE.LineBasicMaterial({ color: DIM_COLOR, transparent: true, opacity: 0.85, depthTest: false });
@@ -138,7 +143,7 @@ function buildDimensionSet(specs: DimensionSpec[]): THREE.Group {
   const defaultHalfExtentUnits = 0.09;
   const halfExtent: Record<'x' | 'y' | 'z', number> = { x: defaultHalfExtentUnits, y: defaultHalfExtentUnits, z: defaultHalfExtentUnits };
   specs.forEach((spec) => {
-    halfExtent[spec.axis] = mmToUnits(spec.mm) / 2;
+    halfExtent[spec.axis] = mmToUnits(spec.lineLengthMm ?? spec.mm) / 2;
   });
 
   specs.forEach((spec) => {
@@ -383,6 +388,71 @@ function buildCanMesh(): THREE.Group {
   botCap.position.y = -height / 2;
   group.add(botCap);
   return group;
+}
+
+// A simple case fan — square frame, a dark blade disc, a few blade-line indicators, and a gold
+// hub (matching the site accent) — built facing local +Z so a caller can rotate the whole group
+// to face whichever case wall it's mounted on.
+function buildFanMesh(sizeMm: number): THREE.Group {
+  const T = THREE;
+  const group = new T.Group();
+  const size = mmToUnits(sizeMm);
+  const radius = size / 2;
+  const depth = size * 0.12;
+  const frameMat = new T.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.4, metalness: 0.3 });
+  const bladeMat = new T.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.5, metalness: 0.2 });
+  const bladeLineMat = new T.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.6 });
+  const hubMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.3, metalness: 0.7 });
+
+  group.add(new T.Mesh(new T.BoxGeometry(size, size, depth * 0.5), frameMat));
+
+  const blade = new T.Mesh(new T.CylinderGeometry(radius * 0.86, radius * 0.86, depth * 0.3, 24), bladeMat);
+  blade.rotation.x = Math.PI / 2;
+  group.add(blade);
+
+  for (let i = 0; i < 7; i++) {
+    const angle = (i / 7) * Math.PI * 2;
+    const bl = new T.Mesh(new T.BoxGeometry(radius * 0.62, radius * 0.16, depth * 0.32), bladeLineMat);
+    bl.position.set(Math.cos(angle) * radius * 0.32, Math.sin(angle) * radius * 0.32, 0);
+    bl.rotation.z = angle;
+    group.add(bl);
+  }
+
+  const hub = new T.Mesh(new T.CylinderGeometry(radius * 0.12, radius * 0.12, depth * 0.4, 16), hubMat);
+  hub.rotation.x = Math.PI / 2;
+  group.add(hub);
+
+  return group;
+}
+
+// Fan-mount position -> world placement, spread evenly across the relevant span of the current
+// case's real size, sitting just outside the panel it's mounted on, facing outward (matching
+// buildFanMesh's local +Z default face). front/rear/side spread vertically (along Y, like a
+// radiator's fan row); top/bottom spread front-to-back (along Z).
+function fanTransform(
+  position: FanMountPosition,
+  index: number,
+  count: number,
+  caseSize: { w: number; h: number; d: number },
+): { pos: [number, number, number]; rot: [number, number, number] } {
+  const { w, h, d } = caseSize;
+  const gap = 0.04;
+  const along = (span: number) => {
+    const step = span / (count + 1);
+    return span / 2 - step * (index + 1);
+  };
+  switch (position) {
+    case 'front':
+      return { pos: [0, along(h), d / 2 + gap], rot: [0, 0, 0] };
+    case 'rear':
+      return { pos: [0, along(h), -d / 2 - gap], rot: [0, Math.PI, 0] };
+    case 'top':
+      return { pos: [0, h / 2 + gap, along(d)], rot: [-Math.PI / 2, 0, 0] };
+    case 'bottom':
+      return { pos: [0, -h / 2 - gap, along(d)], rot: [Math.PI / 2, 0, 0] };
+    case 'side':
+      return { pos: [w / 2 + gap, along(h), 0], rot: [0, Math.PI / 2, 0] };
+  }
 }
 
 export type SceneCallbacks = {
@@ -674,6 +744,35 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     refreshCanDimensions();
   }
 
+  // ---- Case fans ----
+  // The page owns which positions/sizes/counts are picked (constrained by the selected case's
+  // real fanMounts spec); this just rebuilds the meshes from scratch whenever that changes or
+  // the case itself is resized, since a full rebuild is simpler and cheap enough here than
+  // trying to diff/reuse individual fan meshes across a count or size change.
+  let fanConfig: Partial<Record<FanMountPosition, { count: number; sizeMm: number }>> = {};
+  const fanGroup = new THREE.Group();
+  scene.add(fanGroup);
+
+  function rebuildFans() {
+    fanGroup.clear();
+    (Object.keys(fanConfig) as FanMountPosition[]).forEach((position) => {
+      const cfg = fanConfig[position];
+      if (!cfg || cfg.count <= 0) return;
+      for (let i = 0; i < cfg.count; i++) {
+        const fan = buildFanMesh(cfg.sizeMm);
+        const { pos, rot } = fanTransform(position, i, cfg.count, lastCaseSize);
+        fan.position.set(...pos);
+        fan.rotation.set(...rot);
+        fanGroup.add(fan);
+      }
+    });
+  }
+
+  function setFans(config: Partial<Record<FanMountPosition, { count: number; sizeMm: number }>>) {
+    fanConfig = config;
+    rebuildFans();
+  }
+
   function resetComponentPositions() {
     (Object.keys(BASE_POS) as Exclude<CompId, 'case'>[]).forEach((id) => {
       const obj = objects[id];
@@ -701,6 +800,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     resetComponentPositions();
     positionCan();
     refreshCanDimensions();
+    rebuildFans();
   }
 
   // sizeScale is set by a prior setSizeScale(id, specs) call (see changeSelection in the page,
@@ -943,6 +1043,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     setComponentDimensions,
     setDimensionsVisible,
     setCanVisible,
+    setFans,
     setMotion(on: boolean) {
       motionOn = on;
       ambientGroup.visible = on;

@@ -12,6 +12,13 @@ export type Tier = 'S' | 'A' | 'B' | 'C' | 'D';
 
 export type FormFactor = 'E-ATX' | 'ATX' | 'mATX' | 'Mini-ITX';
 
+// A case's fan mounting positions — real manufacturer spec (max fan count and which sizes fit),
+// not something buildcores-open-db's PCCase schema tracks at all, so this is hand-sourced per
+// case rather than mined. 'side' is a mount on the (usually glass) side panel opposite the
+// motherboard tray, distinct from 'front'/'top'/'bottom'/'rear'.
+export type FanMountPosition = 'front' | 'top' | 'rear' | 'bottom' | 'side';
+export type FanMountSpec = { position: FanMountPosition; maxCount: number; sizesMm: number[] };
+
 export type Component = {
   id: string;
   name: string;
@@ -40,6 +47,7 @@ export type Component = {
   coolerRadiatorMm?: number; // cooler only, AIO — the radiator that mounts on the case, not the pump block
   psuLengthMm?: number; // psu only
   ramHeightMm?: number; // ram only, per-SKU heatsink height — falls back to RAM_DIMM_SIZE_MM.height (bare PCB) when unset
+  fanMounts?: FanMountSpec[]; // case only — omitted/empty means a fixed design with no user-configurable fan slots
 };
 
 export type ComponentDb = Record<Category, Component[]>;
@@ -229,6 +237,9 @@ export function defaultComponentDb(): ComponentDb {
         maxCoolerHeightMm: 45,
         maxRadiatorMm: 140,
         maxPsuLengthMm: 100,
+        // Fixed dual-chamber SFF design — the AIO/exhaust fan are pre-installed and part of the
+        // chassis, not a user-configurable slot.
+        fanMounts: [],
       },
       {
         id: 'ca2',
@@ -244,6 +255,11 @@ export function defaultComponentDb(): ComponentDb {
         maxCoolerHeightMm: 170,
         maxRadiatorMm: 280,
         maxPsuLengthMm: 170,
+        fanMounts: [
+          { position: 'front', maxCount: 2, sizesMm: [120, 140] },
+          { position: 'top', maxCount: 2, sizesMm: [120, 140] },
+          { position: 'rear', maxCount: 1, sizesMm: [120] },
+        ],
       },
       {
         id: 'ca3',
@@ -259,6 +275,12 @@ export function defaultComponentDb(): ComponentDb {
         maxCoolerHeightMm: 169,
         maxRadiatorMm: 420,
         maxPsuLengthMm: 250,
+        fanMounts: [
+          { position: 'front', maxCount: 3, sizesMm: [120, 140] },
+          { position: 'top', maxCount: 3, sizesMm: [120, 140] },
+          { position: 'rear', maxCount: 1, sizesMm: [120, 140] },
+          { position: 'bottom', maxCount: 2, sizesMm: [120, 140] },
+        ],
       },
       {
         id: 'ca4',
@@ -274,6 +296,12 @@ export function defaultComponentDb(): ComponentDb {
         maxCoolerHeightMm: 167,
         maxRadiatorMm: 420,
         maxPsuLengthMm: 220,
+        fanMounts: [
+          { position: 'top', maxCount: 3, sizesMm: [120, 140] },
+          { position: 'side', maxCount: 3, sizesMm: [120, 140] },
+          { position: 'bottom', maxCount: 3, sizesMm: [120, 140] },
+          { position: 'rear', maxCount: 2, sizesMm: [120] },
+        ],
       },
     ],
   };
