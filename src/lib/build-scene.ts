@@ -57,8 +57,12 @@ export type SizeScale = { x: number; y: number; z: number };
 // scalesMesh: false marks a spec that should still draw its annotation but must NOT drive the
 // placeholder mesh's scale — e.g. an AIO's radiator length has no matching geometry on the
 // pump-block placeholder mesh, so treating it as a real axis-length would balloon the whole
-// part rather than actually depict a radiator.
-export type DimensionSpec = { axis: 'x' | 'y' | 'z'; mm: number; label?: string; scalesMesh?: boolean };
+// part rather than actually depict a radiator. lineLengthMm overrides how long the tick+line
+// itself is drawn, independent of `mm` (which always drives the label text) — for that same
+// radiator case, the label must still quote the true 360mm spec, but the line has no real
+// geometry to span, so it draws at a small placeholder length instead of stretching across
+// the whole case.
+export type DimensionSpec = { axis: 'x' | 'y' | 'z'; mm: number; label?: string; scalesMesh?: boolean; lineLengthMm?: number };
 
 const DIM_COLOR = 0xc4a35a; // GOMP gold — matches the site's accent color
 
@@ -97,7 +101,7 @@ function makeTextSprite(text: string, targetHeight: number): THREE.Sprite {
 // (the caller positions the whole group flush against the measured object's edge).
 function buildDimensionAnnotation(spec: DimensionSpec): THREE.Group {
   const group = new THREE.Group();
-  const lengthUnits = mmToUnits(spec.mm);
+  const lengthUnits = mmToUnits(spec.lineLengthMm ?? spec.mm);
   const half = lengthUnits / 2;
   const tick = Math.min(0.05, lengthUnits * 0.15);
   const lineMat = new THREE.LineBasicMaterial({ color: DIM_COLOR, transparent: true, opacity: 0.85, depthTest: false });
@@ -139,7 +143,7 @@ function buildDimensionSet(specs: DimensionSpec[]): THREE.Group {
   const defaultHalfExtentUnits = 0.09;
   const halfExtent: Record<'x' | 'y' | 'z', number> = { x: defaultHalfExtentUnits, y: defaultHalfExtentUnits, z: defaultHalfExtentUnits };
   specs.forEach((spec) => {
-    halfExtent[spec.axis] = mmToUnits(spec.mm) / 2;
+    halfExtent[spec.axis] = mmToUnits(spec.lineLengthMm ?? spec.mm) / 2;
   });
 
   specs.forEach((spec) => {

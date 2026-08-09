@@ -116,6 +116,7 @@ const INK = '#1C1C1A';
 const MUTED = '#7A7469';
 const MAROON = '#6E1423';
 const GOLD = '#C4A35A';
+const POSH_GREEN = '#5C7A5C'; // muted sage, so the wattage bar's "safe" end still reads as part of the site's palette
 
 function TierBadge({ tier, small }: { tier?: Tier; small?: boolean }) {
   if (!tier) return null;
@@ -201,8 +202,11 @@ function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVertical 
   if (id === 'cooler') {
     // scalesMesh: false — the placeholder cooler mesh is a pump block, not a radiator; there's
     // no matching geometry to scale by radiator length, so this quotes the real size without
-    // resizing the mesh (unlike every other spec here).
-    if (comp.coolerRadiatorMm) return [{ axis: 'x', mm: comp.coolerRadiatorMm, label: `Ø ${cm(comp.coolerRadiatorMm)}`, scalesMesh: false }];
+    // resizing the mesh (unlike every other spec here). lineLengthMm caps the annotation LINE
+    // itself to roughly the pump block's own size too — without it the line is drawn at the
+    // real (300-420mm) radiator length, which has no matching mesh either and visibly spans
+    // clean across the case.
+    if (comp.coolerRadiatorMm) return [{ axis: 'x', mm: comp.coolerRadiatorMm, label: `Ø ${cm(comp.coolerRadiatorMm)}`, scalesMesh: false, lineLengthMm: 40 }];
     if (comp.coolerHeightMm) return [{ axis: 'y', mm: comp.coolerHeightMm }];
   }
   if (id === 'psu' && comp.psuLengthMm) {
@@ -1104,13 +1108,14 @@ export default function BuildPage() {
               </div>
               {psuWatts != null && (
                 <>
-                  <div style={{ height: 5, borderRadius: 3, background: 'rgba(28,28,26,0.08)', marginTop: 6, overflow: 'hidden' }}>
+                  <div style={{ height: 5, borderRadius: 3, background: 'rgba(28,28,26,0.08)', marginTop: 6, overflow: 'hidden', position: 'relative' }}>
                     <div
                       style={{
-                        height: '100%',
-                        width: `${Math.min(100, (estimatedWatts / psuWatts) * 100)}%`,
-                        background: estimatedWatts > psuWatts ? MAROON : estimatedWatts > psuWatts * 0.7 ? GOLD : INK,
-                        transition: 'width 0.3s',
+                        position: 'absolute',
+                        inset: 0,
+                        background: `linear-gradient(to right, ${POSH_GREEN} 0%, ${GOLD} 65%, ${MAROON} 100%)`,
+                        clipPath: `inset(0 ${100 - Math.min(100, (estimatedWatts / psuWatts) * 100)}% 0 0)`,
+                        transition: 'clip-path 0.3s',
                       }}
                     />
                   </div>
