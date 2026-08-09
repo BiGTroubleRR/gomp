@@ -17,6 +17,7 @@ import {
   CPU_PACKAGE_SIZE_MM,
   RAM_DIMM_SIZE_MM,
   STORAGE_M2_SIZE_MM,
+  PSU_ATX_SIZE_MM,
   type Category,
   type Component,
   type ComponentDb,
@@ -175,7 +176,13 @@ function dimensionSpecsFor(id: CompId, comp: Component | undefined): DimensionSp
     if (comp.coolerRadiatorMm) return [{ axis: 'x', mm: comp.coolerRadiatorMm, label: `Ø ${cm(comp.coolerRadiatorMm)}`, scalesMesh: false }];
     if (comp.coolerHeightMm) return [{ axis: 'y', mm: comp.coolerHeightMm }];
   }
-  if (id === 'psu' && comp.psuLengthMm) return [{ axis: 'z', mm: comp.psuLengthMm }];
+  if (id === 'psu' && comp.psuLengthMm) {
+    return [
+      { axis: 'z', mm: comp.psuLengthMm },
+      { axis: 'x', mm: PSU_ATX_SIZE_MM.width },
+      { axis: 'y', mm: PSU_ATX_SIZE_MM.height },
+    ];
+  }
   // The remaining categories' placeholder meshes (build-scene.ts's buildComponentMesh) each
   // have one genuinely thin "thickness" local axis (the PCB/package thinness — mobo's local X
   // is 0.04 units, cpu's ~0.06-0.1, ram's ~0.04-0.05, storage's ~0.04) and two much larger axes
@@ -192,7 +199,7 @@ function dimensionSpecsFor(id: CompId, comp: Component | undefined): DimensionSp
     const size = CPU_PACKAGE_SIZE_MM[comp.socket];
     return size ? [{ axis: 'y', mm: size.width }, { axis: 'z', mm: size.depth }] : [];
   }
-  if (id === 'ram') return [{ axis: 'y', mm: RAM_DIMM_SIZE_MM.length }, { axis: 'z', mm: RAM_DIMM_SIZE_MM.height }];
+  if (id === 'ram') return [{ axis: 'y', mm: RAM_DIMM_SIZE_MM.length }, { axis: 'z', mm: comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height }];
   if (id === 'storage') return [{ axis: 'z', mm: STORAGE_M2_SIZE_MM.length }, { axis: 'y', mm: STORAGE_M2_SIZE_MM.width }];
   return [];
 }
@@ -211,7 +218,7 @@ function dimensionLabel(id: CompId, comp: Component | undefined): string | null 
     if (comp.coolerRadiatorMm) return `${cm(comp.coolerRadiatorMm)} radiator`;
     if (comp.coolerHeightMm) return `${cm(comp.coolerHeightMm)} tall`;
   }
-  if (id === 'psu' && comp.psuLengthMm) return `${cm(comp.psuLengthMm)} long`;
+  if (id === 'psu' && comp.psuLengthMm) return `${cm(PSU_ATX_SIZE_MM.width)} × ${cm(PSU_ATX_SIZE_MM.height)} × ${cm(comp.psuLengthMm)}`;
   if (id === 'mobo' && comp.formFactor) {
     const size = MOBO_FORM_FACTOR_SIZE_MM[comp.formFactor];
     return size ? `${cm(size.width)} × ${cm(size.depth)}` : null;
@@ -220,7 +227,7 @@ function dimensionLabel(id: CompId, comp: Component | undefined): string | null 
     const size = CPU_PACKAGE_SIZE_MM[comp.socket];
     return size ? `${cm(size.width)} × ${cm(size.depth)}` : null;
   }
-  if (id === 'ram') return `${cm(RAM_DIMM_SIZE_MM.length)} × ${cm(RAM_DIMM_SIZE_MM.height)}`;
+  if (id === 'ram') return `${cm(RAM_DIMM_SIZE_MM.length)} × ${cm(comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height)}`;
   if (id === 'storage') return `${cm(STORAGE_M2_SIZE_MM.length)} × ${cm(STORAGE_M2_SIZE_MM.width)}`;
   return null;
 }

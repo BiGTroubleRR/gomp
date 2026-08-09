@@ -39,6 +39,7 @@ export type Component = {
   coolerHeightMm?: number; // cooler only, air towers
   coolerRadiatorMm?: number; // cooler only, AIO — the radiator that mounts on the case, not the pump block
   psuLengthMm?: number; // psu only
+  ramHeightMm?: number; // ram only, per-SKU heatsink height — falls back to RAM_DIMM_SIZE_MM.height (bare PCB) when unset
 };
 
 export type ComponentDb = Record<Category, Component[]>;
@@ -98,13 +99,20 @@ export const CPU_PACKAGE_SIZE_MM: Record<string, { width: number; depth: number 
   LGA1851: { width: 37.5, depth: 45 },
 };
 
-// Standardized desktop UDIMM size (mm) — every DDR4/DDR5 desktop stick is this size regardless
-// of capacity or speed; only tall RGB heatsinks add a few mm of height, not modeled here.
+// Standardized desktop UDIMM size (mm) — length is fixed regardless of capacity/speed for every
+// DDR4/DDR5 desktop stick. Height is the bare-PCB fallback for a SKU with no per-SKU heatsink
+// height on file (Component.ramHeightMm) — real RGB heatsink heights vary a lot by model (e.g.
+// 44mm on a G.Skill Trident Z5 vs ~56mm on a Corsair Dominator Platinum), so this constant
+// undersells any SKU with a tall heatsink rather than a typical one.
 export const RAM_DIMM_SIZE_MM = { length: 133.35, height: 31.25 };
 
 // Standardized M.2 2280 SSD size (mm) — "2280" literally encodes 22mm x 80mm; every drive GOMP
 // carries is this form factor.
 export const STORAGE_M2_SIZE_MM = { length: 80, width: 22 };
+
+// Standard ATX PSU cross-section (mm) per the Intel ATX PSU spec — every ATX unit is this
+// width x height regardless of wattage/length; only length varies per model (Component.psuLengthMm).
+export const PSU_ATX_SIZE_MM = { width: 150, height: 86 };
 
 export function defaultComponentDb(): ComponentDb {
   return {
@@ -163,8 +171,8 @@ export function defaultComponentDb(): ComponentDb {
       { id: 'c25', name: 'Intel Core i5-13600K', price: 319, specs: '14C/20T · 5.1GHz · 125W', tier: 'C', socket: 'LGA1700', passmark: 37462, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i5-13600K&id=5008' },
     ],
     ram: [
-      { id: 'r1', name: 'G.Skill Trident Z5 32GB DDR5 6400', price: 130, specs: '2×16GB · CL32 · EXPO/XMP3', tier: 'S' },
-      { id: 'r2', name: 'Corsair Dominator 32GB DDR5 5600', price: 112, specs: '2×16GB · CL36', tier: 'A' },
+      { id: 'r1', name: 'G.Skill Trident Z5 32GB DDR5 6400', price: 130, specs: '2×16GB · CL32 · EXPO/XMP3', tier: 'S', ramHeightMm: 44 },
+      { id: 'r2', name: 'Corsair Dominator 32GB DDR5 5600', price: 112, specs: '2×16GB · CL36', tier: 'A', ramHeightMm: 56 },
     ],
     storage: [
       { id: 's1', name: 'Samsung 990 Pro 2TB NVMe', price: 164, specs: 'PCIe 4.0 · 7450MB/s read', tier: 'S' },
