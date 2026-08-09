@@ -2,7 +2,7 @@
 // (src/lib/supabase/components.ts) and the admin-only write route
 // (src/app/api/admin/components/route.ts). No 'use client' here — this file
 // must be importable from server route handlers too.
-import { type Category, type Component, type Tier, type FormFactor } from '@/lib/component-db-seed';
+import { type Category, type Component, type Tier, type FormFactor, type FanMountSpec } from '@/lib/component-db-seed';
 import type { Database } from './types';
 
 export type ComponentRow = Database['public']['Tables']['components']['Row'];
@@ -36,6 +36,7 @@ export function rowToComponent(row: ComponentRow): Component {
   if (row.cooler_radiator_mm != null) comp.coolerRadiatorMm = Number(row.cooler_radiator_mm);
   if (row.psu_length_mm != null) comp.psuLengthMm = Number(row.psu_length_mm);
   if (row.ram_height_mm != null) comp.ramHeightMm = Number(row.ram_height_mm);
+  if (row.fan_mounts != null) comp.fanMounts = row.fan_mounts as unknown as FanMountSpec[];
   return comp;
 }
 
@@ -65,6 +66,7 @@ export function componentToRow(category: Category, comp: Component, sortOrder: n
     cooler_radiator_mm: comp.coolerRadiatorMm ?? null,
     psu_length_mm: comp.psuLengthMm ?? null,
     ram_height_mm: comp.ramHeightMm ?? null,
+    fan_mounts: (comp.fanMounts as unknown as ComponentInsert['fan_mounts']) ?? null,
     sort_order: sortOrder,
   };
 }

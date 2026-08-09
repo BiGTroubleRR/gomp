@@ -21,6 +21,7 @@ import {
   type Category,
   type Component,
   type ComponentDb,
+  type FanMountPosition,
 } from '@/lib/component-db-seed';
 import { createBuildScene, SLOTS, CASE_SIZES, mmToUnits, type BuildScene, type CompId, type DimensionSpec } from '@/lib/build-scene';
 import { useIsMobile } from '@/lib/use-media-query';
@@ -33,6 +34,8 @@ const T = {
     clear_all: 'Clear All', drag_to_orbit: 'Drag to orbit  ·  Scroll to zoom', hide_panel: 'Hide Side Panel',
     show_panel: 'Show Side Panel', complete: 'Complete', your_build: 'Your Build', selected_part: 'Selected Part',
     build_total: 'Build Total', passmark_score: 'PassMark Score', verify_passmark: 'Verify on PassMark ↗', dimensions: 'Dimensions',
+    fans: 'Case Fans',
+    fan_positions: { front: 'Front', top: 'Top', rear: 'Rear', bottom: 'Bottom', side: 'Side' },
     show_can: 'Add Can for Scale', hide_can: 'Remove Can', show_dims: 'Show Dimensions', hide_dims: 'Hide Dimensions',
     continue_benchmarks: 'Continue to Benchmarks →', save_build: 'Save Build', preparing_order: 'Booting up your legend...',
     no_components: '(no components — add in Admin)', none_add_admin: '(none — add in Admin)',
@@ -71,6 +74,8 @@ const T = {
     clear_all: 'Vymazať všetko', drag_to_orbit: 'Ťahaním otáčať  ·  Kolieskom priblížiť', hide_panel: 'Skryť bočný panel',
     show_panel: 'Zobraziť bočný panel', complete: 'Dokončené', your_build: 'Vaša zostava', selected_part: 'Vybraný diel',
     build_total: 'Celková cena', passmark_score: 'Skóre PassMark', verify_passmark: 'Overiť na PassMark ↗', dimensions: 'Rozmery',
+    fans: 'Ventilátory skrine',
+    fan_positions: { front: 'Predné', top: 'Horné', rear: 'Zadné', bottom: 'Spodné', side: 'Bočné' },
     show_can: 'Vložiť plechovku pre mierku', hide_can: 'Odstrániť plechovku', show_dims: 'Zobraziť rozmery', hide_dims: 'Skryť rozmery',
     continue_benchmarks: 'Pokračovať na benchmarky →', save_build: 'Uložiť zostavu', preparing_order: 'Spúšťame vašu legendu...',
     no_components: '(žiadne komponenty — pridajte v Admine)', none_add_admin: '(žiadne — pridajte v Admine)',
@@ -278,6 +283,7 @@ export default function BuildPage() {
   const [glassHidden, setGlassHidden] = useState(false);
   const [canVisible, setCanVisible] = useState(false);
   const [dimensionsVisible, setDimensionsVisible] = useState(true);
+  const [fanConfig, setFanConfigState] = useState<Partial<Record<FanMountPosition, { count: number; sizeMm: number }>>>({});
   const [showComplete, setShowComplete] = useState(false);
   const [completionRunning, setCompletionRunning] = useState(false);
   const [hoverId, setHoverId] = useState<CompId | null>(null);
@@ -452,6 +458,10 @@ export default function BuildPage() {
       sceneRef.current?.updateCase(size.w, size.h, size.d);
       const vertical = caseHasVerticalGpuMount(comp?.name);
       sceneRef.current?.setGpuOrientation(vertical);
+      // A different case has different fan positions/limits — an old count could exceed the
+      // new case's maxCount, or reference a position it doesn't even have.
+      setFanConfigState({});
+      sceneRef.current?.setFans({});
       // The card's own dimension annotation axis depends on the case it's mounted in — refresh
       // it here too, since changing the case doesn't otherwise touch the gpu selection at all.
       if (selected.gpu) {
@@ -482,6 +492,8 @@ export default function BuildPage() {
       sceneRef.current?.setComponentDimensions('case', dimensionSpecsFor('case', pick));
       const vertical = caseHasVerticalGpuMount(pick.name);
       sceneRef.current?.setGpuOrientation(vertical);
+      setFanConfigState({});
+      sceneRef.current?.setFans({});
       if (selected.gpu) {
         const gpuComp = (compDb.gpu || []).find((c) => c.name === selections.gpu);
         sceneRef.current?.setComponentDimensions('gpu', gpuComp ? dimensionSpecsFor('gpu', gpuComp, vertical) : []);
@@ -562,6 +574,28 @@ export default function BuildPage() {
     const next = !dimensionsVisible;
     setDimensionsVisible(next);
     sceneRef.current?.setDimensionsVisible(next);
+  }
+
+  // Case fans: count/size per mount position, constrained by the selected case's own fanMounts
+  // spec (see the picker UI below). Cleared whenever the case changes, since a different case
+  // has different positions/limits and an old count could exceed the new one.
+  function setFanCount(position: FanMountPosition, count: number) {
+    setFanConfigState((prev) => {
+      const caseComp = selected.case ? (compDb.case || []).find((c) => c.name === selections.case) : undefined;
+      const mount = caseComp?.fanMounts?.find((m) => m.position === position);
+      const sizeMm = prev[position]?.sizeMm ?? mount?.sizesMm[0] ?? 120;
+      const next = { ...prev, [position]: { count, sizeMm } };
+      sceneRef.current?.setFans(next);
+      return next;
+    });
+  }
+
+  function setFanSize(position: FanMountPosition, sizeMm: number) {
+    setFanConfigState((prev) => {
+      const next = { ...prev, [position]: { count: prev[position]?.count ?? 0, sizeMm } };
+      sceneRef.current?.setFans(next);
+      return next;
+    });
   }
 
   function handleViewportPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
@@ -1004,6 +1038,47 @@ export default function BuildPage() {
                   <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
                     <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.dimensions}</div>
                     <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: INK, fontWeight: 600 }}>{dimensionLabel(activeId, activeComp)}</div>
+                  </div>
+                )}
+                {activeId === 'case' && activeComp.fanMounts && activeComp.fanMounts.length > 0 && (
+                  <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
+                    <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{t.fans}</div>
+                    {activeComp.fanMounts.map((mount) => {
+                      const cfg = fanConfig[mount.position] || { count: 0, sizeMm: mount.sizesMm[0] };
+                      return (
+                        <div key={mount.position} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: INK }}>{t.fan_positions[mount.position]}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {mount.sizesMm.length > 1 && cfg.count > 0 && (
+                              <select
+                                value={cfg.sizeMm}
+                                onChange={(e) => setFanSize(mount.position, Number(e.target.value))}
+                                style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 10, color: MUTED, background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3, padding: '2px 4px' }}
+                              >
+                                {mount.sizesMm.map((s) => (
+                                  <option key={s} value={s}>{s}mm</option>
+                                ))}
+                              </select>
+                            )}
+                            <button
+                              onClick={() => setFanCount(mount.position, Math.max(0, cfg.count - 1))}
+                              disabled={cfg.count <= 0}
+                              style={{ width: 20, height: 20, borderRadius: 3, border: '0.5px solid rgba(28,28,26,0.2)', background: 'transparent', color: cfg.count <= 0 ? '#c9c2b4' : INK, cursor: cfg.count <= 0 ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1 }}
+                            >
+                              −
+                            </button>
+                            <span style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: INK, minWidth: 12, textAlign: 'center' }}>{cfg.count}</span>
+                            <button
+                              onClick={() => setFanCount(mount.position, Math.min(mount.maxCount, cfg.count + 1))}
+                              disabled={cfg.count >= mount.maxCount}
+                              style={{ width: 20, height: 20, borderRadius: 3, border: '0.5px solid rgba(28,28,26,0.2)', background: 'transparent', color: cfg.count >= mount.maxCount ? '#c9c2b4' : INK, cursor: cfg.count >= mount.maxCount ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1 }}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 {activePassmark && (
