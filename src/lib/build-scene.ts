@@ -62,7 +62,12 @@ export type SizeScale = { x: number; y: number; z: number };
 // radiator case, the label must still quote the true 360mm spec, but the line has no real
 // geometry to span, so it draws at a small placeholder length instead of stretching across
 // the whole case.
-export type DimensionSpec = { axis: 'x' | 'y' | 'z'; mm: number; label?: string; scalesMesh?: boolean; lineLengthMm?: number };
+// annotate: false marks a spec that should still drive the placeholder mesh's scale (so the
+// part's footprint in the scene stays physically correct) but must NOT draw a blueprint
+// annotation or quote a label — the opposite of scalesMesh: false above. Used for motherboards,
+// whose form factor (ATX/mATX/E-ATX/Mini-ITX) already implies the size class, so quoting exact
+// cm figures on top of that is redundant.
+export type DimensionSpec = { axis: 'x' | 'y' | 'z'; mm: number; label?: string; scalesMesh?: boolean; lineLengthMm?: number; annotate?: boolean };
 
 const DIM_COLOR = 0xc4a35a; // GOMP gold — matches the site's accent color
 
@@ -147,6 +152,7 @@ function buildDimensionSet(specs: DimensionSpec[]): THREE.Group {
   });
 
   specs.forEach((spec) => {
+    if (spec.annotate === false) return;
     const annotation = buildDimensionAnnotation(spec);
     const pos = new THREE.Vector3(0, 0, 0);
     if (spec.axis !== 'x') pos.x = halfExtent.x + gap;

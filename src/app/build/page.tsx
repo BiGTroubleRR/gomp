@@ -224,9 +224,13 @@ function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVertical 
   // annotation ends up perpendicular to how the part actually looks (a real physical fix, not
   // just a display tweak: mobo/cpu use local Y+Z, ram/storage use local Y+Z too but paired with
   // a different real dimension each since ram's long axis is Y while storage's is Z).
+  // Only the mesh scale is quoted here (annotate: false) — a motherboard's form factor
+  // (ATX/mATX/E-ATX/Mini-ITX), already shown as its own badge, is a standard size class, so
+  // drawing exact cm figures on top of it is redundant (see dimensionLabel below, which omits
+  // mobo entirely for the same reason).
   if (id === 'mobo' && comp.formFactor) {
     const size = MOBO_FORM_FACTOR_SIZE_MM[comp.formFactor];
-    return size ? [{ axis: 'y', mm: size.width }, { axis: 'z', mm: size.depth }] : [];
+    return size ? [{ axis: 'y', mm: size.width, annotate: false }, { axis: 'z', mm: size.depth, annotate: false }] : [];
   }
   // CPU package size is deliberately not quoted — it barely varies (a few mm across every
   // socket) and isn't a dimension anyone building a PC actually needs to check.
@@ -250,10 +254,8 @@ function dimensionLabel(id: CompId, comp: Component | undefined): string | null 
     if (comp.coolerHeightMm) return `${cm(comp.coolerHeightMm)} tall`;
   }
   if (id === 'psu' && comp.psuLengthMm) return `${cm(PSU_ATX_SIZE_MM.width)} × ${cm(PSU_ATX_SIZE_MM.height)} × ${cm(comp.psuLengthMm)}`;
-  if (id === 'mobo' && comp.formFactor) {
-    const size = MOBO_FORM_FACTOR_SIZE_MM[comp.formFactor];
-    return size ? `${cm(size.width)} × ${cm(size.depth)}` : null;
-  }
+  // Motherboard size is deliberately not quoted — ATX/mATX/E-ATX/Mini-ITX are standard size
+  // classes already shown as their own badge, so exact cm figures on top are redundant.
   if (id === 'ram') return `${cm(RAM_DIMM_SIZE_MM.length)} × ${cm(comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height)}`;
   if (id === 'storage') return `${cm(STORAGE_M2_SIZE_MM.length)} × ${cm(STORAGE_M2_SIZE_MM.width)}`;
   return null;
