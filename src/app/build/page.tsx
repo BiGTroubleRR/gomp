@@ -439,6 +439,13 @@ export default function BuildPage() {
       setActiveId(id);
       const comp = next ? findComp(id) : undefined;
       if (id === 'case' && next) sceneRef.current?.setGpuOrientation(caseHasVerticalGpuMount(comp?.name));
+      // Removing the case leaves its fan meshes orphaned in the scene otherwise — they're tracked
+      // separately from the case mesh itself (see setFans), so toggling the case off doesn't
+      // implicitly remove them the way it does for the case mesh.
+      if (id === 'case' && !next) {
+        setFanConfigState({});
+        sceneRef.current?.setFans({});
+      }
       if (comp) sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp));
       sceneRef.current?.toggleComponent(id, next);
       const gpuVertical =
