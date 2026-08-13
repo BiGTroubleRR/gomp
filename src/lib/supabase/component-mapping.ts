@@ -37,6 +37,7 @@ export function rowToComponent(row: ComponentRow): Component {
   if (row.psu_length_mm != null) comp.psuLengthMm = Number(row.psu_length_mm);
   if (row.ram_height_mm != null) comp.ramHeightMm = Number(row.ram_height_mm);
   if (row.fan_mounts != null) comp.fanMounts = row.fan_mounts as unknown as FanMountSpec[];
+  if (row.image_url) comp.imageUrl = row.image_url;
   return comp;
 }
 
@@ -67,6 +68,7 @@ export function componentToRow(category: Category, comp: Component, sortOrder: n
     psu_length_mm: comp.psuLengthMm ?? null,
     ram_height_mm: comp.ramHeightMm ?? null,
     fan_mounts: (comp.fanMounts as unknown as ComponentInsert['fan_mounts']) ?? null,
+    image_url: comp.imageUrl ?? null,
     sort_order: sortOrder,
   };
 }

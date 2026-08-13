@@ -9,11 +9,16 @@ import type { FanMountPosition } from './component-db-seed';
 export type CompId = 'mobo' | 'cpu' | 'cooler' | 'ram' | 'gpu' | 'storage' | 'psu' | 'case';
 export const SLOTS: CompId[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case'];
 
+// mobo/cpu/cooler/ram are all mounted flush on the motherboard's own face, so they share a Z
+// shift toward the case's rear panel (z = -d/2 side, see buildCase) — a real board's rear I/O
+// sits flush against that wall, not centered front-to-back the way the old z≈0 values had it.
+// cpu/ram also got pulled further apart on Y: they used to sit only 0.2 apart, which put a
+// installed RAM kit's own extent overlapping the CPU block.
 const BASE_POS: Record<Exclude<CompId, 'case'>, [number, number, number]> = {
-  mobo: [-0.88, 0.2, 0.0],
-  cpu: [-0.78, 0.65, 0.1],
-  cooler: [-0.42, 0.75, 0.1],
-  ram: [-0.8, 0.85, -0.09],
+  mobo: [-0.88, 0.2, -0.35],
+  cpu: [-0.78, 0.55, -0.25],
+  cooler: [-0.42, 0.65, -0.25],
+  ram: [-0.8, 1.25, -0.44],
   gpu: [-0.45, -0.5, 0.1],
   storage: [-0.8, 0.08, 0.37],
   psu: [0.1, -1.88, 0.0],
@@ -184,6 +189,62 @@ type ObjRecord = {
   sizeScale: SizeScale;
 };
 
+// 4 fixed local-Z positions for the ram mesh's DIMM slots (real motherboards have 2 or 4) —
+// shared between the actual stick meshes and the standalone empty-slot outline group so both
+// line up. Index 1/2 are the centered pair a 2-slot board (or a 2-stick kit on a 4-slot board)
+// uses; 0/1/2/3 is a populated 4-slot board. Z (not X) because slots repeat across the
+// motherboard's own face — mobo's local X is its face normal (thickness), so stacking slots
+// along X would spread them out perpendicular to the board instead of side by side on it.
+// Index 0 needs to land on the physically-left slot from the default camera angle — reversed
+// from a naive ascending-Z order, which actually put index 0 on the right.
+const RAM_SLOT_Z = [0.15, 0.05, -0.05, -0.15];
+
+// A single DIMM stick, styled after G.Skill Trident Z's signature silhouette: a dark anodized
+// heatsink shroud with a jagged "crown" of alternating-height teeth along the top ridge and a
+// gold diffuser strip running underneath them (standing in for Trident Z's RGB light bar, in
+// the site's own accent color rather than literal RGB). Built along local Y (length) / X
+// (height, sticking up off the board) — X is every placeholder mesh's face-normal axis in this
+// file (see mobo's own box, thin along X), and a real DIMM sticks up perpendicular to the
+// board's face, so height has to ride the same axis as the board's normal for the two meshes
+// to actually line up. Z is the thin card-thickness axis, doubling as the slot-repeat axis.
+function buildRamStick(T: typeof THREE): THREE.Group {
+  const g = new T.Group();
+  const pcbMat = new T.MeshStandardMaterial({ color: 0x001825, roughness: 0.6 });
+  const bodyMat = new T.MeshStandardMaterial({ color: 0x2a2530, roughness: 0.28, metalness: 0.75 });
+  const toothMat = new T.MeshStandardMaterial({ color: 0x3d3648, roughness: 0.22, metalness: 0.85 });
+  const goldMat = new T.MeshStandardMaterial({ color: 0xc4a35a, emissive: 0xc4a35a, emissiveIntensity: 0.8 });
+
+  // Bare PCB edge peeking out below the heatsink shroud.
+  const pcbHeight = 0.86;
+  const pcb = new T.Mesh(new T.BoxGeometry(0.1, pcbHeight, 0.03), pcbMat);
+  g.add(pcb);
+
+  // Main heatsink shroud, sitting on top of (out from the board's face, along X) the PCB.
+  const bodyHeight = 0.42;
+  const bodyX = 0.05 + bodyHeight / 2;
+  const body = new T.Mesh(new T.BoxGeometry(bodyHeight, pcbHeight, 0.05), bodyMat);
+  body.position.x = bodyX;
+  g.add(body);
+
+  // Gold diffuser strip, right at the top edge of the shroud.
+  const stripX = bodyX + bodyHeight / 2 + 0.015;
+  const strip = new T.Mesh(new T.BoxGeometry(0.03, pcbHeight * 0.97, 0.052), goldMat);
+  strip.position.x = stripX;
+  g.add(strip);
+
+  // Jagged crown: alternating-height teeth along the top ridge, sitting on the strip.
+  const toothHeights = [0.09, 0.18, 0.1, 0.2, 0.1, 0.18, 0.09];
+  const toothWidth = (pcbHeight * 0.94) / toothHeights.length;
+  const toothBaseX = stripX + 0.015;
+  toothHeights.forEach((h, i) => {
+    const tooth = new T.Mesh(new T.BoxGeometry(h, toothWidth * 0.7, 0.05), toothMat);
+    tooth.position.set(toothBaseX + h / 2, -pcbHeight * 0.47 + toothWidth * (i + 0.5), 0);
+    g.add(tooth);
+  });
+
+  return g;
+}
+
 function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
   const T = THREE;
   switch (id) {
@@ -196,6 +257,33 @@ function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
       const pcie = new T.Mesh(new T.BoxGeometry(0.06, 0.06, 0.88), new T.MeshStandardMaterial({ color: 0x22223a }));
       pcie.position.set(0.05, -0.48, 0.08);
       g.add(pcie);
+
+      // Rear I/O shield: a backing plate plus a real-looking cluster of USB/ethernet/audio ports
+      // near the board's top edge, so a bare board doesn't read as an oddly featureless slab
+      // there before a case/cables give it visual context.
+      const shieldMat = new T.MeshStandardMaterial({ color: 0x8a8a90, roughness: 0.3, metalness: 0.85 });
+      const portMat = new T.MeshStandardMaterial({ color: 0x141414, roughness: 0.4, metalness: 0.5 });
+      const ethernetMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.25, metalness: 0.8 });
+      const jackMat = new T.MeshStandardMaterial({ color: 0xb5b0a8, roughness: 0.3, metalness: 0.7 });
+      const io = new T.Group();
+      io.add(new T.Mesh(new T.BoxGeometry(0.03, 0.5, 0.32), shieldMat));
+      [-0.18, -0.06, 0.06, 0.18].forEach((y) => {
+        const usb = new T.Mesh(new T.BoxGeometry(0.05, 0.07, 0.13), portMat);
+        usb.position.set(0.02, y, -0.08);
+        io.add(usb);
+      });
+      const eth = new T.Mesh(new T.BoxGeometry(0.05, 0.09, 0.15), ethernetMat);
+      eth.position.set(0.02, -0.18, 0.1);
+      io.add(eth);
+      [-0.02, 0.06, 0.14].forEach((y) => {
+        const jack = new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.04, 12), jackMat);
+        jack.rotation.z = Math.PI / 2;
+        jack.position.set(0.03, y, 0.1);
+        io.add(jack);
+      });
+      io.position.set(0.03, 1.25, 0.35);
+      g.add(io);
+
       g.scale.setScalar(0.86);
       return g;
     }
@@ -229,20 +317,24 @@ function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
     }
     case 'ram': {
       const g = new T.Group();
-      const pcbM = new T.MeshStandardMaterial({ color: 0x001825, roughness: 0.6 });
-      const sM = new T.MeshStandardMaterial({ color: 0x6e1423, roughness: 0.2, metalness: 0.7, emissive: 0x0a1520, emissiveIntensity: 0.3 });
-      const rgbMat = new T.MeshStandardMaterial({ color: 0xc4a35a, emissive: 0xc4a35a, emissiveIntensity: 0.75 });
-      [-0.11, 0.0].forEach((z) => {
-        const s = new T.Mesh(new T.BoxGeometry(0.04, 1.0, 0.08), pcbM);
-        s.position.z = z;
-        g.add(s);
-        const h = new T.Mesh(new T.BoxGeometry(0.05, 0.62, 0.09), sM);
-        h.position.set(0.005, 0.2, z);
-        g.add(h);
-        const rgb = new T.Mesh(new T.BoxGeometry(0.052, 0.03, 0.09), rgbMat);
-        rgb.position.set(0.005, 0.52, z);
-        g.add(rgb);
+      // 4 fixed DIMM slots, evenly spaced along local X (the PCB-thickness axis — real slots
+      // repeat in the direction perpendicular to each stick's flat face, not along its height).
+      // setRamModules toggles how many are visible/populated to match the selected kit's real
+      // stick count (1/2/4). Stored on userData so setRamModules/setRamSlots can find them
+      // without rebuilding the mesh — naturalSize (measured right after this returns, with the
+      // default centered pair visible) stays the same magnitude regardless of which slots end
+      // up toggled later, since spacing no longer shares an axis with the height (X) dimension
+      // ramHeightMm scales.
+      const slots = RAM_SLOT_Z.map((z) => {
+        const slot = buildRamStick(T);
+        slot.position.z = z;
+        g.add(slot);
+        return slot;
       });
+      slots.forEach((s, i) => {
+        s.visible = i === 1 || i === 2;
+      });
+      g.userData.ramSlots = slots;
       g.scale.setScalar(0.82);
       return g;
     }
@@ -763,6 +855,62 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     refreshCanDimensions();
   }
 
+  // ---- RAM slot outlines ----
+  // Real motherboards have a fixed number of DIMM slots (2 on Mini-ITX, 4 otherwise) whether or
+  // not any RAM is installed — this pre-renders that as faint outline frames at the same
+  // RAM_SLOT_Z positions the actual stick meshes use, so the empty slots are visible as soon as
+  // a motherboard is picked. Deliberately a standalone group (not part of objects.ram) so its
+  // visibility doesn't get tangled with the ram mesh's own fly-in/out lifecycle, which only
+  // exists once RAM itself is installed.
+  const ramSlotOutlineGroup = new THREE.Group();
+  const ramSlotOutlines = RAM_SLOT_Z.map((z) => {
+    const geo = new THREE.BoxGeometry(0.06, 0.86, 0.05);
+    const line = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0xc4a35a, transparent: true, opacity: 0.32 }));
+    geo.dispose();
+    line.position.set(0.03, 0, z);
+    ramSlotOutlineGroup.add(line);
+    return line;
+  });
+  ramSlotOutlineGroup.position.set(...BASE_POS.ram);
+  ramSlotOutlineGroup.scale.setScalar(0.82);
+  ramSlotOutlineGroup.visible = false;
+  scene.add(ramSlotOutlineGroup);
+
+  // Fills left to right (ascending index) rather than centering the populated slots — matches
+  // how a real board's slots would actually be populated one at a time, and gives setRamModules
+  // a natural stagger order for the per-stick fly-in below.
+  function ramSlotIndices(count: number): number[] {
+    const n = Math.max(0, Math.min(count, RAM_SLOT_Z.length));
+    return Array.from({ length: n }, (_, i) => i);
+  }
+
+  // `count` is the selected motherboard's real DIMM slot count (0 hides every outline — no
+  // motherboard selected means there's no board to show slots on).
+  function setMoboRamSlots(count: number) {
+    ramSlotOutlineGroup.visible = count > 0;
+    const active = ramSlotIndices(count);
+    ramSlotOutlines.forEach((line, i) => {
+      line.visible = active.includes(i);
+    });
+  }
+
+  // Short drop-in-place tween for a single newly-populated DIMM slot — local to the slot group,
+  // composes fine with the ram mesh's own parent-level scale/position animation (see
+  // toggleComponent) since THREE nests transforms naturally.
+  function flyInRamSlot(slot: THREE.Group) {
+    const start = Date.now();
+    const dur = 380;
+    const fromY = 0.4;
+    function tick() {
+      const p = Math.min(1, (Date.now() - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      slot.position.y = fromY * (1 - eased);
+      slot.scale.setScalar(0.35 + 0.65 * eased);
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    tick();
+  }
+
   // ---- Reference can ----
   let canVisible = false;
   const canGroup = buildCanMesh();
@@ -1083,6 +1231,30 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     }
   }
 
+  // Shows exactly `count` of the ram mesh's 4 fixed DIMM slots, left to right, so the viewport
+  // reflects the selected kit's real stick count. Slots newly turning on fly in one at a time
+  // (staggered by iteration order, i.e. left to right) rather than all popping in at once.
+  function setRamModules(count: number) {
+    const obj = objects.ram;
+    if (!obj) return;
+    const slots = (obj.mesh.userData.ramSlots as THREE.Group[] | undefined) ?? [];
+    const active = ramSlotIndices(count);
+    let staggerIndex = 0;
+    slots.forEach((slot, i) => {
+      const shouldShow = active.includes(i);
+      if (shouldShow && !slot.visible) {
+        const delay = staggerIndex * 140;
+        staggerIndex++;
+        setTimeout(() => {
+          slot.visible = true;
+          flyInRamSlot(slot);
+        }, delay);
+      } else if (!shouldShow) {
+        slot.visible = false;
+      }
+    });
+  }
+
   return {
     toggleComponent,
     updateCase,
@@ -1091,6 +1263,8 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     pickComponentAt,
     setSizeScale,
     setGpuOrientation,
+    setRamModules,
+    setMoboRamSlots,
     setComponentDimensions,
     setDimensionsVisible,
     setCanVisible,

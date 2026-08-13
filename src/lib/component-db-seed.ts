@@ -51,6 +51,7 @@ export type Component = {
   psuLengthMm?: number; // psu only
   ramHeightMm?: number; // ram only, per-SKU heatsink height — falls back to RAM_DIMM_SIZE_MM.height (bare PCB) when unset
   fanMounts?: FanMountSpec[]; // case only — omitted/empty means a fixed design with no user-configurable fan slots
+  imageUrl?: string; // admin-uploaded product shot, background already stripped client-side before upload
 };
 
 export type ComponentDb = Record<Category, Component[]>;

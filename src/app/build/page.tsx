@@ -166,6 +166,22 @@ function cm(mm: number): string {
   return `${(mm / 10).toFixed(1)} cm`;
 }
 
+// Every RAM row's specs string leads with "N×..." (e.g. "2×16GB · CL32") — read straight off
+// that rather than adding a dedicated column, since every curated and bulk-imported RAM row
+// already follows this format. Falls back to 2 (the most common kit) if unparseable.
+function ramModuleCount(comp: Component): number {
+  const m = comp.specs.match(/^(\d+)\s*×/);
+  return m ? Number(m[1]) : 2;
+}
+
+// Real DIMM slot count by form factor — every Mini-ITX board in the catalog has 2 (there's no
+// room for more), every ATX/mATX/E-ATX board has 4. No per-SKU data needed since this holds for
+// every real board at each of those sizes.
+function moboRamSlotCount(mobo: Component | undefined): number {
+  if (!mobo) return 0;
+  return mobo.formFactor === 'Mini-ITX' ? 2 : 4;
+}
+
 // GPU/CPU/PSU specs already quote their wattage as a plain "570W"-style token (the same text
 // the picker card displays), so this pulls the number straight from there instead of adding a
 // parallel structured field that could drift out of sync with what's shown on screen.
@@ -234,7 +250,10 @@ function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVertical 
   }
   // CPU package size is deliberately not quoted — it barely varies (a few mm across every
   // socket) and isn't a dimension anyone building a PC actually needs to check.
-  if (id === 'ram') return [{ axis: 'y', mm: RAM_DIMM_SIZE_MM.length }, { axis: 'z', mm: comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height }];
+  // Height rides local X (the stick's own face-normal, matching the motherboard's — see
+  // buildRamStick in build-scene.ts), not Z, which is now the fixed slot-repeat axis multiple
+  // sticks are laid out along and must stay unscaled by any one SKU's own heatsink height.
+  if (id === 'ram') return [{ axis: 'y', mm: RAM_DIMM_SIZE_MM.length }, { axis: 'x', mm: comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height }];
   if (id === 'storage') return [{ axis: 'z', mm: STORAGE_M2_SIZE_MM.length }, { axis: 'y', mm: STORAGE_M2_SIZE_MM.width }];
   return [];
 }
@@ -441,6 +460,7 @@ export default function BuildPage() {
       setActiveId(id);
       const comp = next ? findComp(id) : undefined;
       if (id === 'case' && next) sceneRef.current?.setGpuOrientation(caseHasVerticalGpuMount(comp?.name));
+      if (id === 'mobo') sceneRef.current?.setMoboRamSlots(moboRamSlotCount(comp));
       // Removing the case leaves its fan meshes orphaned in the scene otherwise — they're tracked
       // separately from the case mesh itself (see setFans), so toggling the case off doesn't
       // implicitly remove them the way it does for the case mesh.
@@ -449,6 +469,7 @@ export default function BuildPage() {
         sceneRef.current?.setFans({});
       }
       if (comp) sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp));
+      if (id === 'ram' && comp) sceneRef.current?.setRamModules(ramModuleCount(comp));
       sceneRef.current?.toggleComponent(id, next);
       const gpuVertical =
         id === 'gpu' && selected.case
@@ -486,6 +507,8 @@ export default function BuildPage() {
       // user picks a different card) — that path doesn't go through toggleComponent (see
       // selectCard), so this is what picks up the new part's real size in that case.
       sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp));
+      if (id === 'ram') sceneRef.current?.setRamModules(ramModuleCount(comp));
+      if (id === 'mobo') sceneRef.current?.setMoboRamSlots(moboRamSlotCount(comp));
     }
     const gpuVertical =
       id === 'gpu' && selected.case
@@ -523,6 +546,10 @@ export default function BuildPage() {
     if (selected[id] && selections[id] === name) {
       setSelected((s) => ({ ...s, [id]: false }));
       sceneRef.current?.toggleComponent(id, false);
+      // Removing the motherboard this way (re-clicking an already-selected card, rather than
+      // toggleComponent's own path) skipped this same follow-up — the empty-slot outlines are
+      // keyed off mobo presence, not just visibility.
+      if (id === 'mobo') sceneRef.current?.setMoboRamSlots(0);
       return;
     }
     // changeSelection (above) already applies this pick's size/scale/orientation, but the scene
@@ -801,32 +828,48 @@ export default function BuildPage() {
                         borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                        <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: isThisSelected ? MAROON : INK }}>{c.name}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                          {c.formFactor && <SpecPill label={c.formFactor} />}
-                          {c.socket && <SpecPill label={c.socket} />}
-                          <TierBadge tier={c.tier} small />
-                        </div>
-                      </div>
-                      <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {c.specs}
-                      </div>
-                      {dimensionLabel(activeStep, c) && (
-                        <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: '#A89A78', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {dimensionLabel(activeStep, c)}
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                        <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
-                        <div
-                          style={{
-                            width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: isThisSelected ? MAROON : 'transparent', border: `1px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.3)'}`,
-                            color: isThisSelected ? '#FDFAF4' : MUTED, fontSize: 10, fontWeight: 700,
-                          }}
-                        >
-                          {isThisSelected ? '✓' : '+'}
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        {c.imageUrl && (
+                          <div
+                            style={{
+                              width: 36, height: 36, borderRadius: 4, flexShrink: 0,
+                              background: 'repeating-conic-gradient(rgba(28,28,26,0.06) 0% 25%, transparent 0% 50%) 0 0 / 10px 10px',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                            }}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={c.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: isThisSelected ? MAROON : INK }}>{c.name}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                              {c.formFactor && <SpecPill label={c.formFactor} />}
+                              {c.socket && <SpecPill label={c.socket} />}
+                              <TierBadge tier={c.tier} small />
+                            </div>
+                          </div>
+                          <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {c.specs}
+                          </div>
+                          {dimensionLabel(activeStep, c) && (
+                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: '#A89A78', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {dimensionLabel(activeStep, c)}
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
+                            <div
+                              style={{
+                                width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: isThisSelected ? MAROON : 'transparent', border: `1px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.3)'}`,
+                                color: isThisSelected ? '#FDFAF4' : MUTED, fontSize: 10, fontWeight: 700,
+                              }}
+                            >
+                              {isThisSelected ? '✓' : '+'}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -961,7 +1004,21 @@ export default function BuildPage() {
                   </span>
                   <TierBadge tier={hoverTier} small />
                 </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: GOLD, fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{hoverComp.name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  {hoverComp.imageUrl && (
+                    <div
+                      style={{
+                        width: 30, height: 30, borderRadius: 4, flexShrink: 0,
+                        background: 'repeating-conic-gradient(rgba(245,240,230,0.08) 0% 25%, transparent 0% 50%) 0 0 / 8px 8px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={hoverComp.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    </div>
+                  )}
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: GOLD, fontWeight: 600, lineHeight: 1.3 }}>{hoverComp.name}</div>
+                </div>
                 <div style={{ marginBottom: hoverPassmark || dimensionLabel(hoverId, hoverComp) ? 8 : 0 }}>
                   {(hoverComp.specs || '').split(' · ').map((s, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(245,240,230,0.85)', marginBottom: 3 }}>

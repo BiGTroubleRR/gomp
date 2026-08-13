@@ -190,6 +190,8 @@ type Translations = {
   margin_title: string; margin_desc: string;
   margin_eur: string; margin_pct: string;
   market_price_label: string; market_price_placeholder: string;
+  original_price_label: string; web_price_label: string;
+  image_label: string; image_removing_bg: string; image_uploading: string; image_replace: string; image_remove: string;
   specs_notes: string; tier_rating: string; tower_category: string; tower_category_help: string;
   update_arrow: string; add_prefix: string; edit_prefix: string;
   select_prefix: string; select_suffix: string;
@@ -232,6 +234,9 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     margin_desc: 'Paste in the cheapest current price you find on Alza / Heureka as "Market Price" below — the sell price is derived automatically from this margin and updates across the site.',
     margin_eur: '€ Flat', margin_pct: '% Markup',
     market_price_label: 'Market Price (Alza/Heureka)', market_price_placeholder: 'e.g. 1650',
+    original_price_label: 'Original', web_price_label: 'Web price',
+    image_label: 'Product Image', image_removing_bg: 'Removing background…', image_uploading: 'Uploading…',
+    image_replace: 'Replace image', image_remove: 'Remove',
     specs_notes: 'Specs / Notes', tier_rating: 'Tier Rating', tower_category: 'Tower Category',
     tower_category_help: 'Full Tower 55–75 cm · Mid Tower 35–55 cm · Mini Tower 30–45 cm · SFF <35 cm',
     update_arrow: 'Update →', add_prefix: 'Add ', edit_prefix: 'Edit ',
@@ -275,6 +280,9 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     margin_desc: 'Vložte najlevnejšiu aktuálnu cenu z Alzy / Heureky ako „Tržnová cena" nižšie — predajná cena sa automaticky odvodí z tejto marže a aktualizuje sa v celom obchode.',
     margin_eur: '€ Pevná', margin_pct: '% Prirážka',
     market_price_label: 'Tržnová cena (Alza/Heureka)', market_price_placeholder: 'napr. 1650',
+    original_price_label: 'Pôvodná', web_price_label: 'Cena na webe',
+    image_label: 'Fotka produktu', image_removing_bg: 'Odstraňujem pozadie…', image_uploading: 'Nahrávam…',
+    image_replace: 'Zmeniť fotku', image_remove: 'Odstrániť',
     specs_notes: 'Špecifikácie / Poznámky', tier_rating: 'Hodnotenie triedy', tower_category: 'Kategória skrine',
     tower_category_help: 'Veľká skriňa 55–75 cm · Stredná skriňa 35–55 cm · Malá skriňa 30–45 cm · SFF <35 cm',
     update_arrow: 'Aktualizovať →', add_prefix: 'Pridať ', edit_prefix: 'Upraviť ',
@@ -315,11 +323,11 @@ function initialBuildForm(): BuildFormState {
 
 type CompFormState = {
   name: string; price: string; marketPrice: string; specs: string; category: string; tier: Tier;
-  passmark: number | null; passmarkUrl: string;
+  passmark: number | null; passmarkUrl: string; imageUrl: string;
 };
 
 function initialCompForm(): CompFormState {
-  return { name: '', price: '', marketPrice: '', specs: '', category: 'Mid Tower', tier: 'B', passmark: null, passmarkUrl: '' };
+  return { name: '', price: '', marketPrice: '', specs: '', category: 'Mid Tower', tier: 'B', passmark: null, passmarkUrl: '', imageUrl: '' };
 }
 
 // Live-over-stored PassMark refresh + market-price-driven repricing, run once on every load.
@@ -450,6 +458,8 @@ export default function AdminPage() {
   const [compCat, setCompCat] = useState<Category>('gpu');
   const [compForm, setCompForm] = useState<CompFormState>(initialCompForm());
   const [editCompId, setEditCompId] = useState<string | null>(null);
+  const [imageStatus, setImageStatus] = useState<'idle' | 'removing' | 'uploading' | 'error'>('idle');
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const [saveMsg, setSaveMsg] = useState('');
   const [nextBuildId, setNextBuildId] = useState(1);
@@ -642,6 +652,7 @@ export default function AdminPage() {
       tier,
       ...(compForm.passmark ? { passmark: compForm.passmark, passmarkUrl: compForm.passmarkUrl || '' } : {}),
       ...(compCat === 'case' ? { category: compForm.category || 'Mid Tower' } : {}),
+      ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
     };
     const sortOrder = (compDb[compCat] || []).length;
     const saved = await insertComponent(compCat, comp, sortOrder);
@@ -669,6 +680,7 @@ export default function AdminPage() {
       // socket or form-factor compatibility data.
       ...(existing?.socket ? { socket: existing.socket } : {}),
       ...(existing?.formFactor ? { formFactor: existing.formFactor } : {}),
+      ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
     };
     const saved = await updateComponentRow(editCompId, compCat, updated);
     setCompDb((db) => ({ ...db, [compCat]: (db[compCat] || []).map((c) => (c.id === editCompId ? saved : c)) }));
@@ -695,12 +707,39 @@ export default function AdminPage() {
       tier: comp.tier || 'B',
       passmark: comp.passmark || null,
       passmarkUrl: comp.passmarkUrl || '',
+      imageUrl: comp.imageUrl || '',
     });
   }
 
   function cancelEditComp() {
     setEditCompId(null);
     setCompForm(initialCompForm());
+  }
+
+  // Strips the background in the admin's own browser (no server round-trip, no per-image API
+  // cost) before ever uploading anything — @imgly/background-removal runs a small ONNX model
+  // over the image via WASM and hands back a transparent PNG. The upload itself still goes
+  // through a server route (see /api/admin/upload-image) because Storage writes need the
+  // service-role key, same reasoning as every other admin write in this app.
+  async function handleImageUpload(file: File) {
+    setImageStatus('removing');
+    setImageError(null);
+    try {
+      const { removeBackground } = await import('@imgly/background-removal');
+      const blob = await removeBackground(file);
+      setImageStatus('uploading');
+      const body = new FormData();
+      body.append('file', blob, 'component.png');
+      body.append('nameHint', compForm.name || compCat);
+      const res = await fetch('/api/admin/upload-image', { method: 'POST', body });
+      const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !json.url) throw new Error(json.error || 'Upload failed.');
+      setCompForm((f) => ({ ...f, imageUrl: json.url! }));
+      setImageStatus('idle');
+    } catch (e) {
+      setImageStatus('error');
+      setImageError(e instanceof Error ? e.message : 'Image processing failed.');
+    }
   }
 
   function pickSuggestion(s: Suggestion) {
@@ -1266,6 +1305,18 @@ export default function AdminPage() {
                       key={comp.id}
                       style={{ background: isEditing ? 'rgba(110,20,35,0.05)' : '#FDFAF4', border: `0.5px solid ${isEditing ? 'rgba(110,20,35,0.3)' : 'rgba(28,28,26,0.12)'}`, borderRadius: 2, padding: 18, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}
                     >
+                      {comp.imageUrl && (
+                        <div
+                          style={{
+                            width: 40, height: 40, borderRadius: 2, flexShrink: 0,
+                            background: 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 10px 10px',
+                            border: '0.5px solid rgba(28,28,26,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                          }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={comp.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        </div>
+                      )}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                           <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: '#1C1C1A', lineHeight: 1.35 }}>{comp.name}</div>
@@ -1279,9 +1330,13 @@ export default function AdminPage() {
                           )}
                         </div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', marginBottom: 9, lineHeight: 1.6 }}>{comp.specs}</div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, color: '#6E1423', marginBottom: 4 }}>{fmt(comp.price)}</div>
-                        {comp.marketPrice != null && (
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#A09890', marginBottom: 4 }}>Market: €{comp.marketPrice}</div>
+                        {comp.marketPrice != null ? (
+                          <div style={{ marginBottom: 4 }}>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#A09890' }}>{t.original_price_label}: €{comp.marketPrice}</div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, color: '#6E1423' }}>{t.web_price_label}: {fmt(comp.price)}</div>
+                          </div>
+                        ) : (
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, color: '#6E1423', marginBottom: 4 }}>{fmt(comp.price)}</div>
                         )}
                         {comp.passmark != null && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1356,6 +1411,65 @@ export default function AdminPage() {
                       placeholder="499"
                       style={INPUT_STYLE}
                     />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={LABEL_STYLE}>{t.image_label}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div
+                      style={{
+                        width: 64, height: 64, borderRadius: 2, flexShrink: 0,
+                        border: '0.5px solid rgba(28,28,26,0.15)',
+                        background: compForm.imageUrl
+                          ? 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 12px 12px'
+                          : '#FDFAF4',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                      }}
+                    >
+                      {compForm.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={compForm.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      ) : (
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890' }}>—</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label
+                        style={{
+                          fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6E1423', cursor: 'pointer',
+                          border: '0.5px solid rgba(110,20,35,0.35)', borderRadius: 2, padding: '5px 10px', width: 'fit-content',
+                        }}
+                      >
+                        {compForm.imageUrl ? t.image_replace : t.image_label}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = '';
+                            if (file) handleImageUpload(file);
+                          }}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                      {imageStatus === 'removing' && (
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469' }}>{t.image_removing_bg}</span>
+                      )}
+                      {imageStatus === 'uploading' && (
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469' }}>{t.image_uploading}</span>
+                      )}
+                      {imageStatus === 'error' && (
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#CC3333' }}>{imageError}</span>
+                      )}
+                      {compForm.imageUrl && imageStatus === 'idle' && (
+                        <button
+                          onClick={() => setCompForm((f) => ({ ...f, imageUrl: '' }))}
+                          style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                        >
+                          {t.image_remove}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div style={{ marginBottom: 12 }}>

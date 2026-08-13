@@ -8,6 +8,7 @@ import SiteNav from '@/components/SiteNav';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
 import { useIsMobile } from '@/lib/use-media-query';
 import { createClient } from '@/lib/supabase/client';
+import { fetchComponentDb } from '@/lib/supabase/components';
 
 type TabId = 'orders' | 'addresses' | 'profile' | 'security';
 
@@ -536,6 +537,7 @@ export default function Account() {
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [partImages, setPartImages] = useState<Map<string, string>>(new Map());
 
   const [addresses, setAddresses] = useState<Address[]>(DEFAULT_ADDRESSES);
   const [editingAddressIdx, setEditingAddressIdx] = useState<number | null>(null);
@@ -559,6 +561,22 @@ export default function Account() {
   // Adopt any persisted addresses on mount (client-only, avoids SSR/client markup mismatch).
   useEffect(() => {
     setAddresses(readJSON('gomp_addresses', DEFAULT_ADDRESSES));
+  }, []);
+
+  // Order line items only store a component's name (see mapOrderRow) — no id, since the
+  // catalog row it once pointed to may since have been edited or deleted. Building a name ->
+  // imageUrl lookup from the live catalog is a best-effort match: it renders nothing for a part
+  // that's been renamed or removed since the order was placed, rather than erroring.
+  useEffect(() => {
+    fetchComponentDb().then((db) => {
+      const map = new Map<string, string>();
+      Object.values(db).forEach((list) => {
+        list.forEach((c) => {
+          if (c.imageUrl) map.set(c.name, c.imageUrl);
+        });
+      });
+      setPartImages(map);
+    });
   }, []);
 
   useEffect(() => {
@@ -959,15 +977,31 @@ export default function Account() {
                                     {t.components}
                                   </div>
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                                    {order.items.map((part) => (
-                                      <div
-                                        key={part}
-                                        style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1C1C1A', display: 'flex', alignItems: 'baseline', gap: 8 }}
-                                      >
-                                        <span style={{ color: 'rgba(28,28,26,0.28)', flexShrink: 0 }}>—</span>
-                                        <span>{part}</span>
-                                      </div>
-                                    ))}
+                                    {order.items.map((part) => {
+                                      const img = partImages.get(part);
+                                      return (
+                                        <div
+                                          key={part}
+                                          style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1C1C1A', display: 'flex', alignItems: 'center', gap: 8 }}
+                                        >
+                                          {img ? (
+                                            <div
+                                              style={{
+                                                width: 22, height: 22, borderRadius: 3, flexShrink: 0,
+                                                background: 'repeating-conic-gradient(rgba(28,28,26,0.06) 0% 25%, transparent 0% 50%) 0 0 / 8px 8px',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                                              }}
+                                            >
+                                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                                              <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                            </div>
+                                          ) : (
+                                            <span style={{ color: 'rgba(28,28,26,0.28)', flexShrink: 0 }}>—</span>
+                                          )}
+                                          <span>{part}</span>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                                 <div>
