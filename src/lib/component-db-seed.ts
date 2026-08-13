@@ -29,6 +29,10 @@ export type Component = {
   // original hand-curated catalog — TierBadge/passmark UI already render nothing when unset.
   tier?: Tier;
   passmark?: number;
+  // Per-component margin, used instead of the site-wide margin (see Margin/computePrice below)
+  // when this component needs a different markup than everything else — e.g. a low-margin
+  // loss-leader GPU, or a part with unusually high shipping/handling cost baked in.
+  marginOverride?: Margin;
   passmarkUrl?: string;
   marketPrice?: number | null;
   category?: string; // case only: Full Tower | Mid Tower | Mini Tower | SFF

@@ -192,6 +192,7 @@ type Translations = {
   market_price_label: string; market_price_placeholder: string;
   original_price_label: string; web_price_label: string;
   image_label: string; image_removing_bg: string; image_uploading: string; image_replace: string; image_remove: string;
+  apply_margin: string; margin_override_badge: string; margin_override_label: string; margin_override_desc: string; margin_override_use_global: string;
   specs_notes: string; tier_rating: string; tower_category: string; tower_category_help: string;
   update_arrow: string; add_prefix: string; edit_prefix: string;
   select_prefix: string; select_suffix: string;
@@ -237,6 +238,9 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     original_price_label: 'Original', web_price_label: 'Web price',
     image_label: 'Product Image', image_removing_bg: 'Removing background…', image_uploading: 'Uploading…',
     image_replace: 'Replace image', image_remove: 'Remove',
+    apply_margin: 'Apply margin →', margin_override_badge: 'Custom margin',
+    margin_override_label: 'Margin Override', margin_override_desc: 'Give this one component its own margin instead of the site-wide one above.',
+    margin_override_use_global: 'Use site-wide margin',
     specs_notes: 'Specs / Notes', tier_rating: 'Tier Rating', tower_category: 'Tower Category',
     tower_category_help: 'Full Tower 55–75 cm · Mid Tower 35–55 cm · Mini Tower 30–45 cm · SFF <35 cm',
     update_arrow: 'Update →', add_prefix: 'Add ', edit_prefix: 'Edit ',
@@ -283,6 +287,9 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     original_price_label: 'Pôvodná', web_price_label: 'Cena na webe',
     image_label: 'Fotka produktu', image_removing_bg: 'Odstraňujem pozadie…', image_uploading: 'Nahrávam…',
     image_replace: 'Zmeniť fotku', image_remove: 'Odstrániť',
+    apply_margin: 'Aplikovať maržu →', margin_override_badge: 'Vlastná marža',
+    margin_override_label: 'Vlastná marža', margin_override_desc: 'Nastavte tomuto komponentu vlastnú maržu namiesto tej celkovej vyššie.',
+    margin_override_use_global: 'Použiť celkovú maržu',
     specs_notes: 'Špecifikácie / Poznámky', tier_rating: 'Hodnotenie triedy', tower_category: 'Kategória skrine',
     tower_category_help: 'Veľká skriňa 55–75 cm · Stredná skriňa 35–55 cm · Malá skriňa 30–45 cm · SFF <35 cm',
     update_arrow: 'Aktualizovať →', add_prefix: 'Pridať ', edit_prefix: 'Upraviť ',
@@ -324,10 +331,14 @@ function initialBuildForm(): BuildFormState {
 type CompFormState = {
   name: string; price: string; marketPrice: string; specs: string; category: string; tier: Tier;
   passmark: number | null; passmarkUrl: string; imageUrl: string;
+  marginOverrideOn: boolean; marginOverrideType: 'eur' | 'pct'; marginOverrideValue: string;
 };
 
 function initialCompForm(): CompFormState {
-  return { name: '', price: '', marketPrice: '', specs: '', category: 'Mid Tower', tier: 'B', passmark: null, passmarkUrl: '', imageUrl: '' };
+  return {
+    name: '', price: '', marketPrice: '', specs: '', category: 'Mid Tower', tier: 'B', passmark: null, passmarkUrl: '', imageUrl: '',
+    marginOverrideOn: false, marginOverrideType: 'pct', marginOverrideValue: '0',
+  };
 }
 
 // Live-over-stored PassMark refresh + market-price-driven repricing, run once on every load.
@@ -341,7 +352,7 @@ function migrateComponentDb(db: ComponentDb, margin: Margin): ComponentDb {
         if (live) next = { ...next, passmark: live.score, passmarkUrl: live.url, tier: tierFromPassmark(cat === 'gpu', live.score) };
       }
       if (next.marketPrice != null) {
-        const price = computePrice(next.marketPrice, margin);
+        const price = computePrice(next.marketPrice, next.marginOverride ?? margin);
         if (price != null) next = { ...next, price };
       }
       return next;
@@ -355,6 +366,9 @@ function recomputeMarginPrices(db: ComponentDb, margin: Margin): ComponentDb {
   (Object.keys(db) as Category[]).forEach((cat) => {
     out[cat] = (db[cat] || []).map((c) => {
       if (c.marketPrice == null) return c;
+      // A component with its own margin override doesn't move when the site-wide margin does
+      // — that's the entire point of the override.
+      if (c.marginOverride != null) return c;
       const price = computePrice(c.marketPrice, margin);
       return price != null ? { ...c, price } : c;
     });
@@ -638,10 +652,18 @@ export default function AdminPage() {
 
   // ---- components CRUD ----
 
+  // The margin this one component should actually be priced with — its own override if the
+  // form has one enabled, otherwise undefined so callers fall back to the site-wide margin.
+  function formMarginOverride(form: CompFormState): Margin | undefined {
+    if (!form.marginOverrideOn) return undefined;
+    return { type: form.marginOverrideType, value: parseFloat(form.marginOverrideValue) || 0 };
+  }
+
   async function addComponent() {
     if (!compForm.name.trim()) return;
     const marketPrice = compForm.marketPrice !== '' ? parseFloat(compForm.marketPrice) : null;
-    const derived = marketPrice != null ? computePrice(marketPrice, margin) : null;
+    const marginOverride = formMarginOverride(compForm);
+    const derived = marketPrice != null ? computePrice(marketPrice, marginOverride ?? margin) : null;
     const tier: Tier = compForm.passmark ? tierFromPassmark(compCat === 'gpu', compForm.passmark) : compForm.tier;
     const comp: Component = {
       id: '', // placeholder — Supabase assigns the real id on insert
@@ -653,6 +675,7 @@ export default function AdminPage() {
       ...(compForm.passmark ? { passmark: compForm.passmark, passmarkUrl: compForm.passmarkUrl || '' } : {}),
       ...(compCat === 'case' ? { category: compForm.category || 'Mid Tower' } : {}),
       ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
+      ...(marginOverride ? { marginOverride } : {}),
     };
     const sortOrder = (compDb[compCat] || []).length;
     const saved = await insertComponent(compCat, comp, sortOrder);
@@ -663,7 +686,8 @@ export default function AdminPage() {
   async function updateComponent() {
     if (!editCompId || !compForm.name.trim()) return;
     const marketPrice = compForm.marketPrice !== '' ? parseFloat(compForm.marketPrice) : null;
-    const derived = marketPrice != null ? computePrice(marketPrice, margin) : null;
+    const marginOverride = formMarginOverride(compForm);
+    const derived = marketPrice != null ? computePrice(marketPrice, marginOverride ?? margin) : null;
     const tier: Tier = compForm.passmark ? tierFromPassmark(compCat === 'gpu', compForm.passmark) : compForm.tier;
     const existing = (compDb[compCat] || []).find((c) => c.id === editCompId);
     const updated: Component = {
@@ -681,11 +705,25 @@ export default function AdminPage() {
       ...(existing?.socket ? { socket: existing.socket } : {}),
       ...(existing?.formFactor ? { formFactor: existing.formFactor } : {}),
       ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
+      ...(marginOverride ? { marginOverride } : {}),
     };
     const saved = await updateComponentRow(editCompId, compCat, updated);
     setCompDb((db) => ({ ...db, [compCat]: (db[compCat] || []).map((c) => (c.id === editCompId ? saved : c)) }));
     setEditCompId(null);
     setCompForm(initialCompForm());
+  }
+
+  // One-click "apply the margin" for a component that's never had a market price recorded:
+  // treats its current sell price as the market/base price and saves the price the site-wide
+  // (or this component's own override) margin actually computes from it.
+  async function applyMarginTo(cat: Category, comp: Component) {
+    const basePrice = comp.marketPrice ?? comp.price;
+    const effective = comp.marginOverride ?? margin;
+    const price = computePrice(basePrice, effective);
+    if (price == null) return;
+    const updated: Component = { ...comp, marketPrice: basePrice, price };
+    const saved = await updateComponentRow(comp.id, cat, updated);
+    setCompDb((db) => ({ ...db, [cat]: (db[cat] || []).map((c) => (c.id === comp.id ? saved : c)) }));
   }
 
   async function deleteComponent(cat: Category, id: string) {
@@ -701,13 +739,19 @@ export default function AdminPage() {
     setCompForm({
       name: comp.name || '',
       price: String(comp.price ?? ''),
-      marketPrice: comp.marketPrice != null ? String(comp.marketPrice) : '',
+      // No market price on file yet? Prefill it with the current sell price so the margin math
+      // (and the auto note below the field) kicks in immediately — hitting Update then applies
+      // the margin to this component instead of requiring the price to be re-typed from scratch.
+      marketPrice: comp.marketPrice != null ? String(comp.marketPrice) : String(comp.price ?? ''),
       specs: comp.specs || '',
       category: comp.category || 'Mid Tower',
       tier: comp.tier || 'B',
       passmark: comp.passmark || null,
       passmarkUrl: comp.passmarkUrl || '',
       imageUrl: comp.imageUrl || '',
+      marginOverrideOn: comp.marginOverride != null,
+      marginOverrideType: comp.marginOverride?.type ?? 'pct',
+      marginOverrideValue: comp.marginOverride ? String(comp.marginOverride.value) : '0',
     });
   }
 
@@ -761,7 +805,8 @@ export default function AdminPage() {
 
   const mpParsed = parseFloat(compForm.marketPrice);
   const hasManualMarketPrice = compForm.marketPrice !== '' && !isNaN(mpParsed);
-  const priceAutoNote = hasManualMarketPrice ? t.price_auto_note(mpParsed, computePrice(mpParsed, margin) ?? 0) : '';
+  const formMargin = formMarginOverride(compForm) ?? margin;
+  const priceAutoNote = hasManualMarketPrice ? t.price_auto_note(mpParsed, computePrice(mpParsed, formMargin) ?? 0) : '';
 
   const totalComps = (Object.values(compDb) as Component[][]).reduce((sum, arr) => sum + (arr ? arr.length : 0), 0);
   const newIntentCount = intents.filter((i) => i.status === 'new').length;
@@ -1300,6 +1345,13 @@ export default function AdminPage() {
                 {(compDb[compCat] || []).map((comp) => {
                   const tc = tierBadge(comp.tier, TIER_COLORS);
                   const isEditing = comp.id === editCompId;
+                  // Shown live for every component, not just ones with a market price already
+                  // on file — treating the current price as the base/cost when there's no
+                  // market price yet, so the markup is always visible instead of only appearing
+                  // once someone has manually typed a market price in.
+                  const basePrice = comp.marketPrice ?? comp.price;
+                  const effectiveMargin = comp.marginOverride ?? margin;
+                  const webPrice = computePrice(basePrice, effectiveMargin) ?? comp.price;
                   return (
                     <div
                       key={comp.id}
@@ -1330,14 +1382,34 @@ export default function AdminPage() {
                           )}
                         </div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', marginBottom: 9, lineHeight: 1.6 }}>{comp.specs}</div>
-                        {comp.marketPrice != null ? (
-                          <div style={{ marginBottom: 4 }}>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#A09890' }}>{t.original_price_label}: €{comp.marketPrice}</div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, color: '#6E1423' }}>{t.web_price_label}: {fmt(comp.price)}</div>
+                        <div style={{ marginBottom: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#A09890' }}>{t.original_price_label}: €{basePrice}</span>
+                            {comp.marginOverride && (
+                              <span
+                                style={{
+                                  fontFamily: 'var(--font-sans)', fontSize: 8, fontWeight: 600, color: '#6E1423',
+                                  background: 'rgba(110,20,35,0.08)', border: '0.5px solid rgba(110,20,35,0.2)',
+                                  borderRadius: 2, padding: '1px 5px', textTransform: 'uppercase', letterSpacing: 0.4,
+                                }}
+                              >
+                                {t.margin_override_badge}
+                              </span>
+                            )}
                           </div>
-                        ) : (
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, color: '#6E1423', marginBottom: 4 }}>{fmt(comp.price)}</div>
-                        )}
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, color: '#6E1423' }}>{t.web_price_label}: {fmt(webPrice)}</div>
+                          {comp.marketPrice == null && (
+                            <button
+                              onClick={() => applyMarginTo(compCat, comp)}
+                              style={{
+                                fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6E1423', background: 'transparent',
+                                border: 'none', textDecoration: 'underline', cursor: 'pointer', padding: 0, marginTop: 2,
+                              }}
+                            >
+                              {t.apply_margin}
+                            </button>
+                          )}
+                        </div>
                         {comp.passmark != null && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: tc.text, fontWeight: 600 }}>PassMark {comp.passmark.toLocaleString()}</span>
@@ -1483,6 +1555,46 @@ export default function AdminPage() {
                   />
                   {hasManualMarketPrice && (
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#6E1423', marginTop: 6 }}>{priceAutoNote}</div>
+                  )}
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <div style={LABEL_STYLE}>{t.margin_override_label}</div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={compForm.marginOverrideOn}
+                        onChange={(e) => setCompForm({ ...compForm, marginOverrideOn: e.target.checked })}
+                      />
+                      {compForm.marginOverrideOn ? t.margin_override_use_global : t.margin_override_label}
+                    </label>
+                  </div>
+                  {compForm.marginOverrideOn && (
+                    <>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', fontWeight: 300, lineHeight: 1.5, marginBottom: 8 }}>{t.margin_override_desc}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, overflow: 'hidden' }}>
+                          <button
+                            onClick={() => setCompForm({ ...compForm, marginOverrideType: 'eur' })}
+                            style={{ padding: '8px 14px', background: compForm.marginOverrideType === 'eur' ? '#6E1423' : 'transparent', color: compForm.marginOverrideType === 'eur' ? '#FDFAF4' : '#7A7469', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                          >
+                            {t.margin_eur}
+                          </button>
+                          <button
+                            onClick={() => setCompForm({ ...compForm, marginOverrideType: 'pct' })}
+                            style={{ padding: '8px 14px', background: compForm.marginOverrideType === 'pct' ? '#6E1423' : 'transparent', color: compForm.marginOverrideType === 'pct' ? '#FDFAF4' : '#7A7469', border: 'none', borderLeft: '0.5px solid rgba(28,28,26,0.15)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                          >
+                            {t.margin_pct}
+                          </button>
+                        </div>
+                        <input
+                          type="number"
+                          value={compForm.marginOverrideValue}
+                          onChange={(e) => setCompForm({ ...compForm, marginOverrideValue: e.target.value })}
+                          style={{ width: 100, padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#F5F0E6', color: '#1C1C1A', fontFamily: 'var(--font-mono)' }}
+                        />
+                      </div>
+                    </>
                   )}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 140px', gap: 12, marginBottom: 12 }}>

@@ -163,6 +163,7 @@ create table if not exists public.components (
   ram_height_mm numeric(6, 1), -- ram only: per-SKU heatsink height (RAM_DIMM_SIZE_MM.height is the bare-PCB fallback)
   fan_mounts jsonb, -- case only: [{position, maxCount, sizesMm}] — real per-case fan slots, hand-sourced (not in buildcores-open-db)
   image_url text, -- admin-uploaded product shot, background already removed client-side before upload
+  margin_override jsonb, -- {type: 'eur'|'pct', value: number} — overrides the site-wide margin for this one component
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -213,6 +214,7 @@ alter table public.components add column if not exists psu_length_mm numeric(6, 
 alter table public.components add column if not exists ram_height_mm numeric(6, 1);
 alter table public.components add column if not exists fan_mounts jsonb;
 alter table public.components add column if not exists image_url text;
+alter table public.components add column if not exists margin_override jsonb;
 
 -- Tier used to be not-null-default-'B', which would silently mislabel every bulk-imported SKU
 -- (no PassMark score to derive a real tier from) as tier B instead of leaving it unset.

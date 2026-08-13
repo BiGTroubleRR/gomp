@@ -139,6 +139,7 @@ export type Database = {
           ram_height_mm: number | null;
           fan_mounts: { position: string; maxCount: number; sizesMm: number[] }[] | null;
           image_url: string | null;
+          margin_override: { type: string; value: number } | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -171,6 +172,7 @@ export type Database = {
           ram_height_mm?: number | null;
           fan_mounts?: { position: string; maxCount: number; sizesMm: number[] }[] | null;
           image_url?: string | null;
+          margin_override?: { type: string; value: number } | null;
           sort_order?: number;
         };
         Update: {
@@ -200,6 +202,7 @@ export type Database = {
           ram_height_mm?: number | null;
           fan_mounts?: { position: string; maxCount: number; sizesMm: number[] }[] | null;
           image_url?: string | null;
+          margin_override?: { type: string; value: number } | null;
           sort_order?: number;
         };
         Relationships: [];
