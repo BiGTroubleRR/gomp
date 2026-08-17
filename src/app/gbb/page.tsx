@@ -49,7 +49,7 @@ const T = {
   },
   sk: {
     nav_home: 'Domov', nav_shop: 'Obchod', nav_build: 'Zostaviť', nav_about: 'O nás', nav_account: 'Účet',
-    eyebrow: 'GOMP ROZPOČTOVÉ ZOSTAVY',
+    eyebrow: 'GOMP BUDGET BUILDS',
     title: 'Skvelé PC nemusí byť nové.',
     intro:
       'Povedzte nám svôj rozpočet a na čo počítač potrebujete. Naceníme zostavu z dôkladne overených bazarových komponentov a pošleme vám návrh — bez záväzku, bez automatického oceňovania, len reálny prehľad o tom, čo je práve dostupné.',
