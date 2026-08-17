@@ -126,43 +126,72 @@ export default function GbbPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
+      <style>{`@keyframes gompPulseDot { 0%,100% { opacity:0.18; transform:scale(0.8); } 50% { opacity:0.6; transform:scale(1.2); } }`}</style>
       <SiteNav />
 
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '32px 20px 60px' : '56px 32px 90px' }}>
-        <div
-          style={{
-            fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600, fontStyle: 'italic',
-            letterSpacing: 1.5, color: GBB_GREEN, marginBottom: 12,
-          }}
-        >
-          {t.eyebrow}
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '32px 20px 60px' : '56px 32px 90px', position: 'relative' }}>
+        <div style={{ position: 'relative' }}>
+          {/* ambient floaties, mirrors the landing-page hero — same motif, green instead of bordeaux */}
+          {!isMobile && (
+            <>
+              <div style={{ position: 'absolute', top: -46, left: -56, width: 210, height: 210, pointerEvents: 'none', zIndex: 0 }}>
+                <div style={{ position: 'absolute', inset: 0, border: `0.5px solid ${GBB_GREEN_TINT(0.22)}`, borderRadius: '50%', animation: 'gompRotateSlow 110s linear infinite' }} />
+                <div style={{ position: 'absolute', inset: 30, border: `0.5px solid ${GBB_GREEN_TINT(0.13)}`, borderRadius: '50%', animation: 'gompRotateSlowRev 85s linear infinite' }} />
+              </div>
+              <div style={{ position: 'absolute', top: 6, left: 'calc(100% - 40px)', width: 7, height: 7, borderRadius: '50%', background: GBB_GREEN, pointerEvents: 'none', zIndex: 1, animation: 'gompPulseDot 5s ease-in-out infinite' }} />
+              <div style={{ position: 'absolute', top: 172, left: -26, width: 6, height: 6, borderRadius: '50%', background: GOLD, filter: 'blur(0.5px)', pointerEvents: 'none', zIndex: 1, animation: 'gompPulseDot 4.5s ease-in-out infinite 0.8s' }} />
+            </>
+          )}
+          <div
+            style={{
+              fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600, fontStyle: 'italic',
+              letterSpacing: 1.5, color: GBB_GREEN, marginBottom: 12, position: 'relative', zIndex: 2,
+            }}
+          >
+            {t.eyebrow}
+          </div>
+          <h1
+            style={{
+              fontFamily: 'var(--font-sans)', fontSize: isMobile ? 30 : 44, fontWeight: 600, color: INK,
+              letterSpacing: -0.5, lineHeight: 1.15, margin: '0 0 18px', maxWidth: 640, position: 'relative', zIndex: 2,
+            }}
+          >
+            {t.title}
+          </h1>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 15, color: MUTED, fontWeight: 300, lineHeight: 1.7, maxWidth: 620, marginBottom: 44, position: 'relative', zIndex: 2 }}>
+            {t.intro}
+          </p>
         </div>
-        <h1
-          style={{
-            fontFamily: 'var(--font-sans)', fontSize: isMobile ? 30 : 44, fontWeight: 600, color: INK,
-            letterSpacing: -0.5, lineHeight: 1.15, margin: '0 0 18px', maxWidth: 640,
-          }}
-        >
-          {t.title}
-        </h1>
-        <p style={{ fontFamily: 'var(--font-sans)', fontSize: 15, color: MUTED, fontWeight: 300, lineHeight: 1.7, maxWidth: 620, marginBottom: 44 }}>
-          {t.intro}
-        </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 20, marginBottom: 56 }}>
-          {[
-            { title: t.point1_title, body: t.point1_body },
-            { title: t.point2_title, body: t.point2_body },
-            { title: t.point3_title, body: t.point3_body },
-          ].map((p) => (
-            <div key={p.title} style={{ background: PANEL_BG, border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 3, padding: 20, borderLeft: `3px solid ${GBB_GREEN}` }}>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: INK, marginBottom: 6 }}>{p.title}</div>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, fontWeight: 300, lineHeight: 1.6 }}>{p.body}</div>
+        <div style={{ position: 'relative', marginBottom: 56 }}>
+          {!isMobile && (
+            <div style={{ position: 'absolute', top: -30, right: -20, width: 150, height: 150, pointerEvents: 'none', zIndex: 0 }}>
+              <div style={{ position: 'absolute', inset: 0, border: '0.5px solid rgba(196,163,90,0.28)', borderRadius: '50%', animation: 'gompRotateSlowRev 95s linear infinite' }} />
+              <div style={{ position: 'absolute', inset: 26, border: '0.5px solid rgba(196,163,90,0.16)', borderRadius: '50%', animation: 'gompRotateSlow 65s linear infinite' }} />
             </div>
-          ))}
+          )}
+          <div style={{ position: 'relative', zIndex: 2, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 20 }}>
+            {[
+              { title: t.point1_title, body: t.point1_body },
+              { title: t.point2_title, body: t.point2_body },
+              { title: t.point3_title, body: t.point3_body },
+            ].map((p) => (
+              <div key={p.title} style={{ background: PANEL_BG, border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 3, padding: 20, borderLeft: `3px solid ${GBB_GREEN}` }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: INK, marginBottom: 6 }}>{p.title}</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, fontWeight: 300, lineHeight: 1.6 }}>{p.body}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div style={{ background: PANEL_BG, border: '0.5px solid rgba(28,28,26,0.12)', borderRadius: 4, padding: isMobile ? 22 : 36, maxWidth: 640 }}>
+        {!isMobile && (
+          <div style={{ position: 'absolute', top: 340, left: -20, width: 130, height: 130, pointerEvents: 'none', zIndex: 0 }}>
+            <div style={{ position: 'absolute', inset: 0, border: `0.5px solid ${GBB_GREEN_TINT(0.2)}`, borderRadius: '50%', animation: 'gompRotateSlow 92s linear infinite' }} />
+          </div>
+        )}
+        <div style={{ position: 'absolute', top: 300, left: '38%', width: 5, height: 5, borderRadius: '50%', background: GOLD, pointerEvents: 'none', zIndex: 0, animation: 'gompPulseDot 5.4s ease-in-out infinite 0.6s', display: isMobile ? 'none' : 'block' }} />
+
+        <div style={{ background: PANEL_BG, border: '0.5px solid rgba(28,28,26,0.12)', borderRadius: 4, padding: isMobile ? 22 : 36, maxWidth: 640, position: 'relative', zIndex: 2 }}>
           {submitted ? (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
               <div style={{ width: 52, height: 52, borderRadius: '50%', background: GBB_GREEN_TINT(0.12), border: `1.5px solid ${GBB_GREEN}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: 22, color: GBB_GREEN }}>
