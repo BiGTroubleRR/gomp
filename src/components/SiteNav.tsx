@@ -7,6 +7,7 @@ import TransitionLink from '@/components/TransitionLink';
 import { useSite } from '@/contexts/SiteContext';
 import { useIsMobile, useMediaQuery } from '@/lib/use-media-query';
 import DeviceViewToggle from '@/components/DeviceViewToggle';
+import { GBB_GREEN } from '@/lib/gbb-theme';
 
 const INK = '#1C1C1A';
 const MUTED = '#7A7469';
@@ -113,6 +114,55 @@ function ClerkAuthControls({ stacked }: { stacked?: boolean }) {
   );
 }
 
+// The brand mark doubles as a switcher between the main store and the Gomp Budget Builds
+// (secondhand) section: it shows whichever section you're currently in, and hovering flips
+// the OTHER one down from above into that exact same spot — like a departure-board flap —
+// while the current label flips away below. Leaving reverses it back. Mobile has no hover,
+// so its full-screen menu keeps a plain "Budget Builds" entry in LINKS as the real way in
+// there; this is a desktop-only shortcut layered on top of that.
+function LogoSwitcher({ onNavigate }: { onNavigate?: () => void }) {
+  const pathname = usePathname();
+  const isGbb = pathname?.startsWith('/gbb') ?? false;
+
+  const primaryLabel = isGbb ? 'GBB' : 'GOMP';
+  const primaryHref = isGbb ? '/gbb' : '/';
+  const primaryColor = isGbb ? GBB_GREEN : GOLD;
+
+  const altLabel = isGbb ? 'GOMP' : 'GBB';
+  const altHref = isGbb ? '/' : '/gbb';
+  const altColor = isGbb ? GOLD : GBB_GREEN;
+
+  const faceStyle = {
+    fontFamily: 'var(--font-serif)',
+    fontStyle: 'italic' as const,
+    fontWeight: 600,
+    letterSpacing: 1.5,
+    fontSize: 17,
+    whiteSpace: 'nowrap' as const,
+  };
+
+  return (
+    <div className="gomp-logo-switch" style={{ position: 'relative', perspective: 320 }}>
+      <TransitionLink
+        href={primaryHref}
+        onClick={onNavigate}
+        className="gomp-logo-face gomp-logo-face-primary"
+        style={{ ...faceStyle, display: 'block', color: primaryColor }}
+      >
+        {primaryLabel}
+      </TransitionLink>
+      <TransitionLink
+        href={altHref}
+        onClick={onNavigate}
+        className="gomp-logo-face gomp-logo-face-alt"
+        style={{ ...faceStyle, color: altColor }}
+      >
+        {altLabel}
+      </TransitionLink>
+    </div>
+  );
+}
+
 // The one shared top nav used by every page except Admin (which is a deliberately distinct
 // dark-chrome area). Collapses to a hamburger + full-screen menu below the 768px breakpoint —
 // the desktop layout has no room for 4 links + account + lang/currency + a CTA on a phone.
@@ -153,13 +203,7 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
             padding: '0 20px',
           }}
         >
-          <TransitionLink
-            href="/"
-            onClick={closeMenu}
-            style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 600, letterSpacing: 1.5, fontSize: 17, color: GOLD }}
-          >
-            GOMP
-          </TransitionLink>
+          <LogoSwitcher onNavigate={closeMenu} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <DeviceViewToggle />
             <button
@@ -247,12 +291,7 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 48 }}>
-        <TransitionLink
-          href="/"
-          style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 600, letterSpacing: 1.5, fontSize: 17, color: GOLD }}
-        >
-          GOMP
-        </TransitionLink>
+        <LogoSwitcher />
         <div style={{ display: 'flex', alignItems: 'center', gap: 36 }}>
           {LINKS.map((l) => {
             const active = l.href === pathname;

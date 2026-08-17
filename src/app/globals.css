@@ -65,6 +65,41 @@ a[data-gomp-nav]:not([style*='background']):hover {
   }
 }
 
+/* ---- Nav logo / GBB switcher: departure-board flip, in place ----
+   The alt face sits absolutely positioned over the same spot as the primary face, flipped
+   up and out of sight above it. On hover the primary face flips down and away below while
+   the alt face flips down from above into the primary's exact slot — the same motion, just
+   reversed, plays on mouse-leave since it's driven by :hover rather than a class toggle. */
+.gomp-logo-face {
+  backface-visibility: hidden;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+.gomp-logo-face-primary {
+  transform: translateY(0) rotateX(0deg);
+  transform-origin: bottom center;
+  opacity: 1;
+}
+.gomp-logo-face-alt {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translateY(-100%) rotateX(-90deg);
+  transform-origin: top center;
+  opacity: 0;
+  pointer-events: none;
+}
+.gomp-logo-switch:hover .gomp-logo-face-primary,
+.gomp-logo-switch:focus-within .gomp-logo-face-primary {
+  transform: translateY(100%) rotateX(90deg);
+  opacity: 0;
+}
+.gomp-logo-switch:hover .gomp-logo-face-alt,
+.gomp-logo-switch:focus-within .gomp-logo-face-alt {
+  transform: translateY(0) rotateX(0deg);
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* ---- Tab-switch / section entrance animation (Account page, hero, etc.) ---- */
 @keyframes fadeUp {
   from {
