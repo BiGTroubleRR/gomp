@@ -323,6 +323,66 @@ create index if not exists checkout_intents_created_at_idx
   on public.checkout_intents (created_at desc);
 
 -- ---------------------------------------------------------------------------
+-- gbb_requests — "Gomp Budget Builds": a customer asks for a build made from
+-- secondhand parts and a price proposal, instead of configuring a new-parts
+-- build themselves. Same PII/RLS shape as checkout_intents (see the note on
+-- that table above) — submission goes through src/app/api/gbb/route.ts, not
+-- a direct anon insert, and reads are admin-only via src/app/api/admin/gbb.
+-- ---------------------------------------------------------------------------
+create table if not exists public.gbb_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users (id) on delete set null,
+
+  first_name text not null default '',
+  last_name text not null default '',
+  email text not null,
+  phone text not null default '',
+
+  budget_eur numeric(10, 2),
+  use_case text not null default '',
+  notes text not null default '',
+
+  -- filled in by an admin while working the request — see the "Budget
+  -- Requests" admin tab, which also generates Bazoš/FB Marketplace search
+  -- links per ad-hoc search term rather than scraping those sites itself.
+  price_proposal_eur numeric(10, 2),
+  proposal_notes text not null default '',
+  status text not null default 'new' check (status in ('new', 'researching', 'quoted', 'converted', 'archived')),
+
+  lang text not null default 'en',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.gbb_requests enable row level security;
+
+-- Submission goes through src/app/api/gbb/route.ts (rate-limited, service-role
+-- insert) — do not add a public insert policy here.
+drop policy if exists "gbb_requests_insert_public" on public.gbb_requests;
+
+drop policy if exists "gbb_requests_select_own" on public.gbb_requests;
+create policy "gbb_requests_select_own" on public.gbb_requests
+  for select using (auth.uid() is not null and auth.uid() = user_id);
+
+create index if not exists gbb_requests_created_at_idx
+  on public.gbb_requests (created_at desc);
+
+create or replace function public.set_gbb_requests_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists gbb_requests_set_updated_at on public.gbb_requests;
+create trigger gbb_requests_set_updated_at
+  before update on public.gbb_requests
+  for each row execute procedure public.set_gbb_requests_updated_at();
+
+-- ---------------------------------------------------------------------------
 -- rate_limit_hits — generic per-key request counter for public endpoints.
 --
 -- Used today by src/app/api/checkout/route.ts to throttle checkout

@@ -18,6 +18,7 @@ const LINKS: { href: string; en: string; sk: string }[] = [
   { href: '/', en: 'Home', sk: 'Domov' },
   { href: '/shop', en: 'Shop', sk: 'Obchod' },
   { href: '/build', en: 'Build', sk: 'Zostaviť' },
+  { href: '/gbb', en: 'Budget Builds', sk: 'Rozpočtové zostavy' },
   { href: '/about', en: 'About', sk: 'O nás' },
 ];
 

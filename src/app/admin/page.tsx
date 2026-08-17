@@ -8,6 +8,9 @@ import DeviceViewToggle from '@/components/DeviceViewToggle';
 import { useUser, SignInButton, UserButton } from '@clerk/nextjs';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
 import { fetchIntents, updateIntentStatus, type CheckoutIntent, type IntentStatus } from '@/lib/admin-intents';
+import { fetchGbbRequests, updateGbbRequest, type GbbRequest, type GbbStatus } from '@/lib/admin-gbb';
+import { marketplaceSearchLinks } from '@/lib/gbb-links';
+import { GBB_GREEN, GBB_GREEN_TINT } from '@/lib/gbb-theme';
 import { fetchComponentDb, subscribeComponents, insertComponent, updateComponentRow, deleteComponentRow } from '@/lib/supabase/components';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
 import {
@@ -211,6 +214,14 @@ type Translations = {
   status_labels: Record<IntentStatus, string>;
   method_labels: Record<'card' | 'google_pay' | 'apple_pay', string>;
   requests_count: (total: number, fresh: number) => string;
+  // Gomp Budget Builds tab
+  gbb_tab: string; gbb_title: string; gbb_no_requests: string;
+  gbb_status_labels: Record<GbbStatus, string>;
+  gbb_use_case_labels: Record<string, string>;
+  gbb_budget_word: string; gbb_use_case_word: string; gbb_notes_word: string;
+  gbb_search_helper: string; gbb_search_placeholder: string; gbb_add_search: string;
+  gbb_proposal_price: string; gbb_proposal_notes: string; gbb_save_proposal: string;
+  gbb_count: (total: number, fresh: number) => string;
 };
 
 const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
@@ -262,6 +273,14 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     status_labels: { new: 'New', contacted: 'Contacted', converted: 'Converted', archived: 'Archived' },
     method_labels: { card: 'Card', google_pay: 'Google Pay', apple_pay: 'Apple Pay' },
     requests_count: (total, fresh) => `${total} total · ${fresh} new`,
+    gbb_tab: 'Budget Requests', gbb_title: 'Gomp Budget Builds', gbb_no_requests: 'No budget build requests yet. They appear here as soon as someone submits one.',
+    gbb_status_labels: { new: 'New', researching: 'Researching', quoted: 'Quoted', converted: 'Converted', archived: 'Archived' },
+    gbb_use_case_labels: { gaming: 'Gaming', office: 'Office & everyday use', creative: 'Content creation / editing', server: 'Home server / NAS', other: 'Something else' },
+    gbb_budget_word: 'Budget', gbb_use_case_word: "What it's for", gbb_notes_word: 'Customer notes',
+    gbb_search_helper: 'Marketplace search links (not scraped — opens the search for you to check)',
+    gbb_search_placeholder: 'e.g. RTX 3070', gbb_add_search: 'Search',
+    gbb_proposal_price: 'Price proposal (EUR)', gbb_proposal_notes: 'Proposal notes (parts, condition, etc.)', gbb_save_proposal: 'Save & mark quoted →',
+    gbb_count: (total, fresh) => `${total} total · ${fresh} new`,
   },
   sk: {
     admin_panel: 'Admin panel', sign_in: 'Prihlásiť sa →',
@@ -311,6 +330,14 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     status_labels: { new: 'Nová', contacted: 'Kontaktovaný', converted: 'Premenená', archived: 'Archivovaná' },
     method_labels: { card: 'Karta', google_pay: 'Google Pay', apple_pay: 'Apple Pay' },
     requests_count: (total, fresh) => `${total} celkovo · ${fresh} nových`,
+    gbb_tab: 'Rozpočtové žiadosti', gbb_title: 'Gomp Rozpočtové Zostavy', gbb_no_requests: 'Zatiaľ žiadne žiadosti o rozpočtovú zostavu. Objavia sa tu hneď, ako ich niekto odošle.',
+    gbb_status_labels: { new: 'Nová', researching: 'Zisťujem ceny', quoted: 'Ponúknuté', converted: 'Premenená', archived: 'Archivovaná' },
+    gbb_use_case_labels: { gaming: 'Hranie', office: 'Kancelária a bežné použitie', creative: 'Tvorba obsahu / strih', server: 'Domáci server / NAS', other: 'Niečo iné' },
+    gbb_budget_word: 'Rozpočet', gbb_use_case_word: 'Na čo to bude', gbb_notes_word: 'Poznámky klienta',
+    gbb_search_helper: 'Odkazy na vyhľadávanie (nezoškrabuje sa nič — len otvorí vyhľadávanie na kontrolu)',
+    gbb_search_placeholder: 'napr. RTX 3070', gbb_add_search: 'Hľadať',
+    gbb_proposal_price: 'Cenový návrh (EUR)', gbb_proposal_notes: 'Poznámky k návrhu (súčiastky, stav...)', gbb_save_proposal: 'Uložiť a označiť ako ponúknuté →',
+    gbb_count: (total, fresh) => `${total} celkovo · ${fresh} nových`,
   },
 };
 
@@ -407,6 +434,14 @@ const STATUS_COLORS: Record<IntentStatus, { bg: string; text: string; border: st
   archived: { bg: '#F2F2F6', text: '#505060', border: 'rgba(144,144,160,0.35)' },
 };
 
+const GBB_STATUS_COLORS: Record<GbbStatus, { bg: string; text: string; border: string }> = {
+  new: { bg: '#FFF0EE', text: '#8B2020', border: 'rgba(204,51,51,0.3)' },
+  researching: { bg: '#FFF8E8', text: '#8A6D2F', border: 'rgba(196,163,90,0.4)' },
+  quoted: { bg: GBB_GREEN_TINT(0.1), text: GBB_GREEN, border: GBB_GREEN_TINT(0.35) },
+  converted: { bg: '#E8FFF0', text: '#1A5030', border: 'rgba(51,153,102,0.35)' },
+  archived: { bg: '#F2F2F6', text: '#505060', border: 'rgba(144,144,160,0.35)' },
+};
+
 function tierBadge(tier: Tier | undefined, palette: Record<Tier, { bg: string; text: string; border: string }>) {
   return palette[tier || 'D'] || palette.D;
 }
@@ -461,7 +496,7 @@ export default function AdminPage() {
           : 'no';
   const authed = adminState === 'yes';
 
-  const [tab, setTab] = useState<'builds' | 'components' | 'requests'>('requests');
+  const [tab, setTab] = useState<'builds' | 'components' | 'requests' | 'gbb'>('requests');
   const [builds, setBuilds] = useState<Build[]>([]);
   const [compDb, setCompDb] = useState<ComponentDb>(defaultComponentDb());
 
@@ -488,6 +523,14 @@ export default function AdminPage() {
   const [intentsError, setIntentsError] = useState<string | null>(null);
   const [needsServiceKey, setNeedsServiceKey] = useState(false);
   const [expandedIntent, setExpandedIntent] = useState<string | null>(null);
+
+  const [gbbRequests, setGbbRequests] = useState<GbbRequest[]>([]);
+  const [gbbLoading, setGbbLoading] = useState(false);
+  const [gbbError, setGbbError] = useState<string | null>(null);
+  const [gbbNeedsServiceKey, setGbbNeedsServiceKey] = useState(false);
+  const [expandedGbb, setExpandedGbb] = useState<string | null>(null);
+  const [gbbSearchTerm, setGbbSearchTerm] = useState<Record<string, string>>({});
+  const [gbbProposalDraft, setGbbProposalDraft] = useState<Record<string, { price: string; notes: string }>>({});
 
   const t = TRANSLATIONS[lang];
   const catLabels = CAT_LABELS[lang];
@@ -571,6 +614,52 @@ export default function AdminPage() {
     if (error) {
       setIntents(previous);
       setIntentsError(error);
+    }
+  }
+
+  // ---- Gomp Budget Builds requests (gbb_requests) ----
+
+  const loadGbbRequests = useCallback(async () => {
+    setGbbLoading(true);
+    const res = await fetchGbbRequests();
+    if (res.ok) {
+      setGbbRequests(res.requests);
+      setGbbError(null);
+      setGbbNeedsServiceKey(false);
+    } else {
+      setGbbError(res.error);
+      setGbbNeedsServiceKey(!!res.needsServiceRoleKey);
+    }
+    setGbbLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (authed) loadGbbRequests();
+  }, [authed, loadGbbRequests]);
+
+  async function changeGbbStatus(id: string, status: GbbStatus) {
+    const previous = gbbRequests;
+    setGbbRequests((list) => list.map((r) => (r.id === id ? { ...r, status } : r)));
+    const result = await updateGbbRequest(id, { status });
+    if (!result.ok) {
+      setGbbRequests(previous);
+      setGbbError(result.error);
+    }
+  }
+
+  async function saveGbbProposal(id: string) {
+    const draft = gbbProposalDraft[id];
+    if (!draft) return;
+    const priceProposalEur = draft.price.trim() !== '' ? Number(draft.price) : null;
+    const result = await updateGbbRequest(id, {
+      priceProposalEur: priceProposalEur != null && !isNaN(priceProposalEur) ? priceProposalEur : null,
+      proposalNotes: draft.notes,
+      status: 'quoted',
+    });
+    if (result.ok) {
+      setGbbRequests((list) => list.map((r) => (r.id === id ? result.request : r)));
+    } else {
+      setGbbError(result.error);
     }
   }
 
@@ -810,6 +899,7 @@ export default function AdminPage() {
 
   const totalComps = (Object.values(compDb) as Component[][]).reduce((sum, arr) => sum + (arr ? arr.length : 0), 0);
   const newIntentCount = intents.filter((i) => i.status === 'new').length;
+  const newGbbCount = gbbRequests.filter((r) => r.status === 'new').length;
 
   // ---------------------------------------------------------------------------
   // Login screen
@@ -989,6 +1079,30 @@ export default function AdminPage() {
             >
               {t.components_tab}
             </button>
+            <button
+              onClick={() => setTab('gbb')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'space-between', gap: 10,
+                width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
+                background: tab === 'gbb' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                border: 'none',
+                borderLeft: isMobile ? 'none' : `2px solid ${tab === 'gbb' ? '#4A90D9' : 'transparent'}`,
+                borderBottom: isMobile ? `2px solid ${tab === 'gbb' ? '#4A90D9' : 'transparent'}` : 'none',
+                color: tab === 'gbb' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'gbb' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              }}
+            >
+              <span>{t.gbb_tab}</span>
+              {newGbbCount > 0 && (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, background: GBB_GREEN, color: '#FDFAF4',
+                    borderRadius: 10, padding: '2px 7px', lineHeight: 1.4,
+                  }}
+                >
+                  {newGbbCount}
+                </span>
+              )}
+            </button>
           </div>
           {!isMobile && (
             <div style={{ padding: '24px 18px 0', marginTop: 20, borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
@@ -1130,6 +1244,175 @@ export default function AdminPage() {
                                 }}
                               >
                                 {t.status_labels[s]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {tab === 'gbb' && (
+            <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.gbb_title}</h1>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300 }}>{t.gbb_count(gbbRequests.length, newGbbCount)}</div>
+                </div>
+                <button
+                  onClick={loadGbbRequests}
+                  disabled={gbbLoading}
+                  style={{ background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, padding: '8px 16px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', cursor: gbbLoading ? 'default' : 'pointer' }}
+                >
+                  {gbbLoading ? t.loading : t.refresh}
+                </button>
+              </div>
+
+              {gbbError && (
+                <div style={{ background: gbbNeedsServiceKey ? 'rgba(196,163,90,0.12)' : '#FFF0EE', border: `0.5px solid ${gbbNeedsServiceKey ? 'rgba(196,163,90,0.5)' : 'rgba(204,51,51,0.25)'}`, borderRadius: 2, padding: '14px 16px', marginBottom: 20 }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: gbbNeedsServiceKey ? '#8A6D2F' : '#CC3333', marginBottom: 4 }}>
+                    {gbbNeedsServiceKey ? t.setup_needed : t.error_word}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: gbbNeedsServiceKey ? '#6B5526' : '#8B2020', lineHeight: 1.6 }}>{gbbError}</div>
+                </div>
+              )}
+
+              {!gbbError && gbbRequests.length === 0 && !gbbLoading && (
+                <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 2, padding: '40px 24px', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#7A7469', fontWeight: 300 }}>{t.gbb_no_requests}</div>
+                </div>
+              )}
+
+              {gbbRequests.map((r) => {
+                const open = expandedGbb === r.id;
+                const badge = GBB_STATUS_COLORS[r.status];
+                const draft = gbbProposalDraft[r.id] ?? { price: r.price_proposal_eur != null ? String(r.price_proposal_eur) : '', notes: r.proposal_notes };
+                const searchTerm = gbbSearchTerm[r.id] ?? '';
+                return (
+                  <div key={r.id} style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 2, marginBottom: 10, overflow: 'hidden' }}>
+                    <div
+                      onClick={() => setExpandedGbb(open ? null : r.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isMobile ? '14px 14px' : '16px 20px', cursor: 'pointer', flexWrap: 'wrap' }}
+                    >
+                      <div style={{ flex: 1, minWidth: 180 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: '#1C1C1A' }}>
+                            {[r.first_name, r.last_name].filter(Boolean).join(' ') || t.no_name}
+                          </span>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', background: badge.bg, color: badge.text, border: `0.5px solid ${badge.border}`, borderRadius: 2, padding: '2px 6px' }}>
+                            {t.gbb_status_labels[r.status]}
+                          </span>
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', marginTop: 3 }}>{r.email}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 15, color: '#1C1C1A' }}>{r.budget_eur != null ? fmt(Number(r.budget_eur)) : '—'}</div>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890', marginTop: 2 }}>
+                          {t.gbb_use_case_labels[r.use_case] ?? r.use_case} · {new Date(r.created_at).toLocaleDateString(lang === 'sk' ? 'sk-SK' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                      </div>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#A09890', width: 12, textAlign: 'center' }}>{open ? '−' : '+'}</span>
+                    </div>
+
+                    {open && (
+                      <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.08)', padding: isMobile ? '14px' : '18px 20px', background: '#F8F4EA' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 18, marginBottom: 18 }}>
+                          <div>
+                            <div style={ADMIN_LABEL}>{t.contact_word}</div>
+                            <div style={ADMIN_VALUE}>
+                              {r.email}
+                              {r.phone ? <><br />{r.phone}</> : null}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={ADMIN_LABEL}>{t.gbb_budget_word} / {t.gbb_use_case_word}</div>
+                            <div style={ADMIN_VALUE}>
+                              {r.budget_eur != null ? fmt(Number(r.budget_eur)) : '—'} · {t.gbb_use_case_labels[r.use_case] ?? r.use_case}
+                            </div>
+                          </div>
+                        </div>
+
+                        {r.notes && (
+                          <div style={{ marginBottom: 18 }}>
+                            <div style={ADMIN_LABEL}>{t.gbb_notes_word}</div>
+                            <div style={{ ...ADMIN_VALUE, whiteSpace: 'pre-wrap' }}>{r.notes}</div>
+                          </div>
+                        )}
+
+                        <div style={{ marginBottom: 18 }}>
+                          <div style={ADMIN_LABEL}>{t.gbb_search_helper}</div>
+                          <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                            <input
+                              value={searchTerm}
+                              onChange={(e) => setGbbSearchTerm((s) => ({ ...s, [r.id]: e.target.value }))}
+                              placeholder={t.gbb_search_placeholder}
+                              style={{ flex: 1, minWidth: 160, padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#FDFAF4', color: '#1C1C1A', fontFamily: 'var(--font-sans)' }}
+                            />
+                          </div>
+                          {searchTerm.trim() && (
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              {marketplaceSearchLinks(searchTerm).map((link) => (
+                                <a
+                                  key={link.label}
+                                  href={link.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: GBB_GREEN, textDecoration: 'none', border: `0.5px solid ${GBB_GREEN_TINT(0.4)}`, borderRadius: 2, padding: '5px 10px' }}
+                                >
+                                  {link.label} ↗
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '160px 1fr', gap: 12, marginBottom: 12 }}>
+                          <div>
+                            <div style={ADMIN_LABEL}>{t.gbb_proposal_price}</div>
+                            <input
+                              type="number"
+                              value={draft.price}
+                              onChange={(e) => setGbbProposalDraft((d) => ({ ...d, [r.id]: { ...draft, price: e.target.value } }))}
+                              style={{ width: '100%', padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#FDFAF4', color: '#1C1C1A', fontFamily: 'var(--font-mono)' }}
+                            />
+                          </div>
+                          <div>
+                            <div style={ADMIN_LABEL}>{t.gbb_proposal_notes}</div>
+                            <input
+                              value={draft.notes}
+                              onChange={(e) => setGbbProposalDraft((d) => ({ ...d, [r.id]: { ...draft, notes: e.target.value } }))}
+                              style={{ width: '100%', padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#FDFAF4', color: '#1C1C1A', fontFamily: 'var(--font-sans)' }}
+                            />
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => saveGbbProposal(r.id)}
+                          style={{ background: GBB_GREEN, color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '8px 16px', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 18 }}
+                        >
+                          {t.gbb_save_proposal}
+                        </button>
+
+                        <div style={ADMIN_LABEL}>{t.set_status}</div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {(['new', 'researching', 'quoted', 'converted', 'archived'] as GbbStatus[]).map((s) => {
+                            const active = r.status === s;
+                            return (
+                              <button
+                                key={s}
+                                onClick={() => changeGbbStatus(r.id, s)}
+                                style={{
+                                  background: active ? GBB_GREEN : 'transparent',
+                                  color: active ? '#FDFAF4' : '#7A7469',
+                                  border: `0.5px solid ${active ? GBB_GREEN : 'rgba(28,28,26,0.2)'}`,
+                                  borderRadius: 2, padding: '6px 12px', fontFamily: 'var(--font-sans)', fontSize: 11,
+                                  cursor: active ? 'default' : 'pointer',
+                                }}
+                              >
+                                {t.gbb_status_labels[s]}
                               </button>
                             );
                           })}

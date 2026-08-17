@@ -266,6 +266,49 @@ export type Database = {
         };
         Relationships: [];
       };
+      // "Gomp Budget Builds" — a customer asks for a secondhand-parts build and a price
+      // proposal instead of configuring a new-parts build. Same PII/RLS shape as
+      // checkout_intents above.
+      gbb_requests: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          first_name: string;
+          last_name: string;
+          email: string;
+          phone: string;
+          budget_eur: number | null;
+          use_case: string;
+          notes: string;
+          price_proposal_eur: number | null;
+          proposal_notes: string;
+          status: 'new' | 'researching' | 'quoted' | 'converted' | 'archived';
+          lang: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          first_name?: string;
+          last_name?: string;
+          email: string;
+          phone?: string;
+          budget_eur?: number | null;
+          use_case?: string;
+          notes?: string;
+          price_proposal_eur?: number | null;
+          proposal_notes?: string;
+          status?: 'new' | 'researching' | 'quoted' | 'converted' | 'archived';
+          lang?: string;
+        };
+        Update: {
+          price_proposal_eur?: number | null;
+          proposal_notes?: string;
+          status?: 'new' | 'researching' | 'quoted' | 'converted' | 'archived';
+        };
+        Relationships: [];
+      };
       // Server-only request counter (see supabase/schema.sql) — no RLS policy,
       // so only the service-role client ever touches this table.
       rate_limit_hits: {
