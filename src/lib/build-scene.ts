@@ -4,7 +4,7 @@
 // per-component mesh; exposes an imperative API the page's React state changes call into.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { FanMountPosition } from './component-db-seed';
+import { RAM_DIMM_SIZE_MM, type FanMountPosition } from './component-db-seed';
 
 export type CompId = 'mobo' | 'cpu' | 'cooler' | 'ram' | 'gpu' | 'storage' | 'psu' | 'case';
 export const SLOTS: CompId[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case'];
@@ -12,13 +12,18 @@ export const SLOTS: CompId[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage'
 // mobo/cpu/cooler/ram are all mounted flush on the motherboard's own face, so they share a Z
 // shift toward the case's rear panel (z = -d/2 side, see buildCase) — a real board's rear I/O
 // sits flush against that wall, not centered front-to-back the way the old z≈0 values had it.
-// cpu/ram also got pulled further apart on Y: they used to sit only 0.2 apart, which put a
-// installed RAM kit's own extent overlapping the CPU block.
+// ram sits beside the CPU (same Y as cpu, offset further along Z — real DIMM slots run down
+// the board next to the socket, not above it) rather than stacked on a separate Y band above
+// it: an earlier revision pulled ram apart from cpu along Y instead of Z to fix an overlap,
+// which put the whole kit up near the board's own top edge — fine at the placeholder's old,
+// undersized length, but once the RAM slot outline fix (see ramSlotOutlineGroup below) made an
+// installed stick's real mm-accurate length correct, that same Y put it past the board's own
+// top edge, AND still directly above the CPU instead of beside it, as a real board has it.
 const BASE_POS: Record<Exclude<CompId, 'case'>, [number, number, number]> = {
   mobo: [-0.88, 0.2, -0.35],
   cpu: [-0.78, 0.55, -0.25],
   cooler: [-0.42, 0.65, -0.25],
-  ram: [-0.8, 1.25, -0.44],
+  ram: [-0.8, 0.55, -0.88],
   gpu: [-0.45, -0.5, 0.1],
   storage: [-0.8, 0.08, 0.37],
   psu: [0.1, -1.88, 0.0],
@@ -281,7 +286,10 @@ function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
         jack.position.set(0.03, y, 0.1);
         io.add(jack);
       });
-      io.position.set(0.03, 1.25, 0.35);
+      // y=1.08 (not the board box's own 1.4 half-height): the backing plate is 0.5 tall, so
+      // centering it any higher pushes its top edge past the board's own top edge and it
+      // visibly hangs off the board instead of sitting on it.
+      io.position.set(0.03, 1.08, 0.35);
       g.add(io);
 
       g.scale.setScalar(0.86);
@@ -862,9 +870,19 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   // a motherboard is picked. Deliberately a standalone group (not part of objects.ram) so its
   // visibility doesn't get tangled with the ram mesh's own fly-in/out lifecycle, which only
   // exists once RAM itself is installed.
+  //
+  // Sized straight from RAM_DIMM_SIZE_MM rather than a hand-tuned box: the page's own 'ram'
+  // DimensionSpec scales an installed stick's local Y (length) to mmToUnits(RAM_DIMM_SIZE_MM.
+  // length) too — every DDR4/DDR5 stick is that same standard length regardless of kit, only
+  // the heatsink height varies — so building the outline from the same constant guarantees it
+  // always matches, instead of drifting out of sync the way two independently-guessed numbers
+  // did (previously the outline was fixed at a length nowhere near what a real, mm-accurate
+  // stick renders at, so every installed stick visibly overran its own slot).
+  const ramSlotLengthUnits = mmToUnits(RAM_DIMM_SIZE_MM.length);
+  const ramSlotHeightUnits = mmToUnits(RAM_DIMM_SIZE_MM.height);
   const ramSlotOutlineGroup = new THREE.Group();
   const ramSlotOutlines = RAM_SLOT_Z.map((z) => {
-    const geo = new THREE.BoxGeometry(0.06, 0.86, 0.05);
+    const geo = new THREE.BoxGeometry(ramSlotHeightUnits, ramSlotLengthUnits, 0.05);
     const line = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0xc4a35a, transparent: true, opacity: 0.32 }));
     geo.dispose();
     line.position.set(0.03, 0, z);
@@ -872,7 +890,6 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     return line;
   });
   ramSlotOutlineGroup.position.set(...BASE_POS.ram);
-  ramSlotOutlineGroup.scale.setScalar(0.82);
   ramSlotOutlineGroup.visible = false;
   scene.add(ramSlotOutlineGroup);
 
