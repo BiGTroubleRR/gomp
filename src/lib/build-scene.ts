@@ -263,33 +263,62 @@ function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
       pcie.position.set(0.05, -0.48, 0.08);
       g.add(pcie);
 
-      // Rear I/O shield: a backing plate plus a real-looking cluster of USB/ethernet/audio ports
-      // near the board's top edge, so a bare board doesn't read as an oddly featureless slab
-      // there before a case/cables give it visual context.
+      // Rear I/O shield: a backing plate plus a real-looking cluster of ports, modeled after a
+      // real rear-IO photo (ASUS ProArt X870E-CREATOR) rather than a generic guess — a 2x3 USB-A
+      // grid (teal, matching that shield's USB-A tint), dual ethernet, an audio-jack trio,
+      // HDMI + DisplayPort, and a USB-C pair — so a bare board doesn't read as an oddly
+      // featureless slab before a case/cables give it visual context. Sits level with the CPU
+      // (same local Y band) on the side opposite the RAM slots, since the real shield runs down
+      // the same edge the CPU socket is closest to, not up near the board's top edge.
       const shieldMat = new T.MeshStandardMaterial({ color: 0x8a8a90, roughness: 0.3, metalness: 0.85 });
       const portMat = new T.MeshStandardMaterial({ color: 0x141414, roughness: 0.4, metalness: 0.5 });
+      const usbMat = new T.MeshStandardMaterial({ color: 0x2a9d8f, roughness: 0.3, metalness: 0.4 });
       const ethernetMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.25, metalness: 0.8 });
       const jackMat = new T.MeshStandardMaterial({ color: 0xb5b0a8, roughness: 0.3, metalness: 0.7 });
       const io = new T.Group();
-      io.add(new T.Mesh(new T.BoxGeometry(0.03, 0.5, 0.32), shieldMat));
-      [-0.18, -0.06, 0.06, 0.18].forEach((y) => {
-        const usb = new T.Mesh(new T.BoxGeometry(0.05, 0.07, 0.13), portMat);
-        usb.position.set(0.02, y, -0.08);
-        io.add(usb);
+      io.add(new T.Mesh(new T.BoxGeometry(0.03, 0.5, 0.42), shieldMat));
+
+      [-0.13, -0.02].forEach((z) => {
+        [0.18, 0.09, 0.0].forEach((y) => {
+          const usb = new T.Mesh(new T.BoxGeometry(0.045, 0.06, 0.045), usbMat);
+          usb.position.set(0.02, y, z);
+          io.add(usb);
+        });
       });
-      const eth = new T.Mesh(new T.BoxGeometry(0.05, 0.09, 0.15), ethernetMat);
-      eth.position.set(0.02, -0.18, 0.1);
-      io.add(eth);
-      [-0.02, 0.06, 0.14].forEach((y) => {
+
+      [0.18, 0.09].forEach((y) => {
+        const eth = new T.Mesh(new T.BoxGeometry(0.05, 0.08, 0.09), ethernetMat);
+        eth.position.set(0.02, y, 0.13);
+        io.add(eth);
+      });
+
+      [0.0, -0.09, -0.18].forEach((y) => {
         const jack = new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.04, 12), jackMat);
         jack.rotation.z = Math.PI / 2;
-        jack.position.set(0.03, y, 0.1);
+        jack.position.set(0.03, y, 0.13);
         io.add(jack);
       });
-      // y=1.08 (not the board box's own 1.4 half-height): the backing plate is 0.5 tall, so
-      // centering it any higher pushes its top edge past the board's own top edge and it
-      // visibly hangs off the board instead of sitting on it.
-      io.position.set(0.03, 1.08, 0.35);
+
+      const hdmi = new T.Mesh(new T.BoxGeometry(0.045, 0.045, 0.09), portMat);
+      hdmi.position.set(0.02, -0.09, -0.13);
+      io.add(hdmi);
+      const dp = new T.Mesh(new T.BoxGeometry(0.045, 0.045, 0.08), portMat);
+      dp.position.set(0.02, -0.09, -0.02);
+      io.add(dp);
+
+      [-0.13, -0.02].forEach((z) => {
+        const usbC = new T.Mesh(new T.BoxGeometry(0.035, 0.035, 0.06), portMat);
+        usbC.position.set(0.02, -0.18, z);
+        io.add(usbC);
+      });
+
+      // y=0.35 matches the CPU's own local band (cpu sits at world y=0.55, mobo at world
+      // y=0.2, so 0.55-0.2=0.35 in mobo-local space) instead of the board's top edge; z=0.5
+      // pushes it to the opposite side of the CPU from the RAM slots (ram sits at local
+      // z≈-0.53 relative to cpu's z≈0.10 — see BASE_POS.ram — so io mirrors that gap the
+      // other way), and the widened backing plate above (0.42, up from 0.32) still clears the
+      // board's own ±0.75 Z half-extent at this position with room to spare.
+      io.position.set(0.03, 0.35, 0.5);
       g.add(io);
 
       g.scale.setScalar(0.86);
