@@ -10,8 +10,11 @@ export type CompId = 'mobo' | 'cpu' | 'cooler' | 'ram' | 'gpu' | 'storage' | 'ps
 export const SLOTS: CompId[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case'];
 
 // mobo/cpu/cooler/ram are all mounted flush on the motherboard's own face, so they share a Z
-// shift toward the case's rear panel (z = -d/2 side, see buildCase) — a real board's rear I/O
-// sits flush against that wall, not centered front-to-back the way the old z≈0 values had it.
+// shift toward the case's rear panel — a real board's rear I/O sits flush against that wall,
+// not centered front-to-back the way the old z≈0 values had it. These three Z values are only
+// ever read as *relative offsets from BASE_POS.mobo's own Z* (see resetComponentPositions and
+// moboAnchoredZ below) — the group's actual world Z is pinned to the selected case's real rear
+// wall (z=+d/2, see buildCase's `front`/`rear` panels) at runtime, not to this constant.
 // ram sits beside the CPU (same Y as cpu, offset further along Z — real DIMM slots run down
 // the board next to the socket, not above it) rather than stacked on a separate Y band above
 // it: an earlier revision pulled ram apart from cpu along Y instead of Z to fix an overlap,
@@ -312,13 +315,22 @@ function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
         io.add(usbC);
       });
 
+      // Rotated -90° about Y so the ports open along +Z (the case's rear wall — see buildCase's
+      // `rear` panel at z=+d/2; the front sits at -d/2) instead of +X (the board's own
+      // face-normal, toward the glass side panel): a real shield's plug openings face backward
+      // out of the case, perpendicular to the board's face, not out toward the viewer the way
+      // CPU/cooler/RAM stick up off it. This also swaps which local axis is the port grid's
+      // "width" — local Z (the grid columns built above) becomes world X and local Y (the rows)
+      // stays world Y, so the grid still reads as a landscape rectangle spanning the case's
+      // width and height, matching what you actually see looking at a case from directly behind.
+      //
       // y=0.35 matches the CPU's own local band (cpu sits at world y=0.55, mobo at world
-      // y=0.2, so 0.55-0.2=0.35 in mobo-local space) instead of the board's top edge; z=0.5
-      // pushes it to the opposite side of the CPU from the RAM slots (ram sits at local
-      // z≈-0.53 relative to cpu's z≈0.10 — see BASE_POS.ram — so io mirrors that gap the
-      // other way), and the widened backing plate above (0.42, up from 0.32) still clears the
-      // board's own ±0.75 Z half-extent at this position with room to spare.
-      io.position.set(0.03, 0.35, 0.5);
+      // y=0.2, so 0.55-0.2=0.35 in mobo-local space); z=0.68 sits right at the board's own
+      // rear-most edge (half the board's ±0.75 Z placeholder extent) rather than mid-board, so
+      // the rotated ports actually reach the rear wall once the whole assembly is anchored
+      // there — see the mobo-anchoring block in resetComponentPositions/setSizeScale below.
+      io.rotation.y = -Math.PI / 2;
+      io.position.set(0.03, 0.35, 0.68);
       g.add(io);
 
       g.scale.setScalar(0.86);
@@ -623,9 +635,9 @@ function fanTransform(
   };
   switch (position) {
     case 'front':
-      return { pos: [0, along(h), d / 2 + gap], rot: [0, 0, 0] };
-    case 'rear':
       return { pos: [0, along(h), -d / 2 - gap], rot: [0, Math.PI, 0] };
+    case 'rear':
+      return { pos: [0, along(h), d / 2 + gap], rot: [0, 0, 0] };
     case 'top':
       return { pos: [0, h / 2 + gap, along(d)], rot: [-Math.PI / 2, 0, 0] };
     case 'bottom':
@@ -759,12 +771,15 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     bottom.rotation.x = -Math.PI / 2;
     bottom.position.y = -h / 2;
     caseGroup.add(bottom);
+    // front sits at -d/2, not +d/2: with the glass panel on +X (see glassMesh below) and the
+    // camera looking in from that side, the case's front is the wall to the right of that view
+    // (confirmed against the actual render, not assumed) — i.e. -Z, not +Z.
     const front = new THREE.Mesh(new THREE.PlaneGeometry(w, h), panelMat());
-    front.position.z = d / 2;
+    front.rotation.y = Math.PI;
+    front.position.z = -d / 2;
     caseGroup.add(front);
     const rear = new THREE.Mesh(new THREE.PlaneGeometry(w, h), panelMat());
-    rear.rotation.y = Math.PI;
-    rear.position.z = -d / 2;
+    rear.position.z = d / 2;
     caseGroup.add(rear);
 
     const boxGeo = new THREE.BoxGeometry(w, h, d);
@@ -1018,17 +1033,41 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     rebuildFans();
   }
 
+  // mobo/cpu/cooler/ram move as a rigid group, sharing whatever Z the motherboard itself sits
+  // at — and that Z is pinned to the *selected case's* actual rear wall (z=-d/2, see buildCase)
+  // rather than BASE_POS.mobo's fixed constant, so the now rear-facing I/O shield ports (see
+  // buildComponentMesh's 'mobo' case) actually reach the rear cutout instead of floating
+  // somewhere in the case's open interior. halfDepth reads the motherboard's own real depth
+  // (E-ATX's 330mm vs Mini-ITX's 170mm sit differently even in the same case) once a real SKU's
+  // sizeScale is on file; before that, it falls back to the unscaled placeholder's own extent.
+  const MOBO_REAR_CLEARANCE = 0.04;
+  function moboAnchoredZ(): number {
+    const mobo = objects.mobo;
+    const nat = naturalSize.mobo;
+    const halfDepth = mobo && nat ? (nat.z * mobo.sizeScale.z) / 2 : 0.75;
+    // +d/2 is the rear wall (see buildCase's `rear` panel) — the case's front sits at -d/2.
+    return lastCaseSize.d / 2 - MOBO_REAR_CLEARANCE - halfDepth;
+  }
+
   function resetComponentPositions() {
+    const moboZ = moboAnchoredZ();
     (Object.keys(BASE_POS) as Exclude<CompId, 'case'>[]).forEach((id) => {
       const obj = objects[id];
       if (!obj) return;
       const base = BASE_POS[id];
-      obj.finalPos.set(base[0], base[1], base[2]);
+      const z = id === 'mobo' || id === 'cpu' || id === 'cooler' || id === 'ram' ? moboZ + (base[2] - BASE_POS.mobo[2]) : base[2];
+      obj.finalPos.set(base[0], base[1], z);
       if (obj.selected) {
         obj.targetPos.copy(obj.finalPos);
         obj.mesh.position.copy(obj.finalPos);
       }
     });
+    // The empty-DIMM-slot outlines are a standalone group (see ramSlotOutlineGroup below), not
+    // one of the objects looped above, so they need their own copy of the same ram Z — otherwise
+    // they stay parked at BASE_POS.ram's static Z forever while the real ram object moves with
+    // the mobo assembly's case-anchored Z, drifting apart on any case/motherboard but the exact
+    // one BASE_POS.ram's constants happened to be tuned against.
+    ramSlotOutlineGroup.position.set(BASE_POS.ram[0], BASE_POS.ram[1], moboZ + (BASE_POS.ram[2] - BASE_POS.mobo[2]));
   }
 
   function updateCase(w: number, h: number, d: number) {
@@ -1258,6 +1297,10 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     if (obj.selected && obj.moveStart == null) {
       obj.mesh.scale.set(sizeScale.x, sizeScale.y, sizeScale.z);
     }
+    // A different motherboard form factor changes moboAnchoredZ's own real half-depth (E-ATX's
+    // 330mm vs Mini-ITX's 170mm), so the whole rear-anchored mobo/cpu/cooler/ram group needs to
+    // slide to match — same reason updateCase re-runs this when the case itself changes.
+    if (id === 'mobo') resetComponentPositions();
   }
 
   // Tips the GPU wrapper onto its side for a riser-mounted vertical case (world Z, where its
