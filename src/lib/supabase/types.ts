@@ -137,6 +137,8 @@ export type Database = {
           cooler_radiator_mm: number | null;
           psu_length_mm: number | null;
           ram_height_mm: number | null;
+          ram_generation: number | null;
+          ram_speed_mhz: number | null;
           fan_mounts: { position: string; maxCount: number; sizesMm: number[] }[] | null;
           image_url: string | null;
           margin_override: { type: string; value: number } | null;
@@ -170,6 +172,8 @@ export type Database = {
           cooler_radiator_mm?: number | null;
           psu_length_mm?: number | null;
           ram_height_mm?: number | null;
+          ram_generation?: number | null;
+          ram_speed_mhz?: number | null;
           fan_mounts?: { position: string; maxCount: number; sizesMm: number[] }[] | null;
           image_url?: string | null;
           margin_override?: { type: string; value: number } | null;
@@ -200,6 +204,8 @@ export type Database = {
           cooler_radiator_mm?: number | null;
           psu_length_mm?: number | null;
           ram_height_mm?: number | null;
+          ram_generation?: number | null;
+          ram_speed_mhz?: number | null;
           fan_mounts?: { position: string; maxCount: number; sizesMm: number[] }[] | null;
           image_url?: string | null;
           margin_override?: { type: string; value: number } | null;

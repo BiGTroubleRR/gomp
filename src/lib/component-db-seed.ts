@@ -54,6 +54,8 @@ export type Component = {
   coolerRadiatorMm?: number; // cooler only, AIO — the radiator that mounts on the case, not the pump block
   psuLengthMm?: number; // psu only
   ramHeightMm?: number; // ram only, per-SKU heatsink height — falls back to RAM_DIMM_SIZE_MM.height (bare PCB) when unset
+  ramGeneration?: 4 | 5; // ram only: DDR4 vs DDR5 — drives the /build DDR filter
+  ramSpeedMhz?: number; // ram only: rated speed, e.g. 6400 for "DDR5-6400" — drives the /build min-speed slider
   fanMounts?: FanMountSpec[]; // case only — omitted/empty means a fixed design with no user-configurable fan slots
   imageUrl?: string; // admin-uploaded product shot, background already stripped client-side before upload
 };
@@ -188,8 +190,8 @@ export function defaultComponentDb(): ComponentDb {
       { id: 'c25', name: 'Intel Core i5-13600K', price: 319, specs: '14C/20T · 5.1GHz · 125W', tier: 'C', socket: 'LGA1700', passmark: 37462, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i5-13600K&id=5008' },
     ],
     ram: [
-      { id: 'r1', name: 'G.Skill Trident Z5 32GB DDR5 6400', price: 130, specs: '2×16GB · CL32 · EXPO/XMP3', tier: 'S', ramHeightMm: 44 },
-      { id: 'r2', name: 'Corsair Dominator 32GB DDR5 5600', price: 112, specs: '2×16GB · CL36', tier: 'A', ramHeightMm: 56 },
+      { id: 'r1', name: 'G.Skill Trident Z5 32GB DDR5 6400', price: 130, specs: '2×16GB · CL32 · EXPO/XMP3', tier: 'S', ramHeightMm: 44, ramGeneration: 5, ramSpeedMhz: 6400 },
+      { id: 'r2', name: 'Corsair Dominator 32GB DDR5 5600', price: 112, specs: '2×16GB · CL36', tier: 'A', ramHeightMm: 56, ramGeneration: 5, ramSpeedMhz: 5600 },
     ],
     storage: [
       { id: 's1', name: 'Samsung 990 Pro 2TB NVMe', price: 164, specs: 'PCIe 4.0 · 7450MB/s read', tier: 'S' },

@@ -197,6 +197,7 @@ type Translations = {
   image_label: string; image_removing_bg: string; image_uploading: string; image_replace: string; image_remove: string;
   apply_margin: string; margin_override_badge: string; margin_override_label: string; margin_override_desc: string; margin_override_use_global: string;
   specs_notes: string; tier_rating: string; tower_category: string; tower_category_help: string;
+  ram_generation: string; ram_speed_mhz: string; ram_generation_help: string;
   update_arrow: string; add_prefix: string; edit_prefix: string;
   select_prefix: string; select_suffix: string;
   listings: (n: number) => string;
@@ -254,6 +255,8 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     margin_override_use_global: 'Use site-wide margin',
     specs_notes: 'Specs / Notes', tier_rating: 'Tier Rating', tower_category: 'Tower Category',
     tower_category_help: 'Full Tower 55–75 cm · Mid Tower 35–55 cm · Mini Tower 30–45 cm · SFF <35 cm',
+    ram_generation: 'DDR Generation', ram_speed_mhz: 'Speed (MHz)',
+    ram_generation_help: 'Drives the DDR4/DDR5 filter and the speed slider on the Build page — leave blank to hide this kit from both.',
     update_arrow: 'Update →', add_prefix: 'Add ', edit_prefix: 'Edit ',
     select_prefix: '— Select ', select_suffix: ' —',
     listings: (n) => `${n} listings · changes save to localStorage and sync to Shop`,
@@ -311,6 +314,8 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     margin_override_use_global: 'Použiť celkovú maržu',
     specs_notes: 'Špecifikácie / Poznámky', tier_rating: 'Hodnotenie triedy', tower_category: 'Kategória skrine',
     tower_category_help: 'Veľká skriňa 55–75 cm · Stredná skriňa 35–55 cm · Malá skriňa 30–45 cm · SFF <35 cm',
+    ram_generation: 'Generácia DDR', ram_speed_mhz: 'Rýchlosť (MHz)',
+    ram_generation_help: 'Ovláda filter DDR4/DDR5 a posuvník rýchlosti na stránke Zostaviť — nechajte prázdne, ak chcete túto sadu skryť z oboch.',
     update_arrow: 'Aktualizovať →', add_prefix: 'Pridať ', edit_prefix: 'Upraviť ',
     select_prefix: '— Vybrať ', select_suffix: ' —',
     listings: (n) => `${n} položiek · zmeny sa ukladajú do localStorage a synchronizujú s obchodom`,
@@ -359,12 +364,14 @@ type CompFormState = {
   name: string; price: string; marketPrice: string; specs: string; category: string; tier: Tier;
   passmark: number | null; passmarkUrl: string; imageUrl: string;
   marginOverrideOn: boolean; marginOverrideType: 'eur' | 'pct'; marginOverrideValue: string;
+  ramGeneration: '' | '4' | '5'; ramSpeedMhz: string;
 };
 
 function initialCompForm(): CompFormState {
   return {
     name: '', price: '', marketPrice: '', specs: '', category: 'Mid Tower', tier: 'B', passmark: null, passmarkUrl: '', imageUrl: '',
     marginOverrideOn: false, marginOverrideType: 'pct', marginOverrideValue: '0',
+    ramGeneration: '', ramSpeedMhz: '',
   };
 }
 
@@ -763,6 +770,8 @@ export default function AdminPage() {
       tier,
       ...(compForm.passmark ? { passmark: compForm.passmark, passmarkUrl: compForm.passmarkUrl || '' } : {}),
       ...(compCat === 'case' ? { category: compForm.category || 'Mid Tower' } : {}),
+      ...(compCat === 'ram' && compForm.ramGeneration ? { ramGeneration: Number(compForm.ramGeneration) as 4 | 5 } : {}),
+      ...(compCat === 'ram' && compForm.ramSpeedMhz ? { ramSpeedMhz: parseInt(compForm.ramSpeedMhz, 10) } : {}),
       ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
       ...(marginOverride ? { marginOverride } : {}),
     };
@@ -793,6 +802,11 @@ export default function AdminPage() {
       // socket or form-factor compatibility data.
       ...(existing?.socket ? { socket: existing.socket } : {}),
       ...(existing?.formFactor ? { formFactor: existing.formFactor } : {}),
+      // ramHeightMm also has no edit field — same carry-forward, otherwise every edit of a
+      // bulk-imported RAM SKU would silently zero out its real heatsink height.
+      ...(existing?.ramHeightMm != null ? { ramHeightMm: existing.ramHeightMm } : {}),
+      ...(compCat === 'ram' && compForm.ramGeneration ? { ramGeneration: Number(compForm.ramGeneration) as 4 | 5 } : {}),
+      ...(compCat === 'ram' && compForm.ramSpeedMhz ? { ramSpeedMhz: parseInt(compForm.ramSpeedMhz, 10) } : {}),
       ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
       ...(marginOverride ? { marginOverride } : {}),
     };
@@ -841,6 +855,8 @@ export default function AdminPage() {
       marginOverrideOn: comp.marginOverride != null,
       marginOverrideType: comp.marginOverride?.type ?? 'pct',
       marginOverrideValue: comp.marginOverride ? String(comp.marginOverride.value) : '0',
+      ramGeneration: comp.ramGeneration ? (String(comp.ramGeneration) as '4' | '5') : '',
+      ramSpeedMhz: comp.ramSpeedMhz != null ? String(comp.ramSpeedMhz) : '',
     });
   }
 
@@ -1908,6 +1924,37 @@ export default function AdminPage() {
                       ))}
                     </select>
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#B0A898', marginTop: 6, lineHeight: 1.6 }}>{t.tower_category_help}</div>
+                  </div>
+                )}
+                {compCat === 'ram' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.ram_generation}</div>
+                      <select
+                        value={compForm.ramGeneration}
+                        onChange={(e) => setCompForm({ ...compForm, ramGeneration: e.target.value as '' | '4' | '5' })}
+                        style={INPUT_STYLE}
+                      >
+                        <option value="">—</option>
+                        <option value="4">DDR4</option>
+                        <option value="5">DDR5</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.ram_speed_mhz}</div>
+                      <input
+                        type="number"
+                        min={0}
+                        step={100}
+                        value={compForm.ramSpeedMhz}
+                        onChange={(e) => setCompForm({ ...compForm, ramSpeedMhz: e.target.value })}
+                        placeholder="6400"
+                        style={INPUT_STYLE}
+                      />
+                    </div>
+                    <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1', fontFamily: 'var(--font-sans)', fontSize: 11, color: '#B0A898', lineHeight: 1.6 }}>
+                      {t.ram_generation_help}
+                    </div>
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>

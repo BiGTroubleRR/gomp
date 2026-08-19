@@ -161,6 +161,8 @@ create table if not exists public.components (
   cooler_radiator_mm numeric(6, 1), -- cooler only: AIO radiator size
   psu_length_mm numeric(6, 1), -- psu only
   ram_height_mm numeric(6, 1), -- ram only: per-SKU heatsink height (RAM_DIMM_SIZE_MM.height is the bare-PCB fallback)
+  ram_generation smallint, -- ram only: 4 or 5 (DDR4/DDR5) — drives the /build DDR filter
+  ram_speed_mhz integer, -- ram only: rated speed, e.g. 6400 for "DDR5-6400" — drives the /build min-speed slider
   fan_mounts jsonb, -- case only: [{position, maxCount, sizesMm}] — real per-case fan slots, hand-sourced (not in buildcores-open-db)
   image_url text, -- admin-uploaded product shot, background already removed client-side before upload
   margin_override jsonb, -- {type: 'eur'|'pct', value: number} — overrides the site-wide margin for this one component
@@ -212,6 +214,8 @@ alter table public.components add column if not exists cooler_height_mm numeric(
 alter table public.components add column if not exists cooler_radiator_mm numeric(6, 1);
 alter table public.components add column if not exists psu_length_mm numeric(6, 1);
 alter table public.components add column if not exists ram_height_mm numeric(6, 1);
+alter table public.components add column if not exists ram_generation smallint;
+alter table public.components add column if not exists ram_speed_mhz integer;
 alter table public.components add column if not exists fan_mounts jsonb;
 alter table public.components add column if not exists image_url text;
 alter table public.components add column if not exists margin_override jsonb;
