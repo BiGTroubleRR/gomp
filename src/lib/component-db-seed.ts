@@ -133,6 +133,40 @@ export const STORAGE_M2_SIZE_MM = { length: 80, width: 22 };
 // width x height regardless of wattage/length; only length varies per model (Component.psuLengthMm).
 export const PSU_ATX_SIZE_MM = { width: 150, height: 86 };
 
+// CPU manufacturer isn't a structured field — every name in the catalog already leads with the
+// brand ("AMD Ryzen 9 9950X3D", "Intel Core Ultra 9 285K"), so this reads that prefix instead of
+// adding a DB column + backfill for something already encoded in the name.
+export function cpuManufacturer(name: string): string {
+  return name.split(' ')[0] || '';
+}
+
+// GPU/CPU/PSU specs already quote their wattage as a plain "570W"-style token (the same text
+// the picker card displays), so this pulls the number straight from there instead of adding a
+// parallel structured field that could drift out of sync with what's shown on screen.
+export function extractWatts(specs: string): number | null {
+  const m = specs.match(/(\d+)\s?W\b/);
+  return m ? Number(m[1]) : null;
+}
+
+// Flat per-category draw for the parts that don't quote their own wattage — small next to a
+// GPU/CPU, so a rough industry-typical estimate is enough for a "will my PSU handle this"
+// gut-check rather than a precise measurement.
+export const BASE_WATTS: Partial<Record<Category, number>> = {
+  mobo: 50,
+  ram: 6,
+  storage: 6,
+  cooler: 8,
+};
+
+// The DDR generation a motherboard supports isn't a structured field (unlike RAM's own
+// ramGeneration) — every board's specs string already leads with a "DDR4"/"DDR5" token
+// ("X870E · DDR5 · PCIe 5.0 · ..."), so this reads that instead of adding a column that would
+// just duplicate what the specs text already says.
+export function moboRamGeneration(mobo: Component | undefined): 4 | 5 | undefined {
+  const m = mobo?.specs.match(/DDR(4|5)/);
+  return m ? (Number(m[1]) as 4 | 5) : undefined;
+}
+
 export function defaultComponentDb(): ComponentDb {
   return {
     gpu: [
