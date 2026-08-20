@@ -14,6 +14,9 @@ import {
   caseFitsFormFactor,
   caseHasVerticalGpuMount,
   fitsInCase,
+  cpuManufacturer,
+  extractWatts,
+  BASE_WATTS,
   RAM_DIMM_SIZE_MM,
   STORAGE_M2_SIZE_MM,
   PSU_ATX_SIZE_MM,
@@ -23,6 +26,7 @@ import {
   type FanMountPosition,
   type FormFactor,
 } from '@/lib/component-db-seed';
+import { autoBuildForBudget, BUDGET_STEPS, type AutoBuildNote } from '@/lib/auto-build';
 import {
   createBuildScene,
   SLOTS,
@@ -86,6 +90,13 @@ const T = {
     power_draw: 'Estimated power draw',
     psu_ok: 'Comfortably within your PSU’s capacity.',
     psu_insufficient: 'Over your PSU’s rated capacity — pick a higher-wattage unit.',
+    budget: 'Budget',
+    budget_hint: 'Drag, then Build Complete PC picks the best value for this amount.',
+    auto_build_note_psu_over_budget: 'Picked a pricier PSU than this budget’s share to keep power delivery safe.',
+    auto_build_note_case_over_budget: 'Picked a pricier case than this budget’s share so everything actually fits.',
+    auto_build_note_no_psu_sufficient: 'No PSU in the catalog comfortably covers this build’s power draw — picked the highest-wattage one available.',
+    auto_build_note_no_case_fits: 'No case fits every picked part at once — picked the roomiest one available.',
+    auto_build_note_category_empty: (cat: string) => `No ${cat} available in the catalog yet.`,
   },
   sk: {
     nav_home: 'Domov', nav_shop: 'Obchod', nav_build: 'Zostaviť', nav_about: 'O nás', nav_account: 'Účet',
@@ -133,6 +144,13 @@ const T = {
     power_draw: 'Odhadovaný príkon',
     psu_ok: 'S rezervou v rámci kapacity vášho zdroja.',
     psu_insufficient: 'Nad menovitú kapacitu vášho zdroja — zvoľte silnejší zdroj.',
+    budget: 'Rozpočet',
+    budget_hint: 'Potiahnite a „Zostaviť kompletné PC“ vyberie najlepší pomer ceny a výkonu za túto sumu.',
+    auto_build_note_psu_over_budget: 'Vybraný drahší zdroj, než by pripadalo na tento rozpočet — pre bezpečné napájanie.',
+    auto_build_note_case_over_budget: 'Vybraná drahšia skriňa, než by pripadalo na tento rozpočet — aby sa všetko naozaj zmestilo.',
+    auto_build_note_no_psu_sufficient: 'Žiadny zdroj v katalógu s rezervou nepokryje príkon tejto zostavy — vybraný najsilnejší dostupný.',
+    auto_build_note_no_case_fits: 'Žiadna skriňa nepojme všetky vybrané diely naraz — vybraná najpriestrannejšia dostupná.',
+    auto_build_note_category_empty: (cat: string) => `V katalógu zatiaľ nie je k dispozícii žiadna kategória ${cat}.`,
   },
 } as const;
 
@@ -204,32 +222,6 @@ function FilterChip({ active, label, onClick }: { active: boolean; label: string
   );
 }
 
-// CPU manufacturer isn't a structured field — every name in the catalog already leads with the
-// brand ("AMD Ryzen 9 9950X3D", "Intel Core Ultra 9 285K"), so this reads that prefix instead of
-// adding a DB column + backfill for something already encoded in the name, same reasoning as
-// ramModuleCount above.
-function cpuManufacturer(name: string): string {
-  return name.split(' ')[0] || '';
-}
-
-// GPU/CPU/PSU specs already quote their wattage as a plain "570W"-style token (the same text
-// the picker card displays), so this pulls the number straight from there instead of adding a
-// parallel structured field that could drift out of sync with what's shown on screen.
-function extractWatts(specs: string): number | null {
-  const m = specs.match(/(\d+)\s?W\b/);
-  return m ? Number(m[1]) : null;
-}
-
-// Flat per-category draw for the parts that don't quote their own wattage — small next to a
-// GPU/CPU, so a rough industry-typical estimate is enough for a "will my PSU handle this"
-// gut-check rather than a precise measurement.
-const BASE_WATTS: Partial<Record<CompId, number>> = {
-  mobo: 50,
-  ram: 6,
-  storage: 6,
-  cooler: 8,
-};
-
 // Same data, formatted as a single line of text for the side panel / hover tooltip (the 3D
 // annotations above are the blueprint-style version of the same numbers).
 function dimensionLabel(id: CompId, comp: Component | undefined): string | null {
@@ -257,6 +249,20 @@ export default function BuildPage() {
   const router = useRouter();
   const pathname = usePathname();
   const t = T[lang];
+  function autoBuildNoteMessage(note: AutoBuildNote): string {
+    switch (note.code) {
+      case 'psu_over_budget':
+        return t.auto_build_note_psu_over_budget;
+      case 'case_over_budget':
+        return t.auto_build_note_case_over_budget;
+      case 'no_psu_sufficient':
+        return t.auto_build_note_no_psu_sufficient;
+      case 'no_case_fits':
+        return t.auto_build_note_no_case_fits;
+      case 'category_empty':
+        return t.auto_build_note_category_empty(t.cat_names[note.category as CompId]);
+    }
+  }
   const isMobile = useIsMobile();
   // Desktop's sidebar/right panel float semi-transparently over the 3D scene — a hard cream
   // outline (four offset copies, not just a soft blur) keeps the text legible against both the
@@ -280,6 +286,8 @@ export default function BuildPage() {
   const [moboFormFactorFilter, setMoboFormFactorFilter] = useState(''); // '' = all form factors
   const [cpuMfrFilter, setCpuMfrFilter] = useState(''); // '' = all manufacturers
   const [sortByTier, setSortByTier] = useState(false); // cooler/gpu/storage/psu/case only
+  const [budgetIdx, setBudgetIdx] = useState(Math.floor(BUDGET_STEPS.length / 2)); // index into BUDGET_STEPS
+  const [autoBuildNotes, setAutoBuildNotes] = useState<AutoBuildNote[]>([]);
   const [activeId, setActiveId] = useState<CompId | null>(null);
   const [activeStep, setActiveStep] = useState<CompId>(SLOTS[0]);
   const [ordering, setOrdering] = useState(false);
@@ -658,10 +666,23 @@ export default function BuildPage() {
     setHoverPos(null);
   }
 
+  // Fills every empty slot at once via the budget slider's target, rather than the old
+  // "just take whatever's first in the catalog" fallback (see findComp's list[0] default) —
+  // already-picked slots are passed in as fixed inputs so a manual choice never gets overridden.
   function buildAll() {
+    const locked: Partial<Record<Category, Component>> = {};
+    SLOTS.forEach((id) => {
+      if (!selected[id]) return;
+      const comp = (compDb[id] || []).find((c) => c.name === selections[id]);
+      if (comp) locked[id] = comp;
+    });
+    const { selections: picks, notes } = autoBuildForBudget(BUDGET_STEPS[budgetIdx], compDb, locked);
+    setAutoBuildNotes(notes);
     SLOTS.forEach((id, i) => {
       if (selected[id]) return;
-      setTimeout(() => toggleComponent(id), i * 90);
+      const name = picks[id];
+      if (!name) return;
+      setTimeout(() => selectCard(id, name), i * 90);
     });
     setActiveStep(SLOTS[SLOTS.length - 1]);
   }
@@ -727,6 +748,25 @@ export default function BuildPage() {
             <div style={{ padding: isMobile ? '20px 20px 10px' : '20px 20px 14px' }}>
               <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase' }}>{t.pc_builder}</div>
               <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#A09890', marginTop: 4 }}>{t.select_components}</div>
+            </div>
+            {/* ---- Budget slider — snaps to common breakpoints (see BUDGET_STEPS), same
+                convention as the RAM min-speed slider below. Drives "Build Complete PC"'s
+                automatic pick; has no effect on manual per-part selection. ---- */}
+            <div style={{ padding: isMobile ? '0 20px 14px' : '0 20px 14px' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.budget}</span>
+                <span style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: MAROON, fontWeight: 600 }}>{fmt(BUDGET_STEPS[budgetIdx])}</span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={BUDGET_STEPS.length - 1}
+                step={1}
+                value={budgetIdx}
+                onChange={(e) => setBudgetIdx(Number(e.target.value))}
+                style={{ width: '100%', accentColor: MAROON, display: 'block' }}
+              />
+              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890', marginTop: 4, lineHeight: 1.4 }}>{t.budget_hint}</div>
             </div>
             <div style={{ flex: isMobile ? 'none' : 1, overflowY: isMobile ? 'visible' : 'auto', padding: '0 20px 16px' }}>
               {/* ---- Step pills — free-jump between categories, green/checked once picked ---- */}
@@ -1007,6 +1047,15 @@ export default function BuildPage() {
               >
                 {t.clear_all}
               </button>
+              {autoBuildNotes.length > 0 && (
+                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {autoBuildNotes.map((note, i) => (
+                    <div key={i} style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, lineHeight: 1.4 }}>
+                      · {autoBuildNoteMessage(note)}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
