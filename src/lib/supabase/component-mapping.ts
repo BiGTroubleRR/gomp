@@ -2,7 +2,7 @@
 // (src/lib/supabase/components.ts) and the admin-only write route
 // (src/app/api/admin/components/route.ts). No 'use client' here — this file
 // must be importable from server route handlers too.
-import { type Category, type Component, type Tier, type FormFactor, type FanMountSpec } from '@/lib/component-db-seed';
+import { type Category, type Component, type Tier, type FormFactor, type FanMountSpec, type Margin } from '@/lib/component-db-seed';
 import type { Database } from './types';
 
 export type ComponentRow = Database['public']['Tables']['components']['Row'];
@@ -36,7 +36,11 @@ export function rowToComponent(row: ComponentRow): Component {
   if (row.cooler_radiator_mm != null) comp.coolerRadiatorMm = Number(row.cooler_radiator_mm);
   if (row.psu_length_mm != null) comp.psuLengthMm = Number(row.psu_length_mm);
   if (row.ram_height_mm != null) comp.ramHeightMm = Number(row.ram_height_mm);
+  if (row.ram_generation === 4 || row.ram_generation === 5) comp.ramGeneration = row.ram_generation;
+  if (row.ram_speed_mhz != null) comp.ramSpeedMhz = Number(row.ram_speed_mhz);
   if (row.fan_mounts != null) comp.fanMounts = row.fan_mounts as unknown as FanMountSpec[];
+  if (row.image_url) comp.imageUrl = row.image_url;
+  if (row.margin_override) comp.marginOverride = row.margin_override as unknown as Margin;
   return comp;
 }
 
@@ -66,7 +70,11 @@ export function componentToRow(category: Category, comp: Component, sortOrder: n
     cooler_radiator_mm: comp.coolerRadiatorMm ?? null,
     psu_length_mm: comp.psuLengthMm ?? null,
     ram_height_mm: comp.ramHeightMm ?? null,
+    ram_generation: comp.ramGeneration ?? null,
+    ram_speed_mhz: comp.ramSpeedMhz ?? null,
     fan_mounts: (comp.fanMounts as unknown as ComponentInsert['fan_mounts']) ?? null,
+    image_url: comp.imageUrl ?? null,
+    margin_override: (comp.marginOverride as unknown as ComponentInsert['margin_override']) ?? null,
     sort_order: sortOrder,
   };
 }

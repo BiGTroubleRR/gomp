@@ -22,6 +22,7 @@ import {
   type Component,
   type ComponentDb,
   type FanMountPosition,
+  type FormFactor,
 } from '@/lib/component-db-seed';
 import { createBuildScene, SLOTS, CASE_SIZES, mmToUnits, type BuildScene, type CompId, type DimensionSpec } from '@/lib/build-scene';
 import { useIsMobile } from '@/lib/use-media-query';
@@ -34,6 +35,7 @@ const T = {
     clear_all: 'Clear All', drag_to_orbit: 'Drag to orbit  ·  Scroll to zoom', hide_panel: 'Hide Side Panel',
     show_panel: 'Show Side Panel', complete: 'Complete', your_build: 'Your Build', selected_part: 'Selected Part',
     build_total: 'Build Total', passmark_score: 'PassMark Score', verify_passmark: 'Verify on PassMark ↗', dimensions: 'Dimensions',
+    passmark_title: (score: number) => `PassMark: ${score.toLocaleString()}`,
     fans: 'Case Fans',
     fan_positions: { front: 'Front', top: 'Top', rear: 'Rear', bottom: 'Bottom', side: 'Side' },
     show_can: 'Add Can for Scale', hide_can: 'Remove Can', show_dims: 'Show Dimensions', hide_dims: 'Hide Dimensions',
@@ -64,6 +66,12 @@ const T = {
     no_case_fit: (formFactor: string) => `No cases fit a ${formFactor} motherboard at this size — try a larger size, or a smaller motherboard.`,
     no_part_fit: (caseName: string) => `Nothing here fits inside the ${caseName} — pick a bigger case, or a smaller part.`,
     no_case_fit_part: 'No cases at this size fit everything you already picked — try a larger size, or remove a part.',
+    no_ram_match: 'No RAM kits match this filter — try a lower minimum speed, or a different DDR generation.',
+    ram_gen_all: 'All', ram_min_speed: 'Minimum speed', ram_min_speed_any: 'Any',
+    filter_all: 'All',
+    no_mobo_match: 'No motherboards match this filter — try a different socket or form factor.',
+    no_cpu_mfr_match: (mfr: string) => `No ${mfr} CPUs match your other filters.`,
+    sort_by_tier: 'Sort by tier',
     power_draw: 'Estimated power draw',
     psu_ok: 'Comfortably within your PSU’s capacity.',
     psu_insufficient: 'Over your PSU’s rated capacity — pick a higher-wattage unit.',
@@ -74,6 +82,7 @@ const T = {
     clear_all: 'Vymazať všetko', drag_to_orbit: 'Ťahaním otáčať  ·  Kolieskom priblížiť', hide_panel: 'Skryť bočný panel',
     show_panel: 'Zobraziť bočný panel', complete: 'Dokončené', your_build: 'Vaša zostava', selected_part: 'Vybraný diel',
     build_total: 'Celková cena', passmark_score: 'Skóre PassMark', verify_passmark: 'Overiť na PassMark ↗', dimensions: 'Rozmery',
+    passmark_title: (score: number) => `PassMark: ${score.toLocaleString()}`,
     fans: 'Ventilátory skrine',
     fan_positions: { front: 'Predné', top: 'Horné', rear: 'Zadné', bottom: 'Spodné', side: 'Bočné' },
     show_can: 'Vložiť plechovku pre mierku', hide_can: 'Odstrániť plechovku', show_dims: 'Zobraziť rozmery', hide_dims: 'Skryť rozmery',
@@ -104,6 +113,12 @@ const T = {
     no_case_fit: (formFactor: string) => `Žiadna skriňa tejto veľkosti neposkytne miesto pre dosku ${formFactor} — skúste väčšiu veľkosť alebo menšiu dosku.`,
     no_part_fit: (caseName: string) => `Nič tu sa nezmestí do skrine ${caseName} — zvoľte väčšiu skriňu alebo menší diel.`,
     no_case_fit_part: 'Žiadna skriňa tejto veľkosti neposkytne miesto pre všetko, čo ste už vybrali — skúste väčšiu veľkosť alebo odstráňte diel.',
+    no_ram_match: 'Žiadna sada RAM nevyhovuje tomuto filtru — skúste nižšiu minimálnu rýchlosť alebo inú generáciu DDR.',
+    ram_gen_all: 'Všetky', ram_min_speed: 'Minimálna rýchlosť', ram_min_speed_any: 'Ľubovoľná',
+    filter_all: 'Všetky',
+    no_mobo_match: 'Žiadna základná doska nevyhovuje tomuto filtru — skúste inú pätici alebo formát.',
+    no_cpu_mfr_match: (mfr: string) => `Žiadne CPU značky ${mfr} nevyhovuje ostatným filtrom.`,
+    sort_by_tier: 'Zoradiť podľa triedy',
     power_draw: 'Odhadovaný príkon',
     psu_ok: 'S rezervou v rámci kapacity vášho zdroja.',
     psu_insufficient: 'Nad menovitú kapacitu vášho zdroja — zvoľte silnejší zdroj.',
@@ -117,6 +132,14 @@ const MUTED = '#7A7469';
 const MAROON = '#6E1423';
 const GOLD = '#C4A35A';
 const POSH_GREEN = '#5C7A5C'; // muted sage, so the wattage bar's "safe" end still reads as part of the site's palette
+
+// Best-to-worst tier order for the sort-by-tier toggle; an unset tier (bulk-imported SKUs with
+// no PassMark score — see the Component.tier comment in component-db-seed.ts) sorts last rather
+// than throwing off indexOf('') === -1 landing before 'S'.
+const TIER_ORDER = ['S', 'A', 'B', 'C', 'D', ''];
+// mobo/cpu/ram get their own dedicated filters (socket+form-factor, manufacturer, DDR+speed)
+// instead — sort-by-tier is for the categories that only have a plain tier to go on.
+const SORT_BY_TIER_STEPS: CompId[] = ['cooler', 'gpu', 'storage', 'psu', 'case'];
 
 function TierBadge({ tier, small }: { tier?: Tier; small?: boolean }) {
   if (!tier) return null;
@@ -150,6 +173,26 @@ function SpecPill({ label }: { label: string }) {
   );
 }
 
+// Shared small toggle-chip look already used inline for the case-size buckets — pulled out once
+// there were three separate filter rows (mobo socket/form-factor, cpu manufacturer) that all
+// needed the exact same active/inactive styling.
+function FilterChip({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '4px 9px', borderRadius: 4,
+        border: `1px solid ${active ? MAROON : 'rgba(28,28,26,0.2)'}`,
+        background: active ? 'rgba(110,20,35,0.08)' : 'transparent',
+        color: active ? MAROON : MUTED,
+        fontFamily: 'var(--font-mono)', fontSize: 9, cursor: 'pointer',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 // Real per-SKU dimensions when the selected case has them (sourced from buildcores-open-db —
 // see the attribution note on /about), falling back to the old category-bucket size for a case
 // that doesn't (e.g. one added in Admin without dimension fields filled in yet).
@@ -164,6 +207,30 @@ function caseUnitsFor(comp: Component | undefined, category: string) {
 // tooltip, and the 3D blueprint annotations) is shown in.
 function cm(mm: number): string {
   return `${(mm / 10).toFixed(1)} cm`;
+}
+
+// Every RAM row's specs string leads with "N×..." (e.g. "2×16GB · CL32") — read straight off
+// that rather than adding a dedicated column, since every curated and bulk-imported RAM row
+// already follows this format. Falls back to 2 (the most common kit) if unparseable.
+function ramModuleCount(comp: Component): number {
+  const m = comp.specs.match(/^(\d+)\s*×/);
+  return m ? Number(m[1]) : 2;
+}
+
+// CPU manufacturer isn't a structured field — every name in the catalog already leads with the
+// brand ("AMD Ryzen 9 9950X3D", "Intel Core Ultra 9 285K"), so this reads that prefix instead of
+// adding a DB column + backfill for something already encoded in the name, same reasoning as
+// ramModuleCount above.
+function cpuManufacturer(name: string): string {
+  return name.split(' ')[0] || '';
+}
+
+// Real DIMM slot count by form factor — every Mini-ITX board in the catalog has 2 (there's no
+// room for more), every ATX/mATX/E-ATX board has 4. No per-SKU data needed since this holds for
+// every real board at each of those sizes.
+function moboRamSlotCount(mobo: Component | undefined): number {
+  if (!mobo) return 0;
+  return mobo.formFactor === 'Mini-ITX' ? 2 : 4;
 }
 
 // GPU/CPU/PSU specs already quote their wattage as a plain "570W"-style token (the same text
@@ -224,13 +291,20 @@ function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVertical 
   // annotation ends up perpendicular to how the part actually looks (a real physical fix, not
   // just a display tweak: mobo/cpu use local Y+Z, ram/storage use local Y+Z too but paired with
   // a different real dimension each since ram's long axis is Y while storage's is Z).
+  // Only the mesh scale is quoted here (annotate: false) — a motherboard's form factor
+  // (ATX/mATX/E-ATX/Mini-ITX), already shown as its own badge, is a standard size class, so
+  // drawing exact cm figures on top of it is redundant (see dimensionLabel below, which omits
+  // mobo entirely for the same reason).
   if (id === 'mobo' && comp.formFactor) {
     const size = MOBO_FORM_FACTOR_SIZE_MM[comp.formFactor];
-    return size ? [{ axis: 'y', mm: size.width }, { axis: 'z', mm: size.depth }] : [];
+    return size ? [{ axis: 'y', mm: size.width, annotate: false }, { axis: 'z', mm: size.depth, annotate: false }] : [];
   }
   // CPU package size is deliberately not quoted — it barely varies (a few mm across every
   // socket) and isn't a dimension anyone building a PC actually needs to check.
-  if (id === 'ram') return [{ axis: 'y', mm: RAM_DIMM_SIZE_MM.length }, { axis: 'z', mm: comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height }];
+  // Height rides local X (the stick's own face-normal, matching the motherboard's — see
+  // buildRamStick in build-scene.ts), not Z, which is now the fixed slot-repeat axis multiple
+  // sticks are laid out along and must stay unscaled by any one SKU's own heatsink height.
+  if (id === 'ram') return [{ axis: 'y', mm: RAM_DIMM_SIZE_MM.length }, { axis: 'x', mm: comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height }];
   if (id === 'storage') return [{ axis: 'z', mm: STORAGE_M2_SIZE_MM.length }, { axis: 'y', mm: STORAGE_M2_SIZE_MM.width }];
   return [];
 }
@@ -250,10 +324,8 @@ function dimensionLabel(id: CompId, comp: Component | undefined): string | null 
     if (comp.coolerHeightMm) return `${cm(comp.coolerHeightMm)} tall`;
   }
   if (id === 'psu' && comp.psuLengthMm) return `${cm(PSU_ATX_SIZE_MM.width)} × ${cm(PSU_ATX_SIZE_MM.height)} × ${cm(comp.psuLengthMm)}`;
-  if (id === 'mobo' && comp.formFactor) {
-    const size = MOBO_FORM_FACTOR_SIZE_MM[comp.formFactor];
-    return size ? `${cm(size.width)} × ${cm(size.depth)}` : null;
-  }
+  // Motherboard size is deliberately not quoted — ATX/mATX/E-ATX/Mini-ITX are standard size
+  // classes already shown as their own badge, so exact cm figures on top are redundant.
   if (id === 'ram') return `${cm(RAM_DIMM_SIZE_MM.length)} × ${cm(comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height)}`;
   if (id === 'storage') return `${cm(STORAGE_M2_SIZE_MM.length)} × ${cm(STORAGE_M2_SIZE_MM.width)}`;
   return null;
@@ -281,6 +353,12 @@ export default function BuildPage() {
   const [selected, setSelected] = useState<Record<CompId, boolean>>({} as Record<CompId, boolean>);
   const [selections, setSelections] = useState<Record<CompId, string>>({} as Record<CompId, string>);
   const [caseCat, setCaseCat] = useState('Mid Tower');
+  const [ramGenFilter, setRamGenFilter] = useState<0 | 4 | 5>(0); // 0 = all generations
+  const [ramMinSpeedIdx, setRamMinSpeedIdx] = useState(0); // index into the speed steps computed below; 0 = no minimum
+  const [moboSocketFilter, setMoboSocketFilter] = useState(''); // '' = all sockets
+  const [moboFormFactorFilter, setMoboFormFactorFilter] = useState(''); // '' = all form factors
+  const [cpuMfrFilter, setCpuMfrFilter] = useState(''); // '' = all manufacturers
+  const [sortByTier, setSortByTier] = useState(false); // cooler/gpu/storage/psu/case only
   const [activeId, setActiveId] = useState<CompId | null>(null);
   const [activeStep, setActiveStep] = useState<CompId>(SLOTS[0]);
   const [ordering, setOrdering] = useState(false);
@@ -403,6 +481,35 @@ export default function BuildPage() {
     return { estimatedWatts: watts, psuWatts: psu };
   }, [selected, selections, compDb]);
 
+  // The min-speed slider snaps across the real speeds present in the catalog (for whichever DDR
+  // generation is currently filtered) rather than a continuous 1MHz range — "common frequencies"
+  // means whatever kits actually exist, not an arbitrary guessed list that could drift from the
+  // catalog. Shared between the filter UI and the actual list filtering below so both agree on
+  // what index N means.
+  const ramSpeedSteps = useMemo(() => {
+    const pool = (compDb.ram || [])
+      .filter((c) => !ramGenFilter || c.ramGeneration === ramGenFilter)
+      .map((c) => c.ramSpeedMhz)
+      .filter((s): s is number => s != null);
+    return Array.from(new Set(pool)).sort((a, b) => a - b);
+  }, [compDb.ram, ramGenFilter]);
+
+  // Chip options for the mobo/cpu filters are read straight off the catalog rather than a fixed
+  // list, so a newly-imported socket/form-factor/manufacturer shows up automatically instead of
+  // needing this file edited every time the catalog grows.
+  const moboSockets = useMemo(
+    () => Array.from(new Set((compDb.mobo || []).map((c) => c.socket).filter((s): s is string => !!s))).sort(),
+    [compDb.mobo],
+  );
+  const moboFormFactors = useMemo(
+    () => Array.from(new Set((compDb.mobo || []).map((c) => c.formFactor).filter((f): f is FormFactor => !!f))).sort(),
+    [compDb.mobo],
+  );
+  const cpuManufacturers = useMemo(
+    () => Array.from(new Set((compDb.cpu || []).map((c) => cpuManufacturer(c.name)).filter(Boolean))).sort(),
+    [compDb.cpu],
+  );
+
   const installedCount = SLOTS.filter((id) => selected[id]).length;
 
   // Falls back to a compatible default rather than always list[0] — otherwise "Build Complete
@@ -439,7 +546,16 @@ export default function BuildPage() {
       setActiveId(id);
       const comp = next ? findComp(id) : undefined;
       if (id === 'case' && next) sceneRef.current?.setGpuOrientation(caseHasVerticalGpuMount(comp?.name));
+      if (id === 'mobo') sceneRef.current?.setMoboRamSlots(moboRamSlotCount(comp));
+      // Removing the case leaves its fan meshes orphaned in the scene otherwise — they're tracked
+      // separately from the case mesh itself (see setFans), so toggling the case off doesn't
+      // implicitly remove them the way it does for the case mesh.
+      if (id === 'case' && !next) {
+        setFanConfigState({});
+        sceneRef.current?.setFans({});
+      }
       if (comp) sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp));
+      if (id === 'ram' && comp) sceneRef.current?.setRamModules(ramModuleCount(comp));
       sceneRef.current?.toggleComponent(id, next);
       const gpuVertical =
         id === 'gpu' && selected.case
@@ -477,6 +593,8 @@ export default function BuildPage() {
       // user picks a different card) — that path doesn't go through toggleComponent (see
       // selectCard), so this is what picks up the new part's real size in that case.
       sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp));
+      if (id === 'ram') sceneRef.current?.setRamModules(ramModuleCount(comp));
+      if (id === 'mobo') sceneRef.current?.setMoboRamSlots(moboRamSlotCount(comp));
     }
     const gpuVertical =
       id === 'gpu' && selected.case
@@ -514,6 +632,10 @@ export default function BuildPage() {
     if (selected[id] && selections[id] === name) {
       setSelected((s) => ({ ...s, [id]: false }));
       sceneRef.current?.toggleComponent(id, false);
+      // Removing the motherboard this way (re-clicking an already-selected card, rather than
+      // toggleComponent's own path) skipped this same follow-up — the empty-slot outlines are
+      // keyed off mobo presence, not just visibility.
+      if (id === 'mobo') sceneRef.current?.setMoboRamSlots(0);
       return;
     }
     // changeSelection (above) already applies this pick's size/scale/orientation, but the scene
@@ -720,24 +842,83 @@ export default function BuildPage() {
                 <p style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginTop: 4, lineHeight: 1.4 }}>{t.cat_desc[activeStep]}</p>
               </div>
 
+              {activeStep === 'mobo' && (moboSockets.length > 1 || moboFormFactors.length > 1) && (
+                <div style={{ marginBottom: 12 }}>
+                  {moboSockets.length > 1 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: moboFormFactors.length > 1 ? 6 : 0 }}>
+                      <FilterChip active={!moboSocketFilter} label={t.filter_all} onClick={() => setMoboSocketFilter('')} />
+                      {moboSockets.map((s) => (
+                        <FilterChip key={s} active={moboSocketFilter === s} label={s} onClick={() => setMoboSocketFilter(s)} />
+                      ))}
+                    </div>
+                  )}
+                  {moboFormFactors.length > 1 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      <FilterChip active={!moboFormFactorFilter} label={t.filter_all} onClick={() => setMoboFormFactorFilter('')} />
+                      {moboFormFactors.map((f) => (
+                        <FilterChip key={f} active={moboFormFactorFilter === f} label={f} onClick={() => setMoboFormFactorFilter(f)} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeStep === 'cpu' && cpuManufacturers.length > 1 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  <FilterChip active={!cpuMfrFilter} label={t.filter_all} onClick={() => setCpuMfrFilter('')} />
+                  {cpuManufacturers.map((m) => (
+                    <FilterChip key={m} active={cpuMfrFilter === m} label={m} onClick={() => setCpuMfrFilter(m)} />
+                  ))}
+                </div>
+              )}
+
               {activeStep === 'case' && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                   {t.case_cats.map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => changeCaseCat(c.id)}
-                      style={{
-                        ...textPop, padding: '4px 9px', borderRadius: 4,
-                        border: `1px solid ${caseCat === c.id ? MAROON : 'rgba(28,28,26,0.2)'}`,
-                        background: caseCat === c.id ? 'rgba(110,20,35,0.08)' : 'transparent',
-                        color: caseCat === c.id ? MAROON : MUTED,
-                        fontFamily: 'var(--font-mono)', fontSize: 9, cursor: 'pointer',
-                      }}
-                    >
-                      {c.label}
-                    </button>
+                    <FilterChip key={c.id} active={caseCat === c.id} label={c.label} onClick={() => changeCaseCat(c.id)} />
                   ))}
                 </div>
+              )}
+
+              {activeStep === 'ram' && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: ramSpeedSteps.length > 1 ? 10 : 0 }}>
+                    {([0, 4, 5] as const).map((gen) => (
+                      <FilterChip
+                        key={gen}
+                        active={ramGenFilter === gen}
+                        label={gen === 0 ? t.ram_gen_all : `DDR${gen}`}
+                        onClick={() => { setRamGenFilter(gen); setRamMinSpeedIdx(0); }}
+                      />
+                    ))}
+                  </div>
+                  {ramSpeedSteps.length > 1 && (
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED }}>{t.ram_min_speed}</span>
+                        <span style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: INK, fontWeight: 600 }}>
+                          {ramMinSpeedIdx === 0 ? t.ram_min_speed_any : `${ramSpeedSteps[Math.min(ramMinSpeedIdx, ramSpeedSteps.length - 1)]} MHz+`}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={ramSpeedSteps.length - 1}
+                        step={1}
+                        value={Math.min(ramMinSpeedIdx, ramSpeedSteps.length - 1)}
+                        onChange={(e) => setRamMinSpeedIdx(Number(e.target.value))}
+                        style={{ width: '100%', accentColor: MAROON }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {SORT_BY_TIER_STEPS.includes(activeStep) && (
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, cursor: 'pointer', width: 'fit-content' }}>
+                  <input type="checkbox" checked={sortByTier} onChange={(e) => setSortByTier(e.target.checked)} />
+                  <span style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED }}>{t.sort_by_tier}</span>
+                </label>
               )}
 
               {/* ---- Product cards for the active category only ----
@@ -762,22 +943,41 @@ export default function BuildPage() {
                     const otherComp = (compDb[otherId] || []).find((c) => c.name === selections[otherId]);
                     if (otherComp) list = list.filter((c) => fitsInCase(otherId, otherComp, c));
                   });
-                } else if (activeStep === 'cpu' && selectedMobo?.socket) {
-                  list = list.filter((c) => c.socket === selectedMobo.socket);
+                } else if (activeStep === 'cpu') {
+                  if (selectedMobo?.socket) list = list.filter((c) => c.socket === selectedMobo.socket);
+                  if (cpuMfrFilter) list = list.filter((c) => cpuManufacturer(c.name) === cpuMfrFilter);
                 } else if (activeStep === 'gpu' || activeStep === 'cooler' || activeStep === 'psu') {
                   if (selectedCase) list = list.filter((c) => fitsInCase(activeStep, c, selectedCase));
+                } else if (activeStep === 'ram') {
+                  if (ramGenFilter) list = list.filter((c) => c.ramGeneration === ramGenFilter);
+                  if (ramMinSpeedIdx > 0) {
+                    const threshold = ramSpeedSteps[Math.min(ramMinSpeedIdx, ramSpeedSteps.length - 1)];
+                    if (threshold != null) list = list.filter((c) => (c.ramSpeedMhz ?? 0) >= threshold);
+                  }
+                } else if (activeStep === 'mobo') {
+                  if (moboSocketFilter) list = list.filter((c) => c.socket === moboSocketFilter);
+                  if (moboFormFactorFilter) list = list.filter((c) => c.formFactor === moboFormFactorFilter);
+                }
+                if (sortByTier && SORT_BY_TIER_STEPS.includes(activeStep)) {
+                  list = [...list].sort((a, b) => TIER_ORDER.indexOf(a.tier ?? '') - TIER_ORDER.indexOf(b.tier ?? ''));
                 }
                 if (list.length === 0) {
                   const reason =
                     activeStep === 'cpu' && selectedMobo?.socket
                       ? t.no_socket_match(selectedMobo.socket)
-                      : activeStep === 'case' && selectedMobo?.formFactor
-                        ? t.no_case_fit(selectedMobo.formFactor)
-                        : activeStep === 'case'
-                          ? t.no_case_fit_part
-                          : (activeStep === 'gpu' || activeStep === 'cooler' || activeStep === 'psu') && selectedCase
-                            ? t.no_part_fit(selectedCase.name)
-                            : t.none_add_admin;
+                      : activeStep === 'cpu' && cpuMfrFilter
+                        ? t.no_cpu_mfr_match(cpuMfrFilter)
+                        : activeStep === 'case' && selectedMobo?.formFactor
+                          ? t.no_case_fit(selectedMobo.formFactor)
+                          : activeStep === 'case'
+                            ? t.no_case_fit_part
+                            : (activeStep === 'gpu' || activeStep === 'cooler' || activeStep === 'psu') && selectedCase
+                              ? t.no_part_fit(selectedCase.name)
+                              : activeStep === 'ram' && (ramGenFilter || ramMinSpeedIdx > 0)
+                                ? t.no_ram_match
+                                : activeStep === 'mobo' && (moboSocketFilter || moboFormFactorFilter)
+                                  ? t.no_mobo_match
+                                  : t.none_add_admin;
                   return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', padding: '12px 0' }}>{reason}</div>;
                 }
                 return list.map((c) => {
@@ -792,32 +992,51 @@ export default function BuildPage() {
                         borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                        <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: isThisSelected ? MAROON : INK }}>{c.name}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                          {c.formFactor && <SpecPill label={c.formFactor} />}
-                          {c.socket && <SpecPill label={c.socket} />}
-                          <TierBadge tier={c.tier} small />
-                        </div>
-                      </div>
-                      <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {c.specs}
-                      </div>
-                      {dimensionLabel(activeStep, c) && (
-                        <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: '#A89A78', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {dimensionLabel(activeStep, c)}
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                        <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
-                        <div
-                          style={{
-                            width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            background: isThisSelected ? MAROON : 'transparent', border: `1px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.3)'}`,
-                            color: isThisSelected ? '#FDFAF4' : MUTED, fontSize: 10, fontWeight: 700,
-                          }}
-                        >
-                          {isThisSelected ? '✓' : '+'}
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        {c.imageUrl && (
+                          <div
+                            style={{
+                              width: 36, height: 36, borderRadius: 4, flexShrink: 0,
+                              background: 'repeating-conic-gradient(rgba(28,28,26,0.06) 0% 25%, transparent 0% 50%) 0 0 / 10px 10px',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                            }}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={c.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: isThisSelected ? MAROON : INK }}>{c.name}</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                              {c.formFactor && <SpecPill label={c.formFactor} />}
+                              {c.socket && <SpecPill label={c.socket} />}
+                              {c.ramGeneration && <SpecPill label={`DDR${c.ramGeneration}${c.ramSpeedMhz ? `-${c.ramSpeedMhz}` : ''}`} />}
+                              <span title={c.passmark ? t.passmark_title(c.passmark) : undefined}>
+                                <TierBadge tier={c.tier} small />
+                              </span>
+                            </div>
+                          </div>
+                          <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {c.specs}
+                          </div>
+                          {dimensionLabel(activeStep, c) && (
+                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: '#A89A78', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {dimensionLabel(activeStep, c)}
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
+                            <div
+                              style={{
+                                width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                background: isThisSelected ? MAROON : 'transparent', border: `1px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.3)'}`,
+                                color: isThisSelected ? '#FDFAF4' : MUTED, fontSize: 10, fontWeight: 700,
+                              }}
+                            >
+                              {isThisSelected ? '✓' : '+'}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -952,7 +1171,21 @@ export default function BuildPage() {
                   </span>
                   <TierBadge tier={hoverTier} small />
                 </div>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: GOLD, fontWeight: 600, marginBottom: 8, lineHeight: 1.3 }}>{hoverComp.name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  {hoverComp.imageUrl && (
+                    <div
+                      style={{
+                        width: 30, height: 30, borderRadius: 4, flexShrink: 0,
+                        background: 'repeating-conic-gradient(rgba(245,240,230,0.08) 0% 25%, transparent 0% 50%) 0 0 / 8px 8px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                      }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={hoverComp.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    </div>
+                  )}
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: GOLD, fontWeight: 600, lineHeight: 1.3 }}>{hoverComp.name}</div>
+                </div>
                 <div style={{ marginBottom: hoverPassmark || dimensionLabel(hoverId, hoverComp) ? 8 : 0 }}>
                   {(hoverComp.specs || '').split(' · ').map((s, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(245,240,230,0.85)', marginBottom: 3 }}>

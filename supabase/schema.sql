@@ -135,7 +135,7 @@ create table if not exists public.components (
   name text not null,
   price numeric(10, 2) not null default 0,
   specs text not null default '',
-  tier text not null default 'B' check (tier in ('S', 'A', 'B', 'C', 'D')),
+  tier text check (tier is null or tier in ('S', 'A', 'B', 'C', 'D')), -- null for bulk-imported SKUs with no PassMark score to derive a tier from
   passmark integer,
   passmark_url text,
   market_price numeric(10, 2),
@@ -161,7 +161,11 @@ create table if not exists public.components (
   cooler_radiator_mm numeric(6, 1), -- cooler only: AIO radiator size
   psu_length_mm numeric(6, 1), -- psu only
   ram_height_mm numeric(6, 1), -- ram only: per-SKU heatsink height (RAM_DIMM_SIZE_MM.height is the bare-PCB fallback)
+  ram_generation smallint, -- ram only: 4 or 5 (DDR4/DDR5) — drives the /build DDR filter
+  ram_speed_mhz integer, -- ram only: rated speed, e.g. 6400 for "DDR5-6400" — drives the /build min-speed slider
   fan_mounts jsonb, -- case only: [{position, maxCount, sizesMm}] — real per-case fan slots, hand-sourced (not in buildcores-open-db)
+  image_url text, -- admin-uploaded product shot, background already removed client-side before upload
+  margin_override jsonb, -- {type: 'eur'|'pct', value: number} — overrides the site-wide margin for this one component
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -210,7 +214,18 @@ alter table public.components add column if not exists cooler_height_mm numeric(
 alter table public.components add column if not exists cooler_radiator_mm numeric(6, 1);
 alter table public.components add column if not exists psu_length_mm numeric(6, 1);
 alter table public.components add column if not exists ram_height_mm numeric(6, 1);
+alter table public.components add column if not exists ram_generation smallint;
+alter table public.components add column if not exists ram_speed_mhz integer;
 alter table public.components add column if not exists fan_mounts jsonb;
+alter table public.components add column if not exists image_url text;
+alter table public.components add column if not exists margin_override jsonb;
+
+-- Tier used to be not-null-default-'B', which would silently mislabel every bulk-imported SKU
+-- (no PassMark score to derive a real tier from) as tier B instead of leaving it unset.
+alter table public.components alter column tier drop not null;
+alter table public.components alter column tier drop default;
+alter table public.components drop constraint if exists components_tier_check;
+alter table public.components add constraint components_tier_check check (tier is null or tier in ('S', 'A', 'B', 'C', 'D'));
 
 -- Required for Supabase Realtime to broadcast INSERT/UPDATE/DELETE on this
 -- table — without this, postgres_changes subscriptions silently receive
@@ -310,6 +325,66 @@ create policy "checkout_intents_select_own" on public.checkout_intents
 
 create index if not exists checkout_intents_created_at_idx
   on public.checkout_intents (created_at desc);
+
+-- ---------------------------------------------------------------------------
+-- gbb_requests — "Gomp Budget Builds": a customer asks for a build made from
+-- secondhand parts and a price proposal, instead of configuring a new-parts
+-- build themselves. Same PII/RLS shape as checkout_intents (see the note on
+-- that table above) — submission goes through src/app/api/gbb/route.ts, not
+-- a direct anon insert, and reads are admin-only via src/app/api/admin/gbb.
+-- ---------------------------------------------------------------------------
+create table if not exists public.gbb_requests (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users (id) on delete set null,
+
+  first_name text not null default '',
+  last_name text not null default '',
+  email text not null,
+  phone text not null default '',
+
+  budget_eur numeric(10, 2),
+  use_case text not null default '',
+  notes text not null default '',
+
+  -- filled in by an admin while working the request — see the "Budget
+  -- Requests" admin tab, which also generates Bazoš/FB Marketplace search
+  -- links per ad-hoc search term rather than scraping those sites itself.
+  price_proposal_eur numeric(10, 2),
+  proposal_notes text not null default '',
+  status text not null default 'new' check (status in ('new', 'researching', 'quoted', 'converted', 'archived')),
+
+  lang text not null default 'en',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.gbb_requests enable row level security;
+
+-- Submission goes through src/app/api/gbb/route.ts (rate-limited, service-role
+-- insert) — do not add a public insert policy here.
+drop policy if exists "gbb_requests_insert_public" on public.gbb_requests;
+
+drop policy if exists "gbb_requests_select_own" on public.gbb_requests;
+create policy "gbb_requests_select_own" on public.gbb_requests
+  for select using (auth.uid() is not null and auth.uid() = user_id);
+
+create index if not exists gbb_requests_created_at_idx
+  on public.gbb_requests (created_at desc);
+
+create or replace function public.set_gbb_requests_updated_at()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists gbb_requests_set_updated_at on public.gbb_requests;
+create trigger gbb_requests_set_updated_at
+  before update on public.gbb_requests
+  for each row execute procedure public.set_gbb_requests_updated_at();
 
 -- ---------------------------------------------------------------------------
 -- rate_limit_hits — generic per-key request counter for public endpoints.

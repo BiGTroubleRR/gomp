@@ -8,6 +8,9 @@ import DeviceViewToggle from '@/components/DeviceViewToggle';
 import { useUser, SignInButton, UserButton } from '@clerk/nextjs';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
 import { fetchIntents, updateIntentStatus, type CheckoutIntent, type IntentStatus } from '@/lib/admin-intents';
+import { fetchGbbRequests, updateGbbRequest, type GbbRequest, type GbbStatus } from '@/lib/admin-gbb';
+import { marketplaceSearchLinks } from '@/lib/gbb-links';
+import { GBB_GREEN, GBB_GREEN_TINT } from '@/lib/gbb-theme';
 import { fetchComponentDb, subscribeComponents, insertComponent, updateComponentRow, deleteComponentRow } from '@/lib/supabase/components';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
 import {
@@ -190,7 +193,11 @@ type Translations = {
   margin_title: string; margin_desc: string;
   margin_eur: string; margin_pct: string;
   market_price_label: string; market_price_placeholder: string;
+  original_price_label: string; web_price_label: string;
+  image_label: string; image_removing_bg: string; image_uploading: string; image_replace: string; image_remove: string;
+  apply_margin: string; margin_override_badge: string; margin_override_label: string; margin_override_desc: string; margin_override_use_global: string;
   specs_notes: string; tier_rating: string; tower_category: string; tower_category_help: string;
+  ram_generation: string; ram_speed_mhz: string; ram_generation_help: string;
   update_arrow: string; add_prefix: string; edit_prefix: string;
   select_prefix: string; select_suffix: string;
   listings: (n: number) => string;
@@ -208,6 +215,14 @@ type Translations = {
   status_labels: Record<IntentStatus, string>;
   method_labels: Record<'card' | 'google_pay' | 'apple_pay', string>;
   requests_count: (total: number, fresh: number) => string;
+  // Gomp Budget Builds tab
+  gbb_tab: string; gbb_title: string; gbb_no_requests: string;
+  gbb_status_labels: Record<GbbStatus, string>;
+  gbb_use_case_labels: Record<string, string>;
+  gbb_budget_word: string; gbb_use_case_word: string; gbb_notes_word: string;
+  gbb_search_helper: string; gbb_search_placeholder: string; gbb_add_search: string;
+  gbb_proposal_price: string; gbb_proposal_notes: string; gbb_save_proposal: string;
+  gbb_count: (total: number, fresh: number) => string;
 };
 
 const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
@@ -232,8 +247,16 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     margin_desc: 'Paste in the cheapest current price you find on Alza / Heureka as "Market Price" below — the sell price is derived automatically from this margin and updates across the site.',
     margin_eur: '€ Flat', margin_pct: '% Markup',
     market_price_label: 'Market Price (Alza/Heureka)', market_price_placeholder: 'e.g. 1650',
+    original_price_label: 'Original', web_price_label: 'Web price',
+    image_label: 'Product Image', image_removing_bg: 'Removing background…', image_uploading: 'Uploading…',
+    image_replace: 'Replace image', image_remove: 'Remove',
+    apply_margin: 'Apply margin →', margin_override_badge: 'Custom margin',
+    margin_override_label: 'Margin Override', margin_override_desc: 'Give this one component its own margin instead of the site-wide one above.',
+    margin_override_use_global: 'Use site-wide margin',
     specs_notes: 'Specs / Notes', tier_rating: 'Tier Rating', tower_category: 'Tower Category',
     tower_category_help: 'Full Tower 55–75 cm · Mid Tower 35–55 cm · Mini Tower 30–45 cm · SFF <35 cm',
+    ram_generation: 'DDR Generation', ram_speed_mhz: 'Speed (MHz)',
+    ram_generation_help: 'Drives the DDR4/DDR5 filter and the speed slider on the Build page — leave blank to hide this kit from both.',
     update_arrow: 'Update →', add_prefix: 'Add ', edit_prefix: 'Edit ',
     select_prefix: '— Select ', select_suffix: ' —',
     listings: (n) => `${n} listings · changes save to localStorage and sync to Shop`,
@@ -253,6 +276,14 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     status_labels: { new: 'New', contacted: 'Contacted', converted: 'Converted', archived: 'Archived' },
     method_labels: { card: 'Card', google_pay: 'Google Pay', apple_pay: 'Apple Pay' },
     requests_count: (total, fresh) => `${total} total · ${fresh} new`,
+    gbb_tab: 'Budget Requests', gbb_title: 'Gomp Budget Builds', gbb_no_requests: 'No budget build requests yet. They appear here as soon as someone submits one.',
+    gbb_status_labels: { new: 'New', researching: 'Researching', quoted: 'Quoted', converted: 'Converted', archived: 'Archived' },
+    gbb_use_case_labels: { gaming: 'Gaming', office: 'Office & everyday use', creative: 'Content creation / editing', server: 'Home server / NAS', other: 'Something else' },
+    gbb_budget_word: 'Budget', gbb_use_case_word: "What it's for", gbb_notes_word: 'Customer notes',
+    gbb_search_helper: 'Marketplace search links (not scraped — opens the search for you to check)',
+    gbb_search_placeholder: 'e.g. RTX 3070', gbb_add_search: 'Search',
+    gbb_proposal_price: 'Price proposal (EUR)', gbb_proposal_notes: 'Proposal notes (parts, condition, etc.)', gbb_save_proposal: 'Save & mark quoted →',
+    gbb_count: (total, fresh) => `${total} total · ${fresh} new`,
   },
   sk: {
     admin_panel: 'Admin panel', sign_in: 'Prihlásiť sa →',
@@ -275,8 +306,16 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     margin_desc: 'Vložte najlevnejšiu aktuálnu cenu z Alzy / Heureky ako „Tržnová cena" nižšie — predajná cena sa automaticky odvodí z tejto marže a aktualizuje sa v celom obchode.',
     margin_eur: '€ Pevná', margin_pct: '% Prirážka',
     market_price_label: 'Tržnová cena (Alza/Heureka)', market_price_placeholder: 'napr. 1650',
+    original_price_label: 'Pôvodná', web_price_label: 'Cena na webe',
+    image_label: 'Fotka produktu', image_removing_bg: 'Odstraňujem pozadie…', image_uploading: 'Nahrávam…',
+    image_replace: 'Zmeniť fotku', image_remove: 'Odstrániť',
+    apply_margin: 'Aplikovať maržu →', margin_override_badge: 'Vlastná marža',
+    margin_override_label: 'Vlastná marža', margin_override_desc: 'Nastavte tomuto komponentu vlastnú maržu namiesto tej celkovej vyššie.',
+    margin_override_use_global: 'Použiť celkovú maržu',
     specs_notes: 'Špecifikácie / Poznámky', tier_rating: 'Hodnotenie triedy', tower_category: 'Kategória skrine',
     tower_category_help: 'Veľká skriňa 55–75 cm · Stredná skriňa 35–55 cm · Malá skriňa 30–45 cm · SFF <35 cm',
+    ram_generation: 'Generácia DDR', ram_speed_mhz: 'Rýchlosť (MHz)',
+    ram_generation_help: 'Ovláda filter DDR4/DDR5 a posuvník rýchlosti na stránke Zostaviť — nechajte prázdne, ak chcete túto sadu skryť z oboch.',
     update_arrow: 'Aktualizovať →', add_prefix: 'Pridať ', edit_prefix: 'Upraviť ',
     select_prefix: '— Vybrať ', select_suffix: ' —',
     listings: (n) => `${n} položiek · zmeny sa ukladajú do localStorage a synchronizujú s obchodom`,
@@ -296,6 +335,14 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     status_labels: { new: 'Nová', contacted: 'Kontaktovaný', converted: 'Premenená', archived: 'Archivovaná' },
     method_labels: { card: 'Karta', google_pay: 'Google Pay', apple_pay: 'Apple Pay' },
     requests_count: (total, fresh) => `${total} celkovo · ${fresh} nových`,
+    gbb_tab: 'Rozpočtové žiadosti', gbb_title: 'Gomp Rozpočtové Zostavy', gbb_no_requests: 'Zatiaľ žiadne žiadosti o rozpočtovú zostavu. Objavia sa tu hneď, ako ich niekto odošle.',
+    gbb_status_labels: { new: 'Nová', researching: 'Zisťujem ceny', quoted: 'Ponúknuté', converted: 'Premenená', archived: 'Archivovaná' },
+    gbb_use_case_labels: { gaming: 'Hranie', office: 'Kancelária a bežné použitie', creative: 'Tvorba obsahu / strih', server: 'Domáci server / NAS', other: 'Niečo iné' },
+    gbb_budget_word: 'Rozpočet', gbb_use_case_word: 'Na čo to bude', gbb_notes_word: 'Poznámky klienta',
+    gbb_search_helper: 'Odkazy na vyhľadávanie (nezoškrabuje sa nič — len otvorí vyhľadávanie na kontrolu)',
+    gbb_search_placeholder: 'napr. RTX 3070', gbb_add_search: 'Hľadať',
+    gbb_proposal_price: 'Cenový návrh (EUR)', gbb_proposal_notes: 'Poznámky k návrhu (súčiastky, stav...)', gbb_save_proposal: 'Uložiť a označiť ako ponúknuté →',
+    gbb_count: (total, fresh) => `${total} celkovo · ${fresh} nových`,
   },
 };
 
@@ -315,11 +362,17 @@ function initialBuildForm(): BuildFormState {
 
 type CompFormState = {
   name: string; price: string; marketPrice: string; specs: string; category: string; tier: Tier;
-  passmark: number | null; passmarkUrl: string;
+  passmark: number | null; passmarkUrl: string; imageUrl: string;
+  marginOverrideOn: boolean; marginOverrideType: 'eur' | 'pct'; marginOverrideValue: string;
+  ramGeneration: '' | '4' | '5'; ramSpeedMhz: string;
 };
 
 function initialCompForm(): CompFormState {
-  return { name: '', price: '', marketPrice: '', specs: '', category: 'Mid Tower', tier: 'B', passmark: null, passmarkUrl: '' };
+  return {
+    name: '', price: '', marketPrice: '', specs: '', category: 'Mid Tower', tier: 'B', passmark: null, passmarkUrl: '', imageUrl: '',
+    marginOverrideOn: false, marginOverrideType: 'pct', marginOverrideValue: '0',
+    ramGeneration: '', ramSpeedMhz: '',
+  };
 }
 
 // Live-over-stored PassMark refresh + market-price-driven repricing, run once on every load.
@@ -333,7 +386,7 @@ function migrateComponentDb(db: ComponentDb, margin: Margin): ComponentDb {
         if (live) next = { ...next, passmark: live.score, passmarkUrl: live.url, tier: tierFromPassmark(cat === 'gpu', live.score) };
       }
       if (next.marketPrice != null) {
-        const price = computePrice(next.marketPrice, margin);
+        const price = computePrice(next.marketPrice, next.marginOverride ?? margin);
         if (price != null) next = { ...next, price };
       }
       return next;
@@ -347,6 +400,9 @@ function recomputeMarginPrices(db: ComponentDb, margin: Margin): ComponentDb {
   (Object.keys(db) as Category[]).forEach((cat) => {
     out[cat] = (db[cat] || []).map((c) => {
       if (c.marketPrice == null) return c;
+      // A component with its own margin override doesn't move when the site-wide margin does
+      // — that's the entire point of the override.
+      if (c.marginOverride != null) return c;
       const price = computePrice(c.marketPrice, margin);
       return price != null ? { ...c, price } : c;
     });
@@ -381,6 +437,14 @@ const ADMIN_VALUE: CSSProperties = {
 const STATUS_COLORS: Record<IntentStatus, { bg: string; text: string; border: string }> = {
   new: { bg: '#FFF0EE', text: '#8B2020', border: 'rgba(204,51,51,0.3)' },
   contacted: { bg: '#E8F0FF', text: '#1A3080', border: 'rgba(51,102,204,0.3)' },
+  converted: { bg: '#E8FFF0', text: '#1A5030', border: 'rgba(51,153,102,0.35)' },
+  archived: { bg: '#F2F2F6', text: '#505060', border: 'rgba(144,144,160,0.35)' },
+};
+
+const GBB_STATUS_COLORS: Record<GbbStatus, { bg: string; text: string; border: string }> = {
+  new: { bg: '#FFF0EE', text: '#8B2020', border: 'rgba(204,51,51,0.3)' },
+  researching: { bg: '#FFF8E8', text: '#8A6D2F', border: 'rgba(196,163,90,0.4)' },
+  quoted: { bg: GBB_GREEN_TINT(0.1), text: GBB_GREEN, border: GBB_GREEN_TINT(0.35) },
   converted: { bg: '#E8FFF0', text: '#1A5030', border: 'rgba(51,153,102,0.35)' },
   archived: { bg: '#F2F2F6', text: '#505060', border: 'rgba(144,144,160,0.35)' },
 };
@@ -439,7 +503,7 @@ export default function AdminPage() {
           : 'no';
   const authed = adminState === 'yes';
 
-  const [tab, setTab] = useState<'builds' | 'components' | 'requests'>('requests');
+  const [tab, setTab] = useState<'builds' | 'components' | 'requests' | 'gbb'>('requests');
   const [builds, setBuilds] = useState<Build[]>([]);
   const [compDb, setCompDb] = useState<ComponentDb>(defaultComponentDb());
 
@@ -450,6 +514,8 @@ export default function AdminPage() {
   const [compCat, setCompCat] = useState<Category>('gpu');
   const [compForm, setCompForm] = useState<CompFormState>(initialCompForm());
   const [editCompId, setEditCompId] = useState<string | null>(null);
+  const [imageStatus, setImageStatus] = useState<'idle' | 'removing' | 'uploading' | 'error'>('idle');
+  const [imageError, setImageError] = useState<string | null>(null);
 
   const [saveMsg, setSaveMsg] = useState('');
   const [nextBuildId, setNextBuildId] = useState(1);
@@ -464,6 +530,14 @@ export default function AdminPage() {
   const [intentsError, setIntentsError] = useState<string | null>(null);
   const [needsServiceKey, setNeedsServiceKey] = useState(false);
   const [expandedIntent, setExpandedIntent] = useState<string | null>(null);
+
+  const [gbbRequests, setGbbRequests] = useState<GbbRequest[]>([]);
+  const [gbbLoading, setGbbLoading] = useState(false);
+  const [gbbError, setGbbError] = useState<string | null>(null);
+  const [gbbNeedsServiceKey, setGbbNeedsServiceKey] = useState(false);
+  const [expandedGbb, setExpandedGbb] = useState<string | null>(null);
+  const [gbbSearchTerm, setGbbSearchTerm] = useState<Record<string, string>>({});
+  const [gbbProposalDraft, setGbbProposalDraft] = useState<Record<string, { price: string; notes: string }>>({});
 
   const t = TRANSLATIONS[lang];
   const catLabels = CAT_LABELS[lang];
@@ -550,6 +624,52 @@ export default function AdminPage() {
     }
   }
 
+  // ---- Gomp Budget Builds requests (gbb_requests) ----
+
+  const loadGbbRequests = useCallback(async () => {
+    setGbbLoading(true);
+    const res = await fetchGbbRequests();
+    if (res.ok) {
+      setGbbRequests(res.requests);
+      setGbbError(null);
+      setGbbNeedsServiceKey(false);
+    } else {
+      setGbbError(res.error);
+      setGbbNeedsServiceKey(!!res.needsServiceRoleKey);
+    }
+    setGbbLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (authed) loadGbbRequests();
+  }, [authed, loadGbbRequests]);
+
+  async function changeGbbStatus(id: string, status: GbbStatus) {
+    const previous = gbbRequests;
+    setGbbRequests((list) => list.map((r) => (r.id === id ? { ...r, status } : r)));
+    const result = await updateGbbRequest(id, { status });
+    if (!result.ok) {
+      setGbbRequests(previous);
+      setGbbError(result.error);
+    }
+  }
+
+  async function saveGbbProposal(id: string) {
+    const draft = gbbProposalDraft[id];
+    if (!draft) return;
+    const priceProposalEur = draft.price.trim() !== '' ? Number(draft.price) : null;
+    const result = await updateGbbRequest(id, {
+      priceProposalEur: priceProposalEur != null && !isNaN(priceProposalEur) ? priceProposalEur : null,
+      proposalNotes: draft.notes,
+      status: 'quoted',
+    });
+    if (result.ok) {
+      setGbbRequests((list) => list.map((r) => (r.id === id ? result.request : r)));
+    } else {
+      setGbbError(result.error);
+    }
+  }
+
   // ---- builds CRUD ----
 
   function openAddBuild() {
@@ -628,10 +748,18 @@ export default function AdminPage() {
 
   // ---- components CRUD ----
 
+  // The margin this one component should actually be priced with — its own override if the
+  // form has one enabled, otherwise undefined so callers fall back to the site-wide margin.
+  function formMarginOverride(form: CompFormState): Margin | undefined {
+    if (!form.marginOverrideOn) return undefined;
+    return { type: form.marginOverrideType, value: parseFloat(form.marginOverrideValue) || 0 };
+  }
+
   async function addComponent() {
     if (!compForm.name.trim()) return;
     const marketPrice = compForm.marketPrice !== '' ? parseFloat(compForm.marketPrice) : null;
-    const derived = marketPrice != null ? computePrice(marketPrice, margin) : null;
+    const marginOverride = formMarginOverride(compForm);
+    const derived = marketPrice != null ? computePrice(marketPrice, marginOverride ?? margin) : null;
     const tier: Tier = compForm.passmark ? tierFromPassmark(compCat === 'gpu', compForm.passmark) : compForm.tier;
     const comp: Component = {
       id: '', // placeholder — Supabase assigns the real id on insert
@@ -642,6 +770,10 @@ export default function AdminPage() {
       tier,
       ...(compForm.passmark ? { passmark: compForm.passmark, passmarkUrl: compForm.passmarkUrl || '' } : {}),
       ...(compCat === 'case' ? { category: compForm.category || 'Mid Tower' } : {}),
+      ...(compCat === 'ram' && compForm.ramGeneration ? { ramGeneration: Number(compForm.ramGeneration) as 4 | 5 } : {}),
+      ...(compCat === 'ram' && compForm.ramSpeedMhz ? { ramSpeedMhz: parseInt(compForm.ramSpeedMhz, 10) } : {}),
+      ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
+      ...(marginOverride ? { marginOverride } : {}),
     };
     const sortOrder = (compDb[compCat] || []).length;
     const saved = await insertComponent(compCat, comp, sortOrder);
@@ -652,7 +784,8 @@ export default function AdminPage() {
   async function updateComponent() {
     if (!editCompId || !compForm.name.trim()) return;
     const marketPrice = compForm.marketPrice !== '' ? parseFloat(compForm.marketPrice) : null;
-    const derived = marketPrice != null ? computePrice(marketPrice, margin) : null;
+    const marginOverride = formMarginOverride(compForm);
+    const derived = marketPrice != null ? computePrice(marketPrice, marginOverride ?? margin) : null;
     const tier: Tier = compForm.passmark ? tierFromPassmark(compCat === 'gpu', compForm.passmark) : compForm.tier;
     const existing = (compDb[compCat] || []).find((c) => c.id === editCompId);
     const updated: Component = {
@@ -669,11 +802,31 @@ export default function AdminPage() {
       // socket or form-factor compatibility data.
       ...(existing?.socket ? { socket: existing.socket } : {}),
       ...(existing?.formFactor ? { formFactor: existing.formFactor } : {}),
+      // ramHeightMm also has no edit field — same carry-forward, otherwise every edit of a
+      // bulk-imported RAM SKU would silently zero out its real heatsink height.
+      ...(existing?.ramHeightMm != null ? { ramHeightMm: existing.ramHeightMm } : {}),
+      ...(compCat === 'ram' && compForm.ramGeneration ? { ramGeneration: Number(compForm.ramGeneration) as 4 | 5 } : {}),
+      ...(compCat === 'ram' && compForm.ramSpeedMhz ? { ramSpeedMhz: parseInt(compForm.ramSpeedMhz, 10) } : {}),
+      ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
+      ...(marginOverride ? { marginOverride } : {}),
     };
     const saved = await updateComponentRow(editCompId, compCat, updated);
     setCompDb((db) => ({ ...db, [compCat]: (db[compCat] || []).map((c) => (c.id === editCompId ? saved : c)) }));
     setEditCompId(null);
     setCompForm(initialCompForm());
+  }
+
+  // One-click "apply the margin" for a component that's never had a market price recorded:
+  // treats its current sell price as the market/base price and saves the price the site-wide
+  // (or this component's own override) margin actually computes from it.
+  async function applyMarginTo(cat: Category, comp: Component) {
+    const basePrice = comp.marketPrice ?? comp.price;
+    const effective = comp.marginOverride ?? margin;
+    const price = computePrice(basePrice, effective);
+    if (price == null) return;
+    const updated: Component = { ...comp, marketPrice: basePrice, price };
+    const saved = await updateComponentRow(comp.id, cat, updated);
+    setCompDb((db) => ({ ...db, [cat]: (db[cat] || []).map((c) => (c.id === comp.id ? saved : c)) }));
   }
 
   async function deleteComponent(cat: Category, id: string) {
@@ -689,18 +842,53 @@ export default function AdminPage() {
     setCompForm({
       name: comp.name || '',
       price: String(comp.price ?? ''),
-      marketPrice: comp.marketPrice != null ? String(comp.marketPrice) : '',
+      // No market price on file yet? Prefill it with the current sell price so the margin math
+      // (and the auto note below the field) kicks in immediately — hitting Update then applies
+      // the margin to this component instead of requiring the price to be re-typed from scratch.
+      marketPrice: comp.marketPrice != null ? String(comp.marketPrice) : String(comp.price ?? ''),
       specs: comp.specs || '',
       category: comp.category || 'Mid Tower',
       tier: comp.tier || 'B',
       passmark: comp.passmark || null,
       passmarkUrl: comp.passmarkUrl || '',
+      imageUrl: comp.imageUrl || '',
+      marginOverrideOn: comp.marginOverride != null,
+      marginOverrideType: comp.marginOverride?.type ?? 'pct',
+      marginOverrideValue: comp.marginOverride ? String(comp.marginOverride.value) : '0',
+      ramGeneration: comp.ramGeneration ? (String(comp.ramGeneration) as '4' | '5') : '',
+      ramSpeedMhz: comp.ramSpeedMhz != null ? String(comp.ramSpeedMhz) : '',
     });
   }
 
   function cancelEditComp() {
     setEditCompId(null);
     setCompForm(initialCompForm());
+  }
+
+  // Strips the background in the admin's own browser (no server round-trip, no per-image API
+  // cost) before ever uploading anything — @imgly/background-removal runs a small ONNX model
+  // over the image via WASM and hands back a transparent PNG. The upload itself still goes
+  // through a server route (see /api/admin/upload-image) because Storage writes need the
+  // service-role key, same reasoning as every other admin write in this app.
+  async function handleImageUpload(file: File) {
+    setImageStatus('removing');
+    setImageError(null);
+    try {
+      const { removeBackground } = await import('@imgly/background-removal');
+      const blob = await removeBackground(file);
+      setImageStatus('uploading');
+      const body = new FormData();
+      body.append('file', blob, 'component.png');
+      body.append('nameHint', compForm.name || compCat);
+      const res = await fetch('/api/admin/upload-image', { method: 'POST', body });
+      const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !json.url) throw new Error(json.error || 'Upload failed.');
+      setCompForm((f) => ({ ...f, imageUrl: json.url! }));
+      setImageStatus('idle');
+    } catch (e) {
+      setImageStatus('error');
+      setImageError(e instanceof Error ? e.message : 'Image processing failed.');
+    }
   }
 
   function pickSuggestion(s: Suggestion) {
@@ -722,10 +910,12 @@ export default function AdminPage() {
 
   const mpParsed = parseFloat(compForm.marketPrice);
   const hasManualMarketPrice = compForm.marketPrice !== '' && !isNaN(mpParsed);
-  const priceAutoNote = hasManualMarketPrice ? t.price_auto_note(mpParsed, computePrice(mpParsed, margin) ?? 0) : '';
+  const formMargin = formMarginOverride(compForm) ?? margin;
+  const priceAutoNote = hasManualMarketPrice ? t.price_auto_note(mpParsed, computePrice(mpParsed, formMargin) ?? 0) : '';
 
   const totalComps = (Object.values(compDb) as Component[][]).reduce((sum, arr) => sum + (arr ? arr.length : 0), 0);
   const newIntentCount = intents.filter((i) => i.status === 'new').length;
+  const newGbbCount = gbbRequests.filter((r) => r.status === 'new').length;
 
   // ---------------------------------------------------------------------------
   // Login screen
@@ -905,6 +1095,30 @@ export default function AdminPage() {
             >
               {t.components_tab}
             </button>
+            <button
+              onClick={() => setTab('gbb')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'space-between', gap: 10,
+                width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
+                background: tab === 'gbb' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                border: 'none',
+                borderLeft: isMobile ? 'none' : `2px solid ${tab === 'gbb' ? '#4A90D9' : 'transparent'}`,
+                borderBottom: isMobile ? `2px solid ${tab === 'gbb' ? '#4A90D9' : 'transparent'}` : 'none',
+                color: tab === 'gbb' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'gbb' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              }}
+            >
+              <span>{t.gbb_tab}</span>
+              {newGbbCount > 0 && (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, background: GBB_GREEN, color: '#FDFAF4',
+                    borderRadius: 10, padding: '2px 7px', lineHeight: 1.4,
+                  }}
+                >
+                  {newGbbCount}
+                </span>
+              )}
+            </button>
           </div>
           {!isMobile && (
             <div style={{ padding: '24px 18px 0', marginTop: 20, borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
@@ -1046,6 +1260,175 @@ export default function AdminPage() {
                                 }}
                               >
                                 {t.status_labels[s]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {tab === 'gbb' && (
+            <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.gbb_title}</h1>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300 }}>{t.gbb_count(gbbRequests.length, newGbbCount)}</div>
+                </div>
+                <button
+                  onClick={loadGbbRequests}
+                  disabled={gbbLoading}
+                  style={{ background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, padding: '8px 16px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', cursor: gbbLoading ? 'default' : 'pointer' }}
+                >
+                  {gbbLoading ? t.loading : t.refresh}
+                </button>
+              </div>
+
+              {gbbError && (
+                <div style={{ background: gbbNeedsServiceKey ? 'rgba(196,163,90,0.12)' : '#FFF0EE', border: `0.5px solid ${gbbNeedsServiceKey ? 'rgba(196,163,90,0.5)' : 'rgba(204,51,51,0.25)'}`, borderRadius: 2, padding: '14px 16px', marginBottom: 20 }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: gbbNeedsServiceKey ? '#8A6D2F' : '#CC3333', marginBottom: 4 }}>
+                    {gbbNeedsServiceKey ? t.setup_needed : t.error_word}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: gbbNeedsServiceKey ? '#6B5526' : '#8B2020', lineHeight: 1.6 }}>{gbbError}</div>
+                </div>
+              )}
+
+              {!gbbError && gbbRequests.length === 0 && !gbbLoading && (
+                <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 2, padding: '40px 24px', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#7A7469', fontWeight: 300 }}>{t.gbb_no_requests}</div>
+                </div>
+              )}
+
+              {gbbRequests.map((r) => {
+                const open = expandedGbb === r.id;
+                const badge = GBB_STATUS_COLORS[r.status];
+                const draft = gbbProposalDraft[r.id] ?? { price: r.price_proposal_eur != null ? String(r.price_proposal_eur) : '', notes: r.proposal_notes };
+                const searchTerm = gbbSearchTerm[r.id] ?? '';
+                return (
+                  <div key={r.id} style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 2, marginBottom: 10, overflow: 'hidden' }}>
+                    <div
+                      onClick={() => setExpandedGbb(open ? null : r.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isMobile ? '14px 14px' : '16px 20px', cursor: 'pointer', flexWrap: 'wrap' }}
+                    >
+                      <div style={{ flex: 1, minWidth: 180 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: '#1C1C1A' }}>
+                            {[r.first_name, r.last_name].filter(Boolean).join(' ') || t.no_name}
+                          </span>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', background: badge.bg, color: badge.text, border: `0.5px solid ${badge.border}`, borderRadius: 2, padding: '2px 6px' }}>
+                            {t.gbb_status_labels[r.status]}
+                          </span>
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', marginTop: 3 }}>{r.email}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 15, color: '#1C1C1A' }}>{r.budget_eur != null ? fmt(Number(r.budget_eur)) : '—'}</div>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890', marginTop: 2 }}>
+                          {t.gbb_use_case_labels[r.use_case] ?? r.use_case} · {new Date(r.created_at).toLocaleDateString(lang === 'sk' ? 'sk-SK' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                      </div>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#A09890', width: 12, textAlign: 'center' }}>{open ? '−' : '+'}</span>
+                    </div>
+
+                    {open && (
+                      <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.08)', padding: isMobile ? '14px' : '18px 20px', background: '#F8F4EA' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 18, marginBottom: 18 }}>
+                          <div>
+                            <div style={ADMIN_LABEL}>{t.contact_word}</div>
+                            <div style={ADMIN_VALUE}>
+                              {r.email}
+                              {r.phone ? <><br />{r.phone}</> : null}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={ADMIN_LABEL}>{t.gbb_budget_word} / {t.gbb_use_case_word}</div>
+                            <div style={ADMIN_VALUE}>
+                              {r.budget_eur != null ? fmt(Number(r.budget_eur)) : '—'} · {t.gbb_use_case_labels[r.use_case] ?? r.use_case}
+                            </div>
+                          </div>
+                        </div>
+
+                        {r.notes && (
+                          <div style={{ marginBottom: 18 }}>
+                            <div style={ADMIN_LABEL}>{t.gbb_notes_word}</div>
+                            <div style={{ ...ADMIN_VALUE, whiteSpace: 'pre-wrap' }}>{r.notes}</div>
+                          </div>
+                        )}
+
+                        <div style={{ marginBottom: 18 }}>
+                          <div style={ADMIN_LABEL}>{t.gbb_search_helper}</div>
+                          <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                            <input
+                              value={searchTerm}
+                              onChange={(e) => setGbbSearchTerm((s) => ({ ...s, [r.id]: e.target.value }))}
+                              placeholder={t.gbb_search_placeholder}
+                              style={{ flex: 1, minWidth: 160, padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#FDFAF4', color: '#1C1C1A', fontFamily: 'var(--font-sans)' }}
+                            />
+                          </div>
+                          {searchTerm.trim() && (
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                              {marketplaceSearchLinks(searchTerm).map((link) => (
+                                <a
+                                  key={link.label}
+                                  href={link.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: GBB_GREEN, textDecoration: 'none', border: `0.5px solid ${GBB_GREEN_TINT(0.4)}`, borderRadius: 2, padding: '5px 10px' }}
+                                >
+                                  {link.label} ↗
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '160px 1fr', gap: 12, marginBottom: 12 }}>
+                          <div>
+                            <div style={ADMIN_LABEL}>{t.gbb_proposal_price}</div>
+                            <input
+                              type="number"
+                              value={draft.price}
+                              onChange={(e) => setGbbProposalDraft((d) => ({ ...d, [r.id]: { ...draft, price: e.target.value } }))}
+                              style={{ width: '100%', padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#FDFAF4', color: '#1C1C1A', fontFamily: 'var(--font-mono)' }}
+                            />
+                          </div>
+                          <div>
+                            <div style={ADMIN_LABEL}>{t.gbb_proposal_notes}</div>
+                            <input
+                              value={draft.notes}
+                              onChange={(e) => setGbbProposalDraft((d) => ({ ...d, [r.id]: { ...draft, notes: e.target.value } }))}
+                              style={{ width: '100%', padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#FDFAF4', color: '#1C1C1A', fontFamily: 'var(--font-sans)' }}
+                            />
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => saveGbbProposal(r.id)}
+                          style={{ background: GBB_GREEN, color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '8px 16px', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 18 }}
+                        >
+                          {t.gbb_save_proposal}
+                        </button>
+
+                        <div style={ADMIN_LABEL}>{t.set_status}</div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {(['new', 'researching', 'quoted', 'converted', 'archived'] as GbbStatus[]).map((s) => {
+                            const active = r.status === s;
+                            return (
+                              <button
+                                key={s}
+                                onClick={() => changeGbbStatus(r.id, s)}
+                                style={{
+                                  background: active ? GBB_GREEN : 'transparent',
+                                  color: active ? '#FDFAF4' : '#7A7469',
+                                  border: `0.5px solid ${active ? GBB_GREEN : 'rgba(28,28,26,0.2)'}`,
+                                  borderRadius: 2, padding: '6px 12px', fontFamily: 'var(--font-sans)', fontSize: 11,
+                                  cursor: active ? 'default' : 'pointer',
+                                }}
+                              >
+                                {t.gbb_status_labels[s]}
                               </button>
                             );
                           })}
@@ -1261,11 +1644,30 @@ export default function AdminPage() {
                 {(compDb[compCat] || []).map((comp) => {
                   const tc = tierBadge(comp.tier, TIER_COLORS);
                   const isEditing = comp.id === editCompId;
+                  // Shown live for every component, not just ones with a market price already
+                  // on file — treating the current price as the base/cost when there's no
+                  // market price yet, so the markup is always visible instead of only appearing
+                  // once someone has manually typed a market price in.
+                  const basePrice = comp.marketPrice ?? comp.price;
+                  const effectiveMargin = comp.marginOverride ?? margin;
+                  const webPrice = computePrice(basePrice, effectiveMargin) ?? comp.price;
                   return (
                     <div
                       key={comp.id}
                       style={{ background: isEditing ? 'rgba(110,20,35,0.05)' : '#FDFAF4', border: `0.5px solid ${isEditing ? 'rgba(110,20,35,0.3)' : 'rgba(28,28,26,0.12)'}`, borderRadius: 2, padding: 18, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}
                     >
+                      {comp.imageUrl && (
+                        <div
+                          style={{
+                            width: 40, height: 40, borderRadius: 2, flexShrink: 0,
+                            background: 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 10px 10px',
+                            border: '0.5px solid rgba(28,28,26,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                          }}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={comp.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        </div>
+                      )}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                           <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: '#1C1C1A', lineHeight: 1.35 }}>{comp.name}</div>
@@ -1279,10 +1681,34 @@ export default function AdminPage() {
                           )}
                         </div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', marginBottom: 9, lineHeight: 1.6 }}>{comp.specs}</div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, color: '#6E1423', marginBottom: 4 }}>{fmt(comp.price)}</div>
-                        {comp.marketPrice != null && (
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#A09890', marginBottom: 4 }}>Market: €{comp.marketPrice}</div>
-                        )}
+                        <div style={{ marginBottom: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#A09890' }}>{t.original_price_label}: €{basePrice}</span>
+                            {comp.marginOverride && (
+                              <span
+                                style={{
+                                  fontFamily: 'var(--font-sans)', fontSize: 8, fontWeight: 600, color: '#6E1423',
+                                  background: 'rgba(110,20,35,0.08)', border: '0.5px solid rgba(110,20,35,0.2)',
+                                  borderRadius: 2, padding: '1px 5px', textTransform: 'uppercase', letterSpacing: 0.4,
+                                }}
+                              >
+                                {t.margin_override_badge}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, color: '#6E1423' }}>{t.web_price_label}: {fmt(webPrice)}</div>
+                          {comp.marketPrice == null && (
+                            <button
+                              onClick={() => applyMarginTo(compCat, comp)}
+                              style={{
+                                fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6E1423', background: 'transparent',
+                                border: 'none', textDecoration: 'underline', cursor: 'pointer', padding: 0, marginTop: 2,
+                              }}
+                            >
+                              {t.apply_margin}
+                            </button>
+                          )}
+                        </div>
                         {comp.passmark != null && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: tc.text, fontWeight: 600 }}>PassMark {comp.passmark.toLocaleString()}</span>
@@ -1359,6 +1785,65 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <div style={{ marginBottom: 12 }}>
+                  <div style={LABEL_STYLE}>{t.image_label}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div
+                      style={{
+                        width: 64, height: 64, borderRadius: 2, flexShrink: 0,
+                        border: '0.5px solid rgba(28,28,26,0.15)',
+                        background: compForm.imageUrl
+                          ? 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 12px 12px'
+                          : '#FDFAF4',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                      }}
+                    >
+                      {compForm.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={compForm.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      ) : (
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890' }}>—</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label
+                        style={{
+                          fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6E1423', cursor: 'pointer',
+                          border: '0.5px solid rgba(110,20,35,0.35)', borderRadius: 2, padding: '5px 10px', width: 'fit-content',
+                        }}
+                      >
+                        {compForm.imageUrl ? t.image_replace : t.image_label}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = '';
+                            if (file) handleImageUpload(file);
+                          }}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                      {imageStatus === 'removing' && (
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469' }}>{t.image_removing_bg}</span>
+                      )}
+                      {imageStatus === 'uploading' && (
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469' }}>{t.image_uploading}</span>
+                      )}
+                      {imageStatus === 'error' && (
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#CC3333' }}>{imageError}</span>
+                      )}
+                      {compForm.imageUrl && imageStatus === 'idle' && (
+                        <button
+                          onClick={() => setCompForm((f) => ({ ...f, imageUrl: '' }))}
+                          style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                        >
+                          {t.image_remove}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ marginBottom: 12 }}>
                   <div style={LABEL_STYLE}>{t.market_price_label}</div>
                   <input
                     type="number"
@@ -1369,6 +1854,46 @@ export default function AdminPage() {
                   />
                   {hasManualMarketPrice && (
                     <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#6E1423', marginTop: 6 }}>{priceAutoNote}</div>
+                  )}
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <div style={LABEL_STYLE}>{t.margin_override_label}</div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={compForm.marginOverrideOn}
+                        onChange={(e) => setCompForm({ ...compForm, marginOverrideOn: e.target.checked })}
+                      />
+                      {compForm.marginOverrideOn ? t.margin_override_use_global : t.margin_override_label}
+                    </label>
+                  </div>
+                  {compForm.marginOverrideOn && (
+                    <>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', fontWeight: 300, lineHeight: 1.5, marginBottom: 8 }}>{t.margin_override_desc}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, overflow: 'hidden' }}>
+                          <button
+                            onClick={() => setCompForm({ ...compForm, marginOverrideType: 'eur' })}
+                            style={{ padding: '8px 14px', background: compForm.marginOverrideType === 'eur' ? '#6E1423' : 'transparent', color: compForm.marginOverrideType === 'eur' ? '#FDFAF4' : '#7A7469', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                          >
+                            {t.margin_eur}
+                          </button>
+                          <button
+                            onClick={() => setCompForm({ ...compForm, marginOverrideType: 'pct' })}
+                            style={{ padding: '8px 14px', background: compForm.marginOverrideType === 'pct' ? '#6E1423' : 'transparent', color: compForm.marginOverrideType === 'pct' ? '#FDFAF4' : '#7A7469', border: 'none', borderLeft: '0.5px solid rgba(28,28,26,0.15)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                          >
+                            {t.margin_pct}
+                          </button>
+                        </div>
+                        <input
+                          type="number"
+                          value={compForm.marginOverrideValue}
+                          onChange={(e) => setCompForm({ ...compForm, marginOverrideValue: e.target.value })}
+                          style={{ width: 100, padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#F5F0E6', color: '#1C1C1A', fontFamily: 'var(--font-mono)' }}
+                        />
+                      </div>
+                    </>
                   )}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 140px', gap: 12, marginBottom: 12 }}>
@@ -1399,6 +1924,37 @@ export default function AdminPage() {
                       ))}
                     </select>
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#B0A898', marginTop: 6, lineHeight: 1.6 }}>{t.tower_category_help}</div>
+                  </div>
+                )}
+                {compCat === 'ram' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.ram_generation}</div>
+                      <select
+                        value={compForm.ramGeneration}
+                        onChange={(e) => setCompForm({ ...compForm, ramGeneration: e.target.value as '' | '4' | '5' })}
+                        style={INPUT_STYLE}
+                      >
+                        <option value="">—</option>
+                        <option value="4">DDR4</option>
+                        <option value="5">DDR5</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.ram_speed_mhz}</div>
+                      <input
+                        type="number"
+                        min={0}
+                        step={100}
+                        value={compForm.ramSpeedMhz}
+                        onChange={(e) => setCompForm({ ...compForm, ramSpeedMhz: e.target.value })}
+                        placeholder="6400"
+                        style={INPUT_STYLE}
+                      />
+                    </div>
+                    <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1', fontFamily: 'var(--font-sans)', fontSize: 11, color: '#B0A898', lineHeight: 1.6 }}>
+                      {t.ram_generation_help}
+                    </div>
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>

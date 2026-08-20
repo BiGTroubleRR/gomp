@@ -4,16 +4,29 @@
 // per-component mesh; exposes an imperative API the page's React state changes call into.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import type { FanMountPosition } from './component-db-seed';
+import { RAM_DIMM_SIZE_MM, type FanMountPosition } from './component-db-seed';
 
 export type CompId = 'mobo' | 'cpu' | 'cooler' | 'ram' | 'gpu' | 'storage' | 'psu' | 'case';
 export const SLOTS: CompId[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case'];
 
+// mobo/cpu/cooler/ram are all mounted flush on the motherboard's own face, so they share a Z
+// shift toward the case's rear panel — a real board's rear I/O sits flush against that wall,
+// not centered front-to-back the way the old z≈0 values had it. These three Z values are only
+// ever read as *relative offsets from BASE_POS.mobo's own Z* (see resetComponentPositions and
+// moboAnchoredZ below) — the group's actual world Z is pinned to the selected case's real rear
+// wall (z=+d/2, see buildCase's `front`/`rear` panels) at runtime, not to this constant.
+// ram sits beside the CPU (same Y as cpu, offset further along Z — real DIMM slots run down
+// the board next to the socket, not above it) rather than stacked on a separate Y band above
+// it: an earlier revision pulled ram apart from cpu along Y instead of Z to fix an overlap,
+// which put the whole kit up near the board's own top edge — fine at the placeholder's old,
+// undersized length, but once the RAM slot outline fix (see ramSlotOutlineGroup below) made an
+// installed stick's real mm-accurate length correct, that same Y put it past the board's own
+// top edge, AND still directly above the CPU instead of beside it, as a real board has it.
 const BASE_POS: Record<Exclude<CompId, 'case'>, [number, number, number]> = {
-  mobo: [-0.88, 0.2, 0.0],
-  cpu: [-0.78, 0.65, 0.1],
-  cooler: [-0.42, 0.75, 0.1],
-  ram: [-0.8, 0.85, -0.09],
+  mobo: [-0.88, 0.2, -0.35],
+  cpu: [-0.78, 0.55, -0.25],
+  cooler: [-0.42, 0.65, -0.25],
+  ram: [-0.8, 0.55, -0.88],
   gpu: [-0.45, -0.5, 0.1],
   storage: [-0.8, 0.08, 0.37],
   psu: [0.1, -1.88, 0.0],
@@ -62,7 +75,12 @@ export type SizeScale = { x: number; y: number; z: number };
 // radiator case, the label must still quote the true 360mm spec, but the line has no real
 // geometry to span, so it draws at a small placeholder length instead of stretching across
 // the whole case.
-export type DimensionSpec = { axis: 'x' | 'y' | 'z'; mm: number; label?: string; scalesMesh?: boolean; lineLengthMm?: number };
+// annotate: false marks a spec that should still drive the placeholder mesh's scale (so the
+// part's footprint in the scene stays physically correct) but must NOT draw a blueprint
+// annotation or quote a label — the opposite of scalesMesh: false above. Used for motherboards,
+// whose form factor (ATX/mATX/E-ATX/Mini-ITX) already implies the size class, so quoting exact
+// cm figures on top of that is redundant.
+export type DimensionSpec = { axis: 'x' | 'y' | 'z'; mm: number; label?: string; scalesMesh?: boolean; lineLengthMm?: number; annotate?: boolean };
 
 const DIM_COLOR = 0xc4a35a; // GOMP gold — matches the site's accent color
 
@@ -147,6 +165,7 @@ function buildDimensionSet(specs: DimensionSpec[]): THREE.Group {
   });
 
   specs.forEach((spec) => {
+    if (spec.annotate === false) return;
     const annotation = buildDimensionAnnotation(spec);
     const pos = new THREE.Vector3(0, 0, 0);
     if (spec.axis !== 'x') pos.x = halfExtent.x + gap;
@@ -178,6 +197,62 @@ type ObjRecord = {
   sizeScale: SizeScale;
 };
 
+// 4 fixed local-Z positions for the ram mesh's DIMM slots (real motherboards have 2 or 4) —
+// shared between the actual stick meshes and the standalone empty-slot outline group so both
+// line up. Index 1/2 are the centered pair a 2-slot board (or a 2-stick kit on a 4-slot board)
+// uses; 0/1/2/3 is a populated 4-slot board. Z (not X) because slots repeat across the
+// motherboard's own face — mobo's local X is its face normal (thickness), so stacking slots
+// along X would spread them out perpendicular to the board instead of side by side on it.
+// Index 0 needs to land on the physically-left slot from the default camera angle — reversed
+// from a naive ascending-Z order, which actually put index 0 on the right.
+const RAM_SLOT_Z = [0.15, 0.05, -0.05, -0.15];
+
+// A single DIMM stick, styled after G.Skill Trident Z's signature silhouette: a dark anodized
+// heatsink shroud with a jagged "crown" of alternating-height teeth along the top ridge and a
+// gold diffuser strip running underneath them (standing in for Trident Z's RGB light bar, in
+// the site's own accent color rather than literal RGB). Built along local Y (length) / X
+// (height, sticking up off the board) — X is every placeholder mesh's face-normal axis in this
+// file (see mobo's own box, thin along X), and a real DIMM sticks up perpendicular to the
+// board's face, so height has to ride the same axis as the board's normal for the two meshes
+// to actually line up. Z is the thin card-thickness axis, doubling as the slot-repeat axis.
+function buildRamStick(T: typeof THREE): THREE.Group {
+  const g = new T.Group();
+  const pcbMat = new T.MeshStandardMaterial({ color: 0x001825, roughness: 0.6 });
+  const bodyMat = new T.MeshStandardMaterial({ color: 0x2a2530, roughness: 0.28, metalness: 0.75 });
+  const toothMat = new T.MeshStandardMaterial({ color: 0x3d3648, roughness: 0.22, metalness: 0.85 });
+  const goldMat = new T.MeshStandardMaterial({ color: 0xc4a35a, emissive: 0xc4a35a, emissiveIntensity: 0.8 });
+
+  // Bare PCB edge peeking out below the heatsink shroud.
+  const pcbHeight = 0.86;
+  const pcb = new T.Mesh(new T.BoxGeometry(0.1, pcbHeight, 0.03), pcbMat);
+  g.add(pcb);
+
+  // Main heatsink shroud, sitting on top of (out from the board's face, along X) the PCB.
+  const bodyHeight = 0.42;
+  const bodyX = 0.05 + bodyHeight / 2;
+  const body = new T.Mesh(new T.BoxGeometry(bodyHeight, pcbHeight, 0.05), bodyMat);
+  body.position.x = bodyX;
+  g.add(body);
+
+  // Gold diffuser strip, right at the top edge of the shroud.
+  const stripX = bodyX + bodyHeight / 2 + 0.015;
+  const strip = new T.Mesh(new T.BoxGeometry(0.03, pcbHeight * 0.97, 0.052), goldMat);
+  strip.position.x = stripX;
+  g.add(strip);
+
+  // Jagged crown: alternating-height teeth along the top ridge, sitting on the strip.
+  const toothHeights = [0.09, 0.18, 0.1, 0.2, 0.1, 0.18, 0.09];
+  const toothWidth = (pcbHeight * 0.94) / toothHeights.length;
+  const toothBaseX = stripX + 0.015;
+  toothHeights.forEach((h, i) => {
+    const tooth = new T.Mesh(new T.BoxGeometry(h, toothWidth * 0.7, 0.05), toothMat);
+    tooth.position.set(toothBaseX + h / 2, -pcbHeight * 0.47 + toothWidth * (i + 0.5), 0);
+    g.add(tooth);
+  });
+
+  return g;
+}
+
 function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
   const T = THREE;
   switch (id) {
@@ -190,6 +265,74 @@ function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
       const pcie = new T.Mesh(new T.BoxGeometry(0.06, 0.06, 0.88), new T.MeshStandardMaterial({ color: 0x22223a }));
       pcie.position.set(0.05, -0.48, 0.08);
       g.add(pcie);
+
+      // Rear I/O shield: a backing plate plus a real-looking cluster of ports, modeled after a
+      // real rear-IO photo (ASUS ProArt X870E-CREATOR) rather than a generic guess — a 2x3 USB-A
+      // grid (teal, matching that shield's USB-A tint), dual ethernet, an audio-jack trio,
+      // HDMI + DisplayPort, and a USB-C pair — so a bare board doesn't read as an oddly
+      // featureless slab before a case/cables give it visual context. Sits level with the CPU
+      // (same local Y band) on the side opposite the RAM slots, since the real shield runs down
+      // the same edge the CPU socket is closest to, not up near the board's top edge.
+      const shieldMat = new T.MeshStandardMaterial({ color: 0x8a8a90, roughness: 0.3, metalness: 0.85 });
+      const portMat = new T.MeshStandardMaterial({ color: 0x141414, roughness: 0.4, metalness: 0.5 });
+      const usbMat = new T.MeshStandardMaterial({ color: 0x2a9d8f, roughness: 0.3, metalness: 0.4 });
+      const ethernetMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.25, metalness: 0.8 });
+      const jackMat = new T.MeshStandardMaterial({ color: 0xb5b0a8, roughness: 0.3, metalness: 0.7 });
+      const io = new T.Group();
+      io.add(new T.Mesh(new T.BoxGeometry(0.03, 0.5, 0.42), shieldMat));
+
+      [-0.13, -0.02].forEach((z) => {
+        [0.18, 0.09, 0.0].forEach((y) => {
+          const usb = new T.Mesh(new T.BoxGeometry(0.045, 0.06, 0.045), usbMat);
+          usb.position.set(0.02, y, z);
+          io.add(usb);
+        });
+      });
+
+      [0.18, 0.09].forEach((y) => {
+        const eth = new T.Mesh(new T.BoxGeometry(0.05, 0.08, 0.09), ethernetMat);
+        eth.position.set(0.02, y, 0.13);
+        io.add(eth);
+      });
+
+      [0.0, -0.09, -0.18].forEach((y) => {
+        const jack = new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.04, 12), jackMat);
+        jack.rotation.z = Math.PI / 2;
+        jack.position.set(0.03, y, 0.13);
+        io.add(jack);
+      });
+
+      const hdmi = new T.Mesh(new T.BoxGeometry(0.045, 0.045, 0.09), portMat);
+      hdmi.position.set(0.02, -0.09, -0.13);
+      io.add(hdmi);
+      const dp = new T.Mesh(new T.BoxGeometry(0.045, 0.045, 0.08), portMat);
+      dp.position.set(0.02, -0.09, -0.02);
+      io.add(dp);
+
+      [-0.13, -0.02].forEach((z) => {
+        const usbC = new T.Mesh(new T.BoxGeometry(0.035, 0.035, 0.06), portMat);
+        usbC.position.set(0.02, -0.18, z);
+        io.add(usbC);
+      });
+
+      // Rotated -90° about Y so the ports open along +Z (the case's rear wall — see buildCase's
+      // `rear` panel at z=+d/2; the front sits at -d/2) instead of +X (the board's own
+      // face-normal, toward the glass side panel): a real shield's plug openings face backward
+      // out of the case, perpendicular to the board's face, not out toward the viewer the way
+      // CPU/cooler/RAM stick up off it. This also swaps which local axis is the port grid's
+      // "width" — local Z (the grid columns built above) becomes world X and local Y (the rows)
+      // stays world Y, so the grid still reads as a landscape rectangle spanning the case's
+      // width and height, matching what you actually see looking at a case from directly behind.
+      //
+      // y=0.35 matches the CPU's own local band (cpu sits at world y=0.55, mobo at world
+      // y=0.2, so 0.55-0.2=0.35 in mobo-local space); z=0.68 sits right at the board's own
+      // rear-most edge (half the board's ±0.75 Z placeholder extent) rather than mid-board, so
+      // the rotated ports actually reach the rear wall once the whole assembly is anchored
+      // there — see the mobo-anchoring block in resetComponentPositions/setSizeScale below.
+      io.rotation.y = -Math.PI / 2;
+      io.position.set(0.03, 0.35, 0.68);
+      g.add(io);
+
       g.scale.setScalar(0.86);
       return g;
     }
@@ -223,20 +366,24 @@ function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
     }
     case 'ram': {
       const g = new T.Group();
-      const pcbM = new T.MeshStandardMaterial({ color: 0x001825, roughness: 0.6 });
-      const sM = new T.MeshStandardMaterial({ color: 0x6e1423, roughness: 0.2, metalness: 0.7, emissive: 0x0a1520, emissiveIntensity: 0.3 });
-      const rgbMat = new T.MeshStandardMaterial({ color: 0xc4a35a, emissive: 0xc4a35a, emissiveIntensity: 0.75 });
-      [-0.11, 0.0].forEach((z) => {
-        const s = new T.Mesh(new T.BoxGeometry(0.04, 1.0, 0.08), pcbM);
-        s.position.z = z;
-        g.add(s);
-        const h = new T.Mesh(new T.BoxGeometry(0.05, 0.62, 0.09), sM);
-        h.position.set(0.005, 0.2, z);
-        g.add(h);
-        const rgb = new T.Mesh(new T.BoxGeometry(0.052, 0.03, 0.09), rgbMat);
-        rgb.position.set(0.005, 0.52, z);
-        g.add(rgb);
+      // 4 fixed DIMM slots, evenly spaced along local X (the PCB-thickness axis — real slots
+      // repeat in the direction perpendicular to each stick's flat face, not along its height).
+      // setRamModules toggles how many are visible/populated to match the selected kit's real
+      // stick count (1/2/4). Stored on userData so setRamModules/setRamSlots can find them
+      // without rebuilding the mesh — naturalSize (measured right after this returns, with the
+      // default centered pair visible) stays the same magnitude regardless of which slots end
+      // up toggled later, since spacing no longer shares an axis with the height (X) dimension
+      // ramHeightMm scales.
+      const slots = RAM_SLOT_Z.map((z) => {
+        const slot = buildRamStick(T);
+        slot.position.z = z;
+        g.add(slot);
+        return slot;
       });
+      slots.forEach((s, i) => {
+        s.visible = i === 1 || i === 2;
+      });
+      g.userData.ramSlots = slots;
       g.scale.setScalar(0.82);
       return g;
     }
@@ -390,46 +537,74 @@ function buildCanMesh(): THREE.Group {
   return group;
 }
 
-// A real case fan reads as a square shroud around a round blade cavity, not a flat disc — this
-// gives it that shroud (with real ~21%-of-width thickness, matching a typical 25mm-thick
-// 120/140mm fan), a bezel ring marking the cavity edge, corner mounting screws, and a hub with
-// pitched (not flat) blades so they look swept rather than like radial spokes. Built facing
-// local +Z so a caller can rotate the whole group to face whichever case wall it's mounted on.
+// A curved, tapered blade profile (wide at the hub end, narrowing to a rounded tip) extruded to
+// a thickness — instead of a flat rectangular box, which reads as a crude paddle sticking out
+// past the fan's circular silhouette rather than a blade curving within it.
+function makeBladeGeometry(length: number, width: number, thickness: number): THREE.ExtrudeGeometry {
+  const shape = new THREE.Shape();
+  shape.moveTo(0, -width * 0.5);
+  shape.quadraticCurveTo(length * 0.55, -width * 0.55, length, -width * 0.05);
+  shape.quadraticCurveTo(length * 1.03, 0, length, width * 0.05);
+  shape.quadraticCurveTo(length * 0.55, width * 0.32, 0, width * 0.5);
+  shape.closePath();
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false, curveSegments: 10 });
+  geo.translate(0, 0, -thickness / 2);
+  return geo;
+}
+
+// A real case fan reads as a square shroud around a round blade cavity, not a flat disc. The
+// frame is built as 4 border bars — an actual open ring, NOT a solid box — because a solid box
+// spanning the full footprint would sit directly in front of the blades and hide them entirely
+// regardless of what's drawn behind it. Colors lean on the site's own maroon/gold palette (a
+// maroon shroud, gold trim) rather than flat black, matching every other component's finish.
+// Built facing local +Z so a caller can rotate the whole group to face whichever case wall it's
+// mounted on.
 function buildFanMesh(sizeMm: number): THREE.Group {
   const T = THREE;
   const group = new T.Group();
   const size = mmToUnits(sizeMm);
   const radius = size / 2;
-  const depth = size * 0.21;
-  const frameMat = new T.MeshStandardMaterial({ color: 0x141414, roughness: 0.45, metalness: 0.25 });
-  const bezelMat = new T.MeshStandardMaterial({ color: 0x232323, roughness: 0.3, metalness: 0.4 });
-  const bladeMat = new T.MeshStandardMaterial({ color: 0x090909, roughness: 0.55, metalness: 0.15 });
-  const hubMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.25, metalness: 0.75 });
-  const screwMat = new T.MeshStandardMaterial({ color: 0x050505, roughness: 0.5, metalness: 0.5 });
+  const depth = size * 0.21; // real 120/140mm fans are ~25mm thick — roughly a fifth of the frame width
+  const frameMat = new T.MeshStandardMaterial({ color: 0x241318, roughness: 0.4, metalness: 0.45 });
+  const bezelMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.25, metalness: 0.85 });
+  const bladeMat = new T.MeshStandardMaterial({ color: 0x2e181d, roughness: 0.45, metalness: 0.3 });
+  const hubMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.2, metalness: 0.85 });
+  const screwMat = new T.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.4, metalness: 0.6 });
 
-  group.add(new T.Mesh(new T.BoxGeometry(size, size, depth), frameMat));
+  const borderWidth = size * 0.12;
+  const topBar = new T.Mesh(new T.BoxGeometry(size, borderWidth, depth), frameMat);
+  topBar.position.y = radius - borderWidth / 2;
+  group.add(topBar);
+  const botBar = new T.Mesh(new T.BoxGeometry(size, borderWidth, depth), frameMat);
+  botBar.position.y = -(radius - borderWidth / 2);
+  group.add(botBar);
+  const sideLen = size - 2 * borderWidth;
+  const leftBar = new T.Mesh(new T.BoxGeometry(borderWidth, sideLen, depth), frameMat);
+  leftBar.position.x = -(radius - borderWidth / 2);
+  group.add(leftBar);
+  const rightBar = new T.Mesh(new T.BoxGeometry(borderWidth, sideLen, depth), frameMat);
+  rightBar.position.x = radius - borderWidth / 2;
+  group.add(rightBar);
 
-  const bezel = new T.Mesh(new T.TorusGeometry(radius * 0.88, radius * 0.045, 12, 32), bezelMat);
-  bezel.position.z = depth / 2;
+  // Gold bezel ring sitting right at the cavity's edge, flush with the frame — since the middle
+  // is now actually open, this reads as the visible trim of the blade housing rather than
+  // floating decoration in front of a solid wall.
+  const bezel = new T.Mesh(new T.TorusGeometry(radius * 0.82, radius * 0.028, 12, 32), bezelMat);
   group.add(bezel);
 
-  // Recessed slightly behind the bezel so the blades read as spinning inside the frame rather
-  // than floating in front of it.
-  const hubGroup = new T.Group();
-  hubGroup.position.z = depth * 0.15;
-  const bladeCount = 9;
+  // Blades kept just inside the bezel's own radius so their tips never poke past the fan's
+  // circular silhouette, tapering toward the tip so they read as blades rather than paddles.
+  const bladeCount = 7;
+  const bladeGeo = makeBladeGeometry(radius * 0.68, radius * 0.34, depth * 0.5);
   for (let i = 0; i < bladeCount; i++) {
     const angle = (i / bladeCount) * Math.PI * 2;
-    const blade = new T.Mesh(new T.BoxGeometry(radius * 0.7, radius * 0.22, depth * 0.22), bladeMat);
-    blade.position.set(Math.cos(angle) * radius * 0.4, Math.sin(angle) * radius * 0.4, 0);
+    const blade = new T.Mesh(bladeGeo, bladeMat);
     blade.rotation.z = angle;
-    blade.rotation.x = 0.5; // pitch, so each blade looks angled/scooped instead of a flat spoke
-    hubGroup.add(blade);
+    group.add(blade);
   }
-  const hub = new T.Mesh(new T.CylinderGeometry(radius * 0.14, radius * 0.14, depth * 0.5, 16), hubMat);
+  const hub = new T.Mesh(new T.CylinderGeometry(radius * 0.15, radius * 0.15, depth * 0.65, 16), hubMat);
   hub.rotation.x = Math.PI / 2;
-  hubGroup.add(hub);
-  group.add(hubGroup);
+  group.add(hub);
 
   const inset = size * 0.42;
   [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
@@ -460,9 +635,9 @@ function fanTransform(
   };
   switch (position) {
     case 'front':
-      return { pos: [0, along(h), d / 2 + gap], rot: [0, 0, 0] };
-    case 'rear':
       return { pos: [0, along(h), -d / 2 - gap], rot: [0, Math.PI, 0] };
+    case 'rear':
+      return { pos: [0, along(h), d / 2 + gap], rot: [0, 0, 0] };
     case 'top':
       return { pos: [0, h / 2 + gap, along(d)], rot: [-Math.PI / 2, 0, 0] };
     case 'bottom':
@@ -596,12 +771,15 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     bottom.rotation.x = -Math.PI / 2;
     bottom.position.y = -h / 2;
     caseGroup.add(bottom);
+    // front sits at -d/2, not +d/2: with the glass panel on +X (see glassMesh below) and the
+    // camera looking in from that side, the case's front is the wall to the right of that view
+    // (confirmed against the actual render, not assumed) — i.e. -Z, not +Z.
     const front = new THREE.Mesh(new THREE.PlaneGeometry(w, h), panelMat());
-    front.position.z = d / 2;
+    front.rotation.y = Math.PI;
+    front.position.z = -d / 2;
     caseGroup.add(front);
     const rear = new THREE.Mesh(new THREE.PlaneGeometry(w, h), panelMat());
-    rear.rotation.y = Math.PI;
-    rear.position.z = -d / 2;
+    rear.position.z = d / 2;
     caseGroup.add(rear);
 
     const boxGeo = new THREE.BoxGeometry(w, h, d);
@@ -729,6 +907,71 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     refreshCanDimensions();
   }
 
+  // ---- RAM slot outlines ----
+  // Real motherboards have a fixed number of DIMM slots (2 on Mini-ITX, 4 otherwise) whether or
+  // not any RAM is installed — this pre-renders that as faint outline frames at the same
+  // RAM_SLOT_Z positions the actual stick meshes use, so the empty slots are visible as soon as
+  // a motherboard is picked. Deliberately a standalone group (not part of objects.ram) so its
+  // visibility doesn't get tangled with the ram mesh's own fly-in/out lifecycle, which only
+  // exists once RAM itself is installed.
+  //
+  // Sized straight from RAM_DIMM_SIZE_MM rather than a hand-tuned box: the page's own 'ram'
+  // DimensionSpec scales an installed stick's local Y (length) to mmToUnits(RAM_DIMM_SIZE_MM.
+  // length) too — every DDR4/DDR5 stick is that same standard length regardless of kit, only
+  // the heatsink height varies — so building the outline from the same constant guarantees it
+  // always matches, instead of drifting out of sync the way two independently-guessed numbers
+  // did (previously the outline was fixed at a length nowhere near what a real, mm-accurate
+  // stick renders at, so every installed stick visibly overran its own slot).
+  const ramSlotLengthUnits = mmToUnits(RAM_DIMM_SIZE_MM.length);
+  const ramSlotHeightUnits = mmToUnits(RAM_DIMM_SIZE_MM.height);
+  const ramSlotOutlineGroup = new THREE.Group();
+  const ramSlotOutlines = RAM_SLOT_Z.map((z) => {
+    const geo = new THREE.BoxGeometry(ramSlotHeightUnits, ramSlotLengthUnits, 0.05);
+    const line = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: 0xc4a35a, transparent: true, opacity: 0.32 }));
+    geo.dispose();
+    line.position.set(0.03, 0, z);
+    ramSlotOutlineGroup.add(line);
+    return line;
+  });
+  ramSlotOutlineGroup.position.set(...BASE_POS.ram);
+  ramSlotOutlineGroup.visible = false;
+  scene.add(ramSlotOutlineGroup);
+
+  // Fills left to right (ascending index) rather than centering the populated slots — matches
+  // how a real board's slots would actually be populated one at a time, and gives setRamModules
+  // a natural stagger order for the per-stick fly-in below.
+  function ramSlotIndices(count: number): number[] {
+    const n = Math.max(0, Math.min(count, RAM_SLOT_Z.length));
+    return Array.from({ length: n }, (_, i) => i);
+  }
+
+  // `count` is the selected motherboard's real DIMM slot count (0 hides every outline — no
+  // motherboard selected means there's no board to show slots on).
+  function setMoboRamSlots(count: number) {
+    ramSlotOutlineGroup.visible = count > 0;
+    const active = ramSlotIndices(count);
+    ramSlotOutlines.forEach((line, i) => {
+      line.visible = active.includes(i);
+    });
+  }
+
+  // Short drop-in-place tween for a single newly-populated DIMM slot — local to the slot group,
+  // composes fine with the ram mesh's own parent-level scale/position animation (see
+  // toggleComponent) since THREE nests transforms naturally.
+  function flyInRamSlot(slot: THREE.Group) {
+    const start = Date.now();
+    const dur = 380;
+    const fromY = 0.4;
+    function tick() {
+      const p = Math.min(1, (Date.now() - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      slot.position.y = fromY * (1 - eased);
+      slot.scale.setScalar(0.35 + 0.65 * eased);
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    tick();
+  }
+
   // ---- Reference can ----
   let canVisible = false;
   const canGroup = buildCanMesh();
@@ -790,17 +1033,41 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     rebuildFans();
   }
 
+  // mobo/cpu/cooler/ram move as a rigid group, sharing whatever Z the motherboard itself sits
+  // at — and that Z is pinned to the *selected case's* actual rear wall (z=-d/2, see buildCase)
+  // rather than BASE_POS.mobo's fixed constant, so the now rear-facing I/O shield ports (see
+  // buildComponentMesh's 'mobo' case) actually reach the rear cutout instead of floating
+  // somewhere in the case's open interior. halfDepth reads the motherboard's own real depth
+  // (E-ATX's 330mm vs Mini-ITX's 170mm sit differently even in the same case) once a real SKU's
+  // sizeScale is on file; before that, it falls back to the unscaled placeholder's own extent.
+  const MOBO_REAR_CLEARANCE = 0.04;
+  function moboAnchoredZ(): number {
+    const mobo = objects.mobo;
+    const nat = naturalSize.mobo;
+    const halfDepth = mobo && nat ? (nat.z * mobo.sizeScale.z) / 2 : 0.75;
+    // +d/2 is the rear wall (see buildCase's `rear` panel) — the case's front sits at -d/2.
+    return lastCaseSize.d / 2 - MOBO_REAR_CLEARANCE - halfDepth;
+  }
+
   function resetComponentPositions() {
+    const moboZ = moboAnchoredZ();
     (Object.keys(BASE_POS) as Exclude<CompId, 'case'>[]).forEach((id) => {
       const obj = objects[id];
       if (!obj) return;
       const base = BASE_POS[id];
-      obj.finalPos.set(base[0], base[1], base[2]);
+      const z = id === 'mobo' || id === 'cpu' || id === 'cooler' || id === 'ram' ? moboZ + (base[2] - BASE_POS.mobo[2]) : base[2];
+      obj.finalPos.set(base[0], base[1], z);
       if (obj.selected) {
         obj.targetPos.copy(obj.finalPos);
         obj.mesh.position.copy(obj.finalPos);
       }
     });
+    // The empty-DIMM-slot outlines are a standalone group (see ramSlotOutlineGroup below), not
+    // one of the objects looped above, so they need their own copy of the same ram Z — otherwise
+    // they stay parked at BASE_POS.ram's static Z forever while the real ram object moves with
+    // the mobo assembly's case-anchored Z, drifting apart on any case/motherboard but the exact
+    // one BASE_POS.ram's constants happened to be tuned against.
+    ramSlotOutlineGroup.position.set(BASE_POS.ram[0], BASE_POS.ram[1], moboZ + (BASE_POS.ram[2] - BASE_POS.mobo[2]));
   }
 
   function updateCase(w: number, h: number, d: number) {
@@ -1030,6 +1297,10 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     if (obj.selected && obj.moveStart == null) {
       obj.mesh.scale.set(sizeScale.x, sizeScale.y, sizeScale.z);
     }
+    // A different motherboard form factor changes moboAnchoredZ's own real half-depth (E-ATX's
+    // 330mm vs Mini-ITX's 170mm), so the whole rear-anchored mobo/cpu/cooler/ram group needs to
+    // slide to match — same reason updateCase re-runs this when the case itself changes.
+    if (id === 'mobo') resetComponentPositions();
   }
 
   // Tips the GPU wrapper onto its side for a riser-mounted vertical case (world Z, where its
@@ -1049,6 +1320,30 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     }
   }
 
+  // Shows exactly `count` of the ram mesh's 4 fixed DIMM slots, left to right, so the viewport
+  // reflects the selected kit's real stick count. Slots newly turning on fly in one at a time
+  // (staggered by iteration order, i.e. left to right) rather than all popping in at once.
+  function setRamModules(count: number) {
+    const obj = objects.ram;
+    if (!obj) return;
+    const slots = (obj.mesh.userData.ramSlots as THREE.Group[] | undefined) ?? [];
+    const active = ramSlotIndices(count);
+    let staggerIndex = 0;
+    slots.forEach((slot, i) => {
+      const shouldShow = active.includes(i);
+      if (shouldShow && !slot.visible) {
+        const delay = staggerIndex * 140;
+        staggerIndex++;
+        setTimeout(() => {
+          slot.visible = true;
+          flyInRamSlot(slot);
+        }, delay);
+      } else if (!shouldShow) {
+        slot.visible = false;
+      }
+    });
+  }
+
   return {
     toggleComponent,
     updateCase,
@@ -1057,6 +1352,8 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     pickComponentAt,
     setSizeScale,
     setGpuOrientation,
+    setRamModules,
+    setMoboRamSlots,
     setComponentDimensions,
     setDimensionsVisible,
     setCanVisible,

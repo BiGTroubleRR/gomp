@@ -137,7 +137,11 @@ export type Database = {
           cooler_radiator_mm: number | null;
           psu_length_mm: number | null;
           ram_height_mm: number | null;
+          ram_generation: number | null;
+          ram_speed_mhz: number | null;
           fan_mounts: { position: string; maxCount: number; sizesMm: number[] }[] | null;
+          image_url: string | null;
+          margin_override: { type: string; value: number } | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -168,7 +172,11 @@ export type Database = {
           cooler_radiator_mm?: number | null;
           psu_length_mm?: number | null;
           ram_height_mm?: number | null;
+          ram_generation?: number | null;
+          ram_speed_mhz?: number | null;
           fan_mounts?: { position: string; maxCount: number; sizesMm: number[] }[] | null;
+          image_url?: string | null;
+          margin_override?: { type: string; value: number } | null;
           sort_order?: number;
         };
         Update: {
@@ -196,7 +204,11 @@ export type Database = {
           cooler_radiator_mm?: number | null;
           psu_length_mm?: number | null;
           ram_height_mm?: number | null;
+          ram_generation?: number | null;
+          ram_speed_mhz?: number | null;
           fan_mounts?: { position: string; maxCount: number; sizesMm: number[] }[] | null;
+          image_url?: string | null;
+          margin_override?: { type: string; value: number } | null;
           sort_order?: number;
         };
         Relationships: [];
@@ -257,6 +269,49 @@ export type Database = {
         };
         Update: {
           status?: 'new' | 'contacted' | 'converted' | 'archived';
+        };
+        Relationships: [];
+      };
+      // "Gomp Budget Builds" — a customer asks for a secondhand-parts build and a price
+      // proposal instead of configuring a new-parts build. Same PII/RLS shape as
+      // checkout_intents above.
+      gbb_requests: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          first_name: string;
+          last_name: string;
+          email: string;
+          phone: string;
+          budget_eur: number | null;
+          use_case: string;
+          notes: string;
+          price_proposal_eur: number | null;
+          proposal_notes: string;
+          status: 'new' | 'researching' | 'quoted' | 'converted' | 'archived';
+          lang: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          first_name?: string;
+          last_name?: string;
+          email: string;
+          phone?: string;
+          budget_eur?: number | null;
+          use_case?: string;
+          notes?: string;
+          price_proposal_eur?: number | null;
+          proposal_notes?: string;
+          status?: 'new' | 'researching' | 'quoted' | 'converted' | 'archived';
+          lang?: string;
+        };
+        Update: {
+          price_proposal_eur?: number | null;
+          proposal_notes?: string;
+          status?: 'new' | 'researching' | 'quoted' | 'converted' | 'archived';
         };
         Relationships: [];
       };
