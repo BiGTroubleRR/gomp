@@ -4,7 +4,15 @@
 // per-component mesh; exposes an imperative API the page's React state changes call into.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { RAM_DIMM_SIZE_MM, type FanMountPosition } from './component-db-seed';
+import {
+  RAM_DIMM_SIZE_MM,
+  MOBO_FORM_FACTOR_SIZE_MM,
+  STORAGE_M2_SIZE_MM,
+  PSU_ATX_SIZE_MM,
+  caseHasVerticalGpuMount,
+  type FanMountPosition,
+  type Component,
+} from './component-db-seed';
 
 export type CompId = 'mobo' | 'cpu' | 'cooler' | 'ram' | 'gpu' | 'storage' | 'psu' | 'case';
 export const SLOTS: CompId[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case'];
@@ -81,6 +89,73 @@ export type SizeScale = { x: number; y: number; z: number };
 // whose form factor (ATX/mATX/E-ATX/Mini-ITX) already implies the size class, so quoting exact
 // cm figures on top of that is redundant.
 export type DimensionSpec = { axis: 'x' | 'y' | 'z'; mm: number; label?: string; scalesMesh?: boolean; lineLengthMm?: number; annotate?: boolean };
+
+// mm -> a "N.N cm" string, the unit every dimension in the Build page (side panel, hover
+// tooltip, and the 3D blueprint annotations) is shown in.
+export function cm(mm: number): string {
+  return `${(mm / 10).toFixed(1)} cm`;
+}
+
+// Real per-SKU dimensions when the selected case has them (sourced from buildcores-open-db —
+// see the attribution note on /about), falling back to the old category-bucket size for a case
+// that doesn't (e.g. one added in Admin without dimension fields filled in yet).
+export function caseUnitsFor(comp: Component | undefined, category: string) {
+  if (comp?.caseWidthMm && comp?.caseHeightMm && comp?.caseDepthMm) {
+    return { w: mmToUnits(comp.caseWidthMm), h: mmToUnits(comp.caseHeightMm), d: mmToUnits(comp.caseDepthMm) };
+  }
+  return SIZES[category] || SIZES['Mid Tower'];
+}
+
+// Every RAM row's specs string leads with "N×..." (e.g. "2×16GB · CL32") — read straight off
+// that rather than adding a dedicated column, since every curated and bulk-imported RAM row
+// already follows this format. Falls back to 2 (the most common kit) if unparseable.
+export function ramModuleCount(comp: Component): number {
+  const m = comp.specs.match(/^(\d+)\s*×/);
+  return m ? Number(m[1]) : 2;
+}
+
+// Real DIMM slot count by form factor — every Mini-ITX board in the catalog has 2 (there's no
+// room for more), every ATX/mATX/E-ATX board has 4. No per-SKU data needed since this holds for
+// every real board at each of those sizes.
+export function moboRamSlotCount(mobo: Component | undefined): number {
+  if (!mobo) return 0;
+  return mobo.formFactor === 'Mini-ITX' ? 2 : 4;
+}
+
+// Every category's real physical dimension(s) — case/gpu/cooler/psu from the per-SKU data
+// sourced from buildcores-open-db, mobo/cpu/ram/storage from the standardized form-factor/
+// socket tables in component-db-seed.ts (real, industry-standard sizes that barely vary within
+// a form factor, so a per-SKU fetch wouldn't add anything). Returns [] when nothing is known
+// yet (e.g. an Admin-added case with no dimensions filled in).
+export function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVertical = false): DimensionSpec[] {
+  if (!comp) return [];
+  if (id === 'case' && comp.caseWidthMm && comp.caseHeightMm && comp.caseDepthMm) {
+    return [
+      { axis: 'x', mm: comp.caseWidthMm },
+      { axis: 'y', mm: comp.caseHeightMm },
+      { axis: 'z', mm: comp.caseDepthMm },
+    ];
+  }
+  if (id === 'gpu' && comp.gpuLengthMm) return [{ axis: gpuVertical ? 'y' : 'z', mm: comp.gpuLengthMm }];
+  if (id === 'cooler') {
+    if (comp.coolerRadiatorMm) return [{ axis: 'x', mm: comp.coolerRadiatorMm, label: `Ø ${cm(comp.coolerRadiatorMm)}`, scalesMesh: false, lineLengthMm: 40 }];
+    if (comp.coolerHeightMm) return [{ axis: 'y', mm: comp.coolerHeightMm }];
+  }
+  if (id === 'psu' && comp.psuLengthMm) {
+    return [
+      { axis: 'z', mm: comp.psuLengthMm },
+      { axis: 'x', mm: PSU_ATX_SIZE_MM.width },
+      { axis: 'y', mm: PSU_ATX_SIZE_MM.height },
+    ];
+  }
+  if (id === 'mobo' && comp.formFactor) {
+    const size = MOBO_FORM_FACTOR_SIZE_MM[comp.formFactor];
+    return size ? [{ axis: 'y', mm: size.width, annotate: false }, { axis: 'z', mm: size.depth, annotate: false }] : [];
+  }
+  if (id === 'ram') return [{ axis: 'y', mm: RAM_DIMM_SIZE_MM.length }, { axis: 'x', mm: comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height }];
+  if (id === 'storage') return [{ axis: 'z', mm: STORAGE_M2_SIZE_MM.length }, { axis: 'y', mm: STORAGE_M2_SIZE_MM.width }];
+  return [];
+}
 
 const DIM_COLOR = 0xc4a35a; // GOMP gold — matches the site's accent color
 
@@ -1352,6 +1427,39 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     });
   }
 
+  // Wires up an entire saved build in one call — the checkout page's read-only preview has no
+  // per-part UI to drive toggleComponent/setSizeScale/etc. incrementally the way the Build
+  // page's own state effects do, it just has a finished (selected, selections, compDb) snapshot
+  // to render as-is. Case size and GPU orientation are applied first since every other part's
+  // final position depends on them (see moboAnchoredZ/resetComponentPositions above).
+  function applyBuildSnapshot(
+    compDb: Partial<Record<CompId, Component[]>>,
+    selected: Partial<Record<CompId, boolean>>,
+    selections: Partial<Record<CompId, string>>,
+  ) {
+    function findComp(id: CompId): Component | undefined {
+      const list = compDb[id] || [];
+      return list.find((c) => c.name === selections[id]) || list[0];
+    }
+    const caseComp = findComp('case');
+    const gpuVertical = caseHasVerticalGpuMount(caseComp?.name);
+    if (caseComp) {
+      const size = caseUnitsFor(caseComp, caseComp.category || 'Mid Tower');
+      updateCase(size.w, size.h, size.d);
+    }
+    setGpuOrientation(gpuVertical);
+    SLOTS.forEach((id) => {
+      const comp = findComp(id);
+      if (comp) {
+        setSizeScale(id, dimensionSpecsFor(id, comp, gpuVertical));
+        if (id === 'ram') setRamModules(ramModuleCount(comp));
+        if (id === 'mobo') setMoboRamSlots(moboRamSlotCount(comp));
+      }
+      toggleComponent(id, !!selected[id] && !!comp);
+    });
+    controls.autoRotate = true;
+  }
+
   return {
     toggleComponent,
     updateCase,
@@ -1366,6 +1474,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     setDimensionsVisible,
     setCanVisible,
     setFans,
+    applyBuildSnapshot,
     setMotion(on: boolean) {
       motionOn = on;
       ambientGroup.visible = on;

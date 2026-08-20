@@ -14,7 +14,6 @@ import {
   caseFitsFormFactor,
   caseHasVerticalGpuMount,
   fitsInCase,
-  MOBO_FORM_FACTOR_SIZE_MM,
   RAM_DIMM_SIZE_MM,
   STORAGE_M2_SIZE_MM,
   PSU_ATX_SIZE_MM,
@@ -24,7 +23,19 @@ import {
   type FanMountPosition,
   type FormFactor,
 } from '@/lib/component-db-seed';
-import { createBuildScene, SLOTS, CASE_SIZES, mmToUnits, type BuildScene, type CompId, type DimensionSpec } from '@/lib/build-scene';
+import {
+  createBuildScene,
+  SLOTS,
+  CASE_SIZES,
+  mmToUnits,
+  cm,
+  caseUnitsFor,
+  ramModuleCount,
+  moboRamSlotCount,
+  dimensionSpecsFor,
+  type BuildScene,
+  type CompId,
+} from '@/lib/build-scene';
 import { useIsMobile } from '@/lib/use-media-query';
 import { setDustCursorVisible, isDustEnabled } from '@/lib/cursor-dust';
 
@@ -193,44 +204,12 @@ function FilterChip({ active, label, onClick }: { active: boolean; label: string
   );
 }
 
-// Real per-SKU dimensions when the selected case has them (sourced from buildcores-open-db —
-// see the attribution note on /about), falling back to the old category-bucket size for a case
-// that doesn't (e.g. one added in Admin without dimension fields filled in yet).
-function caseUnitsFor(comp: Component | undefined, category: string) {
-  if (comp?.caseWidthMm && comp?.caseHeightMm && comp?.caseDepthMm) {
-    return { w: mmToUnits(comp.caseWidthMm), h: mmToUnits(comp.caseHeightMm), d: mmToUnits(comp.caseDepthMm) };
-  }
-  return CASE_SIZES[category] || CASE_SIZES['Mid Tower'];
-}
-
-// mm -> a "N.N cm" string, the unit every dimension in the Build page (side panel, hover
-// tooltip, and the 3D blueprint annotations) is shown in.
-function cm(mm: number): string {
-  return `${(mm / 10).toFixed(1)} cm`;
-}
-
-// Every RAM row's specs string leads with "N×..." (e.g. "2×16GB · CL32") — read straight off
-// that rather than adding a dedicated column, since every curated and bulk-imported RAM row
-// already follows this format. Falls back to 2 (the most common kit) if unparseable.
-function ramModuleCount(comp: Component): number {
-  const m = comp.specs.match(/^(\d+)\s*×/);
-  return m ? Number(m[1]) : 2;
-}
-
 // CPU manufacturer isn't a structured field — every name in the catalog already leads with the
 // brand ("AMD Ryzen 9 9950X3D", "Intel Core Ultra 9 285K"), so this reads that prefix instead of
 // adding a DB column + backfill for something already encoded in the name, same reasoning as
 // ramModuleCount above.
 function cpuManufacturer(name: string): string {
   return name.split(' ')[0] || '';
-}
-
-// Real DIMM slot count by form factor — every Mini-ITX board in the catalog has 2 (there's no
-// room for more), every ATX/mATX/E-ATX board has 4. No per-SKU data needed since this holds for
-// every real board at each of those sizes.
-function moboRamSlotCount(mobo: Component | undefined): number {
-  if (!mobo) return 0;
-  return mobo.formFactor === 'Mini-ITX' ? 2 : 4;
 }
 
 // GPU/CPU/PSU specs already quote their wattage as a plain "570W"-style token (the same text
@@ -250,64 +229,6 @@ const BASE_WATTS: Partial<Record<CompId, number>> = {
   storage: 6,
   cooler: 8,
 };
-
-// Every category's real physical dimension(s) — case/gpu/cooler/psu from the per-SKU data
-// sourced from buildcores-open-db, mobo/cpu/ram/storage from the standardized form-factor/
-// socket tables in component-db-seed.ts (real, industry-standard sizes that barely vary within
-// a form factor, so a per-SKU fetch wouldn't add anything). Returns [] when nothing is known
-// yet (e.g. an Admin-added case with no dimensions filled in).
-function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVertical = false): DimensionSpec[] {
-  if (!comp) return [];
-  if (id === 'case' && comp.caseWidthMm && comp.caseHeightMm && comp.caseDepthMm) {
-    return [
-      { axis: 'x', mm: comp.caseWidthMm },
-      { axis: 'y', mm: comp.caseHeightMm },
-      { axis: 'z', mm: comp.caseDepthMm },
-    ];
-  }
-  if (id === 'gpu' && comp.gpuLengthMm) return [{ axis: gpuVertical ? 'y' : 'z', mm: comp.gpuLengthMm }];
-  if (id === 'cooler') {
-    // scalesMesh: false — the placeholder cooler mesh is a pump block, not a radiator; there's
-    // no matching geometry to scale by radiator length, so this quotes the real size without
-    // resizing the mesh (unlike every other spec here). lineLengthMm caps the annotation LINE
-    // itself to roughly the pump block's own size too — without it the line is drawn at the
-    // real (300-420mm) radiator length, which has no matching mesh either and visibly spans
-    // clean across the case.
-    if (comp.coolerRadiatorMm) return [{ axis: 'x', mm: comp.coolerRadiatorMm, label: `Ø ${cm(comp.coolerRadiatorMm)}`, scalesMesh: false, lineLengthMm: 40 }];
-    if (comp.coolerHeightMm) return [{ axis: 'y', mm: comp.coolerHeightMm }];
-  }
-  if (id === 'psu' && comp.psuLengthMm) {
-    return [
-      { axis: 'z', mm: comp.psuLengthMm },
-      { axis: 'x', mm: PSU_ATX_SIZE_MM.width },
-      { axis: 'y', mm: PSU_ATX_SIZE_MM.height },
-    ];
-  }
-  // The remaining categories' placeholder meshes (build-scene.ts's buildComponentMesh) each
-  // have one genuinely thin "thickness" local axis (the PCB/package thinness — mobo's local X
-  // is 0.04 units, cpu's ~0.06-0.1, ram's ~0.04-0.05, storage's ~0.04) and two much larger axes
-  // that form the part's actual real-world footprint. The real width/length/depth numbers below
-  // are mapped onto those two larger axes specifically — never onto the thin one, or the
-  // annotation ends up perpendicular to how the part actually looks (a real physical fix, not
-  // just a display tweak: mobo/cpu use local Y+Z, ram/storage use local Y+Z too but paired with
-  // a different real dimension each since ram's long axis is Y while storage's is Z).
-  // Only the mesh scale is quoted here (annotate: false) — a motherboard's form factor
-  // (ATX/mATX/E-ATX/Mini-ITX), already shown as its own badge, is a standard size class, so
-  // drawing exact cm figures on top of it is redundant (see dimensionLabel below, which omits
-  // mobo entirely for the same reason).
-  if (id === 'mobo' && comp.formFactor) {
-    const size = MOBO_FORM_FACTOR_SIZE_MM[comp.formFactor];
-    return size ? [{ axis: 'y', mm: size.width, annotate: false }, { axis: 'z', mm: size.depth, annotate: false }] : [];
-  }
-  // CPU package size is deliberately not quoted — it barely varies (a few mm across every
-  // socket) and isn't a dimension anyone building a PC actually needs to check.
-  // Height rides local X (the stick's own face-normal, matching the motherboard's — see
-  // buildRamStick in build-scene.ts), not Z, which is now the fixed slot-repeat axis multiple
-  // sticks are laid out along and must stay unscaled by any one SKU's own heatsink height.
-  if (id === 'ram') return [{ axis: 'y', mm: RAM_DIMM_SIZE_MM.length }, { axis: 'x', mm: comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height }];
-  if (id === 'storage') return [{ axis: 'z', mm: STORAGE_M2_SIZE_MM.length }, { axis: 'y', mm: STORAGE_M2_SIZE_MM.width }];
-  return [];
-}
 
 // Same data, formatted as a single line of text for the side panel / hover tooltip (the 3D
 // annotations above are the blueprint-style version of the same numbers).
