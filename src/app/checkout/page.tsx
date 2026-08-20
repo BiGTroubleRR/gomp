@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import dynamic from 'next/dynamic';
 import { useSite } from '@/contexts/SiteContext';
 import { useAuth } from '@/contexts/AuthContext';
 import TransitionLink from '@/components/TransitionLink';
-import Case3DViewer, { type CompDb } from '@/components/Case3DViewer';
+import type { CompDb } from '@/components/Case3DViewer';
 import SiteNav from '@/components/SiteNav';
 import { readJSON, type Currency, type Lang } from '@/lib/gomp-storage';
 import { useIsMobile } from '@/lib/use-media-query';
@@ -63,6 +64,11 @@ const SHIPPING_OPTIONS: { id: ShippingId; name_en: string; name_sk: string; eta_
 ];
 
 const ASSEMBLY_FEE_EUR = 130;
+
+// Code-split out of checkout's main bundle — it pulls in three.js purely to re-render the
+// build's case, and WebGL has nothing to do during SSR anyway, so `ssr: false` also skips a
+// server render that would just throw on `document`/`WebGLRenderingContext`.
+const Case3DViewer = dynamic(() => import('@/components/Case3DViewer'), { ssr: false });
 
 const CAT: Record<string, string> = {
   mobo: 'Motherboard',
