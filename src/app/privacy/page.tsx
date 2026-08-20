@@ -68,17 +68,27 @@ const SECTIONS: Record<'en' | 'sk', Section[]> = {
       blocks: [
         { p: 'Account & authentication data. When you create an account, we (via our authentication providers, Supabase Auth and/or Clerk — see Section 4) process your name, e-mail address, and a securely hashed password, plus optionally a phone number you add in your account profile. This is processed to create and operate your account and to let you sign in — legal basis: performance of a contract with you (GDPR Art. 6(1)(b)).' },
         { p: 'Order & delivery data. When you place an order, we process the components/configuration selected, the order total, order status, and any delivery address you save. This is processed to fulfil your order and to comply with our accounting and tax record-keeping obligations — legal basis: performance of a contract (Art. 6(1)(b)) and legal obligation (Art. 6(1)(c)).' },
+        { p: 'Secondhand build request data (Gomp Budget Builds). If you submit a "Gomp Budget Builds" request, we process your first and last name, e-mail address, phone number, budget, and any notes you provide, in order to research current secondhand-market listings and send you a price proposal. This is processed to take steps you requested toward a possible contract — legal basis: pre-contractual steps at your request (Art. 6(1)(b)).' },
         { p: 'Browser preference data. Your language, currency, and device-view preferences, and an in-progress build/checkout draft, are stored locally in your browser (not on our servers) so the site remembers your choices between visits. This is strictly necessary for the site to function and does not require consent.' },
         { p: 'Performance/technical data. We use Vercel Speed Insights to measure page-load performance (Core Web Vitals) in aggregate, so we can keep the site fast. In its standard configuration this does not set tracking cookies or identify you individually — legal basis: our legitimate interest in operating a reliable website (Art. 6(1)(f)). [TODO: confirm current Speed Insights configuration and whether any identifiers are collected before relying on this basis.]' },
       ],
     },
     {
+      id: 'ai',
+      title: '3. Automated Processing & AI Tools',
+      blocks: [
+        { p: 'We do not use artificial intelligence or any other automated system to make decisions about you or your order that would produce legal effects or otherwise significantly affect you without a person reviewing them first — every price proposal, order, and support reply is checked by a human being before it reaches you (GDPR Art. 22).' },
+        { p: 'Product photography on this site may have its background removed using an on-device machine-learning tool that runs locally in the administrator\'s own browser when a product photo is uploaded. It only processes product photos we upload ourselves and never processes any of your personal data.' },
+        { p: 'If we ever use a general-purpose AI assistant to help draft a reply to your enquiry, we only share what is necessary for that specific reply, and we do not use your data to train an AI provider\'s models where an option to opt out of such training is available. [TODO: if a specific AI tool/vendor is used for this in practice, name it here and confirm its data-training and data-location terms before relying on this paragraph.]' },
+      ],
+    },
+    {
       id: 'processors',
-      title: '3. Third Parties We Share Data With',
+      title: '4. Third Parties We Share Data With',
       blocks: [
         { p: 'We use the following processors to operate the website and store your data. We do not sell personal data to anyone.' },
         { ul: [
-          'Supabase — database hosting and (where used) authentication. Stores account, profile, address, and order data. [TODO: confirm current hosting region — at the time of writing the project is provisioned in an EU AWS region.]',
+          'Supabase — database hosting and (where used) authentication. Stores account, profile, address, order, and Gomp Budget Builds request data. [TODO: confirm current hosting region — at the time of writing the project is provisioned in an EU AWS region.]',
           'Clerk — authentication provider (sign-in/sign-up). Processes your name, e-mail, and session/authentication data. Clerk, Inc. is based in the United States. [TODO: confirm and cite the transfer safeguard in place — e.g. EU-U.S. Data Privacy Framework or Standard Contractual Clauses — and whether an EU data residency option is enabled.]',
           'Vercel — website hosting, and the Speed Insights performance-monitoring feature described above. Vercel Inc. is based in the United States. [TODO: confirm and cite the transfer safeguard in place, as above.]',
           '[TODO: add any e-mail delivery provider used to send order confirmations, if/when one is connected.]',
@@ -88,7 +98,7 @@ const SECTIONS: Record<'en' | 'sk', Section[]> = {
     },
     {
       id: 'retention',
-      title: '4. How Long We Keep Your Data',
+      title: '5. How Long We Keep Your Data',
       blocks: [
         { p: '[TODO: fill in the retention period for account data — e.g. for as long as your account is active, plus a defined period after closure.]' },
         { p: 'Order and invoicing records are, as a general rule under Czech accounting and tax law, required to be kept for ten (10) years from the end of the accounting period to which they relate. [TODO: confirm the exact retention period actually applied and document it here.]' },
@@ -97,14 +107,14 @@ const SECTIONS: Record<'en' | 'sk', Section[]> = {
     },
     {
       id: 'transfers',
-      title: '5. International Transfers',
+      title: '6. International Transfers',
       blocks: [
-        { p: 'Some of our processors (Clerk and Vercel, listed in Section 3) are based in the United States, which means personal data may be transferred outside the European Economic Area. Where this occurs, we rely on the transfer mechanism(s) offered by that processor — such as the EU-U.S. Data Privacy Framework or the European Commission\'s Standard Contractual Clauses. [TODO: confirm and document the specific mechanism relied upon for each processor before relying on this section.]' },
+        { p: 'Some of our processors (Clerk and Vercel, listed in Section 4) are based in the United States, which means personal data may be transferred outside the European Economic Area. Where this occurs, we rely on the transfer mechanism(s) offered by that processor — such as the EU-U.S. Data Privacy Framework or the European Commission\'s Standard Contractual Clauses. [TODO: confirm and document the specific mechanism relied upon for each processor before relying on this section.]' },
       ],
     },
     {
       id: 'cookies',
-      title: '6. Cookies & Local Storage',
+      title: '7. Cookies & Local Storage',
       blocks: [
         { p: 'This website does not currently use tracking, analytics, or marketing cookies. The site does store a small number of items in your browser\'s local storage — not cookies in the strict sense, but a similar client-side mechanism — to remember your language, currency, device-view preference, and an in-progress build/order draft. These are all strictly necessary for the site to function as intended and do not require your consent under the ePrivacy rules.' },
         { p: 'Vercel Speed Insights, described in Section 2, operates in its default configuration without setting cookies.' },
@@ -113,7 +123,7 @@ const SECTIONS: Record<'en' | 'sk', Section[]> = {
     },
     {
       id: 'rights',
-      title: '7. Your Rights',
+      title: '8. Your Rights',
       blocks: [
         { p: 'Under the GDPR, you have the right to:' },
         { ul: [
@@ -130,7 +140,7 @@ const SECTIONS: Record<'en' | 'sk', Section[]> = {
     },
     {
       id: 'changes',
-      title: '8. Changes to This Policy',
+      title: '9. Changes to This Policy',
       blocks: [
         { p: 'We may update this Privacy Policy from time to time, in particular to reflect changes to the processors we use or to applicable law. The current version is always available on this page.' },
       ],
@@ -157,17 +167,27 @@ const SECTIONS: Record<'en' | 'sk', Section[]> = {
       blocks: [
         { p: 'Údaje o účte a prihlásení. Pri vytvorení účtu spracúvame (prostredníctvom našich poskytovateľov autentifikácie, Supabase Auth a/alebo Clerk — pozri časť 4) vaše meno, e-mailovú adresu a bezpečne zahašované heslo, prípadne telefónne číslo, ktoré doplníte vo svojom profile. Robíme tak na vytvorenie a prevádzku vášho účtu a umožnenie prihlásenia — právny základ: plnenie zmluvy s vami (čl. 6 ods. 1 písm. b) GDPR).' },
         { p: 'Údaje o objednávke a doručení. Pri vytvorení objednávky spracúvame vybrané komponenty/konfiguráciu, celkovú cenu objednávky, stav objednávky a prípadnú uloženú doručovaciu adresu. Robíme tak na vybavenie vašej objednávky a splnenie účtovných a daňových povinností — právny základ: plnenie zmluvy (čl. 6 ods. 1 písm. b)) a zákonná povinnosť (čl. 6 ods. 1 písm. c)).' },
+        { p: 'Údaje o žiadosti o bazárovú zostavu (Gomp Budget Builds). Ak odošlete žiadosť „Gomp Budget Builds", spracúvame vaše meno, priezvisko, e-mailovú adresu, telefónne číslo, rozpočet a akékoľvek poznámky, ktoré uvediete, aby sme mohli prehľadať aktuálne ponuky na bazárovom trhu a zaslať vám cenový návrh. Robíme tak na základe krokov, ktoré ste si vyžiadali smerom k prípadnej zmluve — právny základ: kroky pred uzavretím zmluvy na vašu žiadosť (čl. 6 ods. 1 písm. b)).' },
         { p: 'Údaje o preferenciách v prehliadači. Vaše nastavenia jazyka, meny a zobrazenia zariadenia, ako aj rozpracovaná zostava/objednávka, sa ukladajú lokálne vo vašom prehliadači (nie na našich serveroch), aby si stránka pamätala vaše voľby medzi návštevami. Je to nevyhnutné pre fungovanie stránky a nevyžaduje súhlas.' },
         { p: 'Výkonnostné/technické údaje. Používame Vercel Speed Insights na súhrnné meranie rýchlosti načítania stránky (Core Web Vitals), aby sme udržali stránku rýchlu. V štandardnom nastavení sa tým nenastavujú sledovacie cookies ani sa vás individuálne neidentifikuje — právny základ: náš oprávnený záujem na prevádzke spoľahlivej webovej stránky (čl. 6 ods. 1 písm. f)). [TODO: pred spoliehaním sa na tento právny základ potvrdiť aktuálne nastavenie Speed Insights a či sa zbierajú nejaké identifikátory.]' },
       ],
     },
     {
+      id: 'ai',
+      title: '3. Automatizované rozhodovanie a nástroje AI',
+      blocks: [
+        { p: 'Umelú inteligenciu ani iný automatizovaný systém nepoužívame na prijímanie rozhodnutí o vás alebo vašej objednávke, ktoré by mali právne účinky alebo by sa vás inak významne dotýkali, bez toho, aby ich najprv skontroloval človek — každý cenový návrh, objednávku aj odpoveď na vašu otázku pred odoslaním skontroluje človek (čl. 22 GDPR).' },
+        { p: 'Fotografiám produktov na tejto stránke môže byť odstránené pozadie pomocou nástroja strojového učenia, ktorý beží priamo v prehliadači administrátora v okamihu nahrania fotografie. Tento nástroj spracúva iba fotografie produktov, ktoré nahrávame my, a nikdy nespracúva žiadne vaše osobné údaje.' },
+        { p: 'Ak na pomoc s odpoveďou na vašu otázku niekedy použijeme všeobecného AI asistenta, zdieľame s ním iba to, čo je potrebné na danú konkrétnu odpoveď, a vaše údaje nepoužívame na trénovanie modelov poskytovateľa AI, ak je k dispozícii možnosť takéto použitie odmietnuť. [TODO: ak sa v praxi na tento účel používa konkrétny nástroj/poskytovateľ AI, uviesť ho tu a pred spoliehaním sa na tento odsek potvrdiť jeho podmienky týkajúce sa trénovania a umiestnenia údajov.]' },
+      ],
+    },
+    {
       id: 'processors',
-      title: '3. Tretie strany, s ktorými zdieľame údaje',
+      title: '4. Tretie strany, s ktorými zdieľame údaje',
       blocks: [
         { p: 'Na prevádzku webovej stránky a uloženie vašich údajov využívame nasledujúcich spracovateľov. Osobné údaje nikomu nepredávame.' },
         { ul: [
-          'Supabase — hosting databázy a (ak sa používa) autentifikácia. Ukladá údaje o účte, profile, adresách a objednávkach. [TODO: potvrdiť aktuálny región hostingu — v čase písania je projekt umiestnený v regióne AWS v EÚ.]',
+          'Supabase — hosting databázy a (ak sa používa) autentifikácia. Ukladá údaje o účte, profile, adresách, objednávkach a žiadostiach Gomp Budget Builds. [TODO: potvrdiť aktuálny región hostingu — v čase písania je projekt umiestnený v regióne AWS v EÚ.]',
           'Clerk — poskytovateľ autentifikácie (prihlásenie/registrácia). Spracúva vaše meno, e-mail a údaje o relácii/autentifikácii. Spoločnosť Clerk, Inc. má sídlo v USA. [TODO: potvrdiť a uviesť konkrétny mechanizmus zabezpečenia prenosu — napr. rámec EU-U.S. Data Privacy Framework alebo štandardné zmluvné doložky — a či je aktivovaná možnosť uloženia údajov v EÚ.]',
           'Vercel — hosting webovej stránky a funkcia Speed Insights popísaná vyššie. Spoločnosť Vercel Inc. má sídlo v USA. [TODO: potvrdiť a uviesť mechanizmus zabezpečenia prenosu, ako vyššie.]',
           '[TODO: doplniť poskytovateľa e-mailových služieb použitého na zasielanie potvrdení objednávok, ak/keď bude zapojený.]',
@@ -177,7 +197,7 @@ const SECTIONS: Record<'en' | 'sk', Section[]> = {
     },
     {
       id: 'retention',
-      title: '4. Ako dlho uchovávame vaše údaje',
+      title: '5. Ako dlho uchovávame vaše údaje',
       blocks: [
         { p: '[TODO: doplniť dobu uchovávania údajov o účte — napr. počas trvania aktívneho účtu a definovanú dobu po jeho zrušení.]' },
         { p: 'Doklady o objednávkach a fakturácii je potrebné podľa všeobecného pravidla českého účtovného a daňového práva uchovávať desať (10) rokov od konca účtovného obdobia, ktorého sa týkajú. [TODO: potvrdiť skutočne uplatňovanú dobu uchovávania a zdokumentovať ju tu.]' },
@@ -186,14 +206,14 @@ const SECTIONS: Record<'en' | 'sk', Section[]> = {
     },
     {
       id: 'transfers',
-      title: '5. Medzinárodné prenosy',
+      title: '6. Medzinárodné prenosy',
       blocks: [
-        { p: 'Niektorí naši spracovatelia (Clerk a Vercel, uvedení v časti 3) majú sídlo v USA, čo znamená, že osobné údaje môžu byť prenášané mimo Európskeho hospodárskeho priestoru. V takom prípade sa spoliehame na mechanizmus prenosu, ktorý daný spracovateľ ponúka — napríklad rámec EU-U.S. Data Privacy Framework alebo štandardné zmluvné doložky Európskej komisie. [TODO: pred spoliehaním sa na túto časť potvrdiť a zdokumentovať konkrétny mechanizmus pre každého spracovateľa.]' },
+        { p: 'Niektorí naši spracovatelia (Clerk a Vercel, uvedení v časti 4) majú sídlo v USA, čo znamená, že osobné údaje môžu byť prenášané mimo Európskeho hospodárskeho priestoru. V takom prípade sa spoliehame na mechanizmus prenosu, ktorý daný spracovateľ ponúka — napríklad rámec EU-U.S. Data Privacy Framework alebo štandardné zmluvné doložky Európskej komisie. [TODO: pred spoliehaním sa na túto časť potvrdiť a zdokumentovať konkrétny mechanizmus pre každého spracovateľa.]' },
       ],
     },
     {
       id: 'cookies',
-      title: '6. Cookies a lokálne úložisko',
+      title: '7. Cookies a lokálne úložisko',
       blocks: [
         { p: 'Táto webová stránka v súčasnosti nepoužíva sledovacie, analytické ani marketingové cookies. Stránka ukladá malý počet položiek do lokálneho úložiska vášho prehliadača — nie je to cookie v prísnom zmysle, ale podobný mechanizmus na strane klienta — aby si zapamätala váš jazyk, menu, preferenciu zobrazenia zariadenia a rozpracovanú zostavu/objednávku. Všetky sú nevyhnutné pre zamýšľané fungovanie stránky a nevyžadujú váš súhlas podľa pravidiel ePrivacy.' },
         { p: 'Vercel Speed Insights, popísaný v časti 2, funguje v predvolenom nastavení bez nastavovania cookies.' },
@@ -202,7 +222,7 @@ const SECTIONS: Record<'en' | 'sk', Section[]> = {
     },
     {
       id: 'rights',
-      title: '7. Vaše práva',
+      title: '8. Vaše práva',
       blocks: [
         { p: 'Podľa GDPR máte právo na:' },
         { ul: [
@@ -219,7 +239,7 @@ const SECTIONS: Record<'en' | 'sk', Section[]> = {
     },
     {
       id: 'changes',
-      title: '8. Zmeny týchto zásad',
+      title: '9. Zmeny týchto zásad',
       blocks: [
         { p: 'Tieto Zásady ochrany osobných údajov môžeme priebežne aktualizovať, najmä v súvislosti so zmenami spracovateľov, ktorých využívame, alebo platnej legislatívy. Aktuálne znenie je vždy dostupné na tejto stránke.' },
       ],
