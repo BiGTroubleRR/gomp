@@ -1281,6 +1281,14 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     renderer.setSize(w, h);
   }
   window.addEventListener('resize', onResize);
+  // The container's box can also change size for reasons that never fire a window 'resize'
+  // event — e.g. useIsMobile resolving from its desktop-first default to `true` a beat after
+  // this scene is created, which swaps the container from a full-height flex box to a fixed
+  // 46vh one. Without watching the element itself, the renderer/camera stay sized for the
+  // container's very first (pre-mobile) layout forever, which both crops and stretches the
+  // picture once the box actually shrinks.
+  const resizeObserver = new ResizeObserver(onResize);
+  resizeObserver.observe(container);
 
   // Computes and stores this part's true-to-size scale from its real-mm specs, applying it
   // immediately if it's already installed (a same-category SKU swap, e.g. GPU already on and
@@ -1367,6 +1375,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     dispose() {
       running = false;
       window.removeEventListener('resize', onResize);
+      resizeObserver.disconnect();
       (Object.keys(dimensionGroups) as (CompId | 'can')[]).forEach(clearDimensionGroup);
       controls.dispose();
       renderer.dispose();

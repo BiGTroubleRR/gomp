@@ -775,7 +775,7 @@ export default function BuildPage() {
     : (hoverComp?.tier as Tier | undefined);
 
   return (
-    <div style={{ position: 'relative', background: BG, minHeight: '100vh' }}>
+    <div style={{ position: 'relative', background: BG, minHeight: '100vh', paddingBottom: isMobile ? 72 : 0 }}>
       {/* ---- Nav ---- */}
       <SiteNav />
 
@@ -1372,6 +1372,41 @@ export default function BuildPage() {
           </div>
         </div>
       </div>
+
+      {/* ---- Mobile sticky total/CTA bar ----
+          On mobile the sidebar and detail panel stack in normal page flow below the 3D view,
+          so a category with a long card list can push the real total/CTA panel (bottom of the
+          right panel) a full screen or more down the page. This bar is pinned to the viewport
+          so the total and primary action are always reachable without scrolling to the end. */}
+      {isMobile && (
+        <div
+          style={{
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 20,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '10px 16px',
+            background: PANEL,
+            borderTop: '0.5px solid rgba(28,28,26,0.1)',
+            boxShadow: '0 -4px 16px rgba(28,28,26,0.08)',
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.build_total}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 18, color: INK, fontWeight: 600 }}>{fmt(totalPrice)}</div>
+          </div>
+          <button
+            onClick={handleOrder}
+            style={{ padding: '11px 20px', background: MAROON, color: '#FDFAF4', border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            {t.continue_benchmarks}
+          </button>
+        </div>
+      )}
 
       {/* ---- Order overlay ---- */}
       {ordering && (
