@@ -25,7 +25,10 @@ const csp = [
   // eval() and is never used in production builds.
   `script-src 'self' 'unsafe-inline' ${process.env.NODE_ENV !== 'production' ? "'unsafe-eval' " : ''}${CLERK_ORIGINS} ${VERCEL_INSIGHTS_SCRIPT}`,
   `style-src 'self' 'unsafe-inline'`,
-  `img-src 'self' data: blob: https://img.clerk.com`,
+  // Admin-uploaded product photos are served straight from Supabase Storage's public URL
+  // (see src/app/api/admin/upload-image/route.ts's getPublicUrl call) — that host was missing
+  // here, which would silently block every product image the moment one was actually rendered.
+  `img-src 'self' data: blob: https://img.clerk.com ${SUPABASE_URL}`,
   `font-src 'self' data:`,
   `connect-src 'self' ${CLERK_ORIGINS} https://clerk-telemetry.com ${SUPABASE_URL} ${SUPABASE_WS} ${VERCEL_INSIGHTS_BEACON}`,
   // blob: workers back the 3D scene's off-main-thread work.
@@ -37,6 +40,13 @@ const csp = [
 ].join('; ');
 
 const nextConfig: NextConfig = {
+  // Rewrites named imports from these packages into per-module imports at build time (e.g.
+  // `import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'` already does
+  // this by hand; this setting gets the same effect automatically for three's and Clerk's own
+  // barrel-style exports) so a route that only uses part of a package doesn't pull in the rest.
+  experimental: {
+    optimizePackageImports: ['three', '@clerk/nextjs'],
+  },
   async headers() {
     return [
       {

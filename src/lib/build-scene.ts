@@ -157,6 +157,24 @@ export function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVe
   return [];
 }
 
+// Frees every geometry/material/texture attached under a scene root — three.js never does this
+// on its own (removing an object from the scene graph just stops it rendering, it does not free
+// its GPU-side buffers), so a scene torn down without this leaks VRAM on every mount/unmount.
+function disposeSceneContents(root: THREE.Object3D) {
+  root.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (mesh.geometry) mesh.geometry.dispose();
+    const material = mesh.material as THREE.Material | THREE.Material[] | undefined;
+    if (!material) return;
+    (Array.isArray(material) ? material : [material]).forEach((m) => {
+      Object.values(m).forEach((value) => {
+        if (value instanceof THREE.Texture) value.dispose();
+      });
+      m.dispose();
+    });
+  });
+}
+
 const DIM_COLOR = 0xc4a35a; // GOMP gold — matches the site's accent color
 
 // Text size scales with what's being measured — a case's "47.5 cm" label and a RAM stick's
@@ -1309,10 +1327,24 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   }
 
   let running = true;
+  // The tab-hidden case is already free (rAF self-throttles to ~1fps in a backgrounded tab),
+  // but a canvas merely scrolled out of view keeps rendering every frame at full rate — the
+  // sidebar-heavy Build page and the checkout recap both put this canvas well below the fold
+  // on short viewports. IntersectionObserver skips the actual render work while it's offscreen;
+  // requestAnimationFrame itself keeps ticking (cheap) so it resumes instantly once back in view.
+  let inView = true;
+  const visibilityObserver = new IntersectionObserver(
+    ([entry]) => {
+      inView = entry.isIntersecting;
+    },
+    { threshold: 0 },
+  );
+  visibilityObserver.observe(container);
   const clock = new THREE.Clock();
   function tick() {
     if (!running) return;
     requestAnimationFrame(tick);
+    if (document.hidden || !inView) return;
     const t = clock.getElapsedTime();
 
     if (motionOn) {
@@ -1485,7 +1517,13 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       running = false;
       window.removeEventListener('resize', onResize);
       resizeObserver.disconnect();
+      visibilityObserver.disconnect();
       (Object.keys(dimensionGroups) as (CompId | 'can')[]).forEach(clearDimensionGroup);
+      // renderer.dispose() only frees the WebGL context itself — every geometry, material, and
+      // texture built for this scene (case, components, motes, floor, dimension annotations)
+      // stays resident in GPU memory until explicitly disposed too. Walking the whole scene
+      // graph catches everything actually attached, rather than re-listing every group by name.
+      disposeSceneContents(scene);
       controls.dispose();
       renderer.dispose();
       if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
