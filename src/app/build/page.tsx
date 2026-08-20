@@ -222,6 +222,14 @@ function FilterChip({ active, label, onClick }: { active: boolean; label: string
   );
 }
 
+// Feeds the .gomp-slider CSS (globals.css) the current fill percentage — WebKit has no built-in
+// "filled track" the way Firefox's ::-moz-range-progress does, so both browsers read this same
+// custom property, one driven by JS and the other effectively ignoring it in favor of its own.
+function sliderFillStyle(value: number, max: number): CSSProperties {
+  const pct = max > 0 ? (value / max) * 100 : 0;
+  return { ['--gomp-slider-fill' as string]: `${pct}%` } as CSSProperties;
+}
+
 // Same data, formatted as a single line of text for the side panel / hover tooltip (the 3D
 // annotations above are the blueprint-style version of the same numbers).
 function dimensionLabel(id: CompId, comp: Component | undefined): string | null {
@@ -759,12 +767,13 @@ export default function BuildPage() {
               </div>
               <input
                 type="range"
+                className="gomp-slider"
                 min={0}
                 max={BUDGET_STEPS.length - 1}
                 step={1}
                 value={budgetIdx}
                 onChange={(e) => setBudgetIdx(Number(e.target.value))}
-                style={{ width: '100%', accentColor: MAROON, display: 'block' }}
+                style={{ width: '100%', display: 'block', ...sliderFillStyle(budgetIdx, BUDGET_STEPS.length - 1) }}
               />
               <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890', marginTop: 4, lineHeight: 1.4 }}>{t.budget_hint}</div>
             </div>
@@ -863,12 +872,13 @@ export default function BuildPage() {
                       </div>
                       <input
                         type="range"
+                        className="gomp-slider"
                         min={0}
                         max={ramSpeedSteps.length - 1}
                         step={1}
                         value={Math.min(ramMinSpeedIdx, ramSpeedSteps.length - 1)}
                         onChange={(e) => setRamMinSpeedIdx(Number(e.target.value))}
-                        style={{ width: '100%', accentColor: MAROON }}
+                        style={{ width: '100%', ...sliderFillStyle(Math.min(ramMinSpeedIdx, ramSpeedSteps.length - 1), ramSpeedSteps.length - 1) }}
                       />
                     </div>
                   )}
