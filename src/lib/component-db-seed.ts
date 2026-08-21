@@ -167,6 +167,46 @@ export function moboRamGeneration(mobo: Component | undefined): 4 | 5 | undefine
   return m ? (Number(m[1]) as 4 | 5) : undefined;
 }
 
+export type PcieGen = 3 | 4 | 5;
+
+// A board's fastest M.2 slot generation isn't a structured field either, and unlike DDR
+// generation it can't just be read off the specs text — bulk-imported mobo rows only quote
+// "PCIe 5.0" etc. on the ~25 hand-curated SKUs; every buildcores-mined row's specs just says
+// "<chipset> · DDR5 · N×M.2" with no PCIe token at all. What IS always present, on curated and
+// bulk rows alike, is the chipset code itself, so this maps that to a generation instead —
+// values below are lifted directly from what this catalog's own curated rows already quote for
+// each chipset (e.g. m1's "X870E · DDR5 · PCIe 5.0" is where X870E: 5 comes from), extended to
+// each chipset's un-curated siblings from the same tier/generation. This is necessarily the
+// board's *best* slot, not every slot — a real board often also has slower chipset-fed M.2
+// slots alongside its one fastest CPU-direct one — so treat a "no mismatch" read as "at least
+// one slot should be fine," not a guarantee about whichever slot someone actually uses.
+const CHIPSET_PCIE_GEN: Record<string, PcieGen> = {
+  // AM5 (Ryzen 7000/9000)
+  X870E: 5, X870: 5, B850: 5, B650E: 5,
+  X670E: 5, X670: 5, B650: 4, A620: 4,
+  // AM4 (Ryzen 1000-5000)
+  X570: 4, B550: 4, A520: 3, X470: 3, B450: 3, A320: 3,
+  // LGA1851 (Core Ultra 200S)
+  Z890: 5, B860: 4,
+  // LGA1700 (12th-14th gen Core)
+  Z790: 5, H770: 4, B760: 4, H610: 4,
+};
+const CHIPSET_CODES = Object.keys(CHIPSET_PCIE_GEN).sort((a, b) => b.length - a.length);
+
+export function moboPcieGeneration(mobo: Component | undefined): PcieGen | undefined {
+  if (!mobo?.specs) return undefined;
+  // Longest code first so "B650E" matches before the "B650" substring inside it does.
+  const code = CHIPSET_CODES.find((c) => mobo.specs.includes(c));
+  return code ? CHIPSET_PCIE_GEN[code] : undefined;
+}
+
+// Every storage SKU's specs (curated and bulk-imported alike) quotes its interface as a plain
+// "PCIe 4.0"-style token, so this reads that directly rather than adding a parallel field.
+export function storagePcieGeneration(storage: Component | undefined): PcieGen | undefined {
+  const m = storage?.specs.match(/PCIe\s*(\d)\.0/i);
+  return m ? (Number(m[1]) as PcieGen) : undefined;
+}
+
 export function defaultComponentDb(): ComponentDb {
   return {
     gpu: [

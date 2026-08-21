@@ -158,7 +158,10 @@ export function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVe
   // Height is the one that actually varies (bare PCB vs. a tall RGB heatsink) and the one that
   // matters — a tall kit can collide with a big air cooler's fins — so it's the only annotation.
   if (id === 'ram') return [{ axis: 'y', mm: RAM_DIMM_SIZE_MM.length, annotate: false }, { axis: 'x', mm: comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height }];
-  if (id === 'storage') return [{ axis: 'z', mm: STORAGE_M2_SIZE_MM.length }, { axis: 'y', mm: STORAGE_M2_SIZE_MM.width }];
+  // Every M.2 drive in this catalog is the same fixed 2280 size (unlike RAM's height, nothing
+  // here varies by SKU at all), so there's nothing worth calling out with a blueprint line —
+  // annotate: false still scales the mesh to the right (fixed) size, it just draws no label.
+  if (id === 'storage') return [{ axis: 'z', mm: STORAGE_M2_SIZE_MM.length, annotate: false }, { axis: 'y', mm: STORAGE_M2_SIZE_MM.width, annotate: false }];
   return [];
 }
 

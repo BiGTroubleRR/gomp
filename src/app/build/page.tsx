@@ -19,13 +19,15 @@ import {
   extractWatts,
   BASE_WATTS,
   RAM_DIMM_SIZE_MM,
-  STORAGE_M2_SIZE_MM,
   PSU_ATX_SIZE_MM,
+  moboPcieGeneration,
+  storagePcieGeneration,
   type Category,
   type Component,
   type ComponentDb,
   type FanMountPosition,
   type FormFactor,
+  type PcieGen,
 } from '@/lib/component-db-seed';
 import { autoBuildForBudget, BUDGET_STEPS, type AutoBuildNote } from '@/lib/auto-build';
 import {
@@ -86,7 +88,12 @@ const T = {
     ram_gen_all: 'All', ram_min_speed: 'Minimum speed', ram_min_speed_any: 'Any',
     filter_all: 'All',
     no_mobo_match: 'No motherboards match this filter — try a different socket or form factor.',
+    no_socket_match_mobo: (socket: string) => `No motherboards match the ${socket} socket of your selected CPU — pick a different CPU, or check Admin.`,
     no_cpu_mfr_match: (mfr: string) => `No ${mfr} CPUs match your other filters.`,
+    no_storage_match: 'No storage drives match this filter — try a different PCIe generation.',
+    storage_pcie_capped_title: 'Bottlenecked',
+    storage_pcie_capped: (ssdGen: number, moboGen: number) =>
+      `This is a PCIe ${ssdGen}.0 drive, but the selected motherboard's fastest M.2 slot is PCIe ${moboGen}.0 — it'll run, just capped to Gen ${moboGen} speed.`,
     sort_by_tier: 'Sort by tier',
     power_draw: 'Estimated power draw',
     psu_ok: 'Comfortably within your PSU’s capacity.',
@@ -140,7 +147,12 @@ const T = {
     ram_gen_all: 'Všetky', ram_min_speed: 'Minimálna rýchlosť', ram_min_speed_any: 'Ľubovoľná',
     filter_all: 'Všetky',
     no_mobo_match: 'Žiadna základná doska nevyhovuje tomuto filtru — skúste inú pätici alebo formát.',
+    no_socket_match_mobo: (socket: string) => `Žiadna základná doska nesedí na pätici ${socket} vybraného CPU — zvoľte iné CPU, alebo skontrolujte Admin.`,
     no_cpu_mfr_match: (mfr: string) => `Žiadne CPU značky ${mfr} nevyhovuje ostatným filtrom.`,
+    no_storage_match: 'Žiadne úložisko nevyhovuje tomuto filtru — skúste inú generáciu PCIe.',
+    storage_pcie_capped_title: 'Obmedzená rýchlosť',
+    storage_pcie_capped: (ssdGen: number, moboGen: number) =>
+      `Toto je disk PCIe ${ssdGen}.0, ale najrýchlejší M.2 slot vybranej základnej dosky je PCIe ${moboGen}.0 — bude fungovať, len obmedzený na rýchlosť Gen ${moboGen}.`,
     sort_by_tier: 'Zoradiť podľa triedy',
     power_draw: 'Odhadovaný príkon',
     psu_ok: 'S rezervou v rámci kapacity vášho zdroja.',
@@ -251,7 +263,8 @@ function dimensionLabel(id: CompId, comp: Component | undefined): string | null 
   // RAM length is dropped for the same reason (every desktop DIMM is 133.35mm) — only the
   // height actually varies by SKU, and it's the one that can collide with a tall air cooler.
   if (id === 'ram') return `${cm(comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height)} tall`;
-  if (id === 'storage') return `${cm(STORAGE_M2_SIZE_MM.length)} × ${cm(STORAGE_M2_SIZE_MM.width)}`;
+  // Storage isn't quoted at all — every M.2 drive here is the same fixed 2280 size, nothing to
+  // call out (see the matching annotate: false in build-scene.ts's dimensionSpecsFor).
   return null;
 }
 
@@ -292,6 +305,7 @@ export default function BuildPage() {
   const [selections, setSelections] = useState<Record<CompId, string>>({} as Record<CompId, string>);
   const [caseCat, setCaseCat] = useState('Mid Tower');
   const [ramGenFilter, setRamGenFilter] = useState<0 | 4 | 5>(0); // 0 = all generations
+  const [storagePcieGenFilter, setStoragePcieGenFilter] = useState<0 | PcieGen>(0); // 0 = all generations
   const [ramMinSpeedIdx, setRamMinSpeedIdx] = useState(0); // index into the speed steps computed below; 0 = no minimum
   const [moboSocketFilter, setMoboSocketFilter] = useState(''); // '' = all sockets
   const [moboFormFactorFilter, setMoboFormFactorFilter] = useState(''); // '' = all form factors
@@ -451,6 +465,10 @@ export default function BuildPage() {
   const cpuManufacturers = useMemo(
     () => Array.from(new Set((compDb.cpu || []).map((c) => cpuManufacturer(c.name)).filter(Boolean))).sort(),
     [compDb.cpu],
+  );
+  const storagePcieGens = useMemo(
+    () => Array.from(new Set((compDb.storage || []).map((c) => storagePcieGeneration(c)).filter((g): g is PcieGen => !!g))).sort(),
+    [compDb.storage],
   );
 
   const installedCount = SLOTS.filter((id) => selected[id]).length;
@@ -928,6 +946,15 @@ export default function BuildPage() {
                 </div>
               )}
 
+              {activeStep === 'storage' && storagePcieGens.length > 1 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  <FilterChip active={!storagePcieGenFilter} label={t.filter_all} onClick={() => setStoragePcieGenFilter(0)} />
+                  {storagePcieGens.map((gen) => (
+                    <FilterChip key={gen} active={storagePcieGenFilter === gen} label={`PCIe ${gen}.0`} onClick={() => setStoragePcieGenFilter(gen)} />
+                  ))}
+                </div>
+              )}
+
               {SORT_BY_TIER_STEPS.includes(activeStep) && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, cursor: 'pointer', width: 'fit-content' }}>
                   <input type="checkbox" checked={sortByTier} onChange={(e) => setSortByTier(e.target.checked)} />
@@ -936,15 +963,19 @@ export default function BuildPage() {
               )}
 
               {/* ---- Product cards for the active category only ----
-                  CPU is filtered to the selected motherboard's socket (once one is picked).
-                  Case is filtered to sizes that fit the selected motherboard's form factor
-                  (never a smaller-rated case for a bigger board) AND to cases with enough
-                  clearance for whichever gpu/cooler/psu are already installed. GPU/cooler/psu
-                  are filtered the other way — to parts that fit inside the selected case — so
-                  an incompatible pairing can never be selected in either direction. Everything
-                  stays unfiltered until the part(s) it depends on are actually picked. */}
+                  Motherboard and CPU are filtered by each other's socket in both directions —
+                  pick the CPU first and only sockets it fits show up under Motherboard, or pick
+                  the motherboard first and only its socket's CPUs show up, whichever happens
+                  first. Case is filtered to sizes that fit the selected motherboard's form
+                  factor (never a smaller-rated case for a bigger board) AND to cases with
+                  enough clearance for whichever gpu/cooler/psu are already installed. GPU/
+                  cooler/psu are filtered the other way — to parts that fit inside the selected
+                  case — so an incompatible pairing can never be selected in either direction.
+                  Everything stays unfiltered until the part(s) it depends on are actually
+                  picked. */}
               {(() => {
                 const selectedMobo = selected.mobo ? (compDb.mobo || []).find((c) => c.name === selections.mobo) : undefined;
+                const selectedCpu = selected.cpu ? (compDb.cpu || []).find((c) => c.name === selections.cpu) : undefined;
                 const selectedCase = selected.case ? (compDb.case || []).find((c) => c.name === selections.case) : undefined;
                 let list = (compDb[activeStep] || []);
                 if (activeStep === 'case') {
@@ -969,8 +1000,11 @@ export default function BuildPage() {
                     if (threshold != null) list = list.filter((c) => (c.ramSpeedMhz ?? 0) >= threshold);
                   }
                 } else if (activeStep === 'mobo') {
+                  if (selectedCpu?.socket) list = list.filter((c) => c.socket === selectedCpu.socket);
                   if (moboSocketFilter) list = list.filter((c) => c.socket === moboSocketFilter);
                   if (moboFormFactorFilter) list = list.filter((c) => c.formFactor === moboFormFactorFilter);
+                } else if (activeStep === 'storage') {
+                  if (storagePcieGenFilter) list = list.filter((c) => storagePcieGeneration(c) === storagePcieGenFilter);
                 }
                 if (sortByTier && SORT_BY_TIER_STEPS.includes(activeStep)) {
                   list = [...list].sort((a, b) => TIER_ORDER.indexOf(a.tier ?? '') - TIER_ORDER.indexOf(b.tier ?? ''));
@@ -989,9 +1023,13 @@ export default function BuildPage() {
                               ? t.no_part_fit(selectedCase.name)
                               : activeStep === 'ram' && (ramGenFilter || ramMinSpeedIdx > 0)
                                 ? t.no_ram_match
-                                : activeStep === 'mobo' && (moboSocketFilter || moboFormFactorFilter)
-                                  ? t.no_mobo_match
-                                  : t.none_add_admin;
+                                : activeStep === 'mobo' && selectedCpu?.socket
+                                  ? t.no_socket_match_mobo(selectedCpu.socket)
+                                  : activeStep === 'mobo' && (moboSocketFilter || moboFormFactorFilter)
+                                    ? t.no_mobo_match
+                                    : activeStep === 'storage' && storagePcieGenFilter
+                                      ? t.no_storage_match
+                                      : t.none_add_admin;
                   return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', padding: '12px 0' }}>{reason}</div>;
                 }
                 return (
@@ -1041,6 +1079,7 @@ export default function BuildPage() {
                               {c.formFactor && <SpecPill label={c.formFactor} />}
                               {c.socket && <SpecPill label={c.socket} />}
                               {c.ramGeneration && <SpecPill label={`DDR${c.ramGeneration}${c.ramSpeedMhz ? `-${c.ramSpeedMhz}` : ''}`} />}
+                              {activeStep === 'storage' && storagePcieGeneration(c) && <SpecPill label={`PCIe ${storagePcieGeneration(c)}.0`} />}
                               <span title={c.passmark ? t.passmark_title(c.passmark) : undefined}>
                                 <TierBadge tier={c.tier} small />
                               </span>
@@ -1049,6 +1088,18 @@ export default function BuildPage() {
                           <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {c.specs}
                           </div>
+                          {activeStep === 'storage' &&
+                            selectedMobo &&
+                            (() => {
+                              const ssdGen = storagePcieGeneration(c);
+                              const moboGen = moboPcieGeneration(selectedMobo);
+                              if (!ssdGen || !moboGen || ssdGen <= moboGen) return null;
+                              return (
+                                <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9.5, color: MAROON, marginTop: 3, lineHeight: 1.3 }}>
+                                  {t.storage_pcie_capped(ssdGen, moboGen)}
+                                </div>
+                              );
+                            })()}
                           {dimensionLabel(activeStep, c) && (
                             <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: '#A89A78', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {dimensionLabel(activeStep, c)}
@@ -1317,6 +1368,23 @@ export default function BuildPage() {
                     <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: INK, fontWeight: 600 }}>{dimensionLabel(activeId, activeComp)}</div>
                   </div>
                 )}
+                {activeId === 'storage' &&
+                  selected.mobo &&
+                  (() => {
+                    const ssdGen = storagePcieGeneration(activeComp);
+                    const moboGen = moboPcieGeneration((compDb.mobo || []).find((c) => c.name === selections.mobo));
+                    if (!ssdGen || !moboGen || ssdGen <= moboGen) return null;
+                    return (
+                      <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
+                        <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MAROON, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
+                          {t.storage_pcie_capped_title}
+                        </div>
+                        <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: MAROON, marginTop: 3, lineHeight: 1.4 }}>
+                          {t.storage_pcie_capped(ssdGen, moboGen)}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 {activeId === 'case' && activeComp.fanMounts && activeComp.fanMounts.length > 0 && (
                   <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
                     <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{t.fans}</div>
