@@ -152,7 +152,12 @@ export function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVe
     const size = MOBO_FORM_FACTOR_SIZE_MM[comp.formFactor];
     return size ? [{ axis: 'y', mm: size.width, annotate: false }, { axis: 'z', mm: size.depth, annotate: false }] : [];
   }
-  if (id === 'ram') return [{ axis: 'y', mm: RAM_DIMM_SIZE_MM.length }, { axis: 'x', mm: comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height }];
+  // Length is standardized (every desktop DIMM is 133.35mm regardless of capacity/speed/tier),
+  // so annotating it is just noise — annotate: false still keeps it driving the mesh's Y scale,
+  // it just stops drawing a blueprint line/label for a number that's the same on every kit.
+  // Height is the one that actually varies (bare PCB vs. a tall RGB heatsink) and the one that
+  // matters — a tall kit can collide with a big air cooler's fins — so it's the only annotation.
+  if (id === 'ram') return [{ axis: 'y', mm: RAM_DIMM_SIZE_MM.length, annotate: false }, { axis: 'x', mm: comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height }];
   if (id === 'storage') return [{ axis: 'z', mm: STORAGE_M2_SIZE_MM.length }, { axis: 'y', mm: STORAGE_M2_SIZE_MM.width }];
   return [];
 }

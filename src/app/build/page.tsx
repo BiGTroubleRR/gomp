@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useCallback, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
@@ -247,7 +248,9 @@ function dimensionLabel(id: CompId, comp: Component | undefined): string | null 
   if (id === 'psu' && comp.psuLengthMm) return `${cm(PSU_ATX_SIZE_MM.width)} × ${cm(PSU_ATX_SIZE_MM.height)} × ${cm(comp.psuLengthMm)}`;
   // Motherboard size is deliberately not quoted — ATX/mATX/E-ATX/Mini-ITX are standard size
   // classes already shown as their own badge, so exact cm figures on top are redundant.
-  if (id === 'ram') return `${cm(RAM_DIMM_SIZE_MM.length)} × ${cm(comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height)}`;
+  // RAM length is dropped for the same reason (every desktop DIMM is 133.35mm) — only the
+  // height actually varies by SKU, and it's the one that can collide with a tall air cooler.
+  if (id === 'ram') return `${cm(comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height)} tall`;
   if (id === 'storage') return `${cm(STORAGE_M2_SIZE_MM.length)} × ${cm(STORAGE_M2_SIZE_MM.width)}`;
   return null;
 }
@@ -951,18 +954,25 @@ export default function BuildPage() {
                                   : t.none_add_admin;
                   return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', padding: '12px 0' }}>{reason}</div>;
                 }
-                return list.map((c) => {
-                  const isThisSelected = selected[activeStep] && selections[activeStep] === c.name;
-                  return (
-                    <div
-                      key={c.id}
-                      onClick={() => selectCard(activeStep, c.name)}
-                      style={{
-                        border: `1.5px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.12)'}`,
-                        background: isThisSelected ? 'rgba(110,20,35,0.06)' : 'transparent',
-                        borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
-                      }}
-                    >
+                return (
+                  <AnimatePresence initial={false}>
+                    {list.map((c) => {
+                      const isThisSelected = selected[activeStep] && selections[activeStep] === c.name;
+                      return (
+                        <motion.div
+                          key={c.id}
+                          layout="position"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.18 }}
+                          onClick={() => selectCard(activeStep, c.name)}
+                          style={{
+                            border: `1.5px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.12)'}`,
+                            background: isThisSelected ? 'rgba(110,20,35,0.06)' : 'transparent',
+                            borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
+                          }}
+                        >
                       <div style={{ display: 'flex', gap: 10 }}>
                         {c.imageUrl && (
                           <div
@@ -1010,9 +1020,11 @@ export default function BuildPage() {
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                });
+                      </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                );
               })()}
 
               {/* ---- Back / Next ---- */}

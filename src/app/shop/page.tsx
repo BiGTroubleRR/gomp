@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
-import Reveal from '@/components/Reveal';
 import SiteNav from '@/components/SiteNav';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
 import { useIsMobile } from '@/lib/use-media-query';
@@ -370,20 +370,25 @@ export default function Shop() {
       <div style={{ padding: isMobile ? '0 24px 50px' : '0 60px 100px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', borderLeft: '0.5px solid rgba(28,28,26,0.12)' }}>
-            {filtered.map((prod, i) => (
-              <Reveal
-                key={prod.id}
-                revealKey={`product-${prod.id}`}
-                delay={Math.min(i, 5) * 90}
-                style={{
-                  borderRight: '0.5px solid rgba(28,28,26,0.12)',
-                  borderBottom: '0.5px solid rgba(28,28,26,0.12)',
-                  padding: isMobile ? '28px 20px' : '36px 32px',
-                  background: '#FDFAF4',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
+            <AnimatePresence initial={false}>
+              {filtered.map((prod, i) => (
+                <motion.div
+                  key={prod.id}
+                  layout
+                  initial={{ opacity: 0, y: 24 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '0px 0px -8% 0px' }}
+                  exit={{ opacity: 0, scale: 0.97 }}
+                  transition={{ duration: 0.4, delay: Math.min(i, 5) * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                  style={{
+                    borderRight: '0.5px solid rgba(28,28,26,0.12)',
+                    borderBottom: '0.5px solid rgba(28,28,26,0.12)',
+                    padding: isMobile ? '28px 20px' : '36px 32px',
+                    background: '#FDFAF4',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                   <div
                     style={{
@@ -463,9 +468,10 @@ export default function Shop() {
                   >
                     {t.configure_arrow}
                   </TransitionLink>
-                </div>
-              </Reveal>
-            ))}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         </div>
       </div>
