@@ -45,7 +45,7 @@ const nextConfig: NextConfig = {
   // this by hand; this setting gets the same effect automatically for three's and Clerk's own
   // barrel-style exports) so a route that only uses part of a package doesn't pull in the rest.
   experimental: {
-    optimizePackageImports: ['three', '@clerk/nextjs'],
+    optimizePackageImports: ['three', '@clerk/nextjs', 'motion'],
   },
   async headers() {
     return [
