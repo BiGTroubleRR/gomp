@@ -568,7 +568,11 @@ export default function BuildPage() {
   // SKU, matching the old dropdown's behavior), and auto-advance to the next category —
   // picking a category's card twice in a row deselects it instead, since the one-by-one flow
   // has no other obvious "remove" affordance.
-  function selectCard(id: CompId, name: string) {
+  // advanceStep is false only from buildAll's own batch — that path already jumps straight to
+  // the last step once it's done, so letting each of its 8 picks auto-advance too would flip
+  // the visible category (and thus the whole card list + its enter/exit animation) through
+  // every step in rapid succession, which is what made the button visibly lag the page.
+  function selectCard(id: CompId, name: string, advanceStep = true) {
     if (selected[id] && selections[id] === name) {
       setSelected((s) => ({ ...s, [id]: false }));
       sceneRef.current?.toggleComponent(id, false);
@@ -616,6 +620,7 @@ export default function BuildPage() {
       }
     }
 
+    if (!advanceStep) return;
     const idx = SLOTS.indexOf(id);
     if (idx < SLOTS.length - 1) setActiveStep(SLOTS[idx + 1]);
   }
@@ -693,7 +698,7 @@ export default function BuildPage() {
       if (selected[id]) return;
       const name = picks[id];
       if (!name) return;
-      setTimeout(() => selectCard(id, name), i * 90);
+      setTimeout(() => selectCard(id, name, false), i * 90);
     });
     setActiveStep(SLOTS[SLOTS.length - 1]);
   }
@@ -955,7 +960,15 @@ export default function BuildPage() {
                   return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', padding: '12px 0' }}>{reason}</div>;
                 }
                 return (
-                  <AnimatePresence initial={false}>
+                  // Keyed by activeStep so switching categories remounts this AnimatePresence
+                  // outright (a normal React unmount, tearing down any in-flight animation)
+                  // instead of asking it to exit-animate the old category's ~20+ cards while
+                  // entering the new category's — that cross-category swap could leave the old
+                  // cards' exit animation stuck forever, since there's no shared identity for
+                  // Motion's layout projection to reconcile between two unrelated lists. Filter
+                  // changes *within* one category keep the same key, so they still get the
+                  // smooth reflow/exit this was actually built for.
+                  <AnimatePresence initial={false} key={activeStep}>
                     {list.map((c) => {
                       const isThisSelected = selected[activeStep] && selections[activeStep] === c.name;
                       return (
