@@ -299,6 +299,9 @@ export default function BuildPage() {
   const [sortByTier, setSortByTier] = useState(false); // cooler/gpu/storage/psu/case only
   const [budgetIdx, setBudgetIdx] = useState(Math.floor(BUDGET_STEPS.length / 2)); // index into BUDGET_STEPS
   const [autoBuildNotes, setAutoBuildNotes] = useState<AutoBuildNote[]>([]);
+  // Set while buildAll is waiting for an existing build's clear-out to actually finish before
+  // rebuilding fresh — see the effect below for why this can't just be a setTimeout.
+  const [rebuildPending, setRebuildPending] = useState(false);
   const [activeId, setActiveId] = useState<CompId | null>(null);
   const [activeStep, setActiveStep] = useState<CompId>(SLOTS[0]);
   const [ordering, setOrdering] = useState(false);
@@ -682,25 +685,57 @@ export default function BuildPage() {
     setHoverPos(null);
   }
 
-  // Fills every empty slot at once via the budget slider's target, rather than the old
-  // "just take whatever's first in the catalog" fallback (see findComp's list[0] default) —
-  // already-picked slots are passed in as fixed inputs so a manual choice never gets overridden.
-  function buildAll() {
-    const locked: Partial<Record<Category, Component>> = {};
-    SLOTS.forEach((id) => {
-      if (!selected[id]) return;
-      const comp = (compDb[id] || []).find((c) => c.name === selections[id]);
-      if (comp) locked[id] = comp;
-    });
-    const { selections: picks, notes } = autoBuildForBudget(BUDGET_STEPS[budgetIdx], compDb, locked);
+  // Builds a fresh, complete PC for the budget slider's current target — rather than the old
+  // "just take whatever's first in the catalog" fallback (see findComp's list[0] default).
+  function runFreshBuild() {
+    const { selections: picks, notes } = autoBuildForBudget(BUDGET_STEPS[budgetIdx], compDb, {});
     setAutoBuildNotes(notes);
     SLOTS.forEach((id, i) => {
-      if (selected[id]) return;
       const name = picks[id];
       if (!name) return;
       setTimeout(() => selectCard(id, name, false), i * 90);
     });
     setActiveStep(SLOTS[SLOTS.length - 1]);
+  }
+
+  // Fires once the clear-out triggered by buildAll (below) has actually landed in `selected` —
+  // deliberately not a plain setTimeout from inside buildAll: that timeout's callback would
+  // close over the `selected`/`selections` from the render buildAll was called in, which still
+  // says everything is installed. selectCard's own "is this already selected?" check would then
+  // read that stale, all-true snapshot and conclude every part was already there, silently
+  // skipping the actual (re)install — the rebuild would fire but nothing would visibly happen.
+  // Waiting on this effect instead means runFreshBuild always closes over the render where the
+  // clear has genuinely finished.
+  useEffect(() => {
+    if (!rebuildPending) return;
+    if (!SLOTS.every((id) => !selected[id])) return;
+    // Flips rebuildPending back to false only once this fires, not before — setting it
+    // synchronously here would change this same effect's own dependency, triggering an
+    // immediate re-run whose cleanup (below) cancels this timer before its 650ms are up.
+    const t = setTimeout(() => {
+      setRebuildPending(false);
+      runFreshBuild();
+    }, 650);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rebuildPending, selected]);
+
+  // Always a full rebuild, never locked to whatever's already installed: if every slot happens
+  // to already be filled (a previous build, possibly for a since-changed budget), this used to
+  // have nothing left to do and silently no-op — dragging the slider to a new target and
+  // pressing the button again just sat there with the old build. Clearing first (with the same
+  // fly-out animation Clear All uses) and rebuilding from nothing makes the button's result
+  // always match the currently selected budget.
+  function buildAll() {
+    const currentlySelected = SLOTS.filter((id) => selected[id]);
+    if (currentlySelected.length === 0) {
+      runFreshBuild();
+      return;
+    }
+    currentlySelected.forEach((id, i) => {
+      setTimeout(() => toggleComponent(id), i * 80);
+    });
+    setRebuildPending(true);
   }
 
   function clearAll() {
