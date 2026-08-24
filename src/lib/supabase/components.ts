@@ -31,7 +31,7 @@ export async function fetchComponentDb(): Promise<ComponentDb> {
     if (error) console.error('fetchComponentDb: falling back to seed data —', error.message);
     return defaultComponentDb();
   }
-  const db = { mobo: [], cpu: [], cooler: [], ram: [], gpu: [], storage: [], psu: [], case: [] } as ComponentDb;
+  const db = { mobo: [], cpu: [], cooler: [], ram: [], gpu: [], storage: [], psu: [], case: [], fan: [] } as ComponentDb;
   data.forEach((row) => {
     const cat = row.category as Category;
     if (!db[cat]) return;

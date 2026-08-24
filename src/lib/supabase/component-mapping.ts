@@ -38,6 +38,9 @@ export function rowToComponent(row: ComponentRow): Component {
   if (row.ram_height_mm != null) comp.ramHeightMm = Number(row.ram_height_mm);
   if (row.ram_generation === 4 || row.ram_generation === 5) comp.ramGeneration = row.ram_generation;
   if (row.ram_speed_mhz != null) comp.ramSpeedMhz = Number(row.ram_speed_mhz);
+  if (row.ram_family) comp.ramFamily = row.ram_family;
+  if (row.is_live === false) comp.isLive = false;
+  if (row.fan_size_mm != null) comp.fanSizeMm = Number(row.fan_size_mm);
   if (row.fan_mounts != null) comp.fanMounts = row.fan_mounts as unknown as FanMountSpec[];
   if (row.image_url) comp.imageUrl = row.image_url;
   if (row.margin_override) comp.marginOverride = row.margin_override as unknown as Margin;
@@ -72,6 +75,12 @@ export function componentToRow(category: Category, comp: Component, sortOrder: n
     ram_height_mm: comp.ramHeightMm ?? null,
     ram_generation: comp.ramGeneration ?? null,
     ram_speed_mhz: comp.ramSpeedMhz ?? null,
+    ram_family: comp.ramFamily ?? null,
+    // The column is `not null default true`, so this must resolve to an actual boolean rather
+    // than null — anything that never set isLive explicitly (new inserts, edits made through the
+    // main form which has no field for it) is meant to stay/become live, not violate the column.
+    is_live: comp.isLive ?? true,
+    fan_size_mm: comp.fanSizeMm ?? null,
     fan_mounts: (comp.fanMounts as unknown as ComponentInsert['fan_mounts']) ?? null,
     image_url: comp.imageUrl ?? null,
     margin_override: (comp.marginOverride as unknown as ComponentInsert['margin_override']) ?? null,

@@ -5,8 +5,8 @@
 // legible during porting, so this shared seed intentionally uses the smaller, exactly-known
 // Config dataset as the single source of truth for both pages rather than guessing at the
 // missing values.
-export type Category = 'mobo' | 'cpu' | 'cooler' | 'ram' | 'gpu' | 'storage' | 'psu' | 'case';
-export const CATEGORIES: Category[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case'];
+export type Category = 'mobo' | 'cpu' | 'cooler' | 'ram' | 'gpu' | 'storage' | 'psu' | 'case' | 'fan';
+export const CATEGORIES: Category[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case', 'fan'];
 
 export type Tier = 'S' | 'A' | 'B' | 'C' | 'D';
 
@@ -17,7 +17,18 @@ export type FormFactor = 'E-ATX' | 'ATX' | 'mATX' | 'Mini-ITX';
 // case rather than mined. 'side' is a mount on the (usually glass) side panel opposite the
 // motherboard tray, distinct from 'front'/'top'/'bottom'/'rear'.
 export type FanMountPosition = 'front' | 'top' | 'rear' | 'bottom' | 'side';
-export type FanMountSpec = { position: FanMountPosition; maxCount: number; sizesMm: number[] };
+export type FanMountSpec = {
+  position: FanMountPosition;
+  maxCount: number;
+  sizesMm: number[];
+  // The fan(s) this case actually ships with at this position, out of the box — bundled into the
+  // case's own price, so /build treats keeping this fan (or fewer of it) as free and only charges
+  // for units beyond it or a swap to a different product. Admin-set (see the case form's
+  // "Pre-installed fans" section); undefined/0 means this position ships empty even though it
+  // supports fans, same as today for any case that's never had this configured.
+  preinstalledFanName?: string;
+  preinstalledCount?: number;
+};
 
 export type Component = {
   id: string;
@@ -56,8 +67,19 @@ export type Component = {
   ramHeightMm?: number; // ram only, per-SKU heatsink height — falls back to RAM_DIMM_SIZE_MM.height (bare PCB) when unset
   ramGeneration?: 4 | 5; // ram only: DDR4 vs DDR5 — drives the /build DDR filter
   ramSpeedMhz?: number; // ram only: rated speed, e.g. 6400 for "DDR5-6400" — drives the /build min-speed slider
+  // ram only: groups rows that are the same real product line at different stick counts (e.g.
+  // 1x16GB / 2x16GB / 4x16GB of the same manufacturer+speed+per-stick-capacity) so the picker can
+  // show them as one card with a stick-count selector instead of separate rows. Rows without it
+  // (older/manually-curated entries) just render as their own single-variant group.
+  ramFamily?: string;
   fanMounts?: FanMountSpec[]; // case only — omitted/empty means a fixed design with no user-configurable fan slots
+  fanSizeMm?: number; // fan only — the one size this SKU comes in; matched against a mount's sizesMm to decide where it fits
   imageUrl?: string; // admin-uploaded product shot, background already stripped client-side before upload
+  // Whether this SKU is currently purchasable on /build — lets Admin pull a component out of the
+  // live catalog (a bad price, a discontinued part, a mining artifact worth double-checking)
+  // without deleting its row/history. Undefined is treated as live (matches the DB column's own
+  // `not null default true`) so every pre-existing row/caller that never set this keeps working.
+  isLive?: boolean;
 };
 
 export type ComponentDb = Record<Category, Component[]>;
@@ -157,6 +179,12 @@ export const BASE_WATTS: Partial<Record<Category, number>> = {
   storage: 6,
   cooler: 8,
 };
+
+// Case fans rarely quote wattage in their retail specs (RPM/CFM/dBA instead) the way a GPU/PSU
+// does, and draw is per-unit-installed rather than a flat one-shot like BASE_WATTS above — so
+// this is a fallback per fan (typical for a 120-140mm case fan) used only when extractWatts can't
+// find a real number in that SKU's own specs string.
+export const DEFAULT_FAN_WATTS = 3;
 
 // The DDR generation a motherboard supports isn't a structured field (unlike RAM's own
 // ramGeneration) — every board's specs string already leads with a "DDR4"/"DDR5" token
@@ -387,6 +415,10 @@ export function defaultComponentDb(): ComponentDb {
           { position: 'rear', maxCount: 2, sizesMm: [120] },
         ],
       },
+    ],
+    fan: [
+      { id: 'f1', name: 'Noctua NF-A12x25', price: 30, specs: '2000 RPM · 60.1 CFM · 22.6 dBA · 4-pin PWM', tier: 'S', fanSizeMm: 120 },
+      { id: 'f2', name: 'Corsair ML140', price: 25, specs: '1600 RPM · 75.0 CFM · 24.7 dBA · 4-pin PWM', tier: 'A', fanSizeMm: 140 },
     ],
   };
 }

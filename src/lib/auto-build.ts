@@ -34,6 +34,9 @@ const BUDGET_SPLIT: Record<Category, number> = {
   ram: 0.08,
   storage: 0.07,
   cooler: 0.07,
+  // Fans aren't auto-picked — they default to whichever a case ships pre-installed with (see the
+  // Case Fans panel in /build), so they get no budget share of their own here.
+  fan: 0,
 };
 
 // PSU headroom over the estimated draw — a real build should never run a PSU near its rated

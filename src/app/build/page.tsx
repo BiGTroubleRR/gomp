@@ -18,6 +18,7 @@ import {
   cpuManufacturer,
   extractWatts,
   BASE_WATTS,
+  DEFAULT_FAN_WATTS,
   RAM_DIMM_SIZE_MM,
   PSU_ATX_SIZE_MM,
   moboPcieGeneration,
@@ -56,6 +57,7 @@ const T = {
     passmark_title: (score: number) => `PassMark: ${score.toLocaleString()}`,
     fans: 'Case Fans',
     fan_positions: { front: 'Front', top: 'Top', rear: 'Rear', bottom: 'Bottom', side: 'Side' },
+    fan_generic: 'Generic (unbranded)', fan_included: 'included',
     show_can: 'Add Can for Scale', hide_can: 'Remove Can', show_dims: 'Show Dimensions', hide_dims: 'Hide Dimensions',
     continue_benchmarks: 'Continue to Benchmarks →', save_build: 'Save Build', preparing_order: 'Booting up your legend...',
     no_components: '(no components — add in Admin)', none_add_admin: '(none — add in Admin)',
@@ -87,6 +89,7 @@ const T = {
     no_ram_match: 'No RAM kits match this filter — try a lower minimum speed, or a different DDR generation.',
     ram_gen_all: 'All', ram_min_speed: 'Minimum speed', ram_min_speed_any: 'Any',
     filter_all: 'All',
+    show_more: (n: number) => `Show ${n} more`, show_less: 'Show less',
     no_mobo_match: 'No motherboards match this filter — try a different socket or form factor.',
     no_socket_match_mobo: (socket: string) => `No motherboards match the ${socket} socket of your selected CPU — pick a different CPU, or check Admin.`,
     no_cpu_mfr_match: (mfr: string) => `No ${mfr} CPUs match your other filters.`,
@@ -115,6 +118,7 @@ const T = {
     passmark_title: (score: number) => `PassMark: ${score.toLocaleString()}`,
     fans: 'Ventilátory skrine',
     fan_positions: { front: 'Predné', top: 'Horné', rear: 'Zadné', bottom: 'Spodné', side: 'Bočné' },
+    fan_generic: 'Bez značky', fan_included: 'v cene',
     show_can: 'Vložiť plechovku pre mierku', hide_can: 'Odstrániť plechovku', show_dims: 'Zobraziť rozmery', hide_dims: 'Skryť rozmery',
     continue_benchmarks: 'Pokračovať na benchmarky →', save_build: 'Uložiť zostavu', preparing_order: 'Spúšťame vašu legendu...',
     no_components: '(žiadne komponenty — pridajte v Admine)', none_add_admin: '(žiadne — pridajte v Admine)',
@@ -146,6 +150,7 @@ const T = {
     no_ram_match: 'Žiadna sada RAM nevyhovuje tomuto filtru — skúste nižšiu minimálnu rýchlosť alebo inú generáciu DDR.',
     ram_gen_all: 'Všetky', ram_min_speed: 'Minimálna rýchlosť', ram_min_speed_any: 'Ľubovoľná',
     filter_all: 'Všetky',
+    show_more: (n: number) => `Zobraziť ďalších ${n}`, show_less: 'Zobraziť menej',
     no_mobo_match: 'Žiadna základná doska nevyhovuje tomuto filtru — skúste inú pätici alebo formát.',
     no_socket_match_mobo: (socket: string) => `Žiadna základná doska nesedí na pätici ${socket} vybraného CPU — zvoľte iné CPU, alebo skontrolujte Admin.`,
     no_cpu_mfr_match: (mfr: string) => `Žiadne CPU značky ${mfr} nevyhovuje ostatným filtrom.`,
@@ -182,6 +187,30 @@ const TIER_ORDER = ['S', 'A', 'B', 'C', 'D', ''];
 // mobo/cpu/ram get their own dedicated filters (socket+form-factor, manufacturer, DDR+speed)
 // instead — sort-by-tier is for the categories that only have a plain tier to go on.
 const SORT_BY_TIER_STEPS: CompId[] = ['cooler', 'gpu', 'storage', 'psu', 'case'];
+// How many picker rows render before the list caps to a "Show N more" button — mobo/cpu/gpu
+// already sit at 25 rows even in the small static fallback catalog, and the bulk-import scripts
+// are designed to push several categories into the hundreds, so an uncapped list isn't a
+// hypothetical problem. Counted post-filter/post-grouping, so a narrowed-down list under this
+// count never shows the button at all.
+const SHOW_MORE_STEP = 8;
+
+// fanName is optional: a position can still be filled with a generic, unbranded fan (free, purely
+// cosmetic — today's original behavior) when the case has no preinstalledFanName for it and the
+// visitor hasn't swapped in a real product from the 'fan' catalog either.
+type FanConfig = Partial<Record<FanMountPosition, { count: number; sizeMm: number; fanName?: string }>>;
+
+// Seeds fanConfig from whatever the case actually ships with (see FanMountSpec.preinstalledFanName/
+// preinstalledCount in component-db-seed.ts) instead of the old empty-until-touched default —
+// a freshly-picked case should visibly show its real stock fans, not look like it has none.
+function defaultFanConfigForCase(caseComp: Component | undefined, fanDb: Component[]): FanConfig {
+  const out: FanConfig = {};
+  (caseComp?.fanMounts || []).forEach((m) => {
+    if (!m.preinstalledCount) return;
+    const fan = m.preinstalledFanName ? fanDb.find((f) => f.name === m.preinstalledFanName) : undefined;
+    out[m.position] = { count: m.preinstalledCount, sizeMm: fan?.fanSizeMm ?? m.sizesMm[0], fanName: m.preinstalledFanName };
+  });
+  return out;
+}
 
 function TierBadge({ tier, small }: { tier?: Tier; small?: boolean }) {
   if (!tier) return null;
@@ -311,6 +340,14 @@ export default function BuildPage() {
   const [moboFormFactorFilter, setMoboFormFactorFilter] = useState(''); // '' = all form factors
   const [cpuMfrFilter, setCpuMfrFilter] = useState(''); // '' = all manufacturers
   const [sortByTier, setSortByTier] = useState(false); // cooler/gpu/storage/psu/case only
+  // Which stick count (1/2/4) is currently displayed for a given RAM family (see ramFamily on
+  // Component) while browsing the picker — keyed by family so switching category and back keeps
+  // whatever the user last looked at. Only affects which variant's specs/price show on the card;
+  // the actual install still happens via the normal selectCard(name) click.
+  const [ramStickChoice, setRamStickChoice] = useState<Record<string, number>>({});
+  // Per-category "show all" flag for the picker list cap (see SHOW_MORE_STEP below) — a category
+  // stays expanded if you leave and come back to it, but a freshly-opened one starts capped.
+  const [showAllByStep, setShowAllByStep] = useState<Partial<Record<CompId, boolean>>>({});
   const [budgetIdx, setBudgetIdx] = useState(Math.floor(BUDGET_STEPS.length / 2)); // index into BUDGET_STEPS
   const [autoBuildNotes, setAutoBuildNotes] = useState<AutoBuildNote[]>([]);
   // Set while buildAll is waiting for an existing build's clear-out to actually finish before
@@ -322,7 +359,7 @@ export default function BuildPage() {
   const [glassHidden, setGlassHidden] = useState(false);
   const [canVisible, setCanVisible] = useState(false);
   const [dimensionsVisible, setDimensionsVisible] = useState(true);
-  const [fanConfig, setFanConfigState] = useState<Partial<Record<FanMountPosition, { count: number; sizeMm: number }>>>({});
+  const [fanConfig, setFanConfigState] = useState<FanConfig>({});
   const [showComplete, setShowComplete] = useState(false);
   const [completionRunning, setCompletionRunning] = useState(false);
   const [hoverId, setHoverId] = useState<CompId | null>(null);
@@ -343,6 +380,11 @@ export default function BuildPage() {
     async function load() {
       const db = await fetchComponentDb();
       if (cancelled) return;
+      // fetchComponentDb is shared with Admin, which needs to see hidden SKUs too (to toggle them
+      // back live) — the public catalog is the one place that must actually drop them.
+      SLOTS.forEach((id) => {
+        db[id] = (db[id] || []).filter((c) => c.isLive !== false);
+      });
       setCompDb(db);
       if (!catalogInitializedRef.current) {
         catalogInitializedRef.current = true;
@@ -410,8 +452,32 @@ export default function BuildPage() {
     return () => setDustCursorVisible(false);
   }, [hoverId]);
 
+  // Fans aren't a SLOTS category (there's no single "pick one" the way every other part works —
+  // see FanConfig/defaultFanConfigForCase above), so their price/wattage contribution is computed
+  // separately and folded into totalPrice/estimatedWatts below rather than picked up by the
+  // SLOTS.forEach loops those already run. Keeping the fan that came with the case (or fewer
+  // units of it) is free — it's already inside the case's own price — anything beyond that
+  // (more units, or a different product) is billed at that fan's own price. Wattage counts every
+  // installed fan regardless of who's paying, since that's physical draw, not a billing question.
+  const fanTotals = useMemo(() => {
+    let price = 0;
+    let watts = 0;
+    const caseComp = selected.case ? (compDb.case || []).find((c) => c.name === selections.case) : undefined;
+    (Object.keys(fanConfig) as FanMountPosition[]).forEach((position) => {
+      const cfg = fanConfig[position];
+      if (!cfg || cfg.count <= 0 || !cfg.fanName) return;
+      const fan = (compDb.fan || []).find((f) => f.name === cfg.fanName);
+      if (!fan) return;
+      const mount = caseComp?.fanMounts?.find((m) => m.position === position);
+      const freeCount = cfg.fanName === mount?.preinstalledFanName ? Math.min(cfg.count, mount?.preinstalledCount ?? 0) : 0;
+      price += fan.price * Math.max(0, cfg.count - freeCount);
+      watts += (extractWatts(fan.specs) ?? DEFAULT_FAN_WATTS) * cfg.count;
+    });
+    return { price, watts };
+  }, [fanConfig, compDb.fan, compDb.case, selected.case, selections.case]);
+
   const totalPrice = useMemo(() => {
-    let sum = 0;
+    let sum = fanTotals.price;
     SLOTS.forEach((id) => {
       if (!selected[id]) return;
       const list = compDb[id] || [];
@@ -419,12 +485,12 @@ export default function BuildPage() {
       if (comp) sum += comp.price;
     });
     return sum;
-  }, [selected, selections, compDb]);
+  }, [selected, selections, compDb, fanTotals.price]);
 
   // Estimated system draw vs. the selected PSU's rated wattage — a buildcores-style "will this
   // PSU handle it" gut-check, not a precise measurement (see BASE_WATTS/extractWatts above).
   const { estimatedWatts, psuWatts } = useMemo(() => {
-    let watts = 0;
+    let watts = fanTotals.watts;
     let psu: number | null = null;
     SLOTS.forEach((id) => {
       if (!selected[id]) return;
@@ -436,7 +502,7 @@ export default function BuildPage() {
       else watts += BASE_WATTS[id] ?? 0;
     });
     return { estimatedWatts: watts, psuWatts: psu };
-  }, [selected, selections, compDb]);
+  }, [selected, selections, compDb, fanTotals.watts]);
 
   // The min-speed slider snaps across the real speeds present in the catalog (for whichever DDR
   // generation is currently filtered) rather than a continuous 1MHz range — "common frequencies"
@@ -485,7 +551,7 @@ export default function BuildPage() {
       const mobo = selected.mobo ? (compDb.mobo || []).find((c) => c.name === selections.mobo) : undefined;
       const compatible = list.find((c) => {
         if (mobo?.formFactor && !caseFitsFormFactor(c.category, mobo.formFactor)) return false;
-        return (['gpu', 'cooler', 'psu'] as Category[]).every((otherId) => {
+        return (['gpu', 'cooler', 'psu'] as CompId[]).every((otherId) => {
           if (!selected[otherId]) return true;
           const otherComp = (compDb[otherId] || []).find((x) => x.name === selections[otherId]);
           return !otherComp || fitsInCase(otherId, otherComp, c);
@@ -510,10 +576,14 @@ export default function BuildPage() {
       if (id === 'mobo') sceneRef.current?.setMoboRamSlots(moboRamSlotCount(comp));
       // Removing the case leaves its fan meshes orphaned in the scene otherwise — they're tracked
       // separately from the case mesh itself (see setFans), so toggling the case off doesn't
-      // implicitly remove them the way it does for the case mesh.
-      if (id === 'case' && !next) {
-        setFanConfigState({});
-        sceneRef.current?.setFans({});
+      // implicitly remove them the way it does for the case mesh. Selecting one for the first
+      // time (rather than swapping — see changeSelection/changeCaseCat for that path) needs the
+      // same seeding from its pre-installed loadout, or a freshly-picked case would show no fans
+      // at all until the visitor happened to touch the case category/selection again.
+      if (id === 'case') {
+        const newFanConfig = next ? defaultFanConfigForCase(comp, compDb.fan || []) : {};
+        setFanConfigState(newFanConfig);
+        sceneRef.current?.setFans(newFanConfig);
       }
       if (comp) sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp));
       if (id === 'ram' && comp) sceneRef.current?.setRamModules(ramModuleCount(comp));
@@ -540,9 +610,11 @@ export default function BuildPage() {
       const vertical = caseHasVerticalGpuMount(comp?.name);
       sceneRef.current?.setGpuOrientation(vertical);
       // A different case has different fan positions/limits — an old count could exceed the
-      // new case's maxCount, or reference a position it doesn't even have.
-      setFanConfigState({});
-      sceneRef.current?.setFans({});
+      // new case's maxCount, or reference a position it doesn't even have. Seed from the new
+      // case's own pre-installed loadout rather than clearing to empty.
+      const newFanConfig = defaultFanConfigForCase(comp, compDb.fan || []);
+      setFanConfigState(newFanConfig);
+      sceneRef.current?.setFans(newFanConfig);
       // The card's own dimension annotation axis depends on the case it's mounted in — refresh
       // it here too, since changing the case doesn't otherwise touch the gpu selection at all.
       if (selected.gpu) {
@@ -575,8 +647,9 @@ export default function BuildPage() {
       sceneRef.current?.setComponentDimensions('case', dimensionSpecsFor('case', pick));
       const vertical = caseHasVerticalGpuMount(pick.name);
       sceneRef.current?.setGpuOrientation(vertical);
-      setFanConfigState({});
-      sceneRef.current?.setFans({});
+      const newFanConfig = defaultFanConfigForCase(pick, compDb.fan || []);
+      setFanConfigState(newFanConfig);
+      sceneRef.current?.setFans(newFanConfig);
       if (selected.gpu) {
         const gpuComp = (compDb.gpu || []).find((c) => c.name === selections.gpu);
         sceneRef.current?.setComponentDimensions('gpu', gpuComp ? dimensionSpecsFor('gpu', gpuComp, vertical) : []);
@@ -676,7 +749,7 @@ export default function BuildPage() {
       const caseComp = selected.case ? (compDb.case || []).find((c) => c.name === selections.case) : undefined;
       const mount = caseComp?.fanMounts?.find((m) => m.position === position);
       const sizeMm = prev[position]?.sizeMm ?? mount?.sizesMm[0] ?? 120;
-      const next = { ...prev, [position]: { count, sizeMm } };
+      const next = { ...prev, [position]: { count, sizeMm, fanName: prev[position]?.fanName } };
       sceneRef.current?.setFans(next);
       return next;
     });
@@ -684,7 +757,23 @@ export default function BuildPage() {
 
   function setFanSize(position: FanMountPosition, sizeMm: number) {
     setFanConfigState((prev) => {
-      const next = { ...prev, [position]: { count: prev[position]?.count ?? 0, sizeMm } };
+      const next = { ...prev, [position]: { count: prev[position]?.count ?? 0, sizeMm, fanName: prev[position]?.fanName } };
+      sceneRef.current?.setFans(next);
+      return next;
+    });
+  }
+
+  // Swaps which real fan product occupies a position — '' means "generic/unbranded" (the old
+  // cosmetic-only behavior: free, no specific SKU). Picking a real product snaps sizeMm to that
+  // SKU's own fanSizeMm rather than leaving whatever generic size was previously set, since a
+  // fan's size isn't independently choosable once you've picked an actual product.
+  function setFanProduct(position: FanMountPosition, fanName: string) {
+    setFanConfigState((prev) => {
+      const caseComp = selected.case ? (compDb.case || []).find((c) => c.name === selections.case) : undefined;
+      const mount = caseComp?.fanMounts?.find((m) => m.position === position);
+      const fan = fanName ? (compDb.fan || []).find((f) => f.name === fanName) : undefined;
+      const sizeMm = fan?.fanSizeMm ?? prev[position]?.sizeMm ?? mount?.sizesMm[0] ?? 120;
+      const next = { ...prev, [position]: { count: prev[position]?.count ?? 0, sizeMm, fanName: fanName || undefined } };
       sceneRef.current?.setFans(next);
       return next;
     });
@@ -768,7 +857,7 @@ export default function BuildPage() {
 
   function handleOrder() {
     if (ordering) return;
-    writeJSON('gomp_build', { selected, selections, compDb, totalPrice });
+    writeJSON('gomp_build', { selected, selections, compDb, totalPrice, fanConfig });
     setOrdering(true);
     setTimeout(() => navigateWithTransition(pathname, '/benchmarks', () => router.push('/benchmarks')), 300);
   }
@@ -983,7 +1072,7 @@ export default function BuildPage() {
                   if (selectedMobo?.formFactor) {
                     list = list.filter((c) => caseFitsFormFactor(c.category, selectedMobo.formFactor));
                   }
-                  (['gpu', 'cooler', 'psu'] as Category[]).forEach((otherId) => {
+                  (['gpu', 'cooler', 'psu'] as CompId[]).forEach((otherId) => {
                     if (!selected[otherId]) return;
                     const otherComp = (compDb[otherId] || []).find((c) => c.name === selections[otherId]);
                     if (otherComp) list = list.filter((c) => fitsInCase(otherId, otherComp, c));
@@ -1005,6 +1094,49 @@ export default function BuildPage() {
                   if (moboFormFactorFilter) list = list.filter((c) => c.formFactor === moboFormFactorFilter);
                 } else if (activeStep === 'storage') {
                   if (storagePcieGenFilter) list = list.filter((c) => storagePcieGeneration(c) === storagePcieGenFilter);
+                }
+                // Group same-family RAM rows (same manufacturer+speed+per-stick capacity, see
+                // ramFamily) into one card per family, each showing whichever stick-count variant
+                // is currently chosen for it — defaulting to the actually-installed variant if
+                // this family is the one already selected, else 2 sticks (the common case), else
+                // whatever's cheapest/first. Rows without ramFamily (older/manual entries) fall
+                // back to a key unique to themselves, so they render exactly as a normal singleton
+                // row and the stick-selector never appears for them.
+                let ramFamilyVariants: Map<string, Component[]> | null = null;
+                if (activeStep === 'ram') {
+                  ramFamilyVariants = new Map<string, Component[]>();
+                  list.forEach((c) => {
+                    const key = c.ramFamily || `__single:${c.id}`;
+                    if (!ramFamilyVariants!.has(key)) ramFamilyVariants!.set(key, []);
+                    ramFamilyVariants!.get(key)!.push(c);
+                  });
+                  // Curated and bulk-mined rows can land on the exact same spec (e.g. a
+                  // hand-curated "2x16GB@6400" plus a separately-mined row at the identical
+                  // capacity/speed) — same family, same stick count, two different real SKUs.
+                  // Without this, the stick-count selector would show two visually-identical
+                  // buttons for the same count with no way to tell them apart. One variant per
+                  // stick count survives per family: prefer whichever has a curated tier (more
+                  // trustworthy than an unscored bulk import), then the cheaper of the two.
+                  ramFamilyVariants.forEach((variants, key) => {
+                    if (variants.length < 2) return;
+                    const byCount = new Map<number, Component>();
+                    variants.forEach((v) => {
+                      const n = ramModuleCount(v);
+                      const existing = byCount.get(n);
+                      if (!existing) { byCount.set(n, v); return; }
+                      const existingScore = existing.tier ? 1 : 0;
+                      const vScore = v.tier ? 1 : 0;
+                      if (vScore > existingScore || (vScore === existingScore && v.price < existing.price)) byCount.set(n, v);
+                    });
+                    ramFamilyVariants!.set(key, Array.from(byCount.values()));
+                  });
+                  list = Array.from(ramFamilyVariants.entries()).map(([key, variants]) => {
+                    const sorted = [...variants].sort((a, b) => ramModuleCount(a) - ramModuleCount(b));
+                    const chosenCount = ramStickChoice[key];
+                    const byChoice = chosenCount != null ? sorted.find((v) => ramModuleCount(v) === chosenCount) : undefined;
+                    const bySelection = selected.ram ? sorted.find((v) => v.name === selections.ram) : undefined;
+                    return byChoice ?? bySelection ?? sorted.find((v) => ramModuleCount(v) === 2) ?? sorted[0];
+                  });
                 }
                 if (sortByTier && SORT_BY_TIER_STEPS.includes(activeStep)) {
                   list = [...list].sort((a, b) => TIER_ORDER.indexOf(a.tier ?? '') - TIER_ORDER.indexOf(b.tier ?? ''));
@@ -1032,21 +1164,25 @@ export default function BuildPage() {
                                       : t.none_add_admin;
                   return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', padding: '12px 0' }}>{reason}</div>;
                 }
+                const showAll = showAllByStep[activeStep] ?? false;
+                const visibleList = showAll ? list : list.slice(0, SHOW_MORE_STEP);
                 return (
-                  // Keyed by activeStep so switching categories remounts this AnimatePresence
-                  // outright (a normal React unmount, tearing down any in-flight animation)
-                  // instead of asking it to exit-animate the old category's ~20+ cards while
-                  // entering the new category's — that cross-category swap could leave the old
-                  // cards' exit animation stuck forever, since there's no shared identity for
-                  // Motion's layout projection to reconcile between two unrelated lists. Filter
-                  // changes *within* one category keep the same key, so they still get the
-                  // smooth reflow/exit this was actually built for.
+                  <>
+                  {/* Keyed by activeStep so switching categories remounts this AnimatePresence
+                      outright (a normal React unmount, tearing down any in-flight animation)
+                      instead of asking it to exit-animate the old category's ~20+ cards while
+                      entering the new category's — that cross-category swap could leave the old
+                      cards' exit animation stuck forever, since there's no shared identity for
+                      Motion's layout projection to reconcile between two unrelated lists. Filter
+                      changes *within* one category keep the same key, so they still get the
+                      smooth reflow/exit this was actually built for. */}
                   <AnimatePresence initial={false} key={activeStep}>
-                    {list.map((c) => {
+                    {visibleList.map((c) => {
                       const isThisSelected = selected[activeStep] && selections[activeStep] === c.name;
+                      const ramVariants = activeStep === 'ram' && c.ramFamily ? ramFamilyVariants?.get(c.ramFamily) : undefined;
                       return (
                         <motion.div
-                          key={c.id}
+                          key={activeStep === 'ram' && c.ramFamily ? c.ramFamily : c.id}
                           layout="position"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
@@ -1088,6 +1224,29 @@ export default function BuildPage() {
                           <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {c.specs}
                           </div>
+                          {ramVariants && ramVariants.length > 1 && (
+                            <div style={{ display: 'flex', gap: 4, marginTop: 5 }} onClick={(e) => e.stopPropagation()}>
+                              {ramVariants.map((v) => {
+                                const sticks = ramModuleCount(v);
+                                const active = v.id === c.id;
+                                return (
+                                  <button
+                                    key={v.id}
+                                    onClick={() => setRamStickChoice((s) => ({ ...s, [c.ramFamily as string]: sticks }))}
+                                    style={{
+                                      ...textPop, fontFamily: 'var(--font-mono)', fontSize: 10, padding: '2px 8px',
+                                      borderRadius: 4, cursor: 'pointer', lineHeight: 1.4,
+                                      border: `1px solid ${active ? MAROON : 'rgba(28,28,26,0.25)'}`,
+                                      background: active ? MAROON : 'transparent',
+                                      color: active ? '#FDFAF4' : MUTED,
+                                    }}
+                                  >
+                                    {sticks}×
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
                           {activeStep === 'storage' &&
                             selectedMobo &&
                             (() => {
@@ -1123,6 +1282,19 @@ export default function BuildPage() {
                       );
                     })}
                   </AnimatePresence>
+                  {(showAll ? list.length > SHOW_MORE_STEP : list.length > visibleList.length) && (
+                    <button
+                      onClick={() => setShowAllByStep((s) => ({ ...s, [activeStep]: !showAll }))}
+                      style={{
+                        ...textPop, width: '100%', padding: '8px', marginTop: 2, marginBottom: 8,
+                        background: 'transparent', border: '0.5px dashed rgba(28,28,26,0.25)', borderRadius: 4,
+                        color: MUTED, fontFamily: 'var(--font-sans)', fontSize: 11, cursor: 'pointer',
+                      }}
+                    >
+                      {showAll ? t.show_less : t.show_more(list.length - visibleList.length)}
+                    </button>
+                  )}
+                  </>
                 );
               })()}
 
@@ -1390,11 +1562,29 @@ export default function BuildPage() {
                     <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{t.fans}</div>
                     {activeComp.fanMounts.map((mount) => {
                       const cfg = fanConfig[mount.position] || { count: 0, sizeMm: mount.sizesMm[0] };
+                      // Real fan products (from the 'fan' catalog) that physically fit this mount —
+                      // only shown once Admin has actually added matching-size SKUs; otherwise this
+                      // position keeps behaving exactly like the original generic count/size knob.
+                      const matchingFans = (compDb.fan || []).filter((f) => f.fanSizeMm != null && mount.sizesMm.includes(f.fanSizeMm));
                       return (
-                        <div key={mount.position} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <div key={mount.position} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, gap: 6 }}>
                           <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: INK }}>{t.fan_positions[mount.position]}</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            {mount.sizesMm.length > 1 && cfg.count > 0 && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                            {cfg.count > 0 && matchingFans.length > 0 && (
+                              <select
+                                value={cfg.fanName || ''}
+                                onChange={(e) => setFanProduct(mount.position, e.target.value)}
+                                style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 10, color: MUTED, background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3, padding: '2px 4px', maxWidth: 150 }}
+                              >
+                                <option value="">{t.fan_generic}</option>
+                                {matchingFans.map((f) => (
+                                  <option key={f.id} value={f.name}>
+                                    {f.name} {f.name === mount.preinstalledFanName ? `(${t.fan_included})` : `(+${fmt(f.price)})`}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                            {!cfg.fanName && mount.sizesMm.length > 1 && cfg.count > 0 && (
                               <select
                                 value={cfg.sizeMm}
                                 onChange={(e) => setFanSize(mount.position, Number(e.target.value))}

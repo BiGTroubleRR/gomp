@@ -12,6 +12,18 @@ import { fetchGbbRequests, updateGbbRequest, type GbbRequest, type GbbStatus } f
 import { marketplaceSearchLinks } from '@/lib/gbb-links';
 import { GBB_GREEN, GBB_GREEN_TINT } from '@/lib/gbb-theme';
 import { fetchComponentDb, subscribeComponents, insertComponent, updateComponentRow, deleteComponentRow } from '@/lib/supabase/components';
+// Static rather than the original `await import('@imgly/background-removal')` inside
+// handleImageUpload — that was a dynamic import of a package whose own internals do a further
+// dynamic `import("onnxruntime-web")` (see node_modules/@imgly/background-removal/dist/index.mjs),
+// and that double indirection is what Turbopack was choking on: uploading an image threw
+// "Failed to fetch dynamically imported module: http://localhost:3000/<hash>" with no real file
+// at that URL. Statically importing here removes one layer of dynamic-import nesting, letting
+// Turbopack resolve the whole dependency graph up front at build time instead of trying to
+// code-split it at runtime. Safe for SSR: everything WASM/browser-specific in this package only
+// runs inside removeBackground() itself, not at module-evaluation time — importing it just
+// defines the function, same as any other import, and doesn't touch window/document until a
+// visitor actually uploads a file (which only happens client-side already).
+import { removeBackground } from '@imgly/background-removal';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
 import {
   defaultComponentDb,
@@ -24,6 +36,7 @@ import {
   type Build,
   type Margin,
   type Tier,
+  type FanMountPosition,
 } from '@/lib/component-db-seed';
 
 // ---------------------------------------------------------------------------
@@ -34,11 +47,11 @@ type Suggestion = { name: string; passmark?: number; passmarkUrl?: string; specs
 
 // Visual tab order on the Components tab (matches the original site; differs from the
 // shared CATEGORIES export's declaration order, which isn't meant to dictate UI order).
-const CATEGORY_TAB_ORDER: Category[] = ['gpu', 'cpu', 'ram', 'storage', 'mobo', 'cooler', 'psu', 'case'];
+const CATEGORY_TAB_ORDER: Category[] = ['gpu', 'cpu', 'ram', 'storage', 'mobo', 'cooler', 'psu', 'case', 'fan'];
 
 const CAT_LABELS: Record<'en' | 'sk', Record<Category, string>> = {
-  en: { gpu: 'GPU', cpu: 'CPU', ram: 'RAM', storage: 'Storage', mobo: 'Motherboard', cooler: 'Cooler', psu: 'PSU', case: 'Case' },
-  sk: { gpu: 'GPU', cpu: 'CPU', ram: 'RAM', storage: 'Úložisko', mobo: 'Základná doska', cooler: 'Chladič', psu: 'PSU', case: 'Skriňa' },
+  en: { gpu: 'GPU', cpu: 'CPU', ram: 'RAM', storage: 'Storage', mobo: 'Motherboard', cooler: 'Cooler', psu: 'PSU', case: 'Case', fan: 'Fan' },
+  sk: { gpu: 'GPU', cpu: 'CPU', ram: 'RAM', storage: 'Úložisko', mobo: 'Základná doska', cooler: 'Chladič', psu: 'PSU', case: 'Skriňa', fan: 'Ventilátor' },
 };
 
 const CASE_CATS = ['Full Tower', 'Mid Tower', 'Mini Tower', 'SFF'];
@@ -167,6 +180,14 @@ const SUGGESTIONS: Record<Category, Suggestion[]> = {
     { name: 'Cooler Master MasterBox Q300L', specs: 'Micro-ATX · Mesh Front · Compact' },
     { name: 'Phanteks Eclipse G360A', specs: 'Mid-Tower ATX · Mesh Front · 360mm AIO Ready' },
   ],
+  fan: [
+    { name: 'Noctua NF-A12x25', specs: '2000 RPM · 60.1 CFM · 22.6 dBA · 4-pin PWM' },
+    { name: 'Noctua NF-A14', specs: '1500 RPM · 82.5 CFM · 24.6 dBA · 4-pin PWM' },
+    { name: 'Corsair ML120', specs: '2000 RPM · 75.0 CFM · 25.5 dBA · 4-pin PWM' },
+    { name: 'Corsair ML140', specs: '1600 RPM · 75.0 CFM · 24.7 dBA · 4-pin PWM' },
+    { name: 'Lian Li Uni Fan SL120', specs: '1900 RPM · 68.1 CFM · 27.5 dBA · ARGB · 4-pin PWM' },
+    { name: 'Arctic P12 PWM PST', specs: '1800 RPM · 56.3 CFM · 22.5 dBA · 4-pin PWM' },
+  ],
 };
 
 // ---------------------------------------------------------------------------
@@ -198,6 +219,7 @@ type Translations = {
   apply_margin: string; margin_override_badge: string; margin_override_label: string; margin_override_desc: string; margin_override_use_global: string;
   specs_notes: string; tier_rating: string; tower_category: string; tower_category_help: string;
   ram_generation: string; ram_speed_mhz: string; ram_generation_help: string;
+  fan_size_mm: string; preinstalled_fans: string; preinstalled_fans_help: string; fan_none: string;
   update_arrow: string; add_prefix: string; edit_prefix: string;
   select_prefix: string; select_suffix: string;
   listings: (n: number) => string;
@@ -257,6 +279,10 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     tower_category_help: 'Full Tower 55–75 cm · Mid Tower 35–55 cm · Mini Tower 30–45 cm · SFF <35 cm',
     ram_generation: 'DDR Generation', ram_speed_mhz: 'Speed (MHz)',
     ram_generation_help: 'Drives the DDR4/DDR5 filter and the speed slider on the Build page — leave blank to hide this kit from both.',
+    fan_size_mm: 'Fan size (mm)',
+    preinstalled_fans: 'Pre-installed fans',
+    preinstalled_fans_help: 'Which fan (if any) ships in each mount out of the box — keeping it is free; swapping to another fan on Build charges that fan’s price.',
+    fan_none: 'None (bundled, unbranded)',
     update_arrow: 'Update →', add_prefix: 'Add ', edit_prefix: 'Edit ',
     select_prefix: '— Select ', select_suffix: ' —',
     listings: (n) => `${n} listings · changes save to localStorage and sync to Shop`,
@@ -316,6 +342,10 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     tower_category_help: 'Veľká skriňa 55–75 cm · Stredná skriňa 35–55 cm · Malá skriňa 30–45 cm · SFF <35 cm',
     ram_generation: 'Generácia DDR', ram_speed_mhz: 'Rýchlosť (MHz)',
     ram_generation_help: 'Ovláda filter DDR4/DDR5 a posuvník rýchlosti na stránke Zostaviť — nechajte prázdne, ak chcete túto sadu skryť z oboch.',
+    fan_size_mm: 'Veľkosť ventilátora (mm)',
+    preinstalled_fans: 'Predinštalované ventilátory',
+    preinstalled_fans_help: 'Ktorý ventilátor (ak nejaký) je v danej pozícii od výroby — ponechanie je zadarmo, výmena za iný ventilátor na stránke Zostaviť účtuje jeho cenu.',
+    fan_none: 'Žiadny (súčasť skrine, bez značky)',
     update_arrow: 'Aktualizovať →', add_prefix: 'Pridať ', edit_prefix: 'Upraviť ',
     select_prefix: '— Vybrať ', select_suffix: ' —',
     listings: (n) => `${n} položiek · zmeny sa ukladajú do localStorage a synchronizujú s obchodom`,
@@ -365,6 +395,12 @@ type CompFormState = {
   passmark: number | null; passmarkUrl: string; imageUrl: string;
   marginOverrideOn: boolean; marginOverrideType: 'eur' | 'pct'; marginOverrideValue: string;
   ramGeneration: '' | '4' | '5'; ramSpeedMhz: string;
+  fanSizeMm: string; // fan only
+  // case only — which fan (by name, from the 'fan' catalog) and how many ship pre-installed at
+  // each of this case's existing fanMounts positions. Only lets you assign a fan to a position
+  // the case already defines (position/maxCount/sizesMm aren't editable here) — see the
+  // "Pre-installed fans" section, shown only while editing a case that already has fanMounts.
+  fanPreinstalled: Partial<Record<FanMountPosition, { fanName: string; count: string }>>;
 };
 
 function initialCompForm(): CompFormState {
@@ -372,6 +408,7 @@ function initialCompForm(): CompFormState {
     name: '', price: '', marketPrice: '', specs: '', category: 'Mid Tower', tier: 'B', passmark: null, passmarkUrl: '', imageUrl: '',
     marginOverrideOn: false, marginOverrideType: 'pct', marginOverrideValue: '0',
     ramGeneration: '', ramSpeedMhz: '',
+    fanSizeMm: '', fanPreinstalled: {},
   };
 }
 
@@ -514,6 +551,10 @@ export default function AdminPage() {
   const [compCat, setCompCat] = useState<Category>('gpu');
   const [compForm, setCompForm] = useState<CompFormState>(initialCompForm());
   const [editCompId, setEditCompId] = useState<string | null>(null);
+  // Screen position for the edit popup, computed once (from the clicked row's Edit button) when
+  // openEditComp opens it — see openEditComp below. null while in Add mode, where the form stays
+  // inline in its usual spot rather than floating.
+  const [editAnchor, setEditAnchor] = useState<{ top: number; left: number } | null>(null);
   const [imageStatus, setImageStatus] = useState<'idle' | 'removing' | 'uploading' | 'error'>('idle');
   const [imageError, setImageError] = useState<string | null>(null);
 
@@ -772,6 +813,7 @@ export default function AdminPage() {
       ...(compCat === 'case' ? { category: compForm.category || 'Mid Tower' } : {}),
       ...(compCat === 'ram' && compForm.ramGeneration ? { ramGeneration: Number(compForm.ramGeneration) as 4 | 5 } : {}),
       ...(compCat === 'ram' && compForm.ramSpeedMhz ? { ramSpeedMhz: parseInt(compForm.ramSpeedMhz, 10) } : {}),
+      ...(compCat === 'fan' && compForm.fanSizeMm ? { fanSizeMm: parseFloat(compForm.fanSizeMm) } : {}),
       ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
       ...(marginOverride ? { marginOverride } : {}),
     };
@@ -805,8 +847,44 @@ export default function AdminPage() {
       // ramHeightMm also has no edit field — same carry-forward, otherwise every edit of a
       // bulk-imported RAM SKU would silently zero out its real heatsink height.
       ...(existing?.ramHeightMm != null ? { ramHeightMm: existing.ramHeightMm } : {}),
+      // Same reasoning for ramFamily (drives the /build stick-count grouping) and isLive (drives
+      // the live/hidden toggle below) — neither has a field in this form, so an unrelated price/
+      // tier edit must not silently un-group a RAM kit or bring a hidden component back live.
+      ...(existing?.ramFamily ? { ramFamily: existing.ramFamily } : {}),
+      ...(existing?.isLive === false ? { isLive: false } : {}),
       ...(compCat === 'ram' && compForm.ramGeneration ? { ramGeneration: Number(compForm.ramGeneration) as 4 | 5 } : {}),
       ...(compCat === 'ram' && compForm.ramSpeedMhz ? { ramSpeedMhz: parseInt(compForm.ramSpeedMhz, 10) } : {}),
+      ...(compCat === 'fan' && compForm.fanSizeMm ? { fanSizeMm: parseFloat(compForm.fanSizeMm) } : {}),
+      // None of these mm-dimension fields have edit inputs in this form either — same
+      // carry-forward reasoning as ramHeightMm above, just for every other category that has one.
+      // Without this, editing e.g. a GPU's price would silently zero out gpuLengthMm/gpuSlotWidth
+      // and quietly break every case-fit check (fitsInCase) that GPU is involved in from then on.
+      ...(existing?.caseWidthMm != null ? { caseWidthMm: existing.caseWidthMm } : {}),
+      ...(existing?.caseHeightMm != null ? { caseHeightMm: existing.caseHeightMm } : {}),
+      ...(existing?.caseDepthMm != null ? { caseDepthMm: existing.caseDepthMm } : {}),
+      ...(existing?.maxGpuLengthMm != null ? { maxGpuLengthMm: existing.maxGpuLengthMm } : {}),
+      ...(existing?.maxCoolerHeightMm != null ? { maxCoolerHeightMm: existing.maxCoolerHeightMm } : {}),
+      ...(existing?.maxRadiatorMm != null ? { maxRadiatorMm: existing.maxRadiatorMm } : {}),
+      ...(existing?.maxPsuLengthMm != null ? { maxPsuLengthMm: existing.maxPsuLengthMm } : {}),
+      ...(existing?.gpuLengthMm != null ? { gpuLengthMm: existing.gpuLengthMm } : {}),
+      ...(existing?.gpuSlotWidth != null ? { gpuSlotWidth: existing.gpuSlotWidth } : {}),
+      ...(existing?.coolerHeightMm != null ? { coolerHeightMm: existing.coolerHeightMm } : {}),
+      ...(existing?.coolerRadiatorMm != null ? { coolerRadiatorMm: existing.coolerRadiatorMm } : {}),
+      ...(existing?.psuLengthMm != null ? { psuLengthMm: existing.psuLengthMm } : {}),
+      ...(!(compCat === 'fan' && compForm.fanSizeMm) && existing?.fanSizeMm != null ? { fanSizeMm: existing.fanSizeMm } : {}),
+      // Pre-installed-fan assignments (see the "Pre-installed fans" section) merge onto the
+      // case's existing fanMounts — position/maxCount/sizesMm aren't editable here and must
+      // survive untouched; only preinstalledFanName/preinstalledCount change.
+      ...(existing?.fanMounts
+        ? {
+            fanMounts: existing.fanMounts.map((m) => {
+              const pre = compForm.fanPreinstalled[m.position];
+              if (!pre) return m;
+              const count = parseInt(pre.count, 10) || 0;
+              return { ...m, preinstalledFanName: pre.fanName || undefined, preinstalledCount: count > 0 ? count : undefined };
+            }),
+          }
+        : {}),
       ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
       ...(marginOverride ? { marginOverride } : {}),
     };
@@ -814,6 +892,16 @@ export default function AdminPage() {
     setCompDb((db) => ({ ...db, [compCat]: (db[compCat] || []).map((c) => (c.id === editCompId ? saved : c)) }));
     setEditCompId(null);
     setCompForm(initialCompForm());
+  }
+
+  // Pulls a SKU out of (or back into) the /build catalog without deleting its row — for a bad
+  // price, a discontinued part, or a mining artifact worth double-checking before it's gone for
+  // good. Spreads the full existing component (not just a couple of fields, like the edit form
+  // does) so this never has to know about every other field that might need carrying forward.
+  async function toggleComponentLive(cat: Category, comp: Component) {
+    const updated: Component = { ...comp, isLive: !(comp.isLive ?? true) };
+    const saved = await updateComponentRow(comp.id, cat, updated);
+    setCompDb((db) => ({ ...db, [cat]: (db[cat] || []).map((c) => (c.id === comp.id ? saved : c)) }));
   }
 
   // One-click "apply the margin" for a component that's never had a market price recorded:
@@ -834,9 +922,27 @@ export default function AdminPage() {
     setCompDb((db) => ({ ...db, [cat]: (db[cat] || []).filter((c) => c.id !== id) }));
   }
 
-  function openEditComp(cat: Category, id: string) {
+  // anchorRect is the clicked Edit button's own bounding box (see its onClick below) — used to
+  // float the form right next to the row that was clicked instead of the old behavior, where a
+  // single shared form sat fixed below the whole grid and editing any card but the last one meant
+  // scrolling down to find the form that had just silently updated off-screen.
+  function openEditComp(cat: Category, id: string, anchorRect?: DOMRect) {
     const comp = (compDb[cat] || []).find((c) => c.id === id);
     if (!comp) return;
+    const PANEL_WIDTH = isMobile ? window.innerWidth - 32 : 440;
+    const EDGE_MARGIN = 12;
+    if (anchorRect) {
+      let left = anchorRect.right + EDGE_MARGIN;
+      if (left + PANEL_WIDTH > window.innerWidth - EDGE_MARGIN) left = anchorRect.left - PANEL_WIDTH - EDGE_MARGIN;
+      if (left < EDGE_MARGIN) left = Math.max(EDGE_MARGIN, window.innerWidth - PANEL_WIDTH - EDGE_MARGIN);
+      // Leaves room for the panel's own height (it scrolls internally past that via maxHeight)
+      // rather than trying to predict the exact height of a form whose field count varies by
+      // category (case/ram add extra rows) before it has even rendered.
+      const top = Math.max(EDGE_MARGIN, Math.min(anchorRect.top, window.innerHeight - EDGE_MARGIN - 120));
+      setEditAnchor({ top, left });
+    } else {
+      setEditAnchor({ top: 80, left: Math.max(EDGE_MARGIN, (window.innerWidth - PANEL_WIDTH) / 2) });
+    }
     setCompCat(cat);
     setEditCompId(id);
     setCompForm({
@@ -857,13 +963,33 @@ export default function AdminPage() {
       marginOverrideValue: comp.marginOverride ? String(comp.marginOverride.value) : '0',
       ramGeneration: comp.ramGeneration ? (String(comp.ramGeneration) as '4' | '5') : '',
       ramSpeedMhz: comp.ramSpeedMhz != null ? String(comp.ramSpeedMhz) : '',
+      fanSizeMm: comp.fanSizeMm != null ? String(comp.fanSizeMm) : '',
+      fanPreinstalled: Object.fromEntries(
+        (comp.fanMounts || []).map((m) => [
+          m.position,
+          { fanName: m.preinstalledFanName || '', count: String(m.preinstalledCount ?? 0) },
+        ]),
+      ) as CompFormState['fanPreinstalled'],
     });
   }
 
   function cancelEditComp() {
     setEditCompId(null);
+    setEditAnchor(null);
     setCompForm(initialCompForm());
   }
+
+  // Escape closes the floating edit popup the same way the backdrop click and Cancel button do —
+  // only wired up while it's actually open, matching how any other dismissable overlay behaves.
+  useEffect(() => {
+    if (!editCompId) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') cancelEditComp();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editCompId]);
 
   // Strips the background in the admin's own browser (no server round-trip, no per-image API
   // cost) before ever uploading anything — @imgly/background-removal runs a small ONNX model
@@ -874,7 +1000,6 @@ export default function AdminPage() {
     setImageStatus('removing');
     setImageError(null);
     try {
-      const { removeBackground } = await import('@imgly/background-removal');
       const blob = await removeBackground(file);
       setImageStatus('uploading');
       const body = new FormData();
@@ -898,6 +1023,11 @@ export default function AdminPage() {
 
   // ---- derived values ----
 
+  // The case actually being edited (fanMounts/existing dimension data lives on it, not on
+  // compForm) — used by the "Pre-installed fans" section below, which only appears once a case
+  // with real fanMounts positions is being edited (there's no UI here for defining new mount
+  // positions from scratch, only for assigning a fan to ones the case already has).
+  const editingCase = compCat === 'case' && editCompId ? (compDb.case || []).find((c) => c.id === editCompId) : undefined;
   const suggestQ = compForm.name.trim().toLowerCase();
   const existingNames = new Set((compDb[compCat] || []).map((c) => c.name.toLowerCase()));
   const filteredSuggestions = (SUGGESTIONS[compCat] || []).filter((s) => !suggestQ || s.name.toLowerCase().includes(suggestQ));
@@ -1644,6 +1774,7 @@ export default function AdminPage() {
                 {(compDb[compCat] || []).map((comp) => {
                   const tc = tierBadge(comp.tier, TIER_COLORS);
                   const isEditing = comp.id === editCompId;
+                  const isLive = comp.isLive !== false;
                   // Shown live for every component, not just ones with a market price already
                   // on file — treating the current price as the base/cost when there's no
                   // market price yet, so the markup is always visible instead of only appearing
@@ -1654,7 +1785,12 @@ export default function AdminPage() {
                   return (
                     <div
                       key={comp.id}
-                      style={{ background: isEditing ? 'rgba(110,20,35,0.05)' : '#FDFAF4', border: `0.5px solid ${isEditing ? 'rgba(110,20,35,0.3)' : 'rgba(28,28,26,0.12)'}`, borderRadius: 2, padding: 18, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}
+                      style={{
+                        background: isEditing ? 'rgba(110,20,35,0.05)' : isLive ? '#FDFAF4' : 'rgba(240,235,225,0.6)',
+                        border: `0.5px solid ${isEditing ? 'rgba(110,20,35,0.3)' : 'rgba(28,28,26,0.12)'}`,
+                        borderRadius: 2, padding: 18, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10,
+                        opacity: isLive ? 1 : 0.7,
+                      }}
                     >
                       {comp.imageUrl && (
                         <div
@@ -1719,11 +1855,21 @@ export default function AdminPage() {
                         )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
-                        <button onClick={() => openEditComp(compCat, comp.id)} style={{ fontFamily: 'var(--font-sans)', color: '#6E1423', background: 'transparent', border: '0.5px solid rgba(110,20,35,0.35)', borderRadius: 2, padding: '4px 8px', cursor: 'pointer', fontSize: 11 }}>
+                        <button onClick={(e) => openEditComp(compCat, comp.id, e.currentTarget.getBoundingClientRect())} style={{ fontFamily: 'var(--font-sans)', color: '#6E1423', background: 'transparent', border: '0.5px solid rgba(110,20,35,0.35)', borderRadius: 2, padding: '4px 8px', cursor: 'pointer', fontSize: 11 }}>
                           {t.edit}
                         </button>
                         <button onClick={() => deleteComponent(compCat, comp.id)} style={{ fontFamily: 'var(--font-sans)', color: '#CC3333', background: 'transparent', border: '0.5px solid rgba(204,51,51,0.3)', borderRadius: 2, padding: '4px 8px', cursor: 'pointer', fontSize: 11 }}>
                           ✕
+                        </button>
+                        <button
+                          onClick={() => toggleComponentLive(compCat, comp)}
+                          style={{
+                            fontFamily: 'var(--font-sans)', fontSize: 11, cursor: 'pointer', borderRadius: 2, padding: '4px 8px',
+                            background: 'transparent', color: isLive ? '#1A7040' : '#9090A0',
+                            border: `0.5px solid ${isLive ? 'rgba(26,112,64,0.35)' : 'rgba(144,144,160,0.4)'}`,
+                          }}
+                        >
+                          {isLive ? t.live : t.hidden}
                         </button>
                       </div>
                     </div>
@@ -1731,7 +1877,14 @@ export default function AdminPage() {
                 })}
               </div>
 
-              <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? 16 : 26, borderLeft: '3px solid #6E1423' }}>
+              {(() => {
+                // Same form fields either way — only the surrounding container differs. Add mode
+                // (editCompId null) keeps the original inline placement below the grid; Edit mode
+                // floats the identical content next to whichever row's Edit button was clicked
+                // (see openEditComp), so extracting this into one shared `formInner` avoids ever
+                // letting the two renderings drift apart into subtly different forms.
+                const formInner = (
+                  <>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: '#1C1C1A', marginBottom: 18 }}>
                   {editCompId ? t.edit_prefix + catLabels[compCat] : t.add_prefix + catLabels[compCat] + ' →'}
                 </div>
@@ -1957,6 +2110,59 @@ export default function AdminPage() {
                     </div>
                   </div>
                 )}
+                {compCat === 'fan' && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={LABEL_STYLE}>{t.fan_size_mm}</div>
+                    <input
+                      type="number"
+                      min={0}
+                      step={10}
+                      value={compForm.fanSizeMm}
+                      onChange={(e) => setCompForm({ ...compForm, fanSizeMm: e.target.value })}
+                      placeholder="120"
+                      style={INPUT_STYLE}
+                    />
+                  </div>
+                )}
+                {editingCase && editingCase.fanMounts && editingCase.fanMounts.length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={LABEL_STYLE}>{t.preinstalled_fans}</div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', fontWeight: 300, lineHeight: 1.5, marginBottom: 10 }}>
+                      {t.preinstalled_fans_help}
+                    </div>
+                    {editingCase.fanMounts.map((mount) => {
+                      const pre = compForm.fanPreinstalled[mount.position] ?? { fanName: '', count: '0' };
+                      const matchingFans = (compDb.fan || []).filter((f) => f.fanSizeMm != null && mount.sizesMm.includes(f.fanSizeMm));
+                      return (
+                        <div key={mount.position} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '90px 1fr 70px', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1C1C1A', textTransform: 'capitalize' }}>{mount.position}</div>
+                          <select
+                            value={pre.fanName}
+                            onChange={(e) =>
+                              setCompForm({ ...compForm, fanPreinstalled: { ...compForm.fanPreinstalled, [mount.position]: { ...pre, fanName: e.target.value } } })
+                            }
+                            style={INPUT_STYLE}
+                          >
+                            <option value="">{t.fan_none}</option>
+                            {matchingFans.map((f) => (
+                              <option key={f.id} value={f.name}>{f.name}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="number"
+                            min={0}
+                            max={mount.maxCount}
+                            value={pre.count}
+                            onChange={(e) =>
+                              setCompForm({ ...compForm, fanPreinstalled: { ...compForm.fanPreinstalled, [mount.position]: { ...pre, count: e.target.value } } })
+                            }
+                            style={INPUT_STYLE}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                   <button
                     onClick={editCompId ? updateComponent : addComponent}
@@ -1970,7 +2176,31 @@ export default function AdminPage() {
                     </button>
                   )}
                 </div>
-              </div>
+                  </>
+                );
+                if (editCompId && editAnchor) {
+                  return (
+                    <>
+                      <div onClick={cancelEditComp} style={{ position: 'fixed', inset: 0, background: 'rgba(28,28,26,0.35)', zIndex: 50 }} />
+                      <div
+                        style={{
+                          position: 'fixed', top: editAnchor.top, left: editAnchor.left,
+                          width: isMobile ? 'calc(100vw - 32px)' : 440, maxHeight: 'calc(100vh - 24px)', overflowY: 'auto',
+                          background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.2)', borderLeft: '3px solid #6E1423',
+                          borderRadius: 4, padding: isMobile ? 16 : 26, boxShadow: '0 16px 48px rgba(28,28,26,0.3)', zIndex: 51,
+                        }}
+                      >
+                        {formInner}
+                      </div>
+                    </>
+                  );
+                }
+                return (
+                  <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? 16 : 26, borderLeft: '3px solid #6E1423' }}>
+                    {formInner}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>

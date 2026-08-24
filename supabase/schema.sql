@@ -131,7 +131,7 @@ create policy "order_items_insert_own" on public.order_items
 -- ---------------------------------------------------------------------------
 create table if not exists public.components (
   id uuid primary key default gen_random_uuid(),
-  category text not null check (category in ('mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case')),
+  category text not null check (category in ('mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case', 'fan')),
   name text not null,
   price numeric(10, 2) not null default 0,
   specs text not null default '',
@@ -163,9 +163,12 @@ create table if not exists public.components (
   ram_height_mm numeric(6, 1), -- ram only: per-SKU heatsink height (RAM_DIMM_SIZE_MM.height is the bare-PCB fallback)
   ram_generation smallint, -- ram only: 4 or 5 (DDR4/DDR5) — drives the /build DDR filter
   ram_speed_mhz integer, -- ram only: rated speed, e.g. 6400 for "DDR5-6400" — drives the /build min-speed slider
+  ram_family text, -- ram only: groups same manufacturer+speed+per-stick-capacity rows (different stick counts of the same real product line) so /build can show them as one card with a 1x/2x/4x selector
   fan_mounts jsonb, -- case only: [{position, maxCount, sizesMm}] — real per-case fan slots, hand-sourced (not in buildcores-open-db)
   image_url text, -- admin-uploaded product shot, background already removed client-side before upload
   margin_override jsonb, -- {type: 'eur'|'pct', value: number} — overrides the site-wide margin for this one component
+  is_live boolean not null default true, -- Admin can pull a SKU out of the /build catalog (Live/Hidden toggle) without deleting its row
+  fan_size_mm numeric(5, 1), -- fan only: the one size this SKU comes in, matched against a case's fan_mounts[].sizesMm
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -219,6 +222,15 @@ alter table public.components add column if not exists ram_speed_mhz integer;
 alter table public.components add column if not exists fan_mounts jsonb;
 alter table public.components add column if not exists image_url text;
 alter table public.components add column if not exists margin_override jsonb;
+alter table public.components add column if not exists ram_family text;
+alter table public.components add column if not exists is_live boolean not null default true;
+alter table public.components add column if not exists fan_size_mm numeric(5, 1);
+
+-- 'fan' added as its own catalog category (see Category in component-db-seed.ts) — the original
+-- check constraint predates it and would reject every fan row's insert otherwise.
+alter table public.components drop constraint if exists components_category_check;
+alter table public.components add constraint components_category_check
+  check (category in ('mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case', 'fan'));
 
 -- Tier used to be not-null-default-'B', which would silently mislabel every bulk-imported SKU
 -- (no PassMark score to derive a real tier from) as tier B instead of leaving it unset.

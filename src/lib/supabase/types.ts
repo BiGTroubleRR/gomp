@@ -139,9 +139,12 @@ export type Database = {
           ram_height_mm: number | null;
           ram_generation: number | null;
           ram_speed_mhz: number | null;
+          ram_family: string | null;
           fan_mounts: { position: string; maxCount: number; sizesMm: number[] }[] | null;
           image_url: string | null;
           margin_override: { type: string; value: number } | null;
+          is_live: boolean;
+          fan_size_mm: number | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -174,9 +177,12 @@ export type Database = {
           ram_height_mm?: number | null;
           ram_generation?: number | null;
           ram_speed_mhz?: number | null;
+          ram_family?: string | null;
           fan_mounts?: { position: string; maxCount: number; sizesMm: number[] }[] | null;
           image_url?: string | null;
           margin_override?: { type: string; value: number } | null;
+          is_live?: boolean;
+          fan_size_mm?: number | null;
           sort_order?: number;
         };
         Update: {
@@ -206,9 +212,12 @@ export type Database = {
           ram_height_mm?: number | null;
           ram_generation?: number | null;
           ram_speed_mhz?: number | null;
+          ram_family?: string | null;
           fan_mounts?: { position: string; maxCount: number; sizesMm: number[] }[] | null;
           image_url?: string | null;
           margin_override?: { type: string; value: number } | null;
+          is_live?: boolean;
+          fan_size_mm?: number | null;
           sort_order?: number;
         };
         Relationships: [];

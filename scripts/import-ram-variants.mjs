@@ -65,7 +65,10 @@ const MFR_PRIORITY = [
 
 // capacityGb = total kit capacity, modules = stick count (1 = single stick, incl. the "even
 // 1x16GB" case explicitly asked for). Spans budget single sticks through high-end 64GB dual kits
-// across the speed range real DDR5 ships at.
+// across the speed range real DDR5 ships at. The 4-module rows exist specifically so the 8GB and
+// 16GB per-stick lines each have a complete 1x/2x/4x spread (32GB=4x8GB, 64GB=4x16GB) for the
+// /build stick-count selector — 4-DIMM kits ship at more modest speeds in practice (signal
+// integrity across 4 slots), so these are only added at 5600/6000 rather than the full range.
 const TARGET_SPECS = [
   { capacityGb: 8, modules: 1, speed: 5600 },
   { capacityGb: 16, modules: 1, speed: 5200 },
@@ -83,9 +86,13 @@ const TARGET_SPECS = [
   { capacityGb: 32, modules: 2, speed: 6800 },
   { capacityGb: 32, modules: 2, speed: 7200 },
   { capacityGb: 32, modules: 2, speed: 8000 },
+  { capacityGb: 32, modules: 4, speed: 5600 },
+  { capacityGb: 32, modules: 4, speed: 6000 },
   { capacityGb: 64, modules: 2, speed: 5600 },
   { capacityGb: 64, modules: 2, speed: 6000 },
   { capacityGb: 64, modules: 2, speed: 6400 },
+  { capacityGb: 64, modules: 4, speed: 5600 },
+  { capacityGb: 64, modules: 4, speed: 6000 },
 ];
 
 const { data: existing } = await supabase.from('components').select('name').eq('category', 'ram');
@@ -121,6 +128,17 @@ for (const target of TARGET_SPECS) {
       specs,
       tier: null,
       ram_height_mm: c.height ?? null,
+      // Both were previously left unset here, which silently dropped every mined row out of the
+      // /build DDR-generation filter and the min-speed slider (they read exactly these two
+      // columns) — every candidate in this file is already filtered to ram_type === 'DDR5' above.
+      ram_generation: 5,
+      ram_speed_mhz: target.speed,
+      // Same manufacturer + speed + per-stick capacity = the same real product line at a
+      // different stick count (1x/2x/4x) — this is what lets the picker group them into one
+      // card. Per-stick capacity (not total kit capacity) is the part that must match: a 1x16GB
+      // and a 2x16GB stick are the same product bought in different quantities, but a 1x16GB and
+      // a 1x8GB are not, even at the same speed.
+      ram_family: `${c.metadata.manufacturer.trim()}|${moduleCapacity}GB|${target.speed}`,
       sort_order: 100,
     });
   });
