@@ -413,4 +413,54 @@ create table if not exists public.rate_limit_hits (
   count integer not null default 0
 );
 
+-- ---------------------------------------------------------------------------
+-- customer_builds — "Zákaznícke GOMPy": a showcase of already-completed
+-- customer PC builds, shown publicly at /customer-builds. Same RLS shape as
+-- `components` (a public catalog, not a row a single visitor owns): anyone
+-- can read, nobody can write with the anon key. Writes go through
+-- src/app/api/admin/customer-builds/route.ts, Clerk-admin-gated, service-role.
+-- ---------------------------------------------------------------------------
+create table if not exists public.customer_builds (
+  id uuid primary key default gen_random_uuid(),
+  title text not null default '',
+  -- Optional attribution — first name/initial only, never a full name (this
+  -- is shown publicly; storing more would be an unnecessary GDPR exposure for
+  -- a name field that adds no real value here). Enforced by admin-form
+  -- copy/placeholder text, not a DB constraint.
+  customer_label text not null default '',
+  specs text not null default '', -- '·'-delimited, same convention as components.specs
+  price_eur numeric(10, 2), -- optional "as built" price
+  built_on date, -- optional completion date
+  image_url text, -- floats on display (see .gomp-float-photo in globals.css)
+  is_live boolean not null default true, -- Live/Hidden toggle, same convention as components
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.customer_builds enable row level security;
+
+drop policy if exists "customer_builds_select_public" on public.customer_builds;
+create policy "customer_builds_select_public" on public.customer_builds
+  for select using (true);
+
+-- No write policy for anon/authenticated — service-role only, same reasoning
+-- as components_write_public above.
+drop policy if exists "customer_builds_write_public" on public.customer_builds;
+
+drop trigger if exists customer_builds_set_updated_at on public.customer_builds;
+create trigger customer_builds_set_updated_at
+  before update on public.customer_builds
+  for each row execute procedure public.set_updated_at();
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'customer_builds'
+  ) then
+    alter publication supabase_realtime add table public.customer_builds;
+  end if;
+end $$;
+
 alter table public.rate_limit_hits enable row level security;

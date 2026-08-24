@@ -20,6 +20,7 @@ const LINKS: { href: string; en: string; sk: string }[] = [
   { href: '/shop', en: 'Shop', sk: 'Obchod' },
   { href: '/build', en: 'Build', sk: 'Zostaviť' },
   { href: '/gbb', en: 'Budget Builds', sk: 'Budget Builds' },
+  { href: '/customer-builds', en: 'Customer GOMPs', sk: 'Zákaznícke GOMPy' },
   { href: '/about', en: 'About', sk: 'O nás' },
 ];
 

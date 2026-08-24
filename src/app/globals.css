@@ -349,3 +349,23 @@ a[data-gomp-nav]:not([style*='background']):hover {
     transform: scale(1.04);
   }
 }
+
+/* Customer GOMPs showcase (/customer-builds): a gentle up-down bob on each build's photo. */
+@keyframes gompFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+.gomp-float-photo {
+  animation: gompFloat 5.5s ease-in-out infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gomp-float-photo {
+    animation: none;
+  }
+}

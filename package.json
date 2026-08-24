@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.6.4",
-    "@imgly/background-removal": "^1.7.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.0",
     "@vercel/speed-insights": "^2.0.0",

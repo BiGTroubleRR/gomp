@@ -12,18 +12,14 @@ import { fetchGbbRequests, updateGbbRequest, type GbbRequest, type GbbStatus } f
 import { marketplaceSearchLinks } from '@/lib/gbb-links';
 import { GBB_GREEN, GBB_GREEN_TINT } from '@/lib/gbb-theme';
 import { fetchComponentDb, subscribeComponents, insertComponent, updateComponentRow, deleteComponentRow } from '@/lib/supabase/components';
-// Static rather than the original `await import('@imgly/background-removal')` inside
-// handleImageUpload — that was a dynamic import of a package whose own internals do a further
-// dynamic `import("onnxruntime-web")` (see node_modules/@imgly/background-removal/dist/index.mjs),
-// and that double indirection is what Turbopack was choking on: uploading an image threw
-// "Failed to fetch dynamically imported module: http://localhost:3000/<hash>" with no real file
-// at that URL. Statically importing here removes one layer of dynamic-import nesting, letting
-// Turbopack resolve the whole dependency graph up front at build time instead of trying to
-// code-split it at runtime. Safe for SSR: everything WASM/browser-specific in this package only
-// runs inside removeBackground() itself, not at module-evaluation time — importing it just
-// defines the function, same as any other import, and doesn't touch window/document until a
-// visitor actually uploads a file (which only happens client-side already).
-import { removeBackground } from '@imgly/background-removal';
+import {
+  fetchCustomerBuilds,
+  subscribeCustomerBuilds,
+  insertCustomerBuild,
+  updateCustomerBuild,
+  deleteCustomerBuild,
+} from '@/lib/supabase/customer-builds';
+import type { CustomerBuild } from '@/lib/supabase/customer-build-mapping';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
 import {
   defaultComponentDb,
@@ -215,7 +211,7 @@ type Translations = {
   margin_eur: string; margin_pct: string;
   market_price_label: string; market_price_placeholder: string;
   original_price_label: string; web_price_label: string;
-  image_label: string; image_removing_bg: string; image_uploading: string; image_replace: string; image_remove: string;
+  image_label: string; image_uploading: string; image_replace: string; image_remove: string;
   apply_margin: string; margin_override_badge: string; margin_override_label: string; margin_override_desc: string; margin_override_use_global: string;
   specs_notes: string; tier_rating: string; tower_category: string; tower_category_help: string;
   ram_generation: string; ram_speed_mhz: string; ram_generation_help: string;
@@ -245,6 +241,11 @@ type Translations = {
   gbb_search_helper: string; gbb_search_placeholder: string; gbb_add_search: string;
   gbb_proposal_price: string; gbb_proposal_notes: string; gbb_save_proposal: string;
   gbb_count: (total: number, fresh: number) => string;
+  // Zákaznícke GOMPy (customer_builds) tab
+  customer_gomps_tab: string; customer_gomps_title: string; add_customer_gomp: string;
+  cg_title_label: string; cg_customer_label: string; cg_customer_placeholder: string;
+  cg_specs_label: string; cg_specs_help: string; cg_price_label: string; cg_built_on_label: string;
+  cg_listed: (n: number) => string;
 };
 
 const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
@@ -270,7 +271,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     margin_eur: '€ Flat', margin_pct: '% Markup',
     market_price_label: 'Market Price (Alza/Heureka)', market_price_placeholder: 'e.g. 1650',
     original_price_label: 'Original', web_price_label: 'Web price',
-    image_label: 'Product Image', image_removing_bg: 'Removing background…', image_uploading: 'Uploading…',
+    image_label: 'Product Image', image_uploading: 'Uploading…',
     image_replace: 'Replace image', image_remove: 'Remove',
     apply_margin: 'Apply margin →', margin_override_badge: 'Custom margin',
     margin_override_label: 'Margin Override', margin_override_desc: 'Give this one component its own margin instead of the site-wide one above.',
@@ -310,6 +311,11 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     gbb_search_placeholder: 'e.g. RTX 3070', gbb_add_search: 'Search',
     gbb_proposal_price: 'Price proposal (EUR)', gbb_proposal_notes: 'Proposal notes (parts, condition, etc.)', gbb_save_proposal: 'Save & mark quoted →',
     gbb_count: (total, fresh) => `${total} total · ${fresh} new`,
+    customer_gomps_tab: 'Customer GOMPs', customer_gomps_title: 'Zákaznícke GOMPy', add_customer_gomp: '+ Add build',
+    cg_title_label: 'Title', cg_customer_label: 'Customer', cg_customer_placeholder: 'First name/initial only — e.g. "Built for Martin K."',
+    cg_specs_label: 'Specs', cg_specs_help: 'Separate each spec with " · ", same as the Components tab.',
+    cg_price_label: 'Price (EUR)', cg_built_on_label: 'Built on',
+    cg_listed: (n) => `${n} build${n === 1 ? '' : 's'}`,
   },
   sk: {
     admin_panel: 'Admin panel', sign_in: 'Prihlásiť sa →',
@@ -333,7 +339,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     margin_eur: '€ Pevná', margin_pct: '% Prirážka',
     market_price_label: 'Tržnová cena (Alza/Heureka)', market_price_placeholder: 'napr. 1650',
     original_price_label: 'Pôvodná', web_price_label: 'Cena na webe',
-    image_label: 'Fotka produktu', image_removing_bg: 'Odstraňujem pozadie…', image_uploading: 'Nahrávam…',
+    image_label: 'Fotka produktu', image_uploading: 'Nahrávam…',
     image_replace: 'Zmeniť fotku', image_remove: 'Odstrániť',
     apply_margin: 'Aplikovať maržu →', margin_override_badge: 'Vlastná marža',
     margin_override_label: 'Vlastná marža', margin_override_desc: 'Nastavte tomuto komponentu vlastnú maržu namiesto tej celkovej vyššie.',
@@ -373,6 +379,11 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     gbb_search_placeholder: 'napr. RTX 3070', gbb_add_search: 'Hľadať',
     gbb_proposal_price: 'Cenový návrh (EUR)', gbb_proposal_notes: 'Poznámky k návrhu (súčiastky, stav...)', gbb_save_proposal: 'Uložiť a označiť ako ponúknuté →',
     gbb_count: (total, fresh) => `${total} celkovo · ${fresh} nových`,
+    customer_gomps_tab: 'Zákaznícke GOMPy', customer_gomps_title: 'Zákaznícke GOMPy', add_customer_gomp: '+ Pridať zostavu',
+    cg_title_label: 'Názov', cg_customer_label: 'Zákazník', cg_customer_placeholder: 'Len meno/iniciálka — napr. "Postavené pre Martina K."',
+    cg_specs_label: 'Špecifikácie', cg_specs_help: 'Oddeľte jednotlivé položky pomocou " · ", rovnako ako v záložke Komponenty.',
+    cg_price_label: 'Cena (EUR)', cg_built_on_label: 'Dátum dokončenia',
+    cg_listed: (n) => `${n} ${n === 1 ? 'zostava' : n >= 2 && n <= 4 ? 'zostavy' : 'zostáv'}`,
   },
 };
 
@@ -449,6 +460,31 @@ function recomputeMarginPrices(db: ComponentDb, margin: Margin): ComponentDb {
 
 function computeNextBuildId(builds: Build[]): number {
   return builds.reduce((m, b) => Math.max(m, b.id || 0), 0) + 1;
+}
+
+// Mirrors the server's own checks (MAX_BYTES and the component-images Storage bucket's
+// allowed_mime_types — see scripts/widen-image-bucket-mime-types.mjs) so a bad file is rejected
+// instantly, client-side, instead of only after a full round trip to the upload route.
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml'];
+
+function validateImageFile(file: File): string | null {
+  if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+    return `Unsupported file type (${file.type || 'unknown'}). Use PNG, JPEG, WebP, GIF, or SVG.`;
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    return 'Image too large (max 5MB).';
+  }
+  return null;
+}
+
+// "Zákaznícke GOMPy" (customer_builds) add/edit form state.
+type CgFormState = {
+  title: string; customerLabel: string; specs: string; priceEur: string; builtOn: string; imageUrl: string;
+};
+
+function initialCgForm(): CgFormState {
+  return { title: '', customerLabel: '', specs: '', priceEur: '', builtOn: '', imageUrl: '' };
 }
 
 const LABEL_STYLE: CSSProperties = {
@@ -540,9 +576,16 @@ export default function AdminPage() {
           : 'no';
   const authed = adminState === 'yes';
 
-  const [tab, setTab] = useState<'builds' | 'components' | 'requests' | 'gbb'>('requests');
+  const [tab, setTab] = useState<'builds' | 'components' | 'requests' | 'gbb' | 'customerGomps'>('requests');
   const [builds, setBuilds] = useState<Build[]>([]);
   const [compDb, setCompDb] = useState<ComponentDb>(defaultComponentDb());
+
+  const [customerGomps, setCustomerGomps] = useState<CustomerBuild[]>([]);
+  const [showCgForm, setShowCgForm] = useState(false);
+  const [cgEditId, setCgEditId] = useState<string | null>(null);
+  const [cgForm, setCgForm] = useState<CgFormState>(initialCgForm());
+  const [cgImageStatus, setCgImageStatus] = useState<'idle' | 'uploading' | 'error'>('idle');
+  const [cgImageError, setCgImageError] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
@@ -555,7 +598,7 @@ export default function AdminPage() {
   // openEditComp opens it — see openEditComp below. null while in Add mode, where the form stays
   // inline in its usual spot rather than floating.
   const [editAnchor, setEditAnchor] = useState<{ top: number; left: number } | null>(null);
-  const [imageStatus, setImageStatus] = useState<'idle' | 'removing' | 'uploading' | 'error'>('idle');
+  const [imageStatus, setImageStatus] = useState<'idle' | 'uploading' | 'error'>('idle');
   const [imageError, setImageError] = useState<string | null>(null);
 
   const [saveMsg, setSaveMsg] = useState('');
@@ -628,6 +671,22 @@ export default function AdminPage() {
     }
     loadCatalog();
     const unsubscribe = subscribeComponents(loadCatalog);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [authed]);
+
+  // "Zákaznícke GOMPy" — same live-catalog pattern as the components effect above.
+  useEffect(() => {
+    if (!authed) return;
+    let cancelled = false;
+    async function loadCustomerGomps() {
+      const data = await fetchCustomerBuilds();
+      if (!cancelled) setCustomerGomps(data);
+    }
+    loadCustomerGomps();
+    const unsubscribe = subscribeCustomerBuilds(loadCustomerGomps);
     return () => {
       cancelled = true;
       unsubscribe();
@@ -762,6 +821,103 @@ export default function AdminPage() {
     const newBuilds = builds.map((b) => (b.id === id ? { ...b, visible: !b.visible } : b));
     writeJSON('gomp_builds_db', newBuilds);
     setBuilds(newBuilds);
+  }
+
+  // ---- customer GOMPs (customer_builds) CRUD ----
+
+  function openAddCg() {
+    setShowCgForm(true);
+    setCgEditId(null);
+    setCgForm(initialCgForm());
+    setCgImageStatus('idle');
+    setCgImageError(null);
+  }
+
+  function openEditCg(id: string) {
+    const b = customerGomps.find((x) => x.id === id);
+    if (!b) return;
+    setShowCgForm(true);
+    setCgEditId(id);
+    setCgForm({
+      title: b.title,
+      customerLabel: b.customerLabel,
+      specs: b.specs,
+      priceEur: b.priceEur != null ? String(b.priceEur) : '',
+      builtOn: b.builtOn || '',
+      imageUrl: b.imageUrl || '',
+    });
+    setCgImageStatus('idle');
+    setCgImageError(null);
+  }
+
+  function cancelEditCg() {
+    setShowCgForm(false);
+    setCgEditId(null);
+    setCgForm(initialCgForm());
+  }
+
+  async function saveCg() {
+    if (!cgForm.title.trim()) return;
+    const build: CustomerBuild = {
+      id: cgEditId ?? '', // placeholder — Supabase assigns the real id on insert
+      title: cgForm.title.trim(),
+      customerLabel: cgForm.customerLabel.trim(),
+      specs: cgForm.specs.trim(),
+      priceEur: cgForm.priceEur !== '' ? parseFloat(cgForm.priceEur) || 0 : null,
+      builtOn: cgForm.builtOn || null,
+      imageUrl: cgForm.imageUrl || null,
+      isLive: true,
+      sortOrder: 0,
+      createdAt: '',
+      updatedAt: '',
+    };
+    if (cgEditId) {
+      const saved = await updateCustomerBuild(cgEditId, build);
+      setCustomerGomps((list) => list.map((b) => (b.id === cgEditId ? saved : b)));
+    } else {
+      const saved = await insertCustomerBuild(build, customerGomps.length);
+      setCustomerGomps((list) => [...list, saved]);
+    }
+    cancelEditCg();
+  }
+
+  async function deleteCg(id: string) {
+    const b = customerGomps.find((x) => x.id === id);
+    if (!window.confirm(`Delete "${b ? b.title : ''}"?`)) return;
+    await deleteCustomerBuild(id);
+    setCustomerGomps((list) => list.filter((x) => x.id !== id));
+  }
+
+  async function toggleCgLive(build: CustomerBuild) {
+    const updated: CustomerBuild = { ...build, isLive: !build.isLive };
+    const saved = await updateCustomerBuild(build.id, updated);
+    setCustomerGomps((list) => list.map((b) => (b.id === build.id ? saved : b)));
+  }
+
+  // Same plain-upload flow as handleImageUpload (see the Components tab) — no
+  // background removal, the admin pre-cuts the photo themselves if they want transparency.
+  async function handleCgImageUpload(file: File) {
+    const invalidReason = validateImageFile(file);
+    if (invalidReason) {
+      setCgImageStatus('error');
+      setCgImageError(invalidReason);
+      return;
+    }
+    setCgImageStatus('uploading');
+    setCgImageError(null);
+    try {
+      const body = new FormData();
+      body.append('file', file, file.name || 'customer-build.png');
+      body.append('nameHint', cgForm.title || 'customer-build');
+      const res = await fetch('/api/admin/upload-image', { method: 'POST', body });
+      const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !json.url) throw new Error(json.error || 'Upload failed.');
+      setCgForm((f) => ({ ...f, imageUrl: json.url! }));
+      setCgImageStatus('idle');
+    } catch (e) {
+      setCgImageStatus('error');
+      setCgImageError(e instanceof Error ? e.message : 'Image upload failed.');
+    }
   }
 
   // ---- margin ----
@@ -991,19 +1147,24 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editCompId]);
 
-  // Strips the background in the admin's own browser (no server round-trip, no per-image API
-  // cost) before ever uploading anything — @imgly/background-removal runs a small ONNX model
-  // over the image via WASM and hands back a transparent PNG. The upload itself still goes
+  // Uploads the file exactly as picked — no client-side processing. The upload still goes
   // through a server route (see /api/admin/upload-image) because Storage writes need the
-  // service-role key, same reasoning as every other admin write in this app.
+  // service-role key, same reasoning as every other admin write in this app. If the admin wants
+  // a transparent product shot, they pre-cut the background themselves (e.g. export a PNG with
+  // alpha already removed) before picking the file here; the upload and every render site pass
+  // the alpha channel through untouched.
   async function handleImageUpload(file: File) {
-    setImageStatus('removing');
+    const invalidReason = validateImageFile(file);
+    if (invalidReason) {
+      setImageStatus('error');
+      setImageError(invalidReason);
+      return;
+    }
+    setImageStatus('uploading');
     setImageError(null);
     try {
-      const blob = await removeBackground(file);
-      setImageStatus('uploading');
       const body = new FormData();
-      body.append('file', blob, 'component.png');
+      body.append('file', file, file.name || 'component.png');
       body.append('nameHint', compForm.name || compCat);
       const res = await fetch('/api/admin/upload-image', { method: 'POST', body });
       const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
@@ -1012,7 +1173,7 @@ export default function AdminPage() {
       setImageStatus('idle');
     } catch (e) {
       setImageStatus('error');
-      setImageError(e instanceof Error ? e.message : 'Image processing failed.');
+      setImageError(e instanceof Error ? e.message : 'Image upload failed.');
     }
   }
 
@@ -1248,6 +1409,20 @@ export default function AdminPage() {
                   {newGbbCount}
                 </span>
               )}
+            </button>
+            <button
+              onClick={() => setTab('customerGomps')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 10,
+                width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
+                background: tab === 'customerGomps' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                border: 'none',
+                borderLeft: isMobile ? 'none' : `2px solid ${tab === 'customerGomps' ? '#4A90D9' : 'transparent'}`,
+                borderBottom: isMobile ? `2px solid ${tab === 'customerGomps' ? '#4A90D9' : 'transparent'}` : 'none',
+                color: tab === 'customerGomps' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'customerGomps' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              }}
+            >
+              {t.customer_gomps_tab}
             </button>
           </div>
           {!isMobile && (
@@ -1717,6 +1892,183 @@ export default function AdminPage() {
             </div>
           )}
 
+          {tab === 'customerGomps' && (
+            <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.customer_gomps_title}</h1>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300 }}>{t.cg_listed(customerGomps.length)}</div>
+                </div>
+                <button
+                  onClick={openAddCg}
+                  style={{ background: '#6E1423', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '10px 20px', fontSize: 13, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.2, fontFamily: 'var(--font-sans)' }}
+                >
+                  {t.add_customer_gomp}
+                </button>
+              </div>
+
+              {showCgForm && (
+                <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? 16 : 28, marginBottom: 24, borderLeft: '3px solid #6E1423' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 600, color: '#1C1C1A', marginBottom: 22 }}>
+                    {cgEditId !== null ? t.edit : t.add_customer_gomp}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.cg_title_label}</div>
+                      <input value={cgForm.title} onChange={(e) => setCgForm({ ...cgForm, title: e.target.value })} placeholder="The Weekend Warrior" style={INPUT_STYLE} />
+                    </div>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.cg_customer_label}</div>
+                      <input
+                        value={cgForm.customerLabel}
+                        onChange={(e) => setCgForm({ ...cgForm, customerLabel: e.target.value })}
+                        placeholder={t.cg_customer_placeholder}
+                        style={INPUT_STYLE}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={LABEL_STYLE}>{t.cg_specs_label}</div>
+                    <textarea
+                      value={cgForm.specs}
+                      onChange={(e) => setCgForm({ ...cgForm, specs: e.target.value })}
+                      placeholder="RTX 5090 · Ryzen 9 9950X3D · 64GB DDR5-6400 · 2TB NVMe"
+                      rows={3}
+                      style={{ ...INPUT_STYLE, resize: 'vertical', fontFamily: 'var(--font-mono)' }}
+                    />
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginTop: 5 }}>{t.cg_specs_help}</div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr', gap: 14, marginBottom: 18 }}>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.cg_price_label}</div>
+                      <input type="number" value={cgForm.priceEur} onChange={(e) => setCgForm({ ...cgForm, priceEur: e.target.value })} placeholder="1999" style={INPUT_STYLE} />
+                    </div>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.cg_built_on_label}</div>
+                      <input type="date" value={cgForm.builtOn} onChange={(e) => setCgForm({ ...cgForm, builtOn: e.target.value })} style={INPUT_STYLE} />
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: 22 }}>
+                    <div style={LABEL_STYLE}>{t.image_label}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <div
+                        style={{
+                          width: 64, height: 64, borderRadius: 2, flexShrink: 0,
+                          border: '0.5px solid rgba(28,28,26,0.15)',
+                          background: cgForm.imageUrl
+                            ? 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 12px 12px'
+                            : '#FDFAF4',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                        }}
+                      >
+                        {cgForm.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={cgForm.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        ) : (
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890' }}>—</span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label
+                          style={{
+                            fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6E1423', cursor: 'pointer',
+                            border: '0.5px solid rgba(110,20,35,0.35)', borderRadius: 2, padding: '5px 10px', width: 'fit-content',
+                          }}
+                        >
+                          {cgForm.imageUrl ? t.image_replace : t.image_label}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              e.target.value = '';
+                              if (file) handleCgImageUpload(file);
+                            }}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
+                        {cgImageStatus === 'uploading' && (
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469' }}>{t.image_uploading}</span>
+                        )}
+                        {cgImageStatus === 'error' && (
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#CC3333' }}>{cgImageError}</span>
+                        )}
+                        {cgForm.imageUrl && cgImageStatus === 'idle' && (
+                          <button
+                            onClick={() => setCgForm((f) => ({ ...f, imageUrl: '' }))}
+                            style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                          >
+                            {t.image_remove}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 18 }}>
+                    <button onClick={cancelEditCg} style={{ background: 'transparent', color: '#7A7469', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, padding: '9px 20px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                      {t.cancel}
+                    </button>
+                    <button onClick={saveCg} style={{ background: '#6E1423', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '9px 26px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                      {t.save_build}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
+                {customerGomps.map((b) => (
+                  <div
+                    key={b.id}
+                    style={{
+                      background: b.isLive ? '#FDFAF4' : 'rgba(240,235,225,0.6)',
+                      border: '0.5px solid rgba(28,28,26,0.12)', borderRadius: 2, padding: 16,
+                      display: 'flex', gap: 14, opacity: b.isLive ? 1 : 0.65,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 72, height: 72, borderRadius: 2, flexShrink: 0,
+                        border: '0.5px solid rgba(28,28,26,0.12)',
+                        background: b.imageUrl ? 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 12px 12px' : '#F5F0E6',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                      }}
+                    >
+                      {b.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={b.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      ) : (
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890' }}>—</span>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: '#1C1C1A', marginBottom: 2 }}>{b.title}</div>
+                      {b.customerLabel && (
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginBottom: 4 }}>{b.customerLabel}</div>
+                      )}
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: '#7A7469', lineHeight: 1.6, marginBottom: 8 }}>
+                        {b.specs}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        <button
+                          onClick={() => toggleCgLive(b)}
+                          style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: b.isLive ? '#1A7040' : '#9090A0', background: 'transparent', border: `0.5px solid ${b.isLive ? '#1A7040' : '#9090A0'}`, borderRadius: 2, padding: '4px 10px', cursor: 'pointer' }}
+                        >
+                          {b.isLive ? t.live : t.hidden}
+                        </button>
+                        <button onClick={() => openEditCg(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#6E1423', background: 'transparent', border: '0.5px solid rgba(110,20,35,0.4)', borderRadius: 2, padding: '4px 10px', cursor: 'pointer' }}>
+                          {t.edit}
+                        </button>
+                        <button onClick={() => deleteCg(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#CC3333', background: 'transparent', border: '0.5px solid rgba(204,51,51,0.35)', borderRadius: 2, padding: '4px 10px', cursor: 'pointer' }}>
+                          {t.del}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {tab === 'components' && (
             <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
               <div style={{ marginBottom: 28 }}>
@@ -1976,9 +2328,6 @@ export default function AdminPage() {
                           style={{ display: 'none' }}
                         />
                       </label>
-                      {imageStatus === 'removing' && (
-                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469' }}>{t.image_removing_bg}</span>
-                      )}
                       {imageStatus === 'uploading' && (
                         <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469' }}>{t.image_uploading}</span>
                       )}

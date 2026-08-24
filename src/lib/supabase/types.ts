@@ -222,6 +222,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      // "Zákaznícke GOMPy" — already-completed customer builds shown at
+      // /customer-builds. Same public-read/service-role-write shape as `components`.
+      customer_builds: {
+        Row: {
+          id: string;
+          title: string;
+          customer_label: string;
+          specs: string;
+          price_eur: number | null;
+          built_on: string | null;
+          image_url: string | null;
+          is_live: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title?: string;
+          customer_label?: string;
+          specs?: string;
+          price_eur?: number | null;
+          built_on?: string | null;
+          image_url?: string | null;
+          is_live?: boolean;
+          sort_order?: number;
+        };
+        Update: {
+          title?: string;
+          customer_label?: string;
+          specs?: string;
+          price_eur?: number | null;
+          built_on?: string | null;
+          image_url?: string | null;
+          is_live?: boolean;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
       // Demand-signal rows from /checkout. Intentionally has no card-data
       // fields — see the table comment in supabase/schema.sql.
       checkout_intents: {
