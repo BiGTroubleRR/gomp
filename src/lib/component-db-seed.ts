@@ -5,8 +5,8 @@
 // legible during porting, so this shared seed intentionally uses the smaller, exactly-known
 // Config dataset as the single source of truth for both pages rather than guessing at the
 // missing values.
-export type Category = 'mobo' | 'cpu' | 'cooler' | 'ram' | 'gpu' | 'storage' | 'psu' | 'case';
-export const CATEGORIES: Category[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case'];
+export type Category = 'mobo' | 'cpu' | 'cooler' | 'ram' | 'gpu' | 'storage' | 'psu' | 'case' | 'fan';
+export const CATEGORIES: Category[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case', 'fan'];
 
 export type Tier = 'S' | 'A' | 'B' | 'C' | 'D';
 
@@ -17,7 +17,18 @@ export type FormFactor = 'E-ATX' | 'ATX' | 'mATX' | 'Mini-ITX';
 // case rather than mined. 'side' is a mount on the (usually glass) side panel opposite the
 // motherboard tray, distinct from 'front'/'top'/'bottom'/'rear'.
 export type FanMountPosition = 'front' | 'top' | 'rear' | 'bottom' | 'side';
-export type FanMountSpec = { position: FanMountPosition; maxCount: number; sizesMm: number[] };
+export type FanMountSpec = {
+  position: FanMountPosition;
+  maxCount: number;
+  sizesMm: number[];
+  // The fan(s) this case actually ships with at this position, out of the box — bundled into the
+  // case's own price, so /build treats keeping this fan (or fewer of it) as free and only charges
+  // for units beyond it or a swap to a different product. Admin-set (see the case form's
+  // "Pre-installed fans" section); undefined/0 means this position ships empty even though it
+  // supports fans, same as today for any case that's never had this configured.
+  preinstalledFanName?: string;
+  preinstalledCount?: number;
+};
 
 export type Component = {
   id: string;
@@ -56,8 +67,19 @@ export type Component = {
   ramHeightMm?: number; // ram only, per-SKU heatsink height — falls back to RAM_DIMM_SIZE_MM.height (bare PCB) when unset
   ramGeneration?: 4 | 5; // ram only: DDR4 vs DDR5 — drives the /build DDR filter
   ramSpeedMhz?: number; // ram only: rated speed, e.g. 6400 for "DDR5-6400" — drives the /build min-speed slider
+  // ram only: groups rows that are the same real product line at different stick counts (e.g.
+  // 1x16GB / 2x16GB / 4x16GB of the same manufacturer+speed+per-stick-capacity) so the picker can
+  // show them as one card with a stick-count selector instead of separate rows. Rows without it
+  // (older/manually-curated entries) just render as their own single-variant group.
+  ramFamily?: string;
   fanMounts?: FanMountSpec[]; // case only — omitted/empty means a fixed design with no user-configurable fan slots
+  fanSizeMm?: number; // fan only — the one size this SKU comes in; matched against a mount's sizesMm to decide where it fits
   imageUrl?: string; // admin-uploaded product shot, background already stripped client-side before upload
+  // Whether this SKU is currently purchasable on /build — lets Admin pull a component out of the
+  // live catalog (a bad price, a discontinued part, a mining artifact worth double-checking)
+  // without deleting its row/history. Undefined is treated as live (matches the DB column's own
+  // `not null default true`) so every pre-existing row/caller that never set this keeps working.
+  isLive?: boolean;
 };
 
 export type ComponentDb = Record<Category, Component[]>;
@@ -158,6 +180,12 @@ export const BASE_WATTS: Partial<Record<Category, number>> = {
   cooler: 8,
 };
 
+// Case fans rarely quote wattage in their retail specs (RPM/CFM/dBA instead) the way a GPU/PSU
+// does, and draw is per-unit-installed rather than a flat one-shot like BASE_WATTS above — so
+// this is a fallback per fan (typical for a 120-140mm case fan) used only when extractWatts can't
+// find a real number in that SKU's own specs string.
+export const DEFAULT_FAN_WATTS = 3;
+
 // The DDR generation a motherboard supports isn't a structured field (unlike RAM's own
 // ramGeneration) — every board's specs string already leads with a "DDR4"/"DDR5" token
 // ("X870E · DDR5 · PCIe 5.0 · ..."), so this reads that instead of adding a column that would
@@ -165,6 +193,46 @@ export const BASE_WATTS: Partial<Record<Category, number>> = {
 export function moboRamGeneration(mobo: Component | undefined): 4 | 5 | undefined {
   const m = mobo?.specs.match(/DDR(4|5)/);
   return m ? (Number(m[1]) as 4 | 5) : undefined;
+}
+
+export type PcieGen = 3 | 4 | 5;
+
+// A board's fastest M.2 slot generation isn't a structured field either, and unlike DDR
+// generation it can't just be read off the specs text — bulk-imported mobo rows only quote
+// "PCIe 5.0" etc. on the ~25 hand-curated SKUs; every buildcores-mined row's specs just says
+// "<chipset> · DDR5 · N×M.2" with no PCIe token at all. What IS always present, on curated and
+// bulk rows alike, is the chipset code itself, so this maps that to a generation instead —
+// values below are lifted directly from what this catalog's own curated rows already quote for
+// each chipset (e.g. m1's "X870E · DDR5 · PCIe 5.0" is where X870E: 5 comes from), extended to
+// each chipset's un-curated siblings from the same tier/generation. This is necessarily the
+// board's *best* slot, not every slot — a real board often also has slower chipset-fed M.2
+// slots alongside its one fastest CPU-direct one — so treat a "no mismatch" read as "at least
+// one slot should be fine," not a guarantee about whichever slot someone actually uses.
+const CHIPSET_PCIE_GEN: Record<string, PcieGen> = {
+  // AM5 (Ryzen 7000/9000)
+  X870E: 5, X870: 5, B850: 5, B650E: 5,
+  X670E: 5, X670: 5, B650: 4, A620: 4,
+  // AM4 (Ryzen 1000-5000)
+  X570: 4, B550: 4, A520: 3, X470: 3, B450: 3, A320: 3,
+  // LGA1851 (Core Ultra 200S)
+  Z890: 5, B860: 4,
+  // LGA1700 (12th-14th gen Core)
+  Z790: 5, H770: 4, B760: 4, H610: 4,
+};
+const CHIPSET_CODES = Object.keys(CHIPSET_PCIE_GEN).sort((a, b) => b.length - a.length);
+
+export function moboPcieGeneration(mobo: Component | undefined): PcieGen | undefined {
+  if (!mobo?.specs) return undefined;
+  // Longest code first so "B650E" matches before the "B650" substring inside it does.
+  const code = CHIPSET_CODES.find((c) => mobo.specs.includes(c));
+  return code ? CHIPSET_PCIE_GEN[code] : undefined;
+}
+
+// Every storage SKU's specs (curated and bulk-imported alike) quotes its interface as a plain
+// "PCIe 4.0"-style token, so this reads that directly rather than adding a parallel field.
+export function storagePcieGeneration(storage: Component | undefined): PcieGen | undefined {
+  const m = storage?.specs.match(/PCIe\s*(\d)\.0/i);
+  return m ? (Number(m[1]) as PcieGen) : undefined;
 }
 
 export function defaultComponentDb(): ComponentDb {
@@ -347,6 +415,10 @@ export function defaultComponentDb(): ComponentDb {
           { position: 'rear', maxCount: 2, sizesMm: [120] },
         ],
       },
+    ],
+    fan: [
+      { id: 'f1', name: 'Noctua NF-A12x25', price: 30, specs: '2000 RPM · 60.1 CFM · 22.6 dBA · 4-pin PWM', tier: 'S', fanSizeMm: 120 },
+      { id: 'f2', name: 'Corsair ML140', price: 25, specs: '1600 RPM · 75.0 CFM · 24.7 dBA · 4-pin PWM', tier: 'A', fanSizeMm: 140 },
     ],
   };
 }

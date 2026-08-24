@@ -158,7 +158,10 @@ export function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVe
   // Height is the one that actually varies (bare PCB vs. a tall RGB heatsink) and the one that
   // matters — a tall kit can collide with a big air cooler's fins — so it's the only annotation.
   if (id === 'ram') return [{ axis: 'y', mm: RAM_DIMM_SIZE_MM.length, annotate: false }, { axis: 'x', mm: comp.ramHeightMm ?? RAM_DIMM_SIZE_MM.height }];
-  if (id === 'storage') return [{ axis: 'z', mm: STORAGE_M2_SIZE_MM.length }, { axis: 'y', mm: STORAGE_M2_SIZE_MM.width }];
+  // Every M.2 drive in this catalog is the same fixed 2280 size (unlike RAM's height, nothing
+  // here varies by SKU at all), so there's nothing worth calling out with a blueprint line —
+  // annotate: false still scales the mesh to the right (fixed) size, it just draws no label.
+  if (id === 'storage') return [{ axis: 'z', mm: STORAGE_M2_SIZE_MM.length, annotate: false }, { axis: 'y', mm: STORAGE_M2_SIZE_MM.width, annotate: false }];
   return [];
 }
 
@@ -1131,41 +1134,111 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     rebuildFans();
   }
 
-  // mobo/cpu/cooler/ram move as a rigid group, sharing whatever Z the motherboard itself sits
-  // at — and that Z is pinned to the *selected case's* actual rear wall (z=-d/2, see buildCase)
-  // rather than BASE_POS.mobo's fixed constant, so the now rear-facing I/O shield ports (see
-  // buildComponentMesh's 'mobo' case) actually reach the rear cutout instead of floating
-  // somewhere in the case's open interior. halfDepth reads the motherboard's own real depth
-  // (E-ATX's 330mm vs Mini-ITX's 170mm sit differently even in the same case) once a real SKU's
-  // sizeScale is on file; before that, it falls back to the unscaled placeholder's own extent.
+  // mobo/cpu/cooler/ram/storage move as a rigid group, sharing whatever position the
+  // motherboard itself sits at — and that position is pinned to the *selected case's* actual
+  // interior (rear wall for Z, solid side wall for X) rather than BASE_POS.mobo's fixed
+  // constants, so the now rear-facing I/O shield ports (see buildComponentMesh's 'mobo' case)
+  // actually reach the rear cutout, and the whole assembly stays inside the case's real walls
+  // regardless of which case (by real mm size) or form factor is selected — a fixed X, in
+  // particular, could put a full ATX/E-ATX board's mounting plane past a narrower-than-average
+  // case's solid side panel, reading as the board "peeking" out of the case.
+  // halfDepth reads the motherboard's own real depth (E-ATX's 330mm vs Mini-ITX's 170mm sit
+  // differently even in the same case) once a real SKU's sizeScale is on file; before that, it
+  // falls back to the unscaled placeholder's own extent.
   const MOBO_REAR_CLEARANCE = 0.04;
+  // 0.12 alone reproduced the old fixed X constant (-0.88) exactly, but the rear-IO shield's
+  // bounding box isn't centered on the group origin (see buildComponentMesh's mobo case: the
+  // io group sits offset in local X) — measured live, that pushes the mesh's near edge about
+  // 0.06 further past the solid wall than this clearance alone accounts for, on every case and
+  // form factor equally (mobo's X axis never gets a real-mm sizeScale, so this offset is constant
+  // rather than something that scales away for smaller boards). The extra 0.06 absorbs exactly
+  // that, closing the gap without changing which case the old -0.88 default now lands near.
+  const MOBO_SIDE_CLEARANCE = 0.18;
+  // buildComponentMesh's mobo case bakes `g.scale.setScalar(0.86)` into the mesh at construction,
+  // so naturalSize.mobo (measured right after, at that baked scale) already has it folded in —
+  // but setSizeScale later does `mesh.scale.set(sizeScale...)`, which *overwrites* scale rather
+  // than multiplying on top of it, discarding the 0.86 entirely. The real applied depth ends up
+  // being the raw (pre-bake) geometry size times sizeScale.z alone, not naturalSize.z*sizeScale.z
+  // — dividing the bake back out here first is what makes halfDepth match what actually renders.
+  const MOBO_BAKED_SCALE = 0.86;
   function moboAnchoredZ(): number {
     const mobo = objects.mobo;
     const nat = naturalSize.mobo;
-    const halfDepth = mobo && nat ? (nat.z * mobo.sizeScale.z) / 2 : 0.75;
+    const halfDepth = mobo && nat ? ((nat.z / MOBO_BAKED_SCALE) * mobo.sizeScale.z) / 2 : 0.75;
     // +d/2 is the rear wall (see buildCase's `rear` panel) — the case's front sits at -d/2.
     return lastCaseSize.d / 2 - MOBO_REAR_CLEARANCE - halfDepth;
+  }
+  function moboAnchoredX(): number {
+    // The glass panel sits at +w/2 (see buildCase's glassMesh) — the tray/solid side is -w/2.
+    return -lastCaseSize.w / 2 + MOBO_SIDE_CLEARANCE;
+  }
+
+  // GPU and PSU are anchored the same rear-wall way as the motherboard, each using its own real
+  // length — a card's rear bracket (port cutouts) and a PSU's rear-facing end both mount at the
+  // case's back, not centered front-to-back. GPU's vertical (riser-mount) position is a fixed,
+  // separately-tuned chamber location (see applyGpuPosition), so this anchor only applies when
+  // it's mounted the normal horizontal way.
+  const GPU_REAR_CLEARANCE = 0.04;
+  const PSU_REAR_CLEARANCE = 0.04;
+  function gpuAnchoredZ(): number {
+    const gpu = objects.gpu;
+    const nat = naturalSize.gpu;
+    const halfLength = gpu && nat ? (nat.z * gpu.sizeScale.z) / 2 : 0.45;
+    return lastCaseSize.d / 2 - GPU_REAR_CLEARANCE - halfLength;
+  }
+  function psuAnchoredZ(): number {
+    const psu = objects.psu;
+    const nat = naturalSize.psu;
+    const halfLength = psu && nat ? (nat.z * psu.sizeScale.z) / 2 : 0.7;
+    return lastCaseSize.d / 2 - PSU_REAR_CLEARANCE - halfLength;
+  }
+  // A real PSU mounts flush against the case floor (bottom-mounted, shroud or not) — BASE_POS.psu's
+  // old static Y had no relation to the selected case's actual height, so a tall case left it
+  // floating well above the floor and a short one (see the vertical-GPU riser cases, which also
+  // tend to be shallow/short) could have it poke through the bottom, same as every other
+  // fixed-position case discussed above. buildComponentMesh's psu case never bakes a construction
+  // scale into its own group (unlike mobo's 0.86), so naturalSize.psu.y is already the true
+  // scale-1 size — no MOBO_BAKED_SCALE-style correction needed here.
+  const PSU_BOTTOM_CLEARANCE = 0.04;
+  function psuAnchoredY(): number {
+    const psu = objects.psu;
+    const nat = naturalSize.psu;
+    const halfHeight = psu && nat ? (nat.y * psu.sizeScale.y) / 2 : 0.3;
+    return -lastCaseSize.h / 2 + PSU_BOTTOM_CLEARANCE + halfHeight;
   }
 
   function resetComponentPositions() {
     const moboZ = moboAnchoredZ();
+    const moboX = moboAnchoredX();
+    const psuZ = psuAnchoredZ();
+    const psuY = psuAnchoredY();
     (Object.keys(BASE_POS) as Exclude<CompId, 'case'>[]).forEach((id) => {
       const obj = objects[id];
       if (!obj) return;
       const base = BASE_POS[id];
-      const z = id === 'mobo' || id === 'cpu' || id === 'cooler' || id === 'ram' ? moboZ + (base[2] - BASE_POS.mobo[2]) : base[2];
-      obj.finalPos.set(base[0], base[1], z);
+      const inMoboGroup = id === 'mobo' || id === 'cpu' || id === 'cooler' || id === 'ram' || id === 'storage';
+      const x = inMoboGroup ? moboX + (base[0] - BASE_POS.mobo[0]) : base[0];
+      const y = id === 'psu' ? psuY : base[1];
+      const z = inMoboGroup ? moboZ + (base[2] - BASE_POS.mobo[2]) : id === 'psu' ? psuZ : base[2];
+      obj.finalPos.set(x, y, z);
       if (obj.selected) {
         obj.targetPos.copy(obj.finalPos);
         obj.mesh.position.copy(obj.finalPos);
       }
     });
     // The empty-DIMM-slot outlines are a standalone group (see ramSlotOutlineGroup below), not
-    // one of the objects looped above, so they need their own copy of the same ram Z — otherwise
-    // they stay parked at BASE_POS.ram's static Z forever while the real ram object moves with
-    // the mobo assembly's case-anchored Z, drifting apart on any case/motherboard but the exact
-    // one BASE_POS.ram's constants happened to be tuned against.
-    ramSlotOutlineGroup.position.set(BASE_POS.ram[0], BASE_POS.ram[1], moboZ + (BASE_POS.ram[2] - BASE_POS.mobo[2]));
+    // one of the objects looped above, so they need their own copy of the same ram position —
+    // otherwise they stay parked at BASE_POS.ram's static spot forever while the real ram
+    // object moves with the mobo assembly's case-anchored position, drifting apart on any case/
+    // motherboard but the exact one BASE_POS.ram's constants happened to be tuned against.
+    ramSlotOutlineGroup.position.set(
+      moboX + (BASE_POS.ram[0] - BASE_POS.mobo[0]),
+      BASE_POS.ram[1],
+      moboZ + (BASE_POS.ram[2] - BASE_POS.mobo[2]),
+    );
+    // GPU isn't looped above (its position also depends on vertical/horizontal orientation,
+    // which this function doesn't track) — see applyGpuPosition, called separately wherever
+    // this is (setSizeScale('gpu', ...), setGpuOrientation).
   }
 
   function updateCase(w: number, h: number, d: number) {
@@ -1418,9 +1491,78 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       obj.mesh.scale.set(sizeScale.x, sizeScale.y, sizeScale.z);
     }
     // A different motherboard form factor changes moboAnchoredZ's own real half-depth (E-ATX's
-    // 330mm vs Mini-ITX's 170mm), so the whole rear-anchored mobo/cpu/cooler/ram group needs to
-    // slide to match — same reason updateCase re-runs this when the case itself changes.
+    // 330mm vs Mini-ITX's 170mm), so the whole rear-anchored mobo/cpu/cooler/ram/storage group
+    // needs to slide to match — same reason updateCase re-runs this when the case itself
+    // changes. A different GPU/PSU changes their own rear anchor the same way, but each has its
+    // own real length independent of the mobo's, so they're recomputed separately rather than
+    // by this same case-relative group.
     if (id === 'mobo') resetComponentPositions();
+    if (id === 'gpu') applyGpuPosition();
+    if (id === 'psu') resetComponentPositions();
+  }
+
+  // Tracks the last orientation setGpuOrientation was given, so a later reposition (a different
+  // GPU with a different real length, or a case-depth change picked up by resetComponentPositions
+  // indirectly through setSizeScale('psu'/'mobo', ...)) can reapply the right one without the
+  // caller having to know/re-pass it.
+  let gpuVerticalMode = false;
+
+  // Horizontal: anchored to the case's rear wall like the motherboard, using the GPU's own real
+  // length — a card's rear bracket (port cutouts) mounts flush against the same wall the mobo's
+  // I/O shield does, not centered front-to-back. Vertical (riser-mount case): a fixed, already-
+  // tuned chamber position — that layout puts the card in its own enclosure opposite the mobo
+  // tray, not case-depth-relative the way the horizontal mount is.
+  const GPU_VERTICAL_BOTTOM_CLEARANCE = 0.04;
+  // Vertical mode adds a second rotation (wrapper.rotation.x, set in setGpuOrientation) on top of
+  // the inner group's own baked -90° Z rotation (see buildComponentMesh's gpu case) — composing
+  // the two by hand to find where the card's real length actually lands in world Y is exactly the
+  // kind of rotation math that's already bitten this file once (see moboAnchoredZ's history).
+  // Measuring the real, already-transformed Box3 sidesteps that entirely: it's exact regardless of
+  // how the rotations compose, for any card length. A fixed Y (the old GPU_VERTICAL_POS[1]) had no
+  // relation to either the case's real height or the selected card's real length, so a long card
+  // in a short chamber would hang out through the case floor — this anchors the card's bottom
+  // edge to the chamber floor instead, the same "wall minus clearance minus half-extent" pattern
+  // used for every other rear-wall anchor in this file, just measured instead of derived.
+  function gpuVerticalAnchoredY(): number {
+    const obj = objects.gpu;
+    if (!obj) return GPU_VERTICAL_POS[1];
+    const mesh = obj.mesh;
+    const prevPos = mesh.position.clone();
+    const prevRot = mesh.rotation.clone();
+    const prevScale = mesh.scale.clone();
+    mesh.position.set(GPU_VERTICAL_POS[0], 0, GPU_VERTICAL_POS[2]);
+    mesh.rotation.set(-Math.PI / 2, 0, 0);
+    mesh.scale.set(obj.sizeScale.x, obj.sizeScale.y, obj.sizeScale.z);
+    mesh.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(mesh);
+    mesh.position.copy(prevPos);
+    mesh.rotation.copy(prevRot);
+    mesh.scale.copy(prevScale);
+    mesh.updateMatrixWorld(true);
+    const bottomWall = -lastCaseSize.h / 2 + GPU_VERTICAL_BOTTOM_CLEARANCE;
+    return bottomWall - box.min.y;
+  }
+
+  function applyGpuPosition() {
+    const obj = objects.gpu;
+    if (!obj) return;
+    const pos = gpuVerticalMode
+      ? new THREE.Vector3(GPU_VERTICAL_POS[0], gpuVerticalAnchoredY(), GPU_VERTICAL_POS[2])
+      : new THREE.Vector3(BASE_POS.gpu[0], BASE_POS.gpu[1], gpuAnchoredZ());
+    obj.finalPos.copy(pos);
+    // Matches resetComponentPositions' own guard (just `obj.selected`, no moveStart check): the
+    // auto-build flow toggles gpu on and then, ~90ms later while its 650ms entrance animation is
+    // still in flight, toggles the case on too — which recomputes this same anchor against the
+    // case's real depth. Requiring moveStart == null here left that recompute unable to reach the
+    // in-flight animation's target, so the card would land wherever the animation had already been
+    // pointed (the pre-case-selection, wrong depth) and stay there permanently once moveStart
+    // cleared. Updating targetPos unconditionally lets an in-progress lerp redirect toward the
+    // corrected target instead of freezing it; only skip the instant mesh.position snap while
+    // still mid-move, so the animation stays smooth instead of jumping.
+    if (obj.selected) {
+      obj.targetPos.copy(pos);
+      if (obj.moveStart == null) obj.mesh.position.copy(pos);
+    }
   }
 
   // Tips the GPU wrapper onto its side for a riser-mounted vertical case (world Z, where its
@@ -1431,13 +1573,9 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   function setGpuOrientation(vertical: boolean) {
     const obj = objects.gpu;
     if (!obj) return;
+    gpuVerticalMode = vertical;
     obj.mesh.rotation.set(vertical ? -Math.PI / 2 : 0, 0, 0);
-    const pos = new THREE.Vector3(...(vertical ? GPU_VERTICAL_POS : BASE_POS.gpu));
-    obj.finalPos.copy(pos);
-    if (obj.selected && obj.moveStart == null) {
-      obj.mesh.position.copy(pos);
-      obj.targetPos.copy(pos);
-    }
+    applyGpuPosition();
   }
 
   // Shows exactly `count` of the ram mesh's 4 fixed DIMM slots, left to right, so the viewport
