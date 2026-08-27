@@ -1263,9 +1263,9 @@ export default function AdminPage() {
           )}
 
           <div style={{ marginTop: 24, paddingTop: 16, borderTop: '0.5px solid rgba(28,28,26,0.1)', display: 'flex', gap: 6, justifyContent: 'center' }}>
-            <button onClick={() => setLang('en')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 6px', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'en' ? '#6E1423' : '#7A7469' }}>EN</button>
-            <span style={{ color: 'rgba(28,28,26,0.25)' }}>/</span>
             <button onClick={() => setLang('sk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 6px', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'sk' ? '#6E1423' : '#7A7469' }}>SK</button>
+            <span style={{ color: 'rgba(28,28,26,0.25)' }}>/</span>
+            <button onClick={() => setLang('en')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 6px', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'en' ? '#6E1423' : '#7A7469' }}>EN</button>
           </div>
         </div>
       </div>
@@ -1296,9 +1296,9 @@ export default function AdminPage() {
         </span>
         {!isMobile && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 20, fontFamily: 'var(--font-sans)', fontSize: 12 }}>
-            <button onClick={() => setLang('en')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'en' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: lang === 'en' ? 600 : 400 }}>EN</button>
-            <span style={{ color: 'rgba(245,240,230,0.25)' }}>/</span>
             <button onClick={() => setLang('sk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'sk' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: lang === 'sk' ? 600 : 400 }}>SK</button>
+            <span style={{ color: 'rgba(245,240,230,0.25)' }}>/</span>
+            <button onClick={() => setLang('en')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'en' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: lang === 'en' ? 600 : 400 }}>EN</button>
             <span style={{ color: 'rgba(245,240,230,0.18)', marginLeft: 4 }}>|</span>
             <button onClick={() => setCurrency('eur')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: currency === 'eur' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: currency === 'eur' ? 600 : 400 }}>€</button>
             <span style={{ color: 'rgba(245,240,230,0.25)' }}>/</span>

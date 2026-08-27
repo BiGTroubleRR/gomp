@@ -38,7 +38,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${cormorant.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
+    <html lang="sk" className={`${cormorant.variable} ${dmSans.variable} ${jetbrainsMono.variable}`}>
       <body>
         <ClerkProvider>
           <SiteProvider>

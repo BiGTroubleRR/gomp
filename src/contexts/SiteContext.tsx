@@ -16,7 +16,7 @@ const SiteContext = createContext<SiteContextValue | null>(null);
 export function SiteProvider({ children }: { children: React.ReactNode }) {
   // Defaults match the original site's getLang()/getCurrency() fallbacks. Real values are
   // adopted from localStorage on mount (client-only) to avoid an SSR/client markup mismatch.
-  const [lang, setLangState] = useState<Lang>('en');
+  const [lang, setLangState] = useState<Lang>('sk');
   const [currency, setCurrencyState] = useState<Currency>('eur');
 
   useEffect(() => {

@@ -5,11 +5,11 @@ const LANG_KEY = 'gomp_lang';
 const CURRENCY_KEY = 'gomp_currency';
 
 export function getLang(): Lang {
-  if (typeof window === 'undefined') return 'en';
+  if (typeof window === 'undefined') return 'sk';
   try {
-    return (localStorage.getItem(LANG_KEY) as Lang) || 'en';
+    return (localStorage.getItem(LANG_KEY) as Lang) || 'sk';
   } catch {
-    return 'en';
+    return 'sk';
   }
 }
 

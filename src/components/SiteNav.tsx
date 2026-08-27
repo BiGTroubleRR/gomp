@@ -30,17 +30,17 @@ function LangCurrencyRow({ stacked }: { stacked?: boolean }) {
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: stacked ? 'column' : 'row' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
         <button
-          onClick={() => setLang('en')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)', fontSize: stacked ? 16 : 12, color: lang === 'en' ? MAROON : MUTED, fontWeight: lang === 'en' ? 600 : 400 }}
-        >
-          EN
-        </button>
-        <span style={{ color: 'rgba(28,28,26,0.25)', fontSize: stacked ? 16 : 12 }}>/</span>
-        <button
           onClick={() => setLang('sk')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)', fontSize: stacked ? 16 : 12, color: lang === 'sk' ? MAROON : MUTED, fontWeight: lang === 'sk' ? 600 : 400 }}
         >
           SK
+        </button>
+        <span style={{ color: 'rgba(28,28,26,0.25)', fontSize: stacked ? 16 : 12 }}>/</span>
+        <button
+          onClick={() => setLang('en')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)', fontSize: stacked ? 16 : 12, color: lang === 'en' ? MAROON : MUTED, fontWeight: lang === 'en' ? 600 : 400 }}
+        >
+          EN
         </button>
       </div>
       <span style={{ color: 'rgba(28,28,26,0.2)', fontSize: stacked ? 16 : 12 }}>|</span>
