@@ -216,6 +216,12 @@ type Translations = {
   specs_notes: string; tier_rating: string; tower_category: string; tower_category_help: string;
   ram_generation: string; ram_speed_mhz: string; ram_generation_help: string;
   fan_size_mm: string; preinstalled_fans: string; preinstalled_fans_help: string; fan_none: string;
+  dimensions_mm: string;
+  case_width_mm: string; case_height_mm: string; case_depth_mm: string;
+  max_gpu_length_mm: string; max_cooler_height_mm: string; max_radiator_mm: string; max_psu_length_mm: string;
+  gpu_length_mm: string; gpu_slot_width: string;
+  cooler_height_mm: string; cooler_radiator_mm: string;
+  psu_length_mm: string;
   update_arrow: string; add_prefix: string; edit_prefix: string;
   select_prefix: string; select_suffix: string;
   listings: (n: number) => string;
@@ -284,6 +290,12 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     preinstalled_fans: 'Pre-installed fans',
     preinstalled_fans_help: 'Which fan (if any) ships in each mount out of the box — keeping it is free; swapping to another fan on Build charges that fan’s price.',
     fan_none: 'None (bundled, unbranded)',
+    dimensions_mm: 'Dimensions (mm)',
+    case_width_mm: 'Width', case_height_mm: 'Height', case_depth_mm: 'Depth',
+    max_gpu_length_mm: 'Max GPU length', max_cooler_height_mm: 'Max cooler height', max_radiator_mm: 'Max radiator size', max_psu_length_mm: 'Max PSU length',
+    gpu_length_mm: 'Length', gpu_slot_width: 'Slot width',
+    cooler_height_mm: 'Height (air)', cooler_radiator_mm: 'Radiator size (AIO)',
+    psu_length_mm: 'Length',
     update_arrow: 'Update →', add_prefix: 'Add ', edit_prefix: 'Edit ',
     select_prefix: '— Select ', select_suffix: ' —',
     listings: (n) => `${n} listings · changes save to localStorage and sync to Shop`,
@@ -352,6 +364,12 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     preinstalled_fans: 'Predinštalované ventilátory',
     preinstalled_fans_help: 'Ktorý ventilátor (ak nejaký) je v danej pozícii od výroby — ponechanie je zadarmo, výmena za iný ventilátor na stránke Zostaviť účtuje jeho cenu.',
     fan_none: 'Žiadny (súčasť skrine, bez značky)',
+    dimensions_mm: 'Rozmery (mm)',
+    case_width_mm: 'Šírka', case_height_mm: 'Výška', case_depth_mm: 'Hĺbka',
+    max_gpu_length_mm: 'Max. dĺžka GPU', max_cooler_height_mm: 'Max. výška chladiča', max_radiator_mm: 'Max. veľkosť radiátora', max_psu_length_mm: 'Max. dĺžka zdroja',
+    gpu_length_mm: 'Dĺžka', gpu_slot_width: 'Šírka (sloty)',
+    cooler_height_mm: 'Výška (vzduchový)', cooler_radiator_mm: 'Veľkosť radiátora (AIO)',
+    psu_length_mm: 'Dĺžka',
     update_arrow: 'Aktualizovať →', add_prefix: 'Pridať ', edit_prefix: 'Upraviť ',
     select_prefix: '— Vybrať ', select_suffix: ' —',
     listings: (n) => `${n} položiek · zmeny sa ukladajú do localStorage a synchronizujú s obchodom`,
@@ -412,6 +430,14 @@ type CompFormState = {
   // the case already defines (position/maxCount/sizesMm aren't editable here) — see the
   // "Pre-installed fans" section, shown only while editing a case that already has fanMounts.
   fanPreinstalled: Partial<Record<FanMountPosition, { fanName: string; count: string }>>;
+  // Real physical dimensions (mm) — case only: the case's own footprint plus the largest part it
+  // fits in each slot. Previously had no edit fields at all (see dimensionFieldsFromForm below),
+  // so this data was invisible in the admin form and only ever silently carried forward untouched.
+  caseWidthMm: string; caseHeightMm: string; caseDepthMm: string;
+  maxGpuLengthMm: string; maxCoolerHeightMm: string; maxRadiatorMm: string; maxPsuLengthMm: string;
+  gpuLengthMm: string; gpuSlotWidth: string; // gpu only
+  coolerHeightMm: string; coolerRadiatorMm: string; // cooler only
+  psuLengthMm: string; // psu only
 };
 
 function initialCompForm(): CompFormState {
@@ -420,6 +446,34 @@ function initialCompForm(): CompFormState {
     marginOverrideOn: false, marginOverrideType: 'pct', marginOverrideValue: '0',
     ramGeneration: '', ramSpeedMhz: '',
     fanSizeMm: '', fanPreinstalled: {},
+    caseWidthMm: '', caseHeightMm: '', caseDepthMm: '',
+    maxGpuLengthMm: '', maxCoolerHeightMm: '', maxRadiatorMm: '', maxPsuLengthMm: '',
+    gpuLengthMm: '', gpuSlotWidth: '',
+    coolerHeightMm: '', coolerRadiatorMm: '',
+    psuLengthMm: '',
+  };
+}
+
+// Shared by addComponent/updateComponent so the same category-scoped set of dimension fields
+// (only ever visible/editable in the form for the category they actually apply to — see the
+// dimension-fields JSX below) is read the same way on both insert and update. An empty string
+// omits the key entirely, which componentToRow then persists as null — the same "explicitly
+// cleared" behavior as every other optional numeric field in this form (e.g. ramSpeedMhz).
+function dimensionFieldsFromForm(cat: Category, form: CompFormState): Partial<Component> {
+  const num = (s: string) => parseFloat(s);
+  return {
+    ...(cat === 'case' && form.caseWidthMm ? { caseWidthMm: num(form.caseWidthMm) } : {}),
+    ...(cat === 'case' && form.caseHeightMm ? { caseHeightMm: num(form.caseHeightMm) } : {}),
+    ...(cat === 'case' && form.caseDepthMm ? { caseDepthMm: num(form.caseDepthMm) } : {}),
+    ...(cat === 'case' && form.maxGpuLengthMm ? { maxGpuLengthMm: num(form.maxGpuLengthMm) } : {}),
+    ...(cat === 'case' && form.maxCoolerHeightMm ? { maxCoolerHeightMm: num(form.maxCoolerHeightMm) } : {}),
+    ...(cat === 'case' && form.maxRadiatorMm ? { maxRadiatorMm: num(form.maxRadiatorMm) } : {}),
+    ...(cat === 'case' && form.maxPsuLengthMm ? { maxPsuLengthMm: num(form.maxPsuLengthMm) } : {}),
+    ...(cat === 'gpu' && form.gpuLengthMm ? { gpuLengthMm: num(form.gpuLengthMm) } : {}),
+    ...(cat === 'gpu' && form.gpuSlotWidth ? { gpuSlotWidth: num(form.gpuSlotWidth) } : {}),
+    ...(cat === 'cooler' && form.coolerHeightMm ? { coolerHeightMm: num(form.coolerHeightMm) } : {}),
+    ...(cat === 'cooler' && form.coolerRadiatorMm ? { coolerRadiatorMm: num(form.coolerRadiatorMm) } : {}),
+    ...(cat === 'psu' && form.psuLengthMm ? { psuLengthMm: num(form.psuLengthMm) } : {}),
   };
 }
 
@@ -486,6 +540,11 @@ type CgFormState = {
 function initialCgForm(): CgFormState {
   return { title: '', customerLabel: '', specs: '', priceEur: '', builtOn: '', imageUrl: '' };
 }
+
+// Width of the floating edit popup on desktop (see openEditComp) — wide enough that a case's
+// dimension grid and fan-mount rows lay out comfortably side by side instead of stacking into a
+// long column that hides most of the form behind internal scrolling.
+const EDIT_PANEL_WIDTH = 640;
 
 const LABEL_STYLE: CSSProperties = {
   fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469',
@@ -594,9 +653,10 @@ export default function AdminPage() {
   const [compCat, setCompCat] = useState<Category>('gpu');
   const [compForm, setCompForm] = useState<CompFormState>(initialCompForm());
   const [editCompId, setEditCompId] = useState<string | null>(null);
-  // Screen position for the edit popup, computed once (from the clicked row's Edit button) when
-  // openEditComp opens it — see openEditComp below. null while in Add mode, where the form stays
-  // inline in its usual spot rather than floating.
+  // Screen position for the edit popup — always centered in the viewport (see openEditComp)
+  // rather than tied to where the Edit button was clicked, so the whole form stays reachable
+  // regardless of scroll position. null while in Add mode, where the form stays inline in its
+  // usual spot rather than floating.
   const [editAnchor, setEditAnchor] = useState<{ top: number; left: number } | null>(null);
   const [imageStatus, setImageStatus] = useState<'idle' | 'uploading' | 'error'>('idle');
   const [imageError, setImageError] = useState<string | null>(null);
@@ -970,6 +1030,7 @@ export default function AdminPage() {
       ...(compCat === 'ram' && compForm.ramGeneration ? { ramGeneration: Number(compForm.ramGeneration) as 4 | 5 } : {}),
       ...(compCat === 'ram' && compForm.ramSpeedMhz ? { ramSpeedMhz: parseInt(compForm.ramSpeedMhz, 10) } : {}),
       ...(compCat === 'fan' && compForm.fanSizeMm ? { fanSizeMm: parseFloat(compForm.fanSizeMm) } : {}),
+      ...dimensionFieldsFromForm(compCat, compForm),
       ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
       ...(marginOverride ? { marginOverride } : {}),
     };
@@ -1011,22 +1072,7 @@ export default function AdminPage() {
       ...(compCat === 'ram' && compForm.ramGeneration ? { ramGeneration: Number(compForm.ramGeneration) as 4 | 5 } : {}),
       ...(compCat === 'ram' && compForm.ramSpeedMhz ? { ramSpeedMhz: parseInt(compForm.ramSpeedMhz, 10) } : {}),
       ...(compCat === 'fan' && compForm.fanSizeMm ? { fanSizeMm: parseFloat(compForm.fanSizeMm) } : {}),
-      // None of these mm-dimension fields have edit inputs in this form either — same
-      // carry-forward reasoning as ramHeightMm above, just for every other category that has one.
-      // Without this, editing e.g. a GPU's price would silently zero out gpuLengthMm/gpuSlotWidth
-      // and quietly break every case-fit check (fitsInCase) that GPU is involved in from then on.
-      ...(existing?.caseWidthMm != null ? { caseWidthMm: existing.caseWidthMm } : {}),
-      ...(existing?.caseHeightMm != null ? { caseHeightMm: existing.caseHeightMm } : {}),
-      ...(existing?.caseDepthMm != null ? { caseDepthMm: existing.caseDepthMm } : {}),
-      ...(existing?.maxGpuLengthMm != null ? { maxGpuLengthMm: existing.maxGpuLengthMm } : {}),
-      ...(existing?.maxCoolerHeightMm != null ? { maxCoolerHeightMm: existing.maxCoolerHeightMm } : {}),
-      ...(existing?.maxRadiatorMm != null ? { maxRadiatorMm: existing.maxRadiatorMm } : {}),
-      ...(existing?.maxPsuLengthMm != null ? { maxPsuLengthMm: existing.maxPsuLengthMm } : {}),
-      ...(existing?.gpuLengthMm != null ? { gpuLengthMm: existing.gpuLengthMm } : {}),
-      ...(existing?.gpuSlotWidth != null ? { gpuSlotWidth: existing.gpuSlotWidth } : {}),
-      ...(existing?.coolerHeightMm != null ? { coolerHeightMm: existing.coolerHeightMm } : {}),
-      ...(existing?.coolerRadiatorMm != null ? { coolerRadiatorMm: existing.coolerRadiatorMm } : {}),
-      ...(existing?.psuLengthMm != null ? { psuLengthMm: existing.psuLengthMm } : {}),
+      ...dimensionFieldsFromForm(compCat, compForm),
       ...(!(compCat === 'fan' && compForm.fanSizeMm) && existing?.fanSizeMm != null ? { fanSizeMm: existing.fanSizeMm } : {}),
       // Pre-installed-fan assignments (see the "Pre-installed fans" section) merge onto the
       // case's existing fanMounts — position/maxCount/sizesMm aren't editable here and must
@@ -1078,27 +1124,21 @@ export default function AdminPage() {
     setCompDb((db) => ({ ...db, [cat]: (db[cat] || []).filter((c) => c.id !== id) }));
   }
 
-  // anchorRect is the clicked Edit button's own bounding box (see its onClick below) — used to
-  // float the form right next to the row that was clicked instead of the old behavior, where a
-  // single shared form sat fixed below the whole grid and editing any card but the last one meant
-  // scrolling down to find the form that had just silently updated off-screen.
-  function openEditComp(cat: Category, id: string, anchorRect?: DOMRect) {
+  // Always centers the popup in the viewport — rather than the earlier version, which anchored it
+  // next to whichever Edit button was clicked. For a category with a lot of fields (case:
+  // dimensions + per-position fan-mount rows), an anchor near the bottom of a long list could
+  // push most of the form below the fold with only its own internal scroll to reach the rest.
+  // Centering with a fixed, generous width instead means the same predictable, fully-reachable
+  // spot every time, regardless of where in the list — or how far down the page — the click
+  // came from.
+  function openEditComp(cat: Category, id: string) {
     const comp = (compDb[cat] || []).find((c) => c.id === id);
     if (!comp) return;
-    const PANEL_WIDTH = isMobile ? window.innerWidth - 32 : 440;
+    const PANEL_WIDTH = isMobile ? window.innerWidth - 32 : Math.min(EDIT_PANEL_WIDTH, window.innerWidth - 24);
     const EDGE_MARGIN = 12;
-    if (anchorRect) {
-      let left = anchorRect.right + EDGE_MARGIN;
-      if (left + PANEL_WIDTH > window.innerWidth - EDGE_MARGIN) left = anchorRect.left - PANEL_WIDTH - EDGE_MARGIN;
-      if (left < EDGE_MARGIN) left = Math.max(EDGE_MARGIN, window.innerWidth - PANEL_WIDTH - EDGE_MARGIN);
-      // Leaves room for the panel's own height (it scrolls internally past that via maxHeight)
-      // rather than trying to predict the exact height of a form whose field count varies by
-      // category (case/ram add extra rows) before it has even rendered.
-      const top = Math.max(EDGE_MARGIN, Math.min(anchorRect.top, window.innerHeight - EDGE_MARGIN - 120));
-      setEditAnchor({ top, left });
-    } else {
-      setEditAnchor({ top: 80, left: Math.max(EDGE_MARGIN, (window.innerWidth - PANEL_WIDTH) / 2) });
-    }
+    const left = Math.max(EDGE_MARGIN, (window.innerWidth - PANEL_WIDTH) / 2);
+    const top = isMobile ? EDGE_MARGIN : Math.max(EDGE_MARGIN, Math.min(64, (window.innerHeight - 640) / 2));
+    setEditAnchor({ top, left });
     setCompCat(cat);
     setEditCompId(id);
     setCompForm({
@@ -1126,6 +1166,18 @@ export default function AdminPage() {
           { fanName: m.preinstalledFanName || '', count: String(m.preinstalledCount ?? 0) },
         ]),
       ) as CompFormState['fanPreinstalled'],
+      caseWidthMm: comp.caseWidthMm != null ? String(comp.caseWidthMm) : '',
+      caseHeightMm: comp.caseHeightMm != null ? String(comp.caseHeightMm) : '',
+      caseDepthMm: comp.caseDepthMm != null ? String(comp.caseDepthMm) : '',
+      maxGpuLengthMm: comp.maxGpuLengthMm != null ? String(comp.maxGpuLengthMm) : '',
+      maxCoolerHeightMm: comp.maxCoolerHeightMm != null ? String(comp.maxCoolerHeightMm) : '',
+      maxRadiatorMm: comp.maxRadiatorMm != null ? String(comp.maxRadiatorMm) : '',
+      maxPsuLengthMm: comp.maxPsuLengthMm != null ? String(comp.maxPsuLengthMm) : '',
+      gpuLengthMm: comp.gpuLengthMm != null ? String(comp.gpuLengthMm) : '',
+      gpuSlotWidth: comp.gpuSlotWidth != null ? String(comp.gpuSlotWidth) : '',
+      coolerHeightMm: comp.coolerHeightMm != null ? String(comp.coolerHeightMm) : '',
+      coolerRadiatorMm: comp.coolerRadiatorMm != null ? String(comp.coolerRadiatorMm) : '',
+      psuLengthMm: comp.psuLengthMm != null ? String(comp.psuLengthMm) : '',
     });
   }
 
@@ -2207,7 +2259,7 @@ export default function AdminPage() {
                         )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
-                        <button onClick={(e) => openEditComp(compCat, comp.id, e.currentTarget.getBoundingClientRect())} style={{ fontFamily: 'var(--font-sans)', color: '#6E1423', background: 'transparent', border: '0.5px solid rgba(110,20,35,0.35)', borderRadius: 2, padding: '4px 8px', cursor: 'pointer', fontSize: 11 }}>
+                        <button onClick={() => openEditComp(compCat, comp.id)} style={{ fontFamily: 'var(--font-sans)', color: '#6E1423', background: 'transparent', border: '0.5px solid rgba(110,20,35,0.35)', borderRadius: 2, padding: '4px 8px', cursor: 'pointer', fontSize: 11 }}>
                           {t.edit}
                         </button>
                         <button onClick={() => deleteComponent(compCat, comp.id)} style={{ fontFamily: 'var(--font-sans)', color: '#CC3333', background: 'transparent', border: '0.5px solid rgba(204,51,51,0.3)', borderRadius: 2, padding: '4px 8px', cursor: 'pointer', fontSize: 11 }}>
@@ -2428,6 +2480,50 @@ export default function AdminPage() {
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#B0A898', marginTop: 6, lineHeight: 1.6 }}>{t.tower_category_help}</div>
                   </div>
                 )}
+                {compCat === 'case' && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={LABEL_STYLE}>{t.dimensions_mm}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr 1fr' : 'repeat(3, 1fr)', gap: 10, marginBottom: 10 }}>
+                      {(
+                        [
+                          ['caseWidthMm', t.case_width_mm],
+                          ['caseHeightMm', t.case_height_mm],
+                          ['caseDepthMm', t.case_depth_mm],
+                        ] as const
+                      ).map(([field, label]) => (
+                        <div key={field}>
+                          <div style={{ ...LABEL_STYLE, fontSize: 9 }}>{label}</div>
+                          <input
+                            type="number" min={0} step={1}
+                            value={compForm[field]}
+                            onChange={(e) => setCompForm({ ...compForm, [field]: e.target.value })}
+                            style={INPUT_STYLE}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 10 }}>
+                      {(
+                        [
+                          ['maxGpuLengthMm', t.max_gpu_length_mm],
+                          ['maxCoolerHeightMm', t.max_cooler_height_mm],
+                          ['maxRadiatorMm', t.max_radiator_mm],
+                          ['maxPsuLengthMm', t.max_psu_length_mm],
+                        ] as const
+                      ).map(([field, label]) => (
+                        <div key={field}>
+                          <div style={{ ...LABEL_STYLE, fontSize: 9 }}>{label}</div>
+                          <input
+                            type="number" min={0} step={1}
+                            value={compForm[field]}
+                            onChange={(e) => setCompForm({ ...compForm, [field]: e.target.value })}
+                            style={INPUT_STYLE}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {compCat === 'ram' && (
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 16 }}>
                     <div>
@@ -2469,6 +2565,61 @@ export default function AdminPage() {
                       value={compForm.fanSizeMm}
                       onChange={(e) => setCompForm({ ...compForm, fanSizeMm: e.target.value })}
                       placeholder="120"
+                      style={INPUT_STYLE}
+                    />
+                  </div>
+                )}
+                {compCat === 'gpu' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.gpu_length_mm}</div>
+                      <input
+                        type="number" min={0} step={1}
+                        value={compForm.gpuLengthMm}
+                        onChange={(e) => setCompForm({ ...compForm, gpuLengthMm: e.target.value })}
+                        style={INPUT_STYLE}
+                      />
+                    </div>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.gpu_slot_width}</div>
+                      <input
+                        type="number" min={0} step={0.5}
+                        value={compForm.gpuSlotWidth}
+                        onChange={(e) => setCompForm({ ...compForm, gpuSlotWidth: e.target.value })}
+                        style={INPUT_STYLE}
+                      />
+                    </div>
+                  </div>
+                )}
+                {compCat === 'cooler' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.cooler_height_mm}</div>
+                      <input
+                        type="number" min={0} step={1}
+                        value={compForm.coolerHeightMm}
+                        onChange={(e) => setCompForm({ ...compForm, coolerHeightMm: e.target.value })}
+                        style={INPUT_STYLE}
+                      />
+                    </div>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.cooler_radiator_mm}</div>
+                      <input
+                        type="number" min={0} step={1}
+                        value={compForm.coolerRadiatorMm}
+                        onChange={(e) => setCompForm({ ...compForm, coolerRadiatorMm: e.target.value })}
+                        style={INPUT_STYLE}
+                      />
+                    </div>
+                  </div>
+                )}
+                {compCat === 'psu' && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={LABEL_STYLE}>{t.psu_length_mm}</div>
+                    <input
+                      type="number" min={0} step={1}
+                      value={compForm.psuLengthMm}
+                      onChange={(e) => setCompForm({ ...compForm, psuLengthMm: e.target.value })}
                       style={INPUT_STYLE}
                     />
                   </div>
@@ -2534,12 +2685,29 @@ export default function AdminPage() {
                       <div
                         style={{
                           position: 'fixed', top: editAnchor.top, left: editAnchor.left,
-                          width: isMobile ? 'calc(100vw - 32px)' : 440, maxHeight: 'calc(100vh - 24px)', overflowY: 'auto',
+                          width: isMobile ? 'calc(100vw - 32px)' : Math.min(EDIT_PANEL_WIDTH, window.innerWidth - 24),
+                          maxHeight: 'calc(100vh - 24px)',
+                          display: 'flex', flexDirection: 'column', overflow: 'hidden',
                           background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.2)', borderLeft: '3px solid #6E1423',
-                          borderRadius: 4, padding: isMobile ? 16 : 26, boxShadow: '0 16px 48px rgba(28,28,26,0.3)', zIndex: 51,
+                          borderRadius: 4, boxShadow: '0 16px 48px rgba(28,28,26,0.3)', zIndex: 51,
                         }}
                       >
-                        {formInner}
+                        {/* Fixed header so the close button stays reachable even once the form's own
+                            content (a case's dimensions + fan-mount rows can get tall) scrolls past it. */}
+                        <div
+                          style={{
+                            flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+                            padding: '8px 10px', borderBottom: '0.5px solid rgba(28,28,26,0.1)', background: 'rgba(28,28,26,0.03)',
+                          }}
+                        >
+                          <button
+                            onClick={cancelEditComp}
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#7A7469', fontSize: 14, padding: '2px 6px', lineHeight: 1 }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <div style={{ overflowY: 'auto', padding: isMobile ? 16 : 26 }}>{formInner}</div>
                       </div>
                     </>
                   );
