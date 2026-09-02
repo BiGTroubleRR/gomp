@@ -87,6 +87,7 @@ const T = {
     back: 'Back', next: 'Next', size: 'Size',
     no_socket_match: (socket: string) => `No CPUs match the ${socket} socket of your selected motherboard — pick a different motherboard, or check Admin.`,
     no_case_fit: (formFactor: string) => `No cases fit a ${formFactor} motherboard at this size — try a larger size, or a smaller motherboard.`,
+    no_mobo_fit_case: (caseCategory: string) => `No motherboards fit a ${caseCategory} case — try a larger case, or a smaller motherboard.`,
     no_part_fit: (caseName: string) => `Nothing here fits inside the ${caseName} — pick a bigger case, or a smaller part.`,
     no_case_fit_part: 'No cases at this size fit everything you already picked — try a larger size, or remove a part.',
     no_ram_match: 'No RAM kits match this filter — try a lower minimum speed, or a different DDR generation.',
@@ -152,6 +153,7 @@ const T = {
     back: 'Späť', next: 'Ďalej', size: 'Veľkosť',
     no_socket_match: (socket: string) => `Žiadne CPU nesedí na pätici ${socket} vybranej základnej dosky — zvoľte inú dosku, alebo skontrolujte Admin.`,
     no_case_fit: (formFactor: string) => `Žiadna skriňa tejto veľkosti neposkytne miesto pre dosku ${formFactor} — skúste väčšiu veľkosť alebo menšiu dosku.`,
+    no_mobo_fit_case: (caseCategory: string) => `Žiadna základná doska sa nezmestí do skrine ${caseCategory} — skúste väčšiu skriňu alebo menšiu dosku.`,
     no_part_fit: (caseName: string) => `Nič tu sa nezmestí do skrine ${caseName} — zvoľte väčšiu skriňu alebo menší diel.`,
     no_case_fit_part: 'Žiadna skriňa tejto veľkosti neposkytne miesto pre všetko, čo ste už vybrali — skúste väčšiu veľkosť alebo odstráňte diel.',
     no_ram_match: 'Žiadna sada RAM nevyhovuje tomuto filtru — skúste nižšiu minimálnu rýchlosť alebo inú generáciu DDR.',
@@ -660,7 +662,7 @@ export default function BuildPage() {
         });
       });
       if (compatible) return compatible;
-    } else if ((id === 'gpu' || id === 'cooler' || id === 'psu') && selected.case) {
+    } else if ((id === 'gpu' || id === 'cooler' || id === 'psu' || id === 'mobo') && selected.case) {
       const caseComp = (compDb.case || []).find((c) => c.name === selections.case);
       const compatible = caseComp && list.find((c) => fitsInCase(id, c, caseComp));
       if (compatible) return compatible;
@@ -706,6 +708,21 @@ export default function BuildPage() {
     [selected, compDb, selections],
   );
 
+  // A smaller case can strand an already-installed gpu/cooler/psu that no longer physically
+  // fits — mirrors the mobo-swap block below that drops a stranded cpu/case, just for the other
+  // direction (case swap dropping the parts that mount inside it) using the same fitsInCase
+  // check the picker's own case-step filter already applies going forward.
+  function dropPartsIncompatibleWithCase(newCase: Component | undefined) {
+    (['mobo', 'gpu', 'cooler', 'psu'] as CompId[]).forEach((otherId) => {
+      if (!selected[otherId]) return;
+      const otherComp = (compDb[otherId] || []).find((c) => c.name === selections[otherId]);
+      if (otherComp && !fitsInCase(otherId, otherComp, newCase)) {
+        setSelected((s) => ({ ...s, [otherId]: false }));
+        sceneRef.current?.toggleComponent(otherId, false);
+      }
+    });
+  }
+
   // Only takes effect immediately when `id` is already selected in the scene (a same-category
   // SKU swap) — a first-time select is handled by selectCard right after it calls
   // toggleComponent(id, true), since the scene doesn't mark itself selected until then.
@@ -713,6 +730,7 @@ export default function BuildPage() {
     setSelections((s) => ({ ...s, [id]: name }));
     const comp = (compDb[id] || []).find((c) => c.name === name);
     if (id === 'case') {
+      dropPartsIncompatibleWithCase(comp);
       const size = caseUnitsFor(comp, comp?.category || 'Mid Tower');
       sceneRef.current?.updateCase(size.w, size.h, size.d);
       const vertical = caseHasVerticalGpuMount(comp?.name);
@@ -749,6 +767,7 @@ export default function BuildPage() {
     const list = (compDb.case || []).filter((c) => c.category === cat);
     const pick = list[0] || (compDb.case || [])[0];
     if (pick) {
+      dropPartsIncompatibleWithCase(pick);
       setSelections((s) => ({ ...s, case: pick.name }));
       const size = caseUnitsFor(pick, cat);
       sceneRef.current?.updateCase(size.w, size.h, size.d);
@@ -1375,6 +1394,7 @@ export default function BuildPage() {
                   if (selectedCpu?.socket) list = list.filter((c) => c.socket === selectedCpu.socket);
                   if (moboSocketFilter) list = list.filter((c) => c.socket === moboSocketFilter);
                   if (moboFormFactorFilter) list = list.filter((c) => c.formFactor === moboFormFactorFilter);
+                  if (selectedCase?.category) list = list.filter((c) => caseFitsFormFactor(selectedCase.category, c.formFactor));
                 } else if (activeStep === 'storage') {
                   if (storagePcieGenFilter) list = list.filter((c) => storagePcieGeneration(c) === storagePcieGenFilter);
                 }
@@ -1395,9 +1415,11 @@ export default function BuildPage() {
                               ? t.no_part_fit(selectedCase.name)
                               : activeStep === 'mobo' && selectedCpu?.socket
                                   ? t.no_socket_match_mobo(selectedCpu.socket)
-                                  : activeStep === 'mobo' && (moboSocketFilter || moboFormFactorFilter)
-                                    ? t.no_mobo_match
-                                    : activeStep === 'storage' && storagePcieGenFilter
+                                  : activeStep === 'mobo' && selectedCase?.category
+                                    ? t.no_mobo_fit_case(selectedCase.category)
+                                    : activeStep === 'mobo' && (moboSocketFilter || moboFormFactorFilter)
+                                      ? t.no_mobo_match
+                                      : activeStep === 'storage' && storagePcieGenFilter
                                       ? t.no_storage_match
                                       : t.none_add_admin;
                   return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', padding: '12px 0' }}>{reason}</div>;
@@ -1740,7 +1762,7 @@ export default function BuildPage() {
             {installedCount === 0 ? (
               <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#A09890' }}>{t.select_components}</div>
             ) : (
-              <AnimatePresence initial={false}>
+              <AnimatePresence initial={false} mode="popLayout">
                 {SLOTS.filter((id) => selected[id]).map((id) => {
                   const comp = findComp(id);
                   if (!comp) return null;

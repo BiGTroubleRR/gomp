@@ -155,6 +155,14 @@ export const STORAGE_M2_SIZE_MM = { length: 80, width: 22 };
 // width x height regardless of wattage/length; only length varies per model (Component.psuLengthMm).
 export const PSU_ATX_SIZE_MM = { width: 150, height: 86 };
 
+// A GPU's top-to-bottom height barely varies by model or length — e.g. the RTX 5090 FE (2-slot,
+// 304mm) and RTX 5080 (3-slot, 304mm) are both exactly 137mm tall — so this is a flat constant
+// rather than a per-SKU field, unlike gpuLengthMm/gpuSlotWidth which do vary meaningfully.
+export const GPU_HEIGHT_MM = 137;
+// Standard PCIe expansion-slot pitch (0.8in) — multiplied by Component.gpuSlotWidth to get a
+// real thickness in mm (e.g. 2-slot ~= 41mm, 3.5-slot ~= 71mm).
+export const PCIE_SLOT_PITCH_MM = 20.32;
+
 // CPU manufacturer isn't a structured field — every name in the catalog already leads with the
 // brand ("AMD Ryzen 9 9950X3D", "Intel Core Ultra 9 285K"), so this reads that prefix instead of
 // adding a DB column + backfill for something already encoded in the name.

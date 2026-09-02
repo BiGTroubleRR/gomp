@@ -9,6 +9,8 @@ import {
   MOBO_FORM_FACTOR_SIZE_MM,
   STORAGE_M2_SIZE_MM,
   PSU_ATX_SIZE_MM,
+  GPU_HEIGHT_MM,
+  PCIE_SLOT_PITCH_MM,
   caseHasVerticalGpuMount,
   type FanMountPosition,
   type Component,
@@ -145,7 +147,23 @@ export function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVe
       { axis: 'z', mm: comp.caseDepthMm },
     ];
   }
-  if (id === 'gpu' && comp.gpuLengthMm) return [{ axis: gpuVertical ? 'y' : 'z', mm: comp.gpuLengthMm }];
+  // Length is the only per-SKU-varying axis the placeholder mesh used to scale — height and
+  // thickness stayed frozen at the mesh's own arbitrary baked proportions regardless of card
+  // length, which is exactly what made longer cards look like an ever-thinner stick. Height
+  // barely varies by real-world card at all (see GPU_HEIGHT_MM), so it's a flat constant rather
+  // than a per-SKU field; thickness reuses the already-existing (and previously unused)
+  // gpuSlotWidth. Height always lands on world x regardless of vertical-mount orientation —
+  // setGpuOrientation (below) rotates the wrapper about world X, which never moves x itself —
+  // while length/thickness are the pair that swap between y/z depending on gpuVertical.
+  if (id === 'gpu' && comp.gpuLengthMm) {
+    const lengthAxis = gpuVertical ? 'y' : 'z';
+    const thicknessAxis = gpuVertical ? 'z' : 'y';
+    return [
+      { axis: lengthAxis, mm: comp.gpuLengthMm },
+      { axis: 'x', mm: GPU_HEIGHT_MM, annotate: false },
+      ...(comp.gpuSlotWidth ? [{ axis: thicknessAxis, mm: comp.gpuSlotWidth * PCIE_SLOT_PITCH_MM, annotate: false } as DimensionSpec] : []),
+    ];
+  }
   if (id === 'cooler') {
     if (comp.coolerRadiatorMm) return [{ axis: 'x', mm: comp.coolerRadiatorMm, label: `Ø ${cm(comp.coolerRadiatorMm)}`, scalesMesh: false, lineLengthMm: 40 }];
     if (comp.coolerHeightMm) return [{ axis: 'y', mm: comp.coolerHeightMm }];
@@ -1182,6 +1200,20 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     return -lastCaseSize.w / 2 + MOBO_SIDE_CLEARANCE;
   }
 
+  // The GPU's height (world X, in both horizontal and vertical-riser mount — rotating the
+  // wrapper about world X for a vertical mount never moves X itself) used to sit at a fixed
+  // constant, tuned back when GPU_HEIGHT_MM didn't exist and X stayed at scale 1 (the
+  // placeholder mesh's own tiny baked size). Now that height is a real ~137mm, an un-anchored
+  // constant overflows the case's side wall for anything smaller than a Full Tower — same class
+  // of bug moboAnchoredX/gpuAnchoredZ/psuAnchoredZ already exist to prevent for their own axes.
+  const GPU_SIDE_CLEARANCE = 0.04;
+  function gpuAnchoredX(): number {
+    const gpu = objects.gpu;
+    const nat = naturalSize.gpu;
+    const halfHeight = gpu && nat ? (nat.x * gpu.sizeScale.x) / 2 : 0.3;
+    return -lastCaseSize.w / 2 + GPU_SIDE_CLEARANCE + halfHeight;
+  }
+
   // GPU and PSU are anchored the same rear-wall way as the motherboard, each using its own real
   // length — a card's rear bracket (port cutouts) and a PSU's rear-facing end both mount at the
   // case's back, not centered front-to-back. GPU's vertical (riser-mount) position is a fixed,
@@ -1556,8 +1588,8 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     const obj = objects.gpu;
     if (!obj) return;
     const pos = gpuVerticalMode
-      ? new THREE.Vector3(GPU_VERTICAL_POS[0], gpuVerticalAnchoredY(), GPU_VERTICAL_POS[2])
-      : new THREE.Vector3(BASE_POS.gpu[0], BASE_POS.gpu[1], gpuAnchoredZ());
+      ? new THREE.Vector3(gpuAnchoredX(), gpuVerticalAnchoredY(), GPU_VERTICAL_POS[2])
+      : new THREE.Vector3(gpuAnchoredX(), BASE_POS.gpu[1], gpuAnchoredZ());
     obj.finalPos.copy(pos);
     // Matches resetComponentPositions' own guard (just `obj.selected`, no moveStart check): the
     // auto-build flow toggles gpu on and then, ~90ms later while its 650ms entrance animation is
