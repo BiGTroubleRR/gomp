@@ -9,7 +9,7 @@ import SiteNav from '@/components/SiteNav';
 import { navigateWithTransition } from '@/lib/gomp-nav';
 import { writeJSON } from '@/lib/gomp-storage';
 import { fetchComponentDb, subscribeComponents } from '@/lib/supabase/components';
-import { passmarkLookup, tierFromPassmark, TIER_COLORS, type Tier } from '@/lib/passmark';
+import { passmarkLookup, tierFromPassmark, ramTier, TIER_COLORS, type Tier } from '@/lib/passmark';
 import TierGlowOrb from '@/components/TierGlowOrb';
 import {
   defaultComponentDb,
@@ -241,6 +241,7 @@ function synthesizeDoubledRamKits(ramList: Component[]): Component[] {
     });
     cheapestTwoByCapacity.forEach((base, capacity) => {
       if (realFourCapacities.has(capacity)) return;
+      const specs = `${base.specs.replace(/^2(\s*×)/, '4$1')} · 2× kits`;
       synthetic.push({
         ...base,
         id: `${base.id}::x2kit`,
@@ -249,7 +250,11 @@ function synthesizeDoubledRamKits(ramList: Component[]): Component[] {
         // rows need distinct names or they'd resolve to the same catalog entry once picked.
         name: `${base.name} (2× kits)`,
         price: Math.round(base.price * 2),
-        specs: `${base.specs.replace(/^2(\s*×)/, '4$1')} · 2× kits`,
+        specs,
+        // Recomputed against the doubled specs (4 sticks, not 2) rather than inherited from
+        // base — tier now depends on stick count, so a synthetic 4-stick bundle should get the
+        // 4-stick bonus, not silently keep the base 2-stick kit's tier.
+        tier: ramTier(base.ramSpeedMhz, specs) ?? base.tier,
       });
     });
   });
@@ -420,7 +425,11 @@ export default function BuildPage() {
   // Set while buildAll is waiting for an existing build's clear-out to actually finish before
   // rebuilding fresh — see the effect below for why this can't just be a setTimeout.
   const [rebuildPending, setRebuildPending] = useState(false);
-  const [activeId, setActiveId] = useState<CompId | null>(null);
+  // Drives the right sidebar's picked-components list: the row for this category renders its
+  // full detail card instead of its compact summary for a few seconds after a pick, then
+  // collapses back down — see flashRecentlyPicked below.
+  const [recentlyPickedId, setRecentlyPickedId] = useState<CompId | null>(null);
+  const recentlyPickedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeStep, setActiveStep] = useState<CompId>(SLOTS[0]);
   const [ordering, setOrdering] = useState(false);
   const [glassHidden, setGlassHidden] = useState(false);
@@ -659,11 +668,17 @@ export default function BuildPage() {
     return list[0];
   }
 
+  function flashRecentlyPicked(id: CompId) {
+    setRecentlyPickedId(id);
+    if (recentlyPickedTimerRef.current) clearTimeout(recentlyPickedTimerRef.current);
+    recentlyPickedTimerRef.current = setTimeout(() => setRecentlyPickedId((cur) => (cur === id ? null : cur)), 4000);
+  }
+
   const toggleComponent = useCallback(
     (id: CompId) => {
       const next = !selected[id];
       setSelected((s) => ({ ...s, [id]: next }));
-      setActiveId(id);
+      if (next) flashRecentlyPicked(id);
       const comp = next ? findComp(id) : undefined;
       if (id === 'case' && next) sceneRef.current?.setGpuOrientation(caseHasVerticalGpuMount(comp?.name));
       if (id === 'mobo') sceneRef.current?.setMoboRamSlots(moboRamSlotCount(comp));
@@ -774,7 +789,7 @@ export default function BuildPage() {
     // below is what actually does for a first-time install — so the annotation still needs
     // setting again here, after that flip (changeSelection's own call was a no-op until now).
     changeSelection(id, name);
-    setActiveId(id);
+    flashRecentlyPicked(id);
     if (!selected[id]) {
       setSelected((s) => ({ ...s, [id]: true }));
       sceneRef.current?.toggleComponent(id, true);
@@ -954,12 +969,6 @@ export default function BuildPage() {
     setOrdering(true);
     setTimeout(() => navigateWithTransition(pathname, '/benchmarks', () => router.push('/benchmarks')), 300);
   }
-
-  const activeComp = activeId ? findComp(activeId) : null;
-  const activePassmark = activeComp ? passmarkLookup(activeComp.name) : null;
-  const activeTier: Tier | undefined = activePassmark
-    ? tierFromPassmark(activeId === 'gpu', activePassmark.score)
-    : (activeComp?.tier as Tier | undefined);
 
   const hoverComp = hoverId ? findComp(hoverId) : null;
   const hoverPassmark = hoverComp ? passmarkLookup(hoverComp.name) : null;
@@ -1230,10 +1239,10 @@ export default function BuildPage() {
                   }
 
                   // Stage 2: 1×/2×/4× buttons for whatever counts exist in the chosen brand+speed
-                  // group, deduped the same way the old single-stage picker did (prefer a curated
-                  // tier over an unscored bulk import, then the cheaper of the two) — just keyed
-                  // by (count, per-stick capacity) instead of (count) alone, since a brand+speed
-                  // group can span several capacities.
+                  // group, deduped by (count, per-stick capacity) since a brand+speed group can
+                  // span several capacities — a duplicate within one bucket prefers the actually
+                  // higher tier (every RAM row has a real computed tier now, see ramTier in
+                  // passmark.ts), then the cheaper of the two.
                   const groupRows = brandSpeedGroups.get(selectedBrandSpeedKey)!;
                   const byCount = new Map<number, Component[]>();
                   groupRows.forEach((c) => {
@@ -1247,9 +1256,9 @@ export default function BuildPage() {
                       const capacity = ramPerStickCapacityGB(c) ?? 0;
                       const existing = byCapacity.get(capacity);
                       if (!existing) { byCapacity.set(capacity, c); return; }
-                      const existingScore = existing.tier ? 1 : 0;
-                      const cScore = c.tier ? 1 : 0;
-                      if (cScore > existingScore || (cScore === existingScore && c.price < existing.price)) byCapacity.set(capacity, c);
+                      const existingScore = existing.tier ? TIER_ORDER.indexOf(existing.tier) : TIER_ORDER.length;
+                      const cScore = c.tier ? TIER_ORDER.indexOf(c.tier) : TIER_ORDER.length;
+                      if (cScore < existingScore || (cScore === existingScore && c.price < existing.price)) byCapacity.set(capacity, c);
                     });
                     byCount.set(count, Array.from(byCapacity.values()).sort((a, b) => (ramPerStickCapacityGB(a) ?? 0) - (ramPerStickCapacityGB(b) ?? 0)));
                   });
@@ -1728,114 +1737,148 @@ export default function BuildPage() {
           }}
         >
           <div style={{ padding: 20, flex: isMobile ? 'none' : 1 }}>
-            {activeId && activeComp ? (
-              <>
-                <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.cat_names[activeId]}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                  <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: MAROON, fontWeight: 600 }}>{activeComp.name}</div>
-                  <TierBadge tier={activeTier} small />
-                </div>
-                <p style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{t.cat_desc[activeId]}</p>
-                <div style={{ marginTop: 12 }}>
-                  {(activeComp.specs || '').split(' · ').map((s, i) => (
-                    <div key={i} style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: INK, marginBottom: 4 }}>
-                      <span style={{ width: 3, height: 3, borderRadius: '50%', background: MAROON }} /> {s}
-                    </div>
-                  ))}
-                </div>
-                {dimensionLabel(activeId, activeComp) && (
-                  <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
-                    <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.dimensions}</div>
-                    <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: INK, fontWeight: 600 }}>{dimensionLabel(activeId, activeComp)}</div>
-                  </div>
-                )}
-                {activeId === 'storage' &&
-                  selected.mobo &&
-                  (() => {
-                    const ssdGen = storagePcieGeneration(activeComp);
-                    const moboGen = moboPcieGeneration((compDb.mobo || []).find((c) => c.name === selections.mobo));
-                    if (!ssdGen || !moboGen || ssdGen <= moboGen) return null;
-                    return (
-                      <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
-                        <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MAROON, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
-                          {t.storage_pcie_capped_title}
-                        </div>
-                        <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: MAROON, marginTop: 3, lineHeight: 1.4 }}>
-                          {t.storage_pcie_capped(ssdGen, moboGen)}
-                        </div>
-                      </div>
-                    );
-                  })()}
-                {activeId === 'case' && activeComp.fanMounts && activeComp.fanMounts.length > 0 && (
-                  <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
-                    <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{t.fans}</div>
-                    {activeComp.fanMounts.map((mount) => {
-                      const cfg = fanConfig[mount.position] || { count: 0, sizeMm: mount.sizesMm[0] };
-                      // Real fan products (from the 'fan' catalog) that physically fit this mount —
-                      // only shown once Admin has actually added matching-size SKUs; otherwise this
-                      // position keeps behaving exactly like the original generic count/size knob.
-                      const matchingFans = (compDb.fan || []).filter((f) => f.fanSizeMm != null && mount.sizesMm.includes(f.fanSizeMm));
-                      return (
-                        <div key={mount.position} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, gap: 6 }}>
-                          <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: INK }}>{t.fan_positions[mount.position]}</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                            {cfg.count > 0 && matchingFans.length > 0 && (
-                              <select
-                                value={cfg.fanName || ''}
-                                onChange={(e) => setFanProduct(mount.position, e.target.value)}
-                                style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 10, color: MUTED, background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3, padding: '2px 4px', maxWidth: 150 }}
-                              >
-                                <option value="">{t.fan_generic}</option>
-                                {matchingFans.map((f) => (
-                                  <option key={f.id} value={f.name}>
-                                    {f.name} {f.name === mount.preinstalledFanName ? `(${t.fan_included})` : `(+${fmt(f.price)})`}
-                                  </option>
-                                ))}
-                              </select>
-                            )}
-                            {!cfg.fanName && mount.sizesMm.length > 1 && cfg.count > 0 && (
-                              <select
-                                value={cfg.sizeMm}
-                                onChange={(e) => setFanSize(mount.position, Number(e.target.value))}
-                                style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 10, color: MUTED, background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3, padding: '2px 4px' }}
-                              >
-                                {mount.sizesMm.map((s) => (
-                                  <option key={s} value={s}>{s}mm</option>
-                                ))}
-                              </select>
-                            )}
-                            <button
-                              onClick={() => setFanCount(mount.position, Math.max(0, cfg.count - 1))}
-                              disabled={cfg.count <= 0}
-                              style={{ width: 20, height: 20, borderRadius: 3, border: '0.5px solid rgba(28,28,26,0.2)', background: 'transparent', color: cfg.count <= 0 ? '#c9c2b4' : INK, cursor: cfg.count <= 0 ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1 }}
-                            >
-                              −
-                            </button>
-                            <span style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: INK, minWidth: 12, textAlign: 'center' }}>{cfg.count}</span>
-                            <button
-                              onClick={() => setFanCount(mount.position, Math.min(mount.maxCount, cfg.count + 1))}
-                              disabled={cfg.count >= mount.maxCount}
-                              style={{ width: 20, height: 20, borderRadius: 3, border: '0.5px solid rgba(28,28,26,0.2)', background: 'transparent', color: cfg.count >= mount.maxCount ? '#c9c2b4' : INK, cursor: cfg.count >= mount.maxCount ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1 }}
-                            >
-                              +
-                            </button>
+            {installedCount === 0 ? (
+              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#A09890' }}>{t.select_components}</div>
+            ) : (
+              <AnimatePresence initial={false}>
+                {SLOTS.filter((id) => selected[id]).map((id) => {
+                  const comp = findComp(id);
+                  if (!comp) return null;
+                  const passmark = passmarkLookup(comp.name);
+                  const tier: Tier | undefined = passmark ? tierFromPassmark(id === 'gpu', passmark.score) : (comp.tier as Tier | undefined);
+                  const expanded = recentlyPickedId === id;
+                  return (
+                    <motion.div
+                      key={id}
+                      layout
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ opacity: { duration: 0.18 } }}
+                      style={{ marginBottom: 8, border: '1px solid rgba(28,28,26,0.1)', borderRadius: 6, padding: expanded ? 12 : '8px 10px', overflow: 'hidden' }}
+                    >
+                      {expanded ? (
+                        <>
+                          <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.cat_names[id]}</div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: MAROON, fontWeight: 600 }}>{comp.name}</div>
+                            <TierBadge tier={tier} small />
+                          </div>
+                          <p style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{t.cat_desc[id]}</p>
+                          <div style={{ marginTop: 12 }}>
+                            {(comp.specs || '').split(' · ').map((s, i) => (
+                              <div key={i} style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: INK, marginBottom: 4 }}>
+                                <span style={{ width: 3, height: 3, borderRadius: '50%', background: MAROON }} /> {s}
+                              </div>
+                            ))}
+                          </div>
+                          {dimensionLabel(id, comp) && (
+                            <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.dimensions}</div>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: INK, fontWeight: 600 }}>{dimensionLabel(id, comp)}</div>
+                            </div>
+                          )}
+                          {passmark && (
+                            <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.passmark_score}</div>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 16, color: tier ? TIER_COLORS[tier].text : INK, fontWeight: 600 }}>{passmark.score.toLocaleString()}</div>
+                              <a href={passmark.url} target="_blank" rel="noopener noreferrer" style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MAROON }}>{t.verify_passmark}</a>
+                            </div>
+                          )}
+                          <div style={{ ...textPop, marginTop: 12, fontFamily: 'var(--font-mono)', fontSize: 15, color: INK }}>{fmt(comp.price)}</div>
+                        </>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>{t.cat_names[id]}</div>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: INK, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{comp.name}</div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                            <TierBadge tier={tier} small />
+                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: INK }}>{fmt(comp.price)}</div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {activePassmark && (
-                  <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
-                    <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.passmark_score}</div>
-                    <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 16, color: activeTier ? TIER_COLORS[activeTier].text : INK, fontWeight: 600 }}>{activePassmark.score.toLocaleString()}</div>
-                    <a href={activePassmark.url} target="_blank" rel="noopener noreferrer" style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MAROON }}>{t.verify_passmark}</a>
-                  </div>
-                )}
-                <div style={{ ...textPop, marginTop: 12, fontFamily: 'var(--font-mono)', fontSize: 15, color: INK }}>{fmt(activeComp.price)}</div>
-              </>
-            ) : (
-              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#A09890' }}>{t.select_components}</div>
+                      )}
+                      {id === 'storage' &&
+                        selected.mobo &&
+                        (() => {
+                          const ssdGen = storagePcieGeneration(comp);
+                          const moboGen = moboPcieGeneration((compDb.mobo || []).find((c) => c.name === selections.mobo));
+                          if (!ssdGen || !moboGen || ssdGen <= moboGen) return null;
+                          return (
+                            <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MAROON, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
+                                {t.storage_pcie_capped_title}
+                              </div>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: MAROON, marginTop: 3, lineHeight: 1.4 }}>
+                                {t.storage_pcie_capped(ssdGen, moboGen)}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      {id === 'case' && comp.fanMounts && comp.fanMounts.length > 0 && (
+                        <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
+                          <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{t.fans}</div>
+                          {comp.fanMounts.map((mount) => {
+                            const cfg = fanConfig[mount.position] || { count: 0, sizeMm: mount.sizesMm[0] };
+                            // Real fan products (from the 'fan' catalog) that physically fit this mount —
+                            // only shown once Admin has actually added matching-size SKUs; otherwise this
+                            // position keeps behaving exactly like the original generic count/size knob.
+                            const matchingFans = (compDb.fan || []).filter((f) => f.fanSizeMm != null && mount.sizesMm.includes(f.fanSizeMm));
+                            return (
+                              <div key={mount.position} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, gap: 6 }}>
+                                <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: INK }}>{t.fan_positions[mount.position]}</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                                  {cfg.count > 0 && matchingFans.length > 0 && (
+                                    <select
+                                      value={cfg.fanName || ''}
+                                      onChange={(e) => setFanProduct(mount.position, e.target.value)}
+                                      style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 10, color: MUTED, background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3, padding: '2px 4px', maxWidth: 150 }}
+                                    >
+                                      <option value="">{t.fan_generic}</option>
+                                      {matchingFans.map((f) => (
+                                        <option key={f.id} value={f.name}>
+                                          {f.name} {f.name === mount.preinstalledFanName ? `(${t.fan_included})` : `(+${fmt(f.price)})`}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  )}
+                                  {!cfg.fanName && mount.sizesMm.length > 1 && cfg.count > 0 && (
+                                    <select
+                                      value={cfg.sizeMm}
+                                      onChange={(e) => setFanSize(mount.position, Number(e.target.value))}
+                                      style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 10, color: MUTED, background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3, padding: '2px 4px' }}
+                                    >
+                                      {mount.sizesMm.map((s) => (
+                                        <option key={s} value={s}>{s}mm</option>
+                                      ))}
+                                    </select>
+                                  )}
+                                  <button
+                                    onClick={() => setFanCount(mount.position, Math.max(0, cfg.count - 1))}
+                                    disabled={cfg.count <= 0}
+                                    style={{ width: 20, height: 20, borderRadius: 3, border: '0.5px solid rgba(28,28,26,0.2)', background: 'transparent', color: cfg.count <= 0 ? '#c9c2b4' : INK, cursor: cfg.count <= 0 ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1 }}
+                                  >
+                                    −
+                                  </button>
+                                  <span style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: INK, minWidth: 12, textAlign: 'center' }}>{cfg.count}</span>
+                                  <button
+                                    onClick={() => setFanCount(mount.position, Math.min(mount.maxCount, cfg.count + 1))}
+                                    disabled={cfg.count >= mount.maxCount}
+                                    style={{ width: 20, height: 20, borderRadius: 3, border: '0.5px solid rgba(28,28,26,0.2)', background: 'transparent', color: cfg.count >= mount.maxCount ? '#c9c2b4' : INK, cursor: cfg.count >= mount.maxCount ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1 }}
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             )}
           </div>
           {estimatedWatts > 0 && (

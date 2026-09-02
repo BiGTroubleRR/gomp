@@ -20,7 +20,7 @@ import {
   deleteCustomerBuild,
 } from '@/lib/supabase/customer-builds';
 import type { CustomerBuild } from '@/lib/supabase/customer-build-mapping';
-import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
+import { passmarkLookup, tierFromPassmark, ramTier, TIER_COLORS } from '@/lib/passmark';
 import TierGlowOrb from '@/components/TierGlowOrb';
 import {
   defaultComponentDb,
@@ -217,6 +217,7 @@ type Translations = {
   specs_notes: string; tier_rating: string; tower_category: string; tower_category_help: string;
   ram_generation: string; ram_speed_mhz: string; ram_generation_help: string;
   ram_family_label: string; ram_family_help: string;
+  ram_tier_help: string; ram_tier_pending: string;
   fan_size_mm: string; preinstalled_fans: string; preinstalled_fans_help: string; fan_none: string;
   dimensions_mm: string;
   case_width_mm: string; case_height_mm: string; case_depth_mm: string;
@@ -290,6 +291,8 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     ram_generation_help: 'Drives the DDR4/DDR5 filter and the speed slider on the Build page — leave blank to hide this kit from both.',
     ram_family_label: 'Product family (optional)',
     ram_family_help: 'Format: Manufacturer|CapacityGB|Speed, e.g. "G.Skill|16GB|6400" — links this kit with other stick-count variants (1×/2×/4×) of the same real product on the Build page. Match an existing family exactly to add to it, or leave blank for a one-off kit.',
+    ram_tier_help: 'Computed automatically from clock speed, CAS latency, and stick count — not manually editable.',
+    ram_tier_pending: 'Set a speed above to see the computed tier.',
     fan_size_mm: 'Fan size (mm)',
     preinstalled_fans: 'Pre-installed fans',
     preinstalled_fans_help: 'Which fan (if any) ships in each mount out of the box — keeping it is free; swapping to another fan on Build charges that fan’s price.',
@@ -365,7 +368,9 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     ram_generation: 'Generácia DDR', ram_speed_mhz: 'Rýchlosť (MHz)',
     ram_generation_help: 'Ovláda filter DDR4/DDR5 a posuvník rýchlosti na stránke Zostaviť — nechajte prázdne, ak chcete túto sadu skryť z oboch.',
     ram_family_label: 'Rodina produktu (voliteľné)',
-    ram_family_help: 'Formát: Výrobca|KapacitaGB|Rýchlosť, napr. "G.Skill|16GB|6400" — prepojí túto sadu s ostatnými variantmi počtu tyčiniek (1×/2×/4×) toho istého reálneho produktu na stránke Zostaviť. Ak chcete pridať do existujúcej rodiny, zhodujte presne; inak nechajte prázdne pre samostatnú sadu.',
+    ram_family_help: 'Formát: Výrobca|KapacitaGB|Rýchlosť, napr. "G.Skill|16GB|6400" — prepojí túto sadu s ostatnými variantmi počtu RAM (1×/2×/4×) toho istého reálneho produktu na stránke Zostaviť. Ak chcete pridať do existujúcej rodiny, zhodujte presne; inak nechajte prázdne pre samostatnú sadu.',
+    ram_tier_help: 'Vypočítané automaticky z rýchlosti, časovania CAS a počtu RAM — nedá sa upraviť ručne.',
+    ram_tier_pending: 'Zadajte rýchlosť vyššie pre zobrazenie vypočítanej triedy.',
     fan_size_mm: 'Veľkosť ventilátora (mm)',
     preinstalled_fans: 'Predinštalované ventilátory',
     preinstalled_fans_help: 'Ktorý ventilátor (ak nejaký) je v danej pozícii od výroby — ponechanie je zadarmo, výmena za iný ventilátor na stránke Zostaviť účtuje jeho cenu.',
@@ -1026,7 +1031,8 @@ export default function AdminPage() {
     const marketPrice = compForm.marketPrice !== '' ? parseFloat(compForm.marketPrice) : null;
     const marginOverride = formMarginOverride(compForm);
     const derived = marketPrice != null ? computePrice(marketPrice, marginOverride ?? margin) : null;
-    const tier: Tier = compForm.passmark ? tierFromPassmark(compCat === 'gpu', compForm.passmark) : compForm.tier;
+    const computedRamTier = compCat === 'ram' ? ramTier(compForm.ramSpeedMhz ? parseInt(compForm.ramSpeedMhz, 10) : undefined, compForm.specs) : undefined;
+    const tier: Tier = computedRamTier ?? (compForm.passmark ? tierFromPassmark(compCat === 'gpu', compForm.passmark) : compForm.tier);
     const comp: Component = {
       id: '', // placeholder — Supabase assigns the real id on insert
       name: compForm.name.trim(),
@@ -1055,7 +1061,8 @@ export default function AdminPage() {
     const marketPrice = compForm.marketPrice !== '' ? parseFloat(compForm.marketPrice) : null;
     const marginOverride = formMarginOverride(compForm);
     const derived = marketPrice != null ? computePrice(marketPrice, marginOverride ?? margin) : null;
-    const tier: Tier = compForm.passmark ? tierFromPassmark(compCat === 'gpu', compForm.passmark) : compForm.tier;
+    const computedRamTier = compCat === 'ram' ? ramTier(compForm.ramSpeedMhz ? parseInt(compForm.ramSpeedMhz, 10) : undefined, compForm.specs) : undefined;
+    const tier: Tier = computedRamTier ?? (compForm.passmark ? tierFromPassmark(compCat === 'gpu', compForm.passmark) : compForm.tier);
     const existing = (compDb[compCat] || []).find((c) => c.id === editCompId);
     const updated: Component = {
       id: editCompId,
@@ -2479,11 +2486,33 @@ export default function AdminPage() {
                   </div>
                   <div>
                     <div style={LABEL_STYLE}>{t.tier_rating}</div>
-                    <select value={compForm.tier} onChange={(e) => setCompForm({ ...compForm, tier: e.target.value as Tier })} style={INPUT_STYLE}>
-                      {(['S', 'A', 'B', 'C', 'D'] as Tier[]).map((tk) => (
-                        <option key={tk} value={tk}>{t[`tier_${tk.toLowerCase()}` as keyof Translations] as string}</option>
-                      ))}
-                    </select>
+                    {compCat === 'ram' ? (
+                      (() => {
+                        const computed = ramTier(compForm.ramSpeedMhz ? parseInt(compForm.ramSpeedMhz, 10) : undefined, compForm.specs);
+                        return (
+                          <div style={{ ...INPUT_STYLE, display: 'flex', alignItems: 'center' }}>
+                            {computed ? (
+                              <span style={{ color: TIER_COLORS[computed].border, fontWeight: 700 }}>
+                                {t[`tier_${computed.toLowerCase()}` as keyof Translations] as string}
+                              </span>
+                            ) : (
+                              <span style={{ color: '#B0A898' }}>{t.ram_tier_pending}</span>
+                            )}
+                          </div>
+                        );
+                      })()
+                    ) : (
+                      <select value={compForm.tier} onChange={(e) => setCompForm({ ...compForm, tier: e.target.value as Tier })} style={INPUT_STYLE}>
+                        {(['S', 'A', 'B', 'C', 'D'] as Tier[]).map((tk) => (
+                          <option key={tk} value={tk}>{t[`tier_${tk.toLowerCase()}` as keyof Translations] as string}</option>
+                        ))}
+                      </select>
+                    )}
+                    {compCat === 'ram' && (
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#B0A898', marginTop: 6, lineHeight: 1.6 }}>
+                        {t.ram_tier_help}
+                      </div>
+                    )}
                   </div>
                 </div>
                 {compCat === 'case' && (

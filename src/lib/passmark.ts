@@ -117,3 +117,41 @@ export function hexToRgba(hex: string, alpha: number): string {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
+
+// RAM has no PassMark-style benchmark table, so its tier is derived from the specs a kit
+// actually ships with instead: clock speed and CAS latency (the two numbers that determine real
+// memory performance), plus a small stick-count bonus. Deliberately keeps its own tiny regexes
+// here rather than importing ramModuleCount from build-scene.ts — that file pulls in three.js and
+// is meant to stay a browser/3D-scene-only module, while this one needs to stay importable from
+// lighter contexts too (Admin's live tier preview). Mirrors the same "^N×"/"CL<n>" conventions
+// ramModuleCount/ramPerStickCapacityGB already parse there.
+function ramModuleCountFromSpecs(specs: string): number {
+  const m = specs.match(/^(\d+)\s*×/);
+  return m ? Number(m[1]) : 2;
+}
+function ramCasLatencyFromSpecs(specs: string): number | null {
+  const m = specs.match(/CL\s*(\d+)/i);
+  return m ? Number(m[1]) : null;
+}
+
+// speed÷CAS-latency is a single ratio that happens to normalize reasonably well across DDR4 and
+// DDR5 despite their very different absolute speed numbers — both generations' well-regarded
+// kits cluster around the same ratio (DDR4-3200 CL16 = 200, DDR5-6400 CL32 = 200, both genuinely
+// excellent for their generation). Rows with no parseable CAS latency (some mined rows lack one)
+// fall back to a flat neutral ratio rather than being rewarded or punished for missing data.
+const RAM_UNKNOWN_CAS_RATIO = 150;
+// A flat nudge, not a multiplier — stick count is a secondary signal per the feature request
+// ("should ALSO be higher"), not one that should ever swamp the speed/latency score on its own.
+const RAM_STICK_BONUS: Record<number, number> = { 1: -8, 2: 0, 4: 8 };
+
+export function ramTier(speedMhz: number | undefined, specs: string): Tier | undefined {
+  if (!speedMhz) return undefined; // no speed yet (new/incomplete row) — caller falls back to a manual tier
+  const cas = ramCasLatencyFromSpecs(specs);
+  const ratio = cas ? speedMhz / cas : RAM_UNKNOWN_CAS_RATIO;
+  const score = ratio + (RAM_STICK_BONUS[ramModuleCountFromSpecs(specs)] ?? 0);
+  if (score >= 200) return 'S';
+  if (score >= 170) return 'A';
+  if (score >= 140) return 'B';
+  if (score >= 110) return 'C';
+  return 'D';
+}

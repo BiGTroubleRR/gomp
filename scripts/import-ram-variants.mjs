@@ -4,8 +4,9 @@
 // spread of capacity/module-count/speed combos (single 8-32GB sticks, dual-channel kits from
 // 16-64GB, speeds from 5200 to 8000) and mines real kits from buildcores-open-db for each,
 // preferring named flagship lines (Trident Z, Dominator/Vengeance, Fury, ...) from the top
-// manufacturers by SKU volume. New rows get no tier/passmark (no PassMark score to derive one
-// from) and an estimated price interpolated from the two real curated anchor prices.
+// manufacturers by SKU volume. New rows get no passmark (RAM has no PassMark score), a tier
+// computed from speed/CAS-latency/stick-count (see computeRamTier below), and an estimated price
+// interpolated from the two real curated anchor prices.
 import { readdirSync, readFileSync } from 'fs';
 import { createClient } from '@supabase/supabase-js';
 
@@ -16,6 +17,21 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.
 
 function normalize(s) {
   return (s || '').toUpperCase().replace(/[®™]/g, '').replace(/[^A-Z0-9]+/g, ' ').trim();
+}
+
+// Mirrors ramTier() in src/lib/passmark.ts — duplicated here because this is a standalone .mjs
+// script (no app TS imports), not because the formula differs. Keep in sync if that changes.
+const RAM_UNKNOWN_CAS_RATIO = 150;
+const RAM_STICK_BONUS = { 1: -8, 2: 0, 4: 8 };
+function computeRamTier(speedMhz, casLatency, moduleCount) {
+  if (!speedMhz) return null;
+  const ratio = casLatency ? speedMhz / casLatency : RAM_UNKNOWN_CAS_RATIO;
+  const score = ratio + (RAM_STICK_BONUS[moduleCount] ?? 0);
+  if (score >= 200) return 'S';
+  if (score >= 170) return 'A';
+  if (score >= 140) return 'B';
+  if (score >= 110) return 'C';
+  return 'D';
 }
 
 const ramDir = `${OPEN_DB}/RAM`;
@@ -126,7 +142,7 @@ for (const target of TARGET_SPECS) {
       name: c.metadata.name,
       price: estimatePrice(target.capacityGb, target.speed, target.modules),
       specs,
-      tier: null,
+      tier: computeRamTier(target.speed, c.cas_latency, target.modules),
       ram_height_mm: c.height ?? null,
       // Both were previously left unset here, which silently dropped every mined row out of the
       // /build DDR-generation filter and the min-speed slider (they read exactly these two
