@@ -997,6 +997,12 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   let dimensionsVisible = true;
   const dimensionGroups: Partial<Record<CompId | 'can', THREE.Group>> = {};
   let lastCaseSize = { w: 2.0, h: 4.5, d: 2.0 };
+  // Real mm the motherboard's own width/depth are currently scaled to (updated by setSizeScale
+  // whenever id==='mobo') — lets resetComponentPositions shrink cpu/cooler/ram/storage's
+  // BASE_POS offsets proportionally for a smaller board instead of using the same absolute
+  // offsets tuned against ATX for every form factor, which pushed them past a Mini-ITX board's
+  // real (much smaller) edges. Defaults to ATX's own size so the ratio starts at exactly 1.
+  let lastMoboSizeMm = { width: MOBO_FORM_FACTOR_SIZE_MM.ATX.width, depth: MOBO_FORM_FACTOR_SIZE_MM.ATX.depth };
 
   function clearDimensionGroup(id: CompId | 'can') {
     const existing = dimensionGroups[id];
@@ -1253,14 +1259,21 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     const moboX = moboAnchoredX();
     const psuZ = psuAnchoredZ();
     const psuY = psuAnchoredY();
+    // cpu/cooler/ram/storage's BASE_POS offsets from the mobo were hand-tuned against a
+    // full-size ATX board — scaling them by how much smaller/bigger the *actual* selected
+    // board's real width/depth is (vs. ATX) keeps them proportionally in the same spot on the
+    // PCB instead of the same absolute offset, which is what pushed them past a much smaller
+    // Mini-ITX board's real edges (170mm vs ATX's 305x244mm).
+    const moboWidthScale = lastMoboSizeMm.width / MOBO_FORM_FACTOR_SIZE_MM.ATX.width;
+    const moboDepthScale = lastMoboSizeMm.depth / MOBO_FORM_FACTOR_SIZE_MM.ATX.depth;
     (Object.keys(BASE_POS) as Exclude<CompId, 'case'>[]).forEach((id) => {
       const obj = objects[id];
       if (!obj) return;
       const base = BASE_POS[id];
       const inMoboGroup = id === 'mobo' || id === 'cpu' || id === 'cooler' || id === 'ram' || id === 'storage';
       const x = inMoboGroup ? moboX + (base[0] - BASE_POS.mobo[0]) : base[0];
-      const y = id === 'psu' ? psuY : base[1];
-      const z = inMoboGroup ? moboZ + (base[2] - BASE_POS.mobo[2]) : id === 'psu' ? psuZ : base[2];
+      const y = inMoboGroup ? BASE_POS.mobo[1] + (base[1] - BASE_POS.mobo[1]) * moboWidthScale : id === 'psu' ? psuY : base[1];
+      const z = inMoboGroup ? moboZ + (base[2] - BASE_POS.mobo[2]) * moboDepthScale : id === 'psu' ? psuZ : base[2];
       obj.finalPos.set(x, y, z);
       if (obj.selected) {
         obj.targetPos.copy(obj.finalPos);
@@ -1274,8 +1287,8 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     // motherboard but the exact one BASE_POS.ram's constants happened to be tuned against.
     ramSlotOutlineGroup.position.set(
       moboX + (BASE_POS.ram[0] - BASE_POS.mobo[0]),
-      BASE_POS.ram[1],
-      moboZ + (BASE_POS.ram[2] - BASE_POS.mobo[2]),
+      BASE_POS.mobo[1] + (BASE_POS.ram[1] - BASE_POS.mobo[1]) * moboWidthScale,
+      moboZ + (BASE_POS.ram[2] - BASE_POS.mobo[2]) * moboDepthScale,
     );
     // GPU isn't looped above (its position also depends on vertical/horizontal orientation,
     // which this function doesn't track) — see applyGpuPosition, called separately wherever
@@ -1530,6 +1543,14 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     obj.sizeScale = sizeScale;
     if (obj.selected && obj.moveStart == null) {
       obj.mesh.scale.set(sizeScale.x, sizeScale.y, sizeScale.z);
+    }
+    if (id === 'mobo') {
+      const widthMm = specs.find((s) => s.axis === 'y')?.mm;
+      const depthMm = specs.find((s) => s.axis === 'z')?.mm;
+      lastMoboSizeMm = {
+        width: widthMm ?? MOBO_FORM_FACTOR_SIZE_MM.ATX.width,
+        depth: depthMm ?? MOBO_FORM_FACTOR_SIZE_MM.ATX.depth,
+      };
     }
     // A different motherboard form factor changes moboAnchoredZ's own real half-depth (E-ATX's
     // 330mm vs Mini-ITX's 170mm), so the whole rear-anchored mobo/cpu/cooler/ram/storage group

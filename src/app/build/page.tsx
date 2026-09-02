@@ -1461,16 +1461,19 @@ export default function BuildPage() {
                       <TierGlowOrb tier={c.tier} width={140} intense={hoveredCardKey === cardKey} />
                       <div style={{ display: 'flex', gap: 10 }}>
                         {c.imageUrl && (
-                          <div
+                          <motion.div
+                            whileHover={{ scale: 1.45, y: [0, -5, 0] }}
+                            transition={{ scale: { duration: 0.2, ease: 'easeOut' }, y: { repeat: Infinity, duration: 1.1, ease: 'easeInOut' } }}
                             style={{
                               width: 36, height: 36, borderRadius: 4, flexShrink: 0,
                               background: 'repeating-conic-gradient(rgba(28,28,26,0.06) 0% 25%, transparent 0% 50%) 0 0 / 10px 10px',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                              transformOrigin: 'left center', position: 'relative', zIndex: 2,
                             }}
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={c.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                          </div>
+                          </motion.div>
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -1678,7 +1681,7 @@ export default function BuildPage() {
                   {hoverComp.imageUrl && (
                     <div
                       style={{
-                        width: 30, height: 30, borderRadius: 4, flexShrink: 0,
+                        width: 44, height: 44, borderRadius: 4, flexShrink: 0,
                         background: 'repeating-conic-gradient(rgba(245,240,230,0.08) 0% 25%, transparent 0% 50%) 0 0 / 8px 8px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                       }}
