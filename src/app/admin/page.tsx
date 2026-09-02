@@ -21,6 +21,7 @@ import {
 } from '@/lib/supabase/customer-builds';
 import type { CustomerBuild } from '@/lib/supabase/customer-build-mapping';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
+import TierGlowOrb from '@/components/TierGlowOrb';
 import {
   defaultComponentDb,
   defaultBuilds,
@@ -215,6 +216,7 @@ type Translations = {
   apply_margin: string; margin_override_badge: string; margin_override_label: string; margin_override_desc: string; margin_override_use_global: string;
   specs_notes: string; tier_rating: string; tower_category: string; tower_category_help: string;
   ram_generation: string; ram_speed_mhz: string; ram_generation_help: string;
+  ram_family_label: string; ram_family_help: string;
   fan_size_mm: string; preinstalled_fans: string; preinstalled_fans_help: string; fan_none: string;
   dimensions_mm: string;
   case_width_mm: string; case_height_mm: string; case_depth_mm: string;
@@ -286,6 +288,8 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     tower_category_help: 'Full Tower 55–75 cm · Mid Tower 35–55 cm · Mini Tower 30–45 cm · SFF <35 cm',
     ram_generation: 'DDR Generation', ram_speed_mhz: 'Speed (MHz)',
     ram_generation_help: 'Drives the DDR4/DDR5 filter and the speed slider on the Build page — leave blank to hide this kit from both.',
+    ram_family_label: 'Product family (optional)',
+    ram_family_help: 'Format: Manufacturer|CapacityGB|Speed, e.g. "G.Skill|16GB|6400" — links this kit with other stick-count variants (1×/2×/4×) of the same real product on the Build page. Match an existing family exactly to add to it, or leave blank for a one-off kit.',
     fan_size_mm: 'Fan size (mm)',
     preinstalled_fans: 'Pre-installed fans',
     preinstalled_fans_help: 'Which fan (if any) ships in each mount out of the box — keeping it is free; swapping to another fan on Build charges that fan’s price.',
@@ -360,6 +364,8 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     tower_category_help: 'Veľká skriňa 55–75 cm · Stredná skriňa 35–55 cm · Malá skriňa 30–45 cm · SFF <35 cm',
     ram_generation: 'Generácia DDR', ram_speed_mhz: 'Rýchlosť (MHz)',
     ram_generation_help: 'Ovláda filter DDR4/DDR5 a posuvník rýchlosti na stránke Zostaviť — nechajte prázdne, ak chcete túto sadu skryť z oboch.',
+    ram_family_label: 'Rodina produktu (voliteľné)',
+    ram_family_help: 'Formát: Výrobca|KapacitaGB|Rýchlosť, napr. "G.Skill|16GB|6400" — prepojí túto sadu s ostatnými variantmi počtu tyčiniek (1×/2×/4×) toho istého reálneho produktu na stránke Zostaviť. Ak chcete pridať do existujúcej rodiny, zhodujte presne; inak nechajte prázdne pre samostatnú sadu.',
     fan_size_mm: 'Veľkosť ventilátora (mm)',
     preinstalled_fans: 'Predinštalované ventilátory',
     preinstalled_fans_help: 'Ktorý ventilátor (ak nejaký) je v danej pozícii od výroby — ponechanie je zadarmo, výmena za iný ventilátor na stránke Zostaviť účtuje jeho cenu.',
@@ -423,7 +429,7 @@ type CompFormState = {
   name: string; price: string; marketPrice: string; specs: string; category: string; tier: Tier;
   passmark: number | null; passmarkUrl: string; imageUrl: string;
   marginOverrideOn: boolean; marginOverrideType: 'eur' | 'pct'; marginOverrideValue: string;
-  ramGeneration: '' | '4' | '5'; ramSpeedMhz: string;
+  ramGeneration: '' | '4' | '5'; ramSpeedMhz: string; ramFamily: string;
   fanSizeMm: string; // fan only
   // case only — which fan (by name, from the 'fan' catalog) and how many ship pre-installed at
   // each of this case's existing fanMounts positions. Only lets you assign a fan to a position
@@ -444,7 +450,7 @@ function initialCompForm(): CompFormState {
   return {
     name: '', price: '', marketPrice: '', specs: '', category: 'Mid Tower', tier: 'B', passmark: null, passmarkUrl: '', imageUrl: '',
     marginOverrideOn: false, marginOverrideType: 'pct', marginOverrideValue: '0',
-    ramGeneration: '', ramSpeedMhz: '',
+    ramGeneration: '', ramSpeedMhz: '', ramFamily: '',
     fanSizeMm: '', fanPreinstalled: {},
     caseWidthMm: '', caseHeightMm: '', caseDepthMm: '',
     maxGpuLengthMm: '', maxCoolerHeightMm: '', maxRadiatorMm: '', maxPsuLengthMm: '',
@@ -653,6 +659,9 @@ export default function AdminPage() {
   const [compCat, setCompCat] = useState<Category>('gpu');
   const [compForm, setCompForm] = useState<CompFormState>(initialCompForm());
   const [editCompId, setEditCompId] = useState<string | null>(null);
+  // Drives the tier glow's hover-brightened state on the grid card below — separate from
+  // editCompId since hover and edit are independent states a card can be in at once.
+  const [hoveredCompId, setHoveredCompId] = useState<string | null>(null);
   // Screen position for the edit popup — always centered in the viewport (see openEditComp)
   // rather than tied to where the Edit button was clicked, so the whole form stays reachable
   // regardless of scroll position. null while in Add mode, where the form stays inline in its
@@ -1029,6 +1038,7 @@ export default function AdminPage() {
       ...(compCat === 'case' ? { category: compForm.category || 'Mid Tower' } : {}),
       ...(compCat === 'ram' && compForm.ramGeneration ? { ramGeneration: Number(compForm.ramGeneration) as 4 | 5 } : {}),
       ...(compCat === 'ram' && compForm.ramSpeedMhz ? { ramSpeedMhz: parseInt(compForm.ramSpeedMhz, 10) } : {}),
+      ...(compCat === 'ram' && compForm.ramFamily.trim() ? { ramFamily: compForm.ramFamily.trim() } : {}),
       ...(compCat === 'fan' && compForm.fanSizeMm ? { fanSizeMm: parseFloat(compForm.fanSizeMm) } : {}),
       ...dimensionFieldsFromForm(compCat, compForm),
       ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
@@ -1064,13 +1074,16 @@ export default function AdminPage() {
       // ramHeightMm also has no edit field — same carry-forward, otherwise every edit of a
       // bulk-imported RAM SKU would silently zero out its real heatsink height.
       ...(existing?.ramHeightMm != null ? { ramHeightMm: existing.ramHeightMm } : {}),
-      // Same reasoning for ramFamily (drives the /build stick-count grouping) and isLive (drives
-      // the live/hidden toggle below) — neither has a field in this form, so an unrelated price/
-      // tier edit must not silently un-group a RAM kit or bring a hidden component back live.
-      ...(existing?.ramFamily ? { ramFamily: existing.ramFamily } : {}),
+      // isLive (drives the live/hidden toggle below) has no field in this form, so an unrelated
+      // price/tier edit must not silently bring a hidden component back live.
       ...(existing?.isLive === false ? { isLive: false } : {}),
       ...(compCat === 'ram' && compForm.ramGeneration ? { ramGeneration: Number(compForm.ramGeneration) as 4 | 5 } : {}),
       ...(compCat === 'ram' && compForm.ramSpeedMhz ? { ramSpeedMhz: parseInt(compForm.ramSpeedMhz, 10) } : {}),
+      // ramFamily is a real, visible, pre-filled editable field now (drives the /build brand+speed
+      // and stick-count grouping) — same blank-clears-it convention as ramGeneration/ramSpeedMhz
+      // just above, since the admin can see the current value and is making a deliberate choice
+      // either way, unlike before when this field wasn't shown at all.
+      ...(compCat === 'ram' && compForm.ramFamily.trim() ? { ramFamily: compForm.ramFamily.trim() } : {}),
       ...(compCat === 'fan' && compForm.fanSizeMm ? { fanSizeMm: parseFloat(compForm.fanSizeMm) } : {}),
       ...dimensionFieldsFromForm(compCat, compForm),
       ...(!(compCat === 'fan' && compForm.fanSizeMm) && existing?.fanSizeMm != null ? { fanSizeMm: existing.fanSizeMm } : {}),
@@ -1159,6 +1172,7 @@ export default function AdminPage() {
       marginOverrideValue: comp.marginOverride ? String(comp.marginOverride.value) : '0',
       ramGeneration: comp.ramGeneration ? (String(comp.ramGeneration) as '4' | '5') : '',
       ramSpeedMhz: comp.ramSpeedMhz != null ? String(comp.ramSpeedMhz) : '',
+      ramFamily: comp.ramFamily || '',
       fanSizeMm: comp.fanSizeMm != null ? String(comp.fanSizeMm) : '',
       fanPreinstalled: Object.fromEntries(
         (comp.fanMounts || []).map((m) => [
@@ -2189,13 +2203,16 @@ export default function AdminPage() {
                   return (
                     <div
                       key={comp.id}
+                      onMouseEnter={() => setHoveredCompId(comp.id)}
+                      onMouseLeave={() => setHoveredCompId((id) => (id === comp.id ? null : id))}
                       style={{
                         background: isEditing ? 'rgba(110,20,35,0.05)' : isLive ? '#FDFAF4' : 'rgba(240,235,225,0.6)',
                         border: `0.5px solid ${isEditing ? 'rgba(110,20,35,0.3)' : 'rgba(28,28,26,0.12)'}`,
                         borderRadius: 2, padding: 18, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10,
-                        opacity: isLive ? 1 : 0.7,
+                        opacity: isLive ? 1 : 0.7, position: 'relative', zIndex: 0, overflow: 'hidden',
                       }}
                     >
+                      <TierGlowOrb tier={comp.tier} intense={hoveredCompId === comp.id} />
                       {comp.imageUrl && (
                         <div
                           style={{
@@ -2552,6 +2569,18 @@ export default function AdminPage() {
                     </div>
                     <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1', fontFamily: 'var(--font-sans)', fontSize: 11, color: '#B0A898', lineHeight: 1.6 }}>
                       {t.ram_generation_help}
+                    </div>
+                    <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1' }}>
+                      <div style={LABEL_STYLE}>{t.ram_family_label}</div>
+                      <input
+                        value={compForm.ramFamily}
+                        onChange={(e) => setCompForm({ ...compForm, ramFamily: e.target.value })}
+                        placeholder="G.Skill|16GB|6400"
+                        style={{ ...INPUT_STYLE, fontFamily: 'var(--font-mono)' }}
+                      />
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#B0A898', marginTop: 6, lineHeight: 1.6 }}>
+                        {t.ram_family_help}
+                      </div>
                     </div>
                   </div>
                 )}

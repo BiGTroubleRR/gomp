@@ -114,6 +114,15 @@ export function ramModuleCount(comp: Component): number {
   return m ? Number(m[1]) : 2;
 }
 
+// Per-stick capacity (not total kit capacity) — the number right after the "N×" that
+// ramModuleCount reads, e.g. "2×16GB · CL32" -> 16. Used by the /build RAM picker's stage-2
+// stick-count buttons to tell apart same-brand+speed+count rows that differ only in capacity
+// (e.g. 2×16GB vs 2×32GB), the same distinction ramFamily's own middle segment encodes.
+export function ramPerStickCapacityGB(comp: Component): number | null {
+  const m = comp.specs.match(/^\d+\s*×\s*(\d+)\s*GB/i);
+  return m ? Number(m[1]) : null;
+}
+
 // Real DIMM slot count by form factor — every Mini-ITX board in the catalog has 2 (there's no
 // room for more), every ATX/mATX/E-ATX board has 4. No per-SKU data needed since this holds for
 // every real board at each of those sizes.

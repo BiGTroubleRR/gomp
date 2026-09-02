@@ -112,3 +112,8 @@ export const TIER_COLORS: Record<Tier, { bg: string; text: string; border: strin
   C: { bg: '#E6F4FF', text: '#1A5A80', border: '#3498DB' },
   D: { bg: '#F2F2F6', text: '#505060', border: '#9090A0' },
 };
+
+export function hexToRgba(hex: string, alpha: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}

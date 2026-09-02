@@ -10,12 +10,14 @@ import { navigateWithTransition } from '@/lib/gomp-nav';
 import { writeJSON } from '@/lib/gomp-storage';
 import { fetchComponentDb, subscribeComponents } from '@/lib/supabase/components';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS, type Tier } from '@/lib/passmark';
+import TierGlowOrb from '@/components/TierGlowOrb';
 import {
   defaultComponentDb,
   caseFitsFormFactor,
   caseHasVerticalGpuMount,
   fitsInCase,
   cpuManufacturer,
+  ramBrand,
   extractWatts,
   BASE_WATTS,
   DEFAULT_FAN_WATTS,
@@ -39,6 +41,7 @@ import {
   cm,
   caseUnitsFor,
   ramModuleCount,
+  ramPerStickCapacityGB,
   moboRamSlotCount,
   dimensionSpecsFor,
   type BuildScene,
@@ -88,6 +91,10 @@ const T = {
     no_case_fit_part: 'No cases at this size fit everything you already picked — try a larger size, or remove a part.',
     no_ram_match: 'No RAM kits match this filter — try a lower minimum speed, or a different DDR generation.',
     ram_gen_all: 'All', ram_min_speed: 'Minimum speed', ram_min_speed_any: 'Any',
+    ram_from_price: (price: string) => `from ${price}`,
+    ram_back_to_brand_speed: '← Brand & speed',
+    ram_choose_sticks: 'RAM count',
+    ram_choose_capacity: 'Capacity per stick',
     filter_all: 'All',
     show_more: (n: number) => `Show ${n} more`, show_less: 'Show less',
     no_mobo_match: 'No motherboards match this filter — try a different socket or form factor.',
@@ -149,6 +156,10 @@ const T = {
     no_case_fit_part: 'Žiadna skriňa tejto veľkosti neposkytne miesto pre všetko, čo ste už vybrali — skúste väčšiu veľkosť alebo odstráňte diel.',
     no_ram_match: 'Žiadna sada RAM nevyhovuje tomuto filtru — skúste nižšiu minimálnu rýchlosť alebo inú generáciu DDR.',
     ram_gen_all: 'Všetky', ram_min_speed: 'Minimálna rýchlosť', ram_min_speed_any: 'Ľubovoľná',
+    ram_from_price: (price: string) => `od ${price}`,
+    ram_back_to_brand_speed: '← Značka a rýchlosť',
+    ram_choose_sticks: 'Počet RAM',
+    ram_choose_capacity: 'Kapacita na tyčinku',
     filter_all: 'Všetky',
     show_more: (n: number) => `Zobraziť ďalších ${n}`, show_less: 'Zobraziť menej',
     no_mobo_match: 'Žiadna základná doska nevyhovuje tomuto filtru — skúste inú pätici alebo formát.',
@@ -193,6 +204,57 @@ const SORT_BY_TIER_STEPS: CompId[] = ['cooler', 'gpu', 'storage', 'psu', 'case']
 // hypothetical problem. Counted post-filter/post-grouping, so a narrowed-down list under this
 // count never shows the button at all.
 const SHOW_MORE_STEP = 8;
+
+// Stage-1 grouping key for the RAM picker: brand + speed only, independent of ramFamily (which
+// is scoped to one fixed per-stick capacity, so the same brand+speed can span several ramFamily
+// values — see the plan this was built from). Works for hand-curated rows too since ramSpeedMhz
+// and the brand-from-name convention are both already structured/derivable for every row.
+function ramBrandSpeedKey(c: Component): string {
+  return `${ramBrand(c.name)}|${c.ramSpeedMhz ?? 'x'}`;
+}
+
+// Real 4-DIMM kits are rare in the mined catalog data — most brand+speed groups only have 1x/2x
+// rows. Rather than leaving the RAM stage-2 stick-count row stuck at 1x/2x for those, synthesize
+// a 4x option priced as two of the cheapest matching 2x kit (the real-world way to actually reach
+// 4 sticks when no bundled 4-pack SKU/price exists) for every brand+speed+per-stick-capacity
+// combo that has a 2x row but no real 4x row at that same capacity. Skipped entirely wherever a
+// real 4x SKU already covers that capacity, so an actual bundled kit's own price always wins.
+function synthesizeDoubledRamKits(ramList: Component[]): Component[] {
+  const byBrandSpeed = new Map<string, Component[]>();
+  ramList.forEach((c) => {
+    const key = ramBrandSpeedKey(c);
+    if (!byBrandSpeed.has(key)) byBrandSpeed.set(key, []);
+    byBrandSpeed.get(key)!.push(c);
+  });
+
+  const synthetic: Component[] = [];
+  byBrandSpeed.forEach((rows) => {
+    const realFourCapacities = new Set(
+      rows.filter((c) => ramModuleCount(c) === 4).map((c) => ramPerStickCapacityGB(c)),
+    );
+    const cheapestTwoByCapacity = new Map<number, Component>();
+    rows.filter((c) => ramModuleCount(c) === 2).forEach((c) => {
+      const capacity = ramPerStickCapacityGB(c);
+      if (capacity == null) return;
+      const existing = cheapestTwoByCapacity.get(capacity);
+      if (!existing || c.price < existing.price) cheapestTwoByCapacity.set(capacity, c);
+    });
+    cheapestTwoByCapacity.forEach((base, capacity) => {
+      if (realFourCapacities.has(capacity)) return;
+      synthetic.push({
+        ...base,
+        id: `${base.id}::x2kit`,
+        // Must differ from the base kit's name — every selection/lookup in this file is keyed by
+        // component name (selections[id] stores a name, not an id), so the 2x and synthesized 4x
+        // rows need distinct names or they'd resolve to the same catalog entry once picked.
+        name: `${base.name} (2× kits)`,
+        price: Math.round(base.price * 2),
+        specs: `${base.specs.replace(/^2(\s*×)/, '4$1')} · 2× kits`,
+      });
+    });
+  });
+  return synthetic;
+}
 
 // fanName is optional: a position can still be filled with a generic, unbranded fan (free, purely
 // cosmetic — today's original behavior) when the case has no preinstalledFanName for it and the
@@ -340,11 +402,16 @@ export default function BuildPage() {
   const [moboFormFactorFilter, setMoboFormFactorFilter] = useState(''); // '' = all form factors
   const [cpuMfrFilter, setCpuMfrFilter] = useState(''); // '' = all manufacturers
   const [sortByTier, setSortByTier] = useState(false); // cooler/gpu/storage/psu/case only
-  // Which stick count (1/2/4) is currently displayed for a given RAM family (see ramFamily on
-  // Component) while browsing the picker — keyed by family so switching category and back keeps
-  // whatever the user last looked at. Only affects which variant's specs/price show on the card;
-  // the actual install still happens via the normal selectCard(name) click.
-  const [ramStickChoice, setRamStickChoice] = useState<Record<string, number>>({});
+  // Two-stage RAM picker: stage 1 picks brand + speed, stage 2 switches to a 1×/2×/4×
+  // stick-count filter for that group (with a capacity sub-choice only when a count maps to more
+  // than one per-stick capacity). selectedBrandSpeedKey is `${brand}|${speedMHz}` — see
+  // ramBrandSpeedKey below. Reset/restored whenever the RAM step is (re)entered, see the effect
+  // near ramSpeedSteps.
+  const [ramStage, setRamStage] = useState<'brandSpeed' | 'sticks'>('brandSpeed');
+  const [selectedBrandSpeedKey, setSelectedBrandSpeedKey] = useState<string | null>(null);
+  // Once a stick count maps to more than one per-stick capacity, this holds which count is
+  // currently expanded to show its capacity sub-row (null = no count expanded yet / resolved).
+  const [expandedStickCount, setExpandedStickCount] = useState<number | null>(null);
   // Per-category "show all" flag for the picker list cap (see SHOW_MORE_STEP below) — a category
   // stays expanded if you leave and come back to it, but a freshly-opened one starts capped.
   const [showAllByStep, setShowAllByStep] = useState<Partial<Record<CompId, boolean>>>({});
@@ -364,6 +431,12 @@ export default function BuildPage() {
   const [completionRunning, setCompletionRunning] = useState(false);
   const [hoverId, setHoverId] = useState<CompId | null>(null);
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  // Drives the tier glow's hover-brightened state on picker cards — kept separate from
+  // hoverId/hoverPos above, which are driven by 3D-viewport raycasting and also open the
+  // viewport's own hover-preview popup; reusing them here would trigger that popup on every
+  // card hover too. Keyed the same way as each card's own React key (ramFamily when grouped,
+  // otherwise id) so a RAM family's stick-count variants glow as one unit.
+  const [hoveredCardKey, setHoveredCardKey] = useState<string | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -385,6 +458,7 @@ export default function BuildPage() {
       SLOTS.forEach((id) => {
         db[id] = (db[id] || []).filter((c) => c.isLive !== false);
       });
+      db.ram = [...(db.ram || []), ...synthesizeDoubledRamKits(db.ram || [])];
       setCompDb(db);
       if (!catalogInitializedRef.current) {
         catalogInitializedRef.current = true;
@@ -516,6 +590,25 @@ export default function BuildPage() {
       .filter((s): s is number => s != null);
     return Array.from(new Set(pool)).sort((a, b) => a - b);
   }, [compDb.ram, ramGenFilter]);
+
+  // Re-entering the RAM step (navigating back into it, or arriving fresh) resets/restores the
+  // two-stage picker: jump straight to stage 2 for the already-installed RAM's own brand+speed
+  // group if one is selected (so changing stick count doesn't force re-picking brand/speed),
+  // otherwise start over at stage 1. Only depends on activeStep — deliberately not on every
+  // selections/compDb change, the same narrow-deps pattern used elsewhere in this file.
+  useEffect(() => {
+    if (activeStep !== 'ram') return;
+    const comp = selected.ram ? (compDb.ram || []).find((c) => c.name === selections.ram) : undefined;
+    if (comp) {
+      setSelectedBrandSpeedKey(ramBrandSpeedKey(comp));
+      setRamStage('sticks');
+    } else {
+      setSelectedBrandSpeedKey(null);
+      setRamStage('brandSpeed');
+    }
+    setExpandedStickCount(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStep]);
 
   // Chip options for the mobo/cpu filters are read straight off the catalog rather than a fixed
   // list, so a newly-imported socket/form-factor/manufacturer shows up automatically instead of
@@ -1000,7 +1093,7 @@ export default function BuildPage() {
                 </div>
               )}
 
-              {activeStep === 'ram' && (
+              {activeStep === 'ram' && ramStage === 'brandSpeed' && (
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: ramSpeedSteps.length > 1 ? 10 : 0 }}>
                     {([0, 4, 5] as const).map((gen) => (
@@ -1066,6 +1159,193 @@ export default function BuildPage() {
                 const selectedMobo = selected.mobo ? (compDb.mobo || []).find((c) => c.name === selections.mobo) : undefined;
                 const selectedCpu = selected.cpu ? (compDb.cpu || []).find((c) => c.name === selections.cpu) : undefined;
                 const selectedCase = selected.case ? (compDb.case || []).find((c) => c.name === selections.case) : undefined;
+
+                // RAM gets its own two-stage picker instead of the generic per-SKU card list
+                // below: stage 1 picks brand + speed, stage 2 switches to a 1×/2×/4× stick-count
+                // filter (with a capacity sub-row only when a count maps to more than one
+                // per-stick capacity). See ramBrandSpeedKey/ramStage/selectedBrandSpeedKey.
+                if (activeStep === 'ram') {
+                  let ramList = compDb.ram || [];
+                  if (ramGenFilter) ramList = ramList.filter((c) => c.ramGeneration === ramGenFilter);
+                  if (ramMinSpeedIdx > 0) {
+                    const threshold = ramSpeedSteps[Math.min(ramMinSpeedIdx, ramSpeedSteps.length - 1)];
+                    if (threshold != null) ramList = ramList.filter((c) => (c.ramSpeedMhz ?? 0) >= threshold);
+                  }
+                  if (ramList.length === 0) {
+                    const reason = ramGenFilter || ramMinSpeedIdx > 0 ? t.no_ram_match : t.none_add_admin;
+                    return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', padding: '12px 0' }}>{reason}</div>;
+                  }
+
+                  const brandSpeedGroups = new Map<string, Component[]>();
+                  ramList.forEach((c) => {
+                    const key = ramBrandSpeedKey(c);
+                    if (!brandSpeedGroups.has(key)) brandSpeedGroups.set(key, []);
+                    brandSpeedGroups.get(key)!.push(c);
+                  });
+
+                  if (ramStage === 'brandSpeed' || !selectedBrandSpeedKey || !brandSpeedGroups.has(selectedBrandSpeedKey)) {
+                    const groups = Array.from(brandSpeedGroups.entries())
+                      .map(([key, rows]) => {
+                        const cheapest = rows.reduce((min, c) => (c.price < min.price ? c : min), rows[0]);
+                        return { key, brand: ramBrand(cheapest.name), speed: cheapest.ramSpeedMhz, gen: cheapest.ramGeneration, cheapest };
+                      })
+                      .sort((a, b) => a.brand.localeCompare(b.brand) || (a.speed ?? 0) - (b.speed ?? 0));
+                    return (
+                      <>
+                        <AnimatePresence initial={false} key="ram-brand-speed">
+                          {groups.map((g) => (
+                            <motion.div
+                              key={g.key}
+                              layout="position"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.18 }}
+                              onClick={() => { setSelectedBrandSpeedKey(g.key); setRamStage('sticks'); setExpandedStickCount(null); }}
+                              onMouseEnter={() => setHoveredCardKey(g.key)}
+                              onMouseLeave={() => setHoveredCardKey((key) => (key === g.key ? null : key))}
+                              style={{
+                                border: '1.5px solid rgba(28,28,26,0.12)', background: 'transparent',
+                                borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
+                                position: 'relative', zIndex: 0, overflow: 'hidden',
+                              }}
+                            >
+                              <TierGlowOrb tier={g.cheapest.tier} width={140} intense={hoveredCardKey === g.key} />
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: INK }}>
+                                  {g.brand}{g.gen && g.speed ? ` · DDR${g.gen}-${g.speed}` : ''}
+                                </div>
+                                <span title={g.cheapest.passmark ? t.passmark_title(g.cheapest.passmark) : undefined}>
+                                  <TierBadge tier={g.cheapest.tier} small />
+                                </span>
+                              </div>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: MUTED, marginTop: 4 }}>
+                                {t.ram_from_price(fmt(g.cheapest.price))}
+                              </div>
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+                      </>
+                    );
+                  }
+
+                  // Stage 2: 1×/2×/4× buttons for whatever counts exist in the chosen brand+speed
+                  // group, deduped the same way the old single-stage picker did (prefer a curated
+                  // tier over an unscored bulk import, then the cheaper of the two) — just keyed
+                  // by (count, per-stick capacity) instead of (count) alone, since a brand+speed
+                  // group can span several capacities.
+                  const groupRows = brandSpeedGroups.get(selectedBrandSpeedKey)!;
+                  const byCount = new Map<number, Component[]>();
+                  groupRows.forEach((c) => {
+                    const n = ramModuleCount(c);
+                    if (!byCount.has(n)) byCount.set(n, []);
+                    byCount.get(n)!.push(c);
+                  });
+                  byCount.forEach((rows, count) => {
+                    const byCapacity = new Map<number, Component>();
+                    rows.forEach((c) => {
+                      const capacity = ramPerStickCapacityGB(c) ?? 0;
+                      const existing = byCapacity.get(capacity);
+                      if (!existing) { byCapacity.set(capacity, c); return; }
+                      const existingScore = existing.tier ? 1 : 0;
+                      const cScore = c.tier ? 1 : 0;
+                      if (cScore > existingScore || (cScore === existingScore && c.price < existing.price)) byCapacity.set(capacity, c);
+                    });
+                    byCount.set(count, Array.from(byCapacity.values()).sort((a, b) => (ramPerStickCapacityGB(a) ?? 0) - (ramPerStickCapacityGB(b) ?? 0)));
+                  });
+                  const counts = Array.from(byCount.keys()).sort((a, b) => a - b);
+                  const [brandLabel] = selectedBrandSpeedKey.split('|');
+                  const speedLabel = groupRows[0]?.ramSpeedMhz;
+                  const genLabel = groupRows[0]?.ramGeneration;
+
+                  function pickStickCount(count: number) {
+                    const rows = byCount.get(count) ?? [];
+                    if (rows.length === 1) {
+                      selectCard('ram', rows[0].name);
+                      setExpandedStickCount(null);
+                    } else {
+                      setExpandedStickCount(count);
+                    }
+                  }
+
+                  return (
+                    <div>
+                      <button
+                        onClick={() => { setRamStage('brandSpeed'); setExpandedStickCount(null); }}
+                        style={{
+                          ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED,
+                          background: 'transparent', border: 'none', outline: 'none', cursor: 'pointer', padding: 0, marginBottom: 10,
+                        }}
+                      >
+                        {t.ram_back_to_brand_speed}
+                      </button>
+                      <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: INK, marginBottom: 10 }}>
+                        {brandLabel}{genLabel && speedLabel ? ` · DDR${genLabel}-${speedLabel}` : ''}
+                      </div>
+                      <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        {t.ram_choose_sticks}
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                        {counts.map((count) => {
+                          const rows = byCount.get(count) ?? [];
+                          const isInstalledCount = selected.ram && rows.some((r) => r.name === selections.ram);
+                          const isExpanded = expandedStickCount === count;
+                          return (
+                            <button
+                              key={count}
+                              onClick={() => pickStickCount(count)}
+                              style={{
+                                ...textPop, flex: 1, fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, padding: '10px 0',
+                                borderRadius: 6, cursor: 'pointer', outline: 'none',
+                                border: `1.5px solid ${isInstalledCount || isExpanded ? MAROON : 'rgba(28,28,26,0.15)'}`,
+                                background: isInstalledCount ? MAROON : isExpanded ? 'rgba(110,20,35,0.06)' : 'transparent',
+                                color: isInstalledCount ? '#FDFAF4' : INK,
+                              }}
+                            >
+                              {count}×
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {expandedStickCount != null && (byCount.get(expandedStickCount)?.length ?? 0) > 1 && (
+                        <div>
+                          <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            {t.ram_choose_capacity}
+                          </div>
+                          <AnimatePresence initial={false} key={`ram-capacity-${expandedStickCount}`}>
+                            {byCount.get(expandedStickCount)!.map((c) => {
+                              const isThisSelected = selected.ram && selections.ram === c.name;
+                              const capacity = ramPerStickCapacityGB(c);
+                              return (
+                                <motion.div
+                                  key={c.id}
+                                  layout="position"
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  transition={{ duration: 0.18 }}
+                                  onClick={() => selectCard('ram', c.name)}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+                                    border: `1.5px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.12)'}`,
+                                    background: isThisSelected ? 'rgba(110,20,35,0.06)' : 'transparent',
+                                    borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
+                                  }}
+                                >
+                                  <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: isThisSelected ? MAROON : INK }}>
+                                    {capacity ? `${capacity}GB/stick` : c.specs}
+                                  </div>
+                                  <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
+                                </motion.div>
+                              );
+                            })}
+                          </AnimatePresence>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
                 let list = (compDb[activeStep] || []);
                 if (activeStep === 'case') {
                   list = list.filter((c) => c.category === caseCat);
@@ -1082,61 +1362,12 @@ export default function BuildPage() {
                   if (cpuMfrFilter) list = list.filter((c) => cpuManufacturer(c.name) === cpuMfrFilter);
                 } else if (activeStep === 'gpu' || activeStep === 'cooler' || activeStep === 'psu') {
                   if (selectedCase) list = list.filter((c) => fitsInCase(activeStep, c, selectedCase));
-                } else if (activeStep === 'ram') {
-                  if (ramGenFilter) list = list.filter((c) => c.ramGeneration === ramGenFilter);
-                  if (ramMinSpeedIdx > 0) {
-                    const threshold = ramSpeedSteps[Math.min(ramMinSpeedIdx, ramSpeedSteps.length - 1)];
-                    if (threshold != null) list = list.filter((c) => (c.ramSpeedMhz ?? 0) >= threshold);
-                  }
                 } else if (activeStep === 'mobo') {
                   if (selectedCpu?.socket) list = list.filter((c) => c.socket === selectedCpu.socket);
                   if (moboSocketFilter) list = list.filter((c) => c.socket === moboSocketFilter);
                   if (moboFormFactorFilter) list = list.filter((c) => c.formFactor === moboFormFactorFilter);
                 } else if (activeStep === 'storage') {
                   if (storagePcieGenFilter) list = list.filter((c) => storagePcieGeneration(c) === storagePcieGenFilter);
-                }
-                // Group same-family RAM rows (same manufacturer+speed+per-stick capacity, see
-                // ramFamily) into one card per family, each showing whichever stick-count variant
-                // is currently chosen for it — defaulting to the actually-installed variant if
-                // this family is the one already selected, else 2 sticks (the common case), else
-                // whatever's cheapest/first. Rows without ramFamily (older/manual entries) fall
-                // back to a key unique to themselves, so they render exactly as a normal singleton
-                // row and the stick-selector never appears for them.
-                let ramFamilyVariants: Map<string, Component[]> | null = null;
-                if (activeStep === 'ram') {
-                  ramFamilyVariants = new Map<string, Component[]>();
-                  list.forEach((c) => {
-                    const key = c.ramFamily || `__single:${c.id}`;
-                    if (!ramFamilyVariants!.has(key)) ramFamilyVariants!.set(key, []);
-                    ramFamilyVariants!.get(key)!.push(c);
-                  });
-                  // Curated and bulk-mined rows can land on the exact same spec (e.g. a
-                  // hand-curated "2x16GB@6400" plus a separately-mined row at the identical
-                  // capacity/speed) — same family, same stick count, two different real SKUs.
-                  // Without this, the stick-count selector would show two visually-identical
-                  // buttons for the same count with no way to tell them apart. One variant per
-                  // stick count survives per family: prefer whichever has a curated tier (more
-                  // trustworthy than an unscored bulk import), then the cheaper of the two.
-                  ramFamilyVariants.forEach((variants, key) => {
-                    if (variants.length < 2) return;
-                    const byCount = new Map<number, Component>();
-                    variants.forEach((v) => {
-                      const n = ramModuleCount(v);
-                      const existing = byCount.get(n);
-                      if (!existing) { byCount.set(n, v); return; }
-                      const existingScore = existing.tier ? 1 : 0;
-                      const vScore = v.tier ? 1 : 0;
-                      if (vScore > existingScore || (vScore === existingScore && v.price < existing.price)) byCount.set(n, v);
-                    });
-                    ramFamilyVariants!.set(key, Array.from(byCount.values()));
-                  });
-                  list = Array.from(ramFamilyVariants.entries()).map(([key, variants]) => {
-                    const sorted = [...variants].sort((a, b) => ramModuleCount(a) - ramModuleCount(b));
-                    const chosenCount = ramStickChoice[key];
-                    const byChoice = chosenCount != null ? sorted.find((v) => ramModuleCount(v) === chosenCount) : undefined;
-                    const bySelection = selected.ram ? sorted.find((v) => v.name === selections.ram) : undefined;
-                    return byChoice ?? bySelection ?? sorted.find((v) => ramModuleCount(v) === 2) ?? sorted[0];
-                  });
                 }
                 if (sortByTier && SORT_BY_TIER_STEPS.includes(activeStep)) {
                   list = [...list].sort((a, b) => TIER_ORDER.indexOf(a.tier ?? '') - TIER_ORDER.indexOf(b.tier ?? ''));
@@ -1153,9 +1384,7 @@ export default function BuildPage() {
                             ? t.no_case_fit_part
                             : (activeStep === 'gpu' || activeStep === 'cooler' || activeStep === 'psu') && selectedCase
                               ? t.no_part_fit(selectedCase.name)
-                              : activeStep === 'ram' && (ramGenFilter || ramMinSpeedIdx > 0)
-                                ? t.no_ram_match
-                                : activeStep === 'mobo' && selectedCpu?.socket
+                              : activeStep === 'mobo' && selectedCpu?.socket
                                   ? t.no_socket_match_mobo(selectedCpu.socket)
                                   : activeStep === 'mobo' && (moboSocketFilter || moboFormFactorFilter)
                                     ? t.no_mobo_match
@@ -1179,22 +1408,26 @@ export default function BuildPage() {
                   <AnimatePresence initial={false} key={activeStep}>
                     {visibleList.map((c) => {
                       const isThisSelected = selected[activeStep] && selections[activeStep] === c.name;
-                      const ramVariants = activeStep === 'ram' && c.ramFamily ? ramFamilyVariants?.get(c.ramFamily) : undefined;
+                      const cardKey = c.id;
                       return (
                         <motion.div
-                          key={activeStep === 'ram' && c.ramFamily ? c.ramFamily : c.id}
+                          key={cardKey}
                           layout="position"
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                           transition={{ duration: 0.18 }}
                           onClick={() => selectCard(activeStep, c.name)}
+                          onMouseEnter={() => setHoveredCardKey(cardKey)}
+                          onMouseLeave={() => setHoveredCardKey((key) => (key === cardKey ? null : key))}
                           style={{
                             border: `1.5px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.12)'}`,
                             background: isThisSelected ? 'rgba(110,20,35,0.06)' : 'transparent',
                             borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
+                            position: 'relative', zIndex: 0, overflow: 'hidden',
                           }}
                         >
+                      <TierGlowOrb tier={c.tier} width={140} intense={hoveredCardKey === cardKey} />
                       <div style={{ display: 'flex', gap: 10 }}>
                         {c.imageUrl && (
                           <div
@@ -1214,7 +1447,6 @@ export default function BuildPage() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                               {c.formFactor && <SpecPill label={c.formFactor} />}
                               {c.socket && <SpecPill label={c.socket} />}
-                              {c.ramGeneration && <SpecPill label={`DDR${c.ramGeneration}${c.ramSpeedMhz ? `-${c.ramSpeedMhz}` : ''}`} />}
                               {activeStep === 'storage' && storagePcieGeneration(c) && <SpecPill label={`PCIe ${storagePcieGeneration(c)}.0`} />}
                               <span title={c.passmark ? t.passmark_title(c.passmark) : undefined}>
                                 <TierBadge tier={c.tier} small />
@@ -1224,29 +1456,6 @@ export default function BuildPage() {
                           <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {c.specs}
                           </div>
-                          {ramVariants && ramVariants.length > 1 && (
-                            <div style={{ display: 'flex', gap: 4, marginTop: 5 }} onClick={(e) => e.stopPropagation()}>
-                              {ramVariants.map((v) => {
-                                const sticks = ramModuleCount(v);
-                                const active = v.id === c.id;
-                                return (
-                                  <button
-                                    key={v.id}
-                                    onClick={() => setRamStickChoice((s) => ({ ...s, [c.ramFamily as string]: sticks }))}
-                                    style={{
-                                      ...textPop, fontFamily: 'var(--font-mono)', fontSize: 10, padding: '2px 8px',
-                                      borderRadius: 4, cursor: 'pointer', lineHeight: 1.4,
-                                      border: `1px solid ${active ? MAROON : 'rgba(28,28,26,0.25)'}`,
-                                      background: active ? MAROON : 'transparent',
-                                      color: active ? '#FDFAF4' : MUTED,
-                                    }}
-                                  >
-                                    {sticks}×
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          )}
                           {activeStep === 'storage' &&
                             selectedMobo &&
                             (() => {

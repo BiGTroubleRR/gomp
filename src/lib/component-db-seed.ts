@@ -162,6 +162,29 @@ export function cpuManufacturer(name: string): string {
   return name.split(' ')[0] || '';
 }
 
+// Real catalog data mixes casing for the same brand across hand-curated vs bulk-imported rows
+// (e.g. "G.Skill" vs "G.SKILL", "Adata" vs "ADATA" — see scripts/import-ram-variants.mjs's own
+// MFR_PRIORITY list, which isn't uniformly cased either) — without normalizing, the /build RAM
+// picker's brand+speed grouping would show near-duplicate entries for the same real brand.
+const RAM_BRAND_CANONICAL: Record<string, string> = {
+  'G.SKILL': 'G.Skill',
+  CORSAIR: 'Corsair',
+  KINGSTON: 'Kingston',
+  TEAMGROUP: 'TeamGroup',
+  CRUCIAL: 'Crucial',
+  PATRIOT: 'Patriot',
+  ADATA: 'ADATA',
+};
+
+// Same reasoning as cpuManufacturer above — RAM has no structured brand field either, and every
+// name already leads with it ("G.Skill Trident Z5...", "Corsair Dominator..."). Used to group the
+// /build RAM picker's first stage by brand + speed, independent of ramFamily (which is scoped to
+// one fixed per-stick capacity and so can't answer "same brand+speed, any capacity").
+export function ramBrand(name: string): string {
+  const raw = name.split(' ')[0] || '';
+  return RAM_BRAND_CANONICAL[raw.toUpperCase()] ?? raw;
+}
+
 // GPU/CPU/PSU specs already quote their wattage as a plain "570W"-style token (the same text
 // the picker card displays), so this pulls the number straight from there instead of adding a
 // parallel structured field that could drift out of sync with what's shown on screen.
