@@ -1462,13 +1462,13 @@ export default function BuildPage() {
                       <div style={{ display: 'flex', gap: 10 }}>
                         {c.imageUrl && (
                           <motion.div
-                            whileHover={{ scale: 1.45, y: [0, -5, 0] }}
-                            transition={{ scale: { duration: 0.2, ease: 'easeOut' }, y: { repeat: Infinity, duration: 1.1, ease: 'easeInOut' } }}
+                            whileHover={{ scale: 1.9, y: [0, -5, 0] }}
+                            transition={{ scale: { duration: 0.2, ease: 'easeOut' }, y: { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } }}
                             style={{
                               width: 36, height: 36, borderRadius: 4, flexShrink: 0,
                               background: 'repeating-conic-gradient(rgba(28,28,26,0.06) 0% 25%, transparent 0% 50%) 0 0 / 10px 10px',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-                              transformOrigin: 'left center', position: 'relative', zIndex: 2,
+                              transformOrigin: 'right center', position: 'relative', zIndex: 2,
                             }}
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
