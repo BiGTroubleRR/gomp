@@ -94,7 +94,7 @@ const T = {
     ram_from_price: (price: string) => `from ${price}`,
     ram_back_to_brand_speed: '← Brand & speed',
     ram_choose_sticks: 'RAM count',
-    ram_choose_capacity: 'Capacity per stick',
+    ram_choose_capacity: 'Capacity per RAM',
     filter_all: 'All',
     show_more: (n: number) => `Show ${n} more`, show_less: 'Show less',
     no_mobo_match: 'No motherboards match this filter — try a different socket or form factor.',
@@ -159,7 +159,7 @@ const T = {
     ram_from_price: (price: string) => `od ${price}`,
     ram_back_to_brand_speed: '← Značka a rýchlosť',
     ram_choose_sticks: 'Počet RAM',
-    ram_choose_capacity: 'Kapacita na tyčinku',
+    ram_choose_capacity: 'Kapacita na RAM',
     filter_all: 'Všetky',
     show_more: (n: number) => `Zobraziť ďalších ${n}`, show_less: 'Zobraziť menej',
     no_mobo_match: 'Žiadna základná doska nevyhovuje tomuto filtru — skúste inú pätici alebo formát.',
@@ -1333,7 +1333,7 @@ export default function BuildPage() {
                                   }}
                                 >
                                   <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: isThisSelected ? MAROON : INK }}>
-                                    {capacity ? `${capacity}GB/stick` : c.specs}
+                                    {capacity ? `${capacity}GB/RAM` : c.specs}
                                   </div>
                                   <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
                                 </motion.div>
