@@ -976,10 +976,10 @@ export default function AdminPage() {
   // Uploads each file in turn (the endpoint is single-file) and appends each resulting URL
   // to the album as it resolves, so a partial failure partway through a multi-file pick
   // still keeps whatever uploaded successfully before it.
-  async function handleCgImageUpload(files: FileList) {
+  async function handleCgImageUpload(files: File[]) {
     setCgImageStatus('uploading');
     setCgImageError(null);
-    for (const file of Array.from(files)) {
+    for (const file of files) {
       const invalidReason = validateImageFile(file);
       if (invalidReason) {
         setCgImageStatus('error');
@@ -2076,9 +2076,14 @@ export default function AdminPage() {
                           accept="image/*"
                           multiple
                           onChange={(e) => {
-                            const files = e.target.files;
+                            // Copy the selected files out to a plain array before resetting the
+                            // input — e.target.files is a live FileList tied to the input, and
+                            // clearing the input's value empties that same FileList in place, so
+                            // reading it after the reset (or holding a reference across it) sees
+                            // zero files instead of what was just picked.
+                            const files = e.target.files ? Array.from(e.target.files) : [];
                             e.target.value = '';
-                            if (files && files.length) handleCgImageUpload(files);
+                            if (files.length) handleCgImageUpload(files);
                           }}
                           style={{ display: 'none' }}
                         />
