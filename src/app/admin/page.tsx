@@ -2118,7 +2118,7 @@ export default function AdminPage() {
                       {b.customerLabel && (
                         <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginBottom: 4 }}>{b.customerLabel}</div>
                       )}
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: '#7A7469', lineHeight: 1.6, marginBottom: 8 }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: '#7A7469', lineHeight: 1.6, marginBottom: 8, whiteSpace: 'pre-wrap' }}>
                         {b.specs}
                       </div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

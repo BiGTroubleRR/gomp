@@ -108,15 +108,21 @@ export default function CustomerBuildsPage() {
                   )}
                   {b.specs && (
                     <div style={{ marginTop: 14 }}>
-                      {b.specs.split(' · ').map((s, si) => (
-                        <div
-                          key={si}
-                          style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-mono)', fontSize: 12.5, color: INK, marginBottom: 6 }}
-                        >
-                          <span style={{ width: 3, height: 3, borderRadius: '50%', background: MAROON, flexShrink: 0 }} />
-                          {s}
-                        </div>
-                      ))}
+                      {b.specs.split('\n').map((line, li) =>
+                        line.trim() === '' ? (
+                          <div key={li} style={{ height: 8 }} />
+                        ) : (
+                          line.split(' · ').map((s, si) => (
+                            <div
+                              key={`${li}-${si}`}
+                              style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-mono)', fontSize: 12.5, color: INK, marginBottom: 6 }}
+                            >
+                              <span style={{ width: 3, height: 3, borderRadius: '50%', background: MAROON, flexShrink: 0 }} />
+                              {s}
+                            </div>
+                          ))
+                        )
+                      )}
                     </div>
                   )}
                   {b.priceEur != null && (
