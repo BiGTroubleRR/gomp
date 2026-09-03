@@ -8,6 +8,7 @@ import { useSite } from '@/contexts/SiteContext';
 import { useIsMobile, useMediaQuery } from '@/lib/use-media-query';
 import DeviceViewToggle from '@/components/DeviceViewToggle';
 import { GBB_GREEN } from '@/lib/gbb-theme';
+import { pick } from '@/lib/i18n';
 
 const INK = '#1C1C1A';
 const MUTED = '#7A7469';
@@ -15,14 +16,14 @@ const MAROON = '#6E1423';
 const GOLD = '#C4A35A';
 const BG = '#F5F0E6';
 
-const LINKS: { href: string; en: string; sk: string }[] = [
-  { href: '/', en: 'Home', sk: 'Domov' },
-  { href: '/shop', en: 'Shop', sk: 'Obchod' },
-  { href: '/build', en: 'Build', sk: 'Zostaviť' },
-  { href: '/gbb', en: 'Budget Builds', sk: 'Budget Builds' },
-  { href: '/customer-builds', en: 'Customer GOMPs', sk: 'Zákaznícke GOMPy' },
-  { href: '/undervolting', en: 'Why undervolt?', sk: 'Prečo undervolt?' },
-  { href: '/about', en: 'About', sk: 'O nás' },
+const LINKS: { href: string; en: string; sk: string; cz: string }[] = [
+  { href: '/', en: 'Home', sk: 'Domov', cz: 'Domů' },
+  { href: '/shop', en: 'Shop', sk: 'Obchod', cz: 'Obchod' },
+  { href: '/build', en: 'Build', sk: 'Zostaviť', cz: 'Sestavit' },
+  { href: '/customer-builds', en: 'Customer GOMPs', sk: 'Zákaznícke GOMPy', cz: 'Zákaznické GOMPy' },
+  { href: '/undervolting', en: 'Why undervolt?', sk: 'Prečo undervolt?', cz: 'Proč undervolt?' },
+  { href: '/about', en: 'About', sk: 'O nás', cz: 'O nás' },
+  { href: '/gbb', en: 'Budget Builds', sk: 'Budget Builds', cz: 'Budget Builds' },
 ];
 
 function LangCurrencyRow({ stacked }: { stacked?: boolean }) {
@@ -35,6 +36,13 @@ function LangCurrencyRow({ stacked }: { stacked?: boolean }) {
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)', fontSize: stacked ? 16 : 12, color: lang === 'sk' ? MAROON : MUTED, fontWeight: lang === 'sk' ? 600 : 400 }}
         >
           SK
+        </button>
+        <span style={{ color: 'rgba(28,28,26,0.25)', fontSize: stacked ? 16 : 12 }}>/</span>
+        <button
+          onClick={() => setLang('cz')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'var(--font-sans)', fontSize: stacked ? 16 : 12, color: lang === 'cz' ? MAROON : MUTED, fontWeight: lang === 'cz' ? 600 : 400 }}
+        >
+          CZ
         </button>
         <span style={{ color: 'rgba(28,28,26,0.25)', fontSize: stacked ? 16 : 12 }}>/</span>
         <button
@@ -87,7 +95,7 @@ function ClerkAuthControls({ stacked }: { stacked?: boolean }) {
                 color: MUTED,
               }}
             >
-              {lang === 'sk' ? 'Prihlásiť sa' : 'Sign In'}
+              {pick(lang, { en: 'Sign In', sk: 'Prihlásiť sa', cz: 'Přihlásit se' })}
             </button>
           </SignInButton>
           <SignUpButton mode="modal">
@@ -104,7 +112,7 @@ function ClerkAuthControls({ stacked }: { stacked?: boolean }) {
                 fontWeight: 500,
               }}
             >
-              {lang === 'sk' ? 'Zaregistrovať sa' : 'Sign Up'}
+              {pick(lang, { en: 'Sign Up', sk: 'Zaregistrovať sa', cz: 'Zaregistrovat se' })}
             </button>
           </SignUpButton>
         </div>
@@ -116,52 +124,26 @@ function ClerkAuthControls({ stacked }: { stacked?: boolean }) {
   );
 }
 
-// The brand mark doubles as a switcher between the main store and the Gomp Budget Builds
-// (secondhand) section: it shows whichever section you're currently in, and hovering flips
-// the OTHER one down from above into that exact same spot — like a departure-board flap —
-// while the current label flips away below. Leaving reverses it back. Mobile has no hover,
-// so its full-screen menu keeps a plain "Budget Builds" entry in LINKS as the real way in
-// there; this is a desktop-only shortcut layered on top of that.
-function LogoSwitcher({ onNavigate }: { onNavigate?: () => void }) {
-  const pathname = usePathname();
-  const isGbb = pathname?.startsWith('/gbb') ?? false;
-
-  const primaryLabel = isGbb ? 'GBB' : 'GOMP';
-  const primaryHref = isGbb ? '/gbb' : '/';
-  const primaryColor = isGbb ? GBB_GREEN : GOLD;
-
-  const altLabel = isGbb ? 'GOMP' : 'GBB';
-  const altHref = isGbb ? '/' : '/gbb';
-  const altColor = isGbb ? GOLD : GBB_GREEN;
-
-  const faceStyle = {
-    fontFamily: 'var(--font-serif)',
-    fontStyle: 'italic' as const,
-    fontWeight: 600,
-    letterSpacing: 1.5,
-    fontSize: 17,
-    whiteSpace: 'nowrap' as const,
-  };
-
+// Plain static brand mark — just a link home, no Budget Builds shortcut (that lives in
+// LINKS now, like every other section).
+function Logo({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <div className="gomp-logo-switch" style={{ position: 'relative', perspective: 320 }}>
-      <TransitionLink
-        href={primaryHref}
-        onClick={onNavigate}
-        className="gomp-logo-face gomp-logo-face-primary"
-        style={{ ...faceStyle, display: 'block', color: primaryColor }}
-      >
-        {primaryLabel}
-      </TransitionLink>
-      <TransitionLink
-        href={altHref}
-        onClick={onNavigate}
-        className="gomp-logo-face gomp-logo-face-alt"
-        style={{ ...faceStyle, color: altColor }}
-      >
-        {altLabel}
-      </TransitionLink>
-    </div>
+    <TransitionLink
+      href="/"
+      onClick={onNavigate}
+      style={{
+        fontFamily: 'var(--font-serif)',
+        fontStyle: 'italic',
+        fontWeight: 600,
+        letterSpacing: 1.5,
+        fontSize: 17,
+        whiteSpace: 'nowrap',
+        display: 'block',
+        color: GOLD,
+      }}
+    >
+      GOMP
+    </TransitionLink>
   );
 }
 
@@ -182,6 +164,7 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
   const navTooNarrow = useMediaQuery('(max-width: 1180px)');
   const showMobileNav = isMobile || navTooNarrow;
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hoveredHref, setHoveredHref] = useState<string | null>(null);
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -206,7 +189,7 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
             padding: '0 20px',
           }}
         >
-          <LogoSwitcher onNavigate={closeMenu} />
+          <Logo onNavigate={closeMenu} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <DeviceViewToggle />
             <button
@@ -238,14 +221,21 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
               {LINKS.map((l) => {
                 const active = l.href === pathname;
+                const isGbbHover = l.href === '/gbb' && hoveredHref === '/gbb';
                 return (
                   <TransitionLink
                     key={l.href}
                     href={l.href}
                     onClick={closeMenu}
-                    style={{ fontFamily: 'var(--font-serif)', fontSize: 28, color: active ? MAROON : INK, fontStyle: active ? 'italic' : 'normal' }}
+                    onMouseEnter={() => setHoveredHref(l.href)}
+                    onMouseLeave={() => setHoveredHref(null)}
+                    style={{
+                      fontFamily: 'var(--font-serif)', fontSize: 28,
+                      color: isGbbHover ? GBB_GREEN : active ? MAROON : INK,
+                      fontStyle: active ? 'italic' : 'normal',
+                    }}
                   >
-                    {lang === 'sk' ? l.sk : l.en}
+                    {pick(lang, l)}
                   </TransitionLink>
                 );
               })}
@@ -254,7 +244,7 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
                 onClick={closeMenu}
                 style={{ fontFamily: 'var(--font-serif)', fontSize: 28, color: pathname === '/account' ? MAROON : INK, fontStyle: pathname === '/account' ? 'italic' : 'normal' }}
               >
-                {lang === 'sk' ? 'Účet' : 'Account'}
+                {pick(lang, { en: 'Account', sk: 'Účet', cz: 'Účet' })}
               </TransitionLink>
             </div>
             <div style={{ marginTop: 40, paddingTop: 28, borderTop: '0.5px solid rgba(28,28,26,0.14)' }}>
@@ -294,17 +284,24 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 48 }}>
-        <LogoSwitcher />
+        <Logo />
         <div style={{ display: 'flex', alignItems: 'center', gap: 36 }}>
           {LINKS.map((l) => {
             const active = l.href === pathname;
+            const isGbbHover = l.href === '/gbb' && hoveredHref === '/gbb';
             return (
               <TransitionLink
                 key={l.href}
                 href={l.href}
-                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: active ? INK : MUTED, fontWeight: active ? 700 : 400 }}
+                onMouseEnter={() => setHoveredHref(l.href)}
+                onMouseLeave={() => setHoveredHref(null)}
+                style={{
+                  fontFamily: 'var(--font-sans)', fontSize: 13,
+                  color: isGbbHover ? GBB_GREEN : active ? INK : MUTED,
+                  fontWeight: active ? 700 : 400,
+                }}
               >
-                {lang === 'sk' ? l.sk : l.en}
+                {pick(lang, l)}
               </TransitionLink>
             );
           })}
@@ -320,7 +317,7 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
             fontWeight: pathname === '/account' ? 700 : 400,
           }}
         >
-          {lang === 'sk' ? 'Účet' : 'Account'}
+          {pick(lang, { en: 'Account', sk: 'Účet', cz: 'Účet' })}
         </TransitionLink>
         <ClerkAuthControls />
         <LangCurrencyRow />

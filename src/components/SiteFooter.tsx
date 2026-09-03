@@ -66,6 +66,32 @@ const T = {
     data_attribution_license: 'ODC Attribution License',
     data_attribution_post: '.',
   },
+  cz: {
+    blurb: 'Ručně stavěné herní počítače přesně podle vašich požadavků. Stavíme je hráči pro hráče.',
+    products: 'Produkty',
+    prebuilt: 'Hotové sestavy',
+    custom: 'Vlastní konfigurace',
+    accessories: 'Příslušenství',
+    company: 'Společnost',
+    aboutus: 'O nás',
+    careers: 'Kariéra',
+    support: 'Podpora',
+    faq: 'FAQ',
+    warranty: 'Záruka',
+    contact: 'Kontakt',
+    legal: 'Právní',
+    terms: 'Obchodní podmínky',
+    privacy: 'Ochrana osobních údajů',
+    rights: 'Všechna práva vyhrazena.',
+    madein: 'Ručně vyrobeno v Praze, ČR',
+    disclaimer:
+      'Ceny slouží pouze pro orientaci, přepočtené přibližným tržním kurzem (1 € ≈ 24,30 Kč, referenční červenec 2026). Konečná cena bude potvrzena při objednávce.',
+    data_attribution_pre: 'Rozměry a parametry komponent obsahují informace z databáze ',
+    data_attribution_name: 'BuildCores OpenDB',
+    data_attribution_mid: ', dostupné pod licencí ',
+    data_attribution_license: 'ODC Attribution License',
+    data_attribution_post: '.',
+  },
 } as const;
 
 function Col({ title, children }: { title: string; children: ReactNode }) {

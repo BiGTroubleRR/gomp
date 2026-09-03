@@ -15,12 +15,16 @@ export default function TransitionLink({
   className,
   style,
   onClick,
+  onMouseEnter,
+  onMouseLeave,
 }: {
   href: string;
   children: ReactNode;
   className?: string;
   style?: CSSProperties;
   onClick?: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -36,7 +40,15 @@ export default function TransitionLink({
   }
 
   return (
-    <Link href={href} className={className} style={style} data-gomp-nav="1" onClick={handleClick}>
+    <Link
+      href={href}
+      className={className}
+      style={style}
+      data-gomp-nav="1"
+      onClick={handleClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       {children}
     </Link>
   );

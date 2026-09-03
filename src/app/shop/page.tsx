@@ -7,6 +7,7 @@ import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
 import { useIsMobile } from '@/lib/use-media-query';
+import { pick } from '@/lib/i18n';
 
 type FilterId = 'all' | 'flagship' | 'performance' | 'midrange' | 'entry';
 
@@ -18,6 +19,7 @@ type Product = {
   cat: Exclude<FilterId, 'all'>;
   tagline_en: string;
   tagline_sk: string;
+  tagline_cz: string;
   gpu: string;
   cpu: string;
   ram: string;
@@ -34,6 +36,7 @@ const PRODUCTS: Product[] = [
     cat: 'flagship',
     tagline_en: 'Ultimate 4K gaming & creation',
     tagline_sk: 'Špičkové 4K hranie a tvorba',
+    tagline_cz: 'Špičkové 4K hraní a tvorba',
     gpu: 'RTX 5090 FE',
     cpu: 'Ryzen 9 9950X',
     ram: '32GB DDR5 6400',
@@ -48,6 +51,7 @@ const PRODUCTS: Product[] = [
     cat: 'performance',
     tagline_en: 'Unstoppable 4K all-rounder',
     tagline_sk: 'Neporaziteľný univerzál pre 4K',
+    tagline_cz: 'Neporazitelný univerzál pro 4K',
     gpu: 'RTX 4090',
     cpu: 'Core i9-14900K',
     ram: '32GB DDR5 5600',
@@ -62,6 +66,7 @@ const PRODUCTS: Product[] = [
     cat: 'performance',
     tagline_en: 'Dominant 1440p performer',
     tagline_sk: 'Dominantný výkon v 1440p',
+    tagline_cz: 'Dominantní výkon v 1440p',
     gpu: 'RTX 4080 Super',
     cpu: 'Core i9-14900KS',
     ram: '32GB DDR5 5200',
@@ -76,6 +81,7 @@ const PRODUCTS: Product[] = [
     cat: 'midrange',
     tagline_en: 'Smooth 1440p at great value',
     tagline_sk: 'Plynulé 1440p za skvelú cenu',
+    tagline_cz: 'Plynulé 1440p za skvělou cenu',
     gpu: 'RTX 4070 Ti Super',
     cpu: 'Core i7-14700K',
     ram: '32GB DDR4 3600',
@@ -90,6 +96,7 @@ const PRODUCTS: Product[] = [
     cat: 'midrange',
     tagline_en: '1080p powerhouse, real value',
     tagline_sk: 'Silák na 1080p za rozumnú cenu',
+    tagline_cz: 'Silák na 1080p za rozumnou cenu',
     gpu: 'RTX 4070 Super',
     cpu: 'Core i5-14600K',
     ram: '16GB DDR5 5200',
@@ -104,6 +111,7 @@ const PRODUCTS: Product[] = [
     cat: 'entry',
     tagline_en: 'Entry-level gaming excellence',
     tagline_sk: 'Špička v základnej triede',
+    tagline_cz: 'Špička v základní třídě',
     gpu: 'RTX 4070',
     cpu: 'Core i5-14600K',
     ram: '16GB DDR4 3600',
@@ -176,6 +184,43 @@ const TRANSLATIONS = {
     verify_passmark: 'Overiť ↗',
     vat_included: 'Cena vrátane DPH',
     showing: (n: number) => `Zobrazených ${n} konfigurácií`,
+  },
+  cz: {
+    nav_home: 'Domů',
+    nav_shop: 'Obchod',
+    nav_build: 'Sestavit',
+    nav_about: 'O nás',
+    nav_account: 'Účet',
+    nav_startbuilding: 'Začít stavět →',
+    eyebrow: 'Hotové sestavy',
+    title: 'Vyberte si sestavu.',
+    configure_arrow: 'Konfigurovat →',
+    need_specific: 'Potřebujete něco konkrétního?',
+    need_specific_desc:
+      'Použijte 3D konfigurátor a nastavte každou komponentu přesně podle svých požadavků. Sledujte, jak se sestava skládá v reálném čase.',
+    open_3d: 'Otevřít 3D konfigurátor →',
+    footer_terms: 'Obchodní podmínky',
+    footer_privacy: 'Ochrana osobních údajů',
+    footer_disclaimer:
+      'Ceny slouží pouze pro orientaci, přepočítané přibližným tržním kurzem (1 € ≈ 24,30 Kč, referenční červenec 2026). Konečná cena bude potvrzena při objednávce.',
+    filter_all: 'Všechny',
+    filter_flagship: 'Vlajkové',
+    filter_performance: 'Výkonné',
+    filter_midrange: 'Střední třída',
+    filter_entry: 'Základní',
+    tier_flagship: 'Vlajková loď',
+    tier_performance: 'Výkonnostní',
+    tier_midrange: 'Střední třída',
+    tier_entry: 'Základní',
+    verify_passmark: 'Ověřit ↗',
+    vat_included: 'Cena včetně DPH',
+    showing: (n: number) => {
+      const mod10 = n % 10;
+      const mod100 = n % 100;
+      if (mod10 === 1 && mod100 !== 11) return `Zobrazena ${n} konfigurace`;
+      if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return `Zobrazeny ${n} konfigurace`;
+      return `Zobrazeno ${n} konfigurací`;
+    },
   },
 } as const;
 
@@ -417,7 +462,7 @@ export default function Shop() {
                   {prod.name}
                 </div>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', marginBottom: 28, fontWeight: 300 }}>
-                  {lang === 'sk' ? prod.tagline_sk : prod.tagline_en}
+                  {pick(lang, { en: prod.tagline_en, sk: prod.tagline_sk, cz: prod.tagline_cz })}
                 </div>
                 <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.1)', flex: 1, marginBottom: 24 }}>
                   <SpecRow label="GPU" value={prod.gpu} passmarkName={prod.gpu} verifyLabel={t.verify_passmark} />

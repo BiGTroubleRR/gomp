@@ -46,12 +46,28 @@ const T = {
     cta: 'Začať stavať →',
     back_home: '← Späť na hlavnú stránku',
   },
+  cz: {
+    eyebrow: 'GOMP UNDERVOLTING',
+    title: 'Tišší. Chladnější. Stejně rychlé.',
+    intro:
+      'Undervolting snižuje napětí přiváděné do CPU nebo GPU, přičemž komponenta si zachová své původní takty. Méně napětí znamená méně tepla, a tedy i méně práce pro ventilátory — bez ztráty jediného snímku výkonu.',
+    point1_title: 'Nižší teploty',
+    point1_body: 'Méně napětí znamená méně tepla pod zátěží, takže komponenty zůstávají chladnější i při dlouhém hraní.',
+    point2_title: 'Tišší provoz',
+    point2_body: 'Chladnější komponenty potřebují nižší otáčky ventilátorů, takže chlazení i skříňové ventilátory mohou zůstat tiché.',
+    point3_title: 'Nižší spotřeba',
+    point3_body: 'Nižší odběr ze zásuvky znamená nižší účet za elektřinu a méně tepla vyzařovaného do místnosti.',
+    closing:
+      'Každý CPU a GPU podvoltujeme všude, kde to konkrétní čip a platforma umožňují, a výsledek ověřujeme během stejného 24hodinového zátěžového testu, jakým prochází každá sestava GOMP — takže tohle všechno získáte bez jakéhokoli kompromisu ve výkonu.',
+    cta: 'Začít stavět →',
+    back_home: '← Zpět na hlavní stránku',
+  },
 } as const;
 
 export default function UndervoltingPage() {
   const { lang } = useSite();
   const isMobile = useIsMobile();
-  const t = T[lang === 'sk' ? 'sk' : 'en'];
+  const t = T[lang] ?? T.en;
 
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>

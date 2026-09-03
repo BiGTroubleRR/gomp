@@ -1,4 +1,4 @@
-export type Lang = 'en' | 'sk';
+export type Lang = 'en' | 'sk' | 'cz';
 export type Currency = 'eur' | 'czk';
 
 const LANG_KEY = 'gomp_lang';

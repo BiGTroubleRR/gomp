@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       budget_eur: budgetEur,
       use_case: (body.useCase ?? '').trim(),
       notes: (body.notes ?? '').trim(),
-      lang: body.lang === 'sk' ? 'sk' : 'en',
+      lang: body.lang === 'sk' ? 'sk' : body.lang === 'cz' ? 'cz' : 'en',
     })
     .select('id')
     .single();

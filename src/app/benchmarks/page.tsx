@@ -109,9 +109,10 @@ const FPS_MODEL: Record<string, { base: number; gpuW: number; cpuW: number }> = 
   er: { base: 90, gpuW: 0.7, cpuW: 0.3 },
 };
 
-const GROUP_LABELS: Record<'en' | 'sk', Record<Group, string>> = {
+const GROUP_LABELS: Record<'en' | 'sk' | 'cz', Record<Group, string>> = {
   en: { fps: 'FPS', aaa: 'Release', synthetic: 'Synthetic' },
   sk: { fps: 'FPS', aaa: 'Titul', synthetic: 'Syntetický' },
+  cz: { fps: 'FPS', aaa: 'Titul', synthetic: 'Syntetický' },
 };
 
 const SUBTITLES_SK: Record<string, string> = {
@@ -132,6 +133,27 @@ const SUBTITLES_SK: Record<string, string> = {
   sn: 'Extrémny RT stres test',
   cb24: 'Render CPU + GPU',
   bmk: 'Sada renderovacieho enginu',
+  pm10: 'Produktivita systému',
+};
+
+const SUBTITLES_CZ: Record<string, string> = {
+  cs2: 'Kompetitivní střílečka',
+  val: 'Taktická střílečka',
+  wz: 'Battle Royale',
+  apex: 'Battle Royale',
+  ow2: 'Hrdinská střílečka',
+  fn: 'Battle Royale',
+  cp77: 'Open-World RPG',
+  bmw: 'Akční RPG',
+  aw2: 'Survival horor',
+  bg3: 'Tahové RPG',
+  hl: 'Open-World RPG',
+  er: 'Akční RPG',
+  ts: 'DirectX 12 GPU test',
+  sw: 'DX12 Ultimate Ray Tracing',
+  sn: 'Extrémní RT stres test',
+  cb24: 'Render CPU + GPU',
+  bmk: 'Sada renderovacího enginu',
   pm10: 'Produktivita systému',
 };
 
@@ -223,6 +245,49 @@ const translations = {
     fps_from_build: (g: string, c: string) => `Odhad na základe vašej zostavy — ${g} + ${c}.`,
     fps_pick_gpu: (c: string) => `Používa sa ${c} z vašej zostavy — vyberte GPU nižšie pre odhad FPS.`,
     fps_pick_cpu: (g: string) => `Používa sa ${g} z vašej zostavy — vyberte CPU nižšie pre odhad FPS.`,
+  },
+  cz: {
+    nav_home: 'Domů',
+    nav_shop: 'Obchod',
+    nav_build: 'Sestavit',
+    nav_about: 'O nás',
+    nav_account: 'Účet',
+    your_build: 'Vaše sestava',
+    benchmark_suite: 'Sada testů',
+    selected_word: 'vybraných',
+    no_selection_msg:
+      'Zatím nemáte vybrané žádné testy — vyberte pár vpravo, nebo přeskočte a spustíme naši výchozí sadu.',
+    continue_checkout: 'Pokračovat k pokladně →',
+    skip_benchmarks: 'Přeskočit testy',
+    back_to_build: '← Zpět na sestavu',
+    step_build: 'Sestava',
+    step_benchmarks: 'Testy',
+    step_checkout: 'Pokladna',
+    choose_title_line1: 'Vyberte si',
+    choose_title_em: 'testy.',
+    choose_desc:
+      'Každá sestava GOMP se dodává s tištěným listem výkonu. Vyberte hry a testy, které na něm chcete mít — spustíme je na vašem přesném stroji ještě před odesláním.',
+    select_recommended: 'Vybrat doporučené',
+    clear_all: 'Zrušit výběr',
+    section_fps_title: 'Ve hře · Kompetitivní a FPS',
+    section_fps_desc: 'Tituly, které žijí a umírají s počtem snímků.',
+    section_aaa_title: 'Ve hře · Populární novinky',
+    section_aaa_desc: 'Náročnější světy pro přesnější obraz reálného výkonu.',
+    section_synth_title: 'Syntetické testy',
+    section_synth_desc: 'Průmyslové standardy, které můžete porovnat s jakýmkoli strojem.',
+    recommended_badge: 'Doporučené',
+    preparing_checkout: 'Připravuje se pokladna',
+    custom_pc_build: 'Vlastní sestava PC',
+    no_build_found: 'Sestava nenalezena',
+    configure_first: 'Nejprve nakonfigurujte sestavu, nebo pokračujte se základním strojem.',
+    components_word: 'komponent',
+    no_test_time: 'Zatím žádný čas testů',
+    fps_source_title: 'Odhadované FPS (1440p)',
+    fps_need_both: 'Nejprve nakonfigurujte sestavu, nebo vyberte GPU a CPU níže pro odhad FPS.',
+    total_test_time: (n: number) => `~${n} min celkový čas testů`,
+    fps_from_build: (g: string, c: string) => `Odhad na základě vaší sestavy — ${g} + ${c}.`,
+    fps_pick_gpu: (c: string) => `Používá se ${c} z vaší sestavy — vyberte GPU níže pro odhad FPS.`,
+    fps_pick_cpu: (g: string) => `Používá se ${g} z vaší sestavy — vyberte CPU níže pro odhad FPS.`,
   },
 } as const;
 
@@ -478,7 +543,12 @@ export default function BenchmarksPage() {
   function renderCard(b: Benchmark) {
     const isSel = !!selected[b.id];
     const fps = estimateFps(b.id);
-    const subtitle = lang === 'sk' ? SUBTITLES_SK[b.id] || b.subtitleEn : b.subtitleEn;
+    const subtitle =
+      lang === 'sk'
+        ? SUBTITLES_SK[b.id] || b.subtitleEn
+        : lang === 'cz'
+          ? SUBTITLES_CZ[b.id] || b.subtitleEn
+          : b.subtitleEn;
     const tierColors = TIER_COLORS[b.tier];
     const borderColor = isSel ? 'rgba(110,20,35,0.35)' : 'rgba(28,28,26,0.12)';
     const bgColor = isSel ? 'rgba(110,20,35,0.05)' : PANEL_BG;

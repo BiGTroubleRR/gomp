@@ -7,6 +7,7 @@ import Reveal from '@/components/Reveal';
 import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import { useIsMobile } from '@/lib/use-media-query';
+import { pick } from '@/lib/i18n';
 
 const translations = {
   en: {
@@ -79,6 +80,41 @@ const translations = {
     watermark_line2: 'svoju',
     watermark_line3: 'Legendu.',
   },
+  cz: {
+    nav_home: 'Domů',
+    nav_shop: 'Obchod',
+    nav_build: 'Sestavit',
+    nav_about: 'O nás',
+    nav_account: 'Účet',
+    nav_startbuilding: 'Začít stavět →',
+    about_gomp: 'O společnosti GOMP',
+    hero_line1: 'Stavějí ho',
+    hero_line2: 'hráči. Pro',
+    hero_line3: 'hráče.',
+    the_origin: 'Náš původ',
+    origin_p1:
+      'Každý hotový počítač, který jsme si kdy koupili, měl skryté kompromisy, které se projevily až ve chvíli, kdy na tom nejvíc záleželo... nedbale nanesená teplovodivá pasta, sériové chladiče na hranici limitů, zdroje dimenzované na horší dny.',
+    origin_p2:
+      'Proto jsme v roce 2019, tři kamarádi z Prahy, přestali nakupovat a začali stavět. Dnes má GOMP na kontě přes 12 000 sestav. Každou z nich před expedicí 24 hodin zátěžově testujeme.',
+    founded: 'Založeno',
+    builds_shipped: 'Expedovaných sestav',
+    hq_workshop: 'Sídlo a dílna',
+    pull_quote: '„Počítače nestavíme na cenu. Stavíme je podle standardu.“',
+    quote_author: 'Jakub G. — zakladatel',
+    origin_p3:
+      'Tento standard znamená tištěný protokol o benchmarcích u každé sestavy. Znamená důkladné 24hodinové zátěžové testování. Znamená použití takového zdroje, jaký bychom dali do vlastního počítače, ne levnějšího kusu jen proto, že se tím zlepší marže.',
+    what_we_stand: 'Za čím si stojíme',
+    our_values: 'Naše hodnoty',
+    who_builds: 'Kdo staví váš počítač',
+    the_team: 'Tým',
+    ready_title: 'Připraveni postavit si vlastní?',
+    ready_desc:
+      'Sestavte si vysněný počítač po jednotlivých dílech. Každý stroj GOMP je ručně sestavený, otestovaný a expedovaný do sedmi dnů.',
+    browse_builds: 'Procházet sestavy',
+    watermark_line1: 'Postav si',
+    watermark_line2: 'svou',
+    watermark_line3: 'Legendu.',
+  },
 } as const;
 
 const values = {
@@ -116,11 +152,28 @@ const values = {
       desc: 'Keď sa niečo pokazí — a občas sa to stane — opravíme to. Bez zbytočných prieťahov, bez ukazovania na výrobcov komponentov. GOMP si za výsledok stojí vždy.',
     },
   ],
+  cz: [
+    {
+      num: '01',
+      title: 'Výkon na prvním místě',
+      desc: 'Každý výběr komponenty, každé tepelné řešení, každý kabel je veden s jedním cílem: maximální trvalý výkon. Chlazení ani napájení nikdy nekompromitujeme.',
+    },
+    {
+      num: '02',
+      title: 'Žádné skryté kompromisy',
+      desc: 'Levné zdroje. Sotva dostačující chladiče. Proprietární konektory. Známe každý trik v knize — a nepoužíváme ani jeden z nich. Každá specifikace je přesně taková, jakou uvádíme.',
+    },
+    {
+      num: '03',
+      title: 'Převzatá odpovědnost',
+      desc: 'Když se něco pokazí — a občas se to stane — opravíme to. Bez zbytečných průtahů, bez ukazování na výrobce komponent. GOMP si za výsledek stojí vždy.',
+    },
+  ],
 } as const;
 
 const team = [
-  { initial: 'J', name: 'Jakub G.', role_en: 'Founder', role_sk: 'Zakladateľ', opacity: 1 },
-  { initial: 'M', name: 'Max G.', role_en: 'Second in Command', role_sk: 'Druhý v poradí', opacity: 1 },
+  { initial: 'J', name: 'Jakub G.', role_en: 'Founder', role_sk: 'Zakladateľ', role_cz: 'Zakladatel', opacity: 1 },
+  { initial: 'M', name: 'Max G.', role_en: 'Second in Command', role_sk: 'Druhý v poradí', role_cz: 'Druhý v pořadí', opacity: 1 },
 ] as const;
 
 const MAROON = '#6E1423';
@@ -405,7 +458,7 @@ export default function AboutPage() {
                 </div>
                 <div style={{ ...sans, fontSize: 15, fontWeight: 600, color: INK, marginBottom: 4 }}>{m.name}</div>
                 <div style={{ ...sans, fontSize: 12, color: MUTED, fontWeight: 300 }}>
-                  {lang === 'sk' ? m.role_sk : m.role_en}
+                  {pick(lang, { en: m.role_en, sk: m.role_sk, cz: m.role_cz })}
                 </div>
               </Reveal>
             ))}

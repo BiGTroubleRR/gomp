@@ -10,6 +10,7 @@ import SiteNav from '@/components/SiteNav';
 import { readJSON, type Currency, type Lang } from '@/lib/gomp-storage';
 import { useIsMobile } from '@/lib/use-media-query';
 import { submitCheckoutIntent, type PaymentMethod } from '@/lib/supabase/checkout-intents';
+import { pick } from '@/lib/i18n';
 
 type ShippingId = 'standard' | 'express' | 'overnight';
 
@@ -57,10 +58,10 @@ const EMPTY_FORM: CheckoutForm = {
   promo: '',
 };
 
-const SHIPPING_OPTIONS: { id: ShippingId; name_en: string; name_sk: string; eta_en: string; eta_sk: string; priceEur: number }[] = [
-  { id: 'standard', name_en: 'Standard Shipping', name_sk: 'Štandardná doprava', eta_en: '8–12 business days', eta_sk: '8 – 12 pracovných dní', priceEur: 0 },
-  { id: 'express', name_en: 'Express Shipping', name_sk: 'Expresná doprava', eta_en: '3–5 business days', eta_sk: '3 – 5 pracovných dní', priceEur: 43 },
-  { id: 'overnight', name_en: 'Overnight', name_sk: 'Cez noc', eta_en: 'Next business day', eta_sk: 'Nasledujúci pracovný deň', priceEur: 112 },
+const SHIPPING_OPTIONS: { id: ShippingId; name_en: string; name_sk: string; name_cz: string; eta_en: string; eta_sk: string; eta_cz: string; priceEur: number }[] = [
+  { id: 'standard', name_en: 'Standard Shipping', name_sk: 'Štandardná doprava', name_cz: 'Standardní doprava', eta_en: '8–12 business days', eta_sk: '8 – 12 pracovných dní', eta_cz: '8–12 pracovních dnů', priceEur: 0 },
+  { id: 'express', name_en: 'Express Shipping', name_sk: 'Expresná doprava', name_cz: 'Expresní doprava', eta_en: '3–5 business days', eta_sk: '3 – 5 pracovných dní', eta_cz: '3–5 pracovních dnů', priceEur: 43 },
+  { id: 'overnight', name_en: 'Overnight', name_sk: 'Cez noc', name_cz: 'Přes noc', eta_en: 'Next business day', eta_sk: 'Nasledujúci pracovný deň', eta_cz: 'Následující pracovní den', priceEur: 112 },
 ];
 
 const ASSEMBLY_FEE_EUR = 130;
@@ -220,6 +221,72 @@ const TRANSLATIONS = {
     build_another: '← Zostaviť ďalšiu',
     go_home: 'Prejsť na domovskú stránku',
     itemCount: (n: number) => `${n} komponentov · zostavené a otestované`,
+  },
+  cz: {
+    nav_home: 'Domů',
+    nav_shop: 'Obchod',
+    nav_build: 'Sestavit',
+    nav_about: 'O nás',
+    nav_account: 'Účet',
+    order_summary: 'Souhrn objednávky',
+    custom_pc_build: 'Vlastní sestava PC',
+    shipping: 'Doprava',
+    assembly_testing: 'Montáž a testování',
+    total: 'Celkem',
+    estimated_delivery: 'Předpokládané doručení',
+    price_disclaimer:
+      'Ceny jsou uvedeny v EUR, přepočet na CZK přibližným tržním kurzem (1 € ≈ 24,30 Kč, referenční červenec 2026). Slouží pouze pro orientaci — konečná cena je potvrzena při pokladně.',
+    shipping_details: 'Údaje o doručení',
+    shipping_details_desc: 'Kam máme doručit vaši sestavu?',
+    saved_addresses: 'Uložené adresy',
+    first_name: 'Jméno',
+    last_name: 'Příjmení',
+    email_address: 'E-mailová adresa',
+    street_address: 'Ulice a číslo',
+    city: 'Město',
+    state_region: 'Kraj / Region',
+    zip_postal: 'PSČ',
+    shipping_method: 'Způsob dopravy',
+    phone_number: 'Telefon',
+    continue_payment: 'Pokračovat k platbě →',
+    payment: 'Platba',
+    payment_desc: 'Vyberte způsob platby.',
+    submit_note:
+      'Platba zatím není aktivní, takže se teď nic nestrhne. Tým GOMP vás bude kontaktovat, aby potvrdil dostupnost a dokončil objednávku — konečná cena se může lišit.',
+    method_card: 'Karta',
+    method_card_desc: 'Visa · Mastercard',
+    method_google: 'Google Pay',
+    method_google_desc: 'Platba uloženým účtem Google',
+    method_apple: 'Apple Pay',
+    method_apple_desc: 'Platba pomocí Touch ID nebo Face ID',
+    contact_details: 'Kontakt',
+    promo_code: 'Slevový kód',
+    optional: 'nepovinné',
+    apply: 'Použít',
+    promo_success: 'GOMP2026 — uplatněna sleva 5 %',
+    consent_label: 'Můžete mi napsat ohledně této objednávky a až GOMP začne prodávat.',
+    consent_required: 'Potvrďte prosím, že vás můžeme kontaktovat.',
+    email_required: 'Zadejte prosím e-mail, abychom vás mohli kontaktovat.',
+    back: '← Zpět',
+    processing: 'Odesílá se…',
+    submit_request: 'Odeslat žádost  ·  ',
+    request_received: 'Žádost přijata',
+    thanks_line1: 'Dále se',
+    thanks_line2: 'postaráme my.',
+    we_will_contact: 'Tým GOMP se ozve na',
+    outcome_note:
+      'Platby kartou a peněženkou na GOMP zatím nejsou aktivní, takže nic nebylo strženo. Vaše konfigurace je uložena a tým GOMP vás bude kontaktovat, aby potvrdil dostupnost a dokončil objednávku. Konečná cena se může lišit od uvedeného odhadu podle cen a dostupnosti komponent v době montáže.',
+    reference: 'Reference',
+    your_build: 'Vaše sestava',
+    delivering_to: 'Pro doručení na',
+    estimated_arrival: 'Orientační doba sestavení',
+    would_pay_with: 'Preferovaná platba',
+    build_another: '← Sestavit další',
+    go_home: 'Přejít na domovskou stránku',
+    itemCount: (n: number) => {
+      const word = n === 1 ? 'komponenta' : n >= 2 && n <= 4 ? 'komponenty' : 'komponent';
+      return `${n} ${word} · sestaveno a otestováno`;
+    },
   },
 };
 
@@ -391,10 +458,14 @@ export default function CheckoutPage() {
     const days = shipping === 'overnight' ? 1 : shipping === 'express' ? 5 : 12;
     const d = new Date();
     d.setDate(d.getDate() + days + 2);
-    return d.toLocaleDateString(lang === 'sk' ? 'sk-SK' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    return d.toLocaleDateString(pick(lang, { en: 'en-US', sk: 'sk-SK', cz: 'cs-CZ' }), { month: 'long', day: 'numeric', year: 'numeric' });
   }, [shipping, lang]);
 
-  const stepLabels = lang === 'sk' ? ['Doprava', 'Platba', 'Potvrdenie'] : ['Shipping', 'Payment', 'Confirm'];
+  const stepLabels = pick(lang, {
+    en: ['Shipping', 'Payment', 'Confirm'],
+    sk: ['Doprava', 'Platba', 'Potvrdenie'],
+    cz: ['Doprava', 'Platba', 'Potvrzení'],
+  });
 
   const PAYMENT_METHODS: { id: PaymentMethod; label: string; desc: string }[] = [
     { id: 'card', label: t.method_card, desc: t.method_card_desc },
@@ -514,7 +585,7 @@ export default function CheckoutPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ ...sans, fontSize: 12, color: MUTED }}>{t.shipping}</span>
             <span style={{ ...mono, fontSize: 12, color: MUTED }}>
-              {shippingCostEur === 0 ? (lang === 'sk' ? 'Zadarmo' : 'Free') : fmt(shippingCostEur)}
+              {shippingCostEur === 0 ? pick(lang, { en: 'Free', sk: 'Zadarmo', cz: 'Zdarma' }) : fmt(shippingCostEur)}
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -661,9 +732,9 @@ export default function CheckoutPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 40 }}>
                 {SHIPPING_OPTIONS.map((opt) => {
                   const selected = opt.id === shipping;
-                  const name = lang === 'sk' ? opt.name_sk : opt.name_en;
-                  const eta = lang === 'sk' ? opt.eta_sk : opt.eta_en;
-                  const priceStr = opt.priceEur === 0 ? (lang === 'sk' ? 'Zadarmo' : 'Free') : fmt(opt.priceEur);
+                  const name = pick(lang, { en: opt.name_en, sk: opt.name_sk, cz: opt.name_cz });
+                  const eta = pick(lang, { en: opt.eta_en, sk: opt.eta_sk, cz: opt.eta_cz });
+                  const priceStr = opt.priceEur === 0 ? pick(lang, { en: 'Free', sk: 'Zadarmo', cz: 'Zdarma' }) : fmt(opt.priceEur);
                   return (
                     <div
                       key={opt.id}
@@ -818,7 +889,7 @@ export default function CheckoutPage() {
                 <span style={{ ...sans, fontSize: 12, color: MUTED, lineHeight: 1.6 }}>
                   {t.consent_label}{' '}
                   <TransitionLink href="/privacy" style={{ color: MAROON, textDecoration: 'underline', textUnderlineOffset: 2 }}>
-                    {lang === 'sk' ? 'Zásady ochrany osobných údajov' : 'Privacy Policy'}
+                    {pick(lang, { en: 'Privacy Policy', sk: 'Zásady ochrany osobných údajov', cz: 'Zásady ochrany osobních údajů' })}
                   </TransitionLink>
                 </span>
               </label>

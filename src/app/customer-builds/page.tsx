@@ -31,6 +31,13 @@ const T = {
     empty: 'Zatiaľ tu nie sú žiadne zostavy — pozrite sa neskôr.',
     close: 'Zavrieť',
   },
+  cz: {
+    eyebrow: 'ZÁKAZNICKÉ GOMPY',
+    title: 'Reálné sestavy, které už běží.',
+    intro: 'Pohled na počítače, které jsme už poskládali pro skutečné zákazníky — přesné součástky, přesné parametry.',
+    empty: 'Zatím tu nejsou žádné sestavy — zkuste to prosím později.',
+    close: 'Zavřít',
+  },
 } as const;
 
 // Pulls the GPU/CPU line out of a build's specs so it can float as its own bubble instead
@@ -362,7 +369,7 @@ function PhotoGallery({
 export default function CustomerBuildsPage() {
   const { lang, fmt } = useSite();
   const isMobile = useIsMobile();
-  const t = T[lang === 'sk' ? 'sk' : 'en'];
+  const t = T[lang] ?? T.en;
 
   const [builds, setBuilds] = useState<CustomerBuild[]>([]);
 

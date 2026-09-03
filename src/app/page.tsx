@@ -9,6 +9,7 @@ import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import { navigateWithTransition } from '@/lib/gomp-nav';
 import { useIsMobile } from '@/lib/use-media-query';
+import { pick } from '@/lib/i18n';
 
 // ---- Palette (exact literal hex values from the original site) ----
 const BG = '#F5F0E6';
@@ -21,7 +22,7 @@ const GOLD = '#C4A35A';
 // ---- Translations ----
 type Dict = Record<string, string>;
 
-const TRANSLATIONS: Record<'en' | 'sk', Dict> = {
+const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
   en: {
     nav_home: 'Home', nav_shop: 'Shop', nav_build: 'Build', nav_about: 'About', nav_account: 'Account',
     nav_startbuilding: 'Start Building →',
@@ -66,29 +67,51 @@ const TRANSLATIONS: Record<'en' | 'sk', Dict> = {
     build_from: 'Ceny od', entry_scales: 'Špička v základnej triede. Rozšíriteľná až po vlajkovú loď.',
     bullet1: '3-ročná záruka na diely a prácu', bullet2: 'Pred expedíciou testované benchmarkmi', bullet3: 'Expedícia do 7 pracovných dní',
   },
+  cz: {
+    nav_home: 'Domů', nav_shop: 'Obchod', nav_build: 'Sestavit', nav_about: 'O nás', nav_account: 'Účet',
+    nav_startbuilding: 'Začít stavět →',
+    hero_eyebrow: 'Herní počítače na míru · Praha',
+    hero_title_line1: 'Postav si svou', hero_title_em: 'Legendu.',
+    hero_desc: 'Vysněný stroj po částech. Každá sestava GOMP je ručně sestavená, otestovaná a expedovaná do sedmi dnů.',
+    hero_cta_build: 'Začít stavět →', hero_cta_browse: 'Prohlédnout sestavy',
+    undervolt_badge: 'Každý CPU & GPU podvoltovaný →',
+    stress_tested: 'ZÁTĚŽOVĚ OTESTOVÁNO',
+    featured_build: 'Doporučená sestava', apex_tagline: 'Špičkové 4K hraní a tvorba',
+    spec_storage: 'Úložiště', spec_cooling: 'Chlazení',
+    configure_this: 'Nakonfigurovat tuto sestavu →', configure_arrow: 'Konfigurovat →',
+    stat1: 'Expedovaných sestav na míru', stat2: 'Průměrné hodnocení · 3200+ recenzí',
+    stat3: 'Dní průměrná výroba a expedice', stat4: 'Záruka na díly a práci',
+    ready_to_ship: 'Připraveno k expedici', featured_builds: 'Doporučené sestavy', view_all: 'Zobrazit všechny sestavy →',
+    why_gomp: 'Proč GOMP', gomp_standard: 'Standard GOMP',
+    yourbuild_line1: 'Vaše sestava.', yourbuild_line2: 'Vaše pravidla.',
+    builder_desc: 'Použijte náš 3D konfigurátor a sledujte, jak se každá součástka objevuje v reálném čase při skládání vašeho počítače.',
+    open_builder: 'Otevřít 3D konfigurátor →',
+    build_from: 'Ceny od', entry_scales: 'Špička v základní třídě. Rozšiřitelná až po vlajkovou loď.',
+    bullet1: '3letá záruka na díly a práci', bullet2: 'Před expedicí testováno benchmarky', bullet3: 'Expedice do 7 pracovních dnů',
+  },
 };
 
 // ---- Static content (translated fields resolved per-language at render time) ----
 type BuildRaw = {
-  tier_en: string; tier_sk: string; name: string;
-  tagline_en: string; tagline_sk: string;
+  tier_en: string; tier_sk: string; tier_cz: string; name: string;
+  tagline_en: string; tagline_sk: string; tagline_cz: string;
   gpu: string; cpu: string; ram: string; storage: string; priceEur: number;
 };
 
 const BUILDS_RAW: BuildRaw[] = [
-  { tier_en: 'Flagship', tier_sk: 'Vlajková loď', name: 'The Apex Predator', tagline_en: 'Ultimate 4K gaming & creation', tagline_sk: 'Špičkové 4K hranie a tvorba', gpu: 'RTX 5090 FE', cpu: 'Ryzen 9 9950X', ram: '32GB DDR5 6400', storage: '2TB NVMe Gen5', priceEur: 3739 },
-  { tier_en: 'Performance', tier_sk: 'Výkonnostná', name: 'The Marauder', tagline_en: 'Dominant 1440p performer', tagline_sk: 'Dominantný výkon v 1440p', gpu: 'RTX 4090', cpu: 'Core i9-14900K', ram: '32GB DDR5 5600', storage: '2TB NVMe Gen4', priceEur: 2609 },
-  { tier_en: 'Value', tier_sk: 'Hodnotová', name: 'The Scout', tagline_en: 'Entry-level excellence', tagline_sk: 'Špička v základnej triede', gpu: 'RTX 4070 Ti Super', cpu: 'Core i5-14600K', ram: '16GB DDR4 3600', storage: '1TB NVMe Gen4', priceEur: 1129 },
+  { tier_en: 'Flagship', tier_sk: 'Vlajková loď', tier_cz: 'Vlajková loď', name: 'The Apex Predator', tagline_en: 'Ultimate 4K gaming & creation', tagline_sk: 'Špičkové 4K hranie a tvorba', tagline_cz: 'Špičkové 4K hraní a tvorba', gpu: 'RTX 5090 FE', cpu: 'Ryzen 9 9950X', ram: '32GB DDR5 6400', storage: '2TB NVMe Gen5', priceEur: 3739 },
+  { tier_en: 'Performance', tier_sk: 'Výkonnostná', tier_cz: 'Výkonnostní', name: 'The Marauder', tagline_en: 'Dominant 1440p performer', tagline_sk: 'Dominantný výkon v 1440p', tagline_cz: 'Dominantní výkon v 1440p', gpu: 'RTX 4090', cpu: 'Core i9-14900K', ram: '32GB DDR5 5600', storage: '2TB NVMe Gen4', priceEur: 2609 },
+  { tier_en: 'Value', tier_sk: 'Hodnotová', tier_cz: 'Hodnotová', name: 'The Scout', tagline_en: 'Entry-level excellence', tagline_sk: 'Špička v základnej triede', tagline_cz: 'Špička v základní třídě', gpu: 'RTX 4070 Ti Super', cpu: 'Core i5-14600K', ram: '16GB DDR4 3600', storage: '1TB NVMe Gen4', priceEur: 1129 },
 ];
 
-type FeatureRaw = { num: string; title_en: string; title_sk: string; desc_en: string; desc_sk: string };
+type FeatureRaw = { num: string; title_en: string; title_sk: string; title_cz: string; desc_en: string; desc_sk: string; desc_cz: string };
 
 const FEATURES_RAW: FeatureRaw[] = [
-  { num: '01', title_en: 'Hand-Assembled', title_sk: 'Ručná zostava', desc_en: 'Every build is crafted by expert technicians and stress-tested for 24 hours before it ships.', desc_sk: 'Každú zostavu vyrábajú skúsení technici a pred expedíciou ju 24 hodín záťažovo testujeme.' },
-  { num: '02', title_en: '3-Year Warranty', title_sk: '3-ročná záruka', desc_en: 'Comprehensive coverage on all parts and labor. No questions, no runarounds, ever.', desc_sk: 'Kompletné krytie všetkých dielov a práce. Bez zbytočných otázok a prieťahov.' },
-  { num: '03', title_en: 'Benchmark Tested', title_sk: 'Otestované benchmarkmi', desc_en: 'Every machine ships with a printed performance validation sheet from our testing rig.', desc_sk: 'Každý počítač expedujeme s tlačeným protokolom o výkonnostných testoch.' },
-  { num: '04', title_en: 'Ships in 7 Days', title_sk: 'Expedícia do 7 dní', desc_en: 'From order confirmation to your door in under a week, guaranteed.', desc_sk: 'Od potvrdenia objednávky až k vašim dverám za menej než týždeň, garantovane.' },
-  { num: '05', title_en: 'Undervolted by Default', title_sk: 'Podvoltované ako štandard', desc_en: 'Every CPU and GPU is undervolted wherever the platform allows it — lower temperatures, quieter fans, less power draw, with zero performance lost.', desc_sk: 'Každý CPU a GPU podvoltujeme všade, kde to platforma umožňuje — nižšie teploty, tichšie ventilátory, nižšia spotreba, bez straty výkonu.' },
+  { num: '01', title_en: 'Hand-Assembled', title_sk: 'Ručná zostava', title_cz: 'Ruční sestavení', desc_en: 'Every build is crafted by expert technicians and stress-tested for 24 hours before it ships.', desc_sk: 'Každú zostavu vyrábajú skúsení technici a pred expedíciou ju 24 hodín záťažovo testujeme.', desc_cz: 'Každou sestavu vyrábějí zkušení technici a před expedicí ji 24 hodin zátěžově testujeme.' },
+  { num: '02', title_en: '3-Year Warranty', title_sk: '3-ročná záruka', title_cz: '3letá záruka', desc_en: 'Comprehensive coverage on all parts and labor. No questions, no runarounds, ever.', desc_sk: 'Kompletné krytie všetkých dielov a práce. Bez zbytočných otázok a prieťahov.', desc_cz: 'Kompletní krytí všech dílů a práce. Bez zbytečných otázek a průtahů.' },
+  { num: '03', title_en: 'Benchmark Tested', title_sk: 'Otestované benchmarkmi', title_cz: 'Otestováno benchmarky', desc_en: 'Every machine ships with a printed performance validation sheet from our testing rig.', desc_sk: 'Každý počítač expedujeme s tlačeným protokolom o výkonnostných testoch.', desc_cz: 'Každý počítač expedujeme s tištěným protokolem o výkonnostních testech.' },
+  { num: '04', title_en: 'Ships in 7 Days', title_sk: 'Expedícia do 7 dní', title_cz: 'Expedice do 7 dnů', desc_en: 'From order confirmation to your door in under a week, guaranteed.', desc_sk: 'Od potvrdenia objednávky až k vašim dverám za menej než týždeň, garantovane.', desc_cz: 'Od potvrzení objednávky až k vašim dveřím za méně než týden, garantovaně.' },
+  { num: '05', title_en: 'Undervolted by Default', title_sk: 'Podvoltované ako štandard', title_cz: 'Podvoltováno jako standard', desc_en: 'Every CPU and GPU is undervolted wherever the platform allows it — lower temperatures, quieter fans, less power draw, with zero performance lost.', desc_sk: 'Každý CPU a GPU podvoltujeme všade, kde to platforma umožňuje — nižšie teploty, tichšie ventilátory, nižšia spotreba, bez straty výkonu.', desc_cz: 'Každý CPU a GPU podvoltujeme všude, kde to platforma umožňuje — nižší teploty, tišší ventilátory, nižší spotřeba, bez ztráty výkonu.' },
 ];
 
 // ---- Small presentational helpers ----
@@ -155,14 +178,14 @@ export default function Home() {
   const [swiping, setSwiping] = useState(false);
   const swipingRef = useRef(false);
 
-  const t = TRANSLATIONS[lang] ?? TRANSLATIONS.en;
+  const t = TRANSLATIONS[lang];
 
   const builds = useMemo(
     () =>
       BUILDS_RAW.map((b) => ({
-        tier: lang === 'sk' ? b.tier_sk : b.tier_en,
+        tier: pick(lang, { en: b.tier_en, sk: b.tier_sk, cz: b.tier_cz }),
         name: b.name,
-        tagline: lang === 'sk' ? b.tagline_sk : b.tagline_en,
+        tagline: pick(lang, { en: b.tagline_en, sk: b.tagline_sk, cz: b.tagline_cz }),
         gpu: b.gpu,
         cpu: b.cpu,
         ram: b.ram,
@@ -176,8 +199,8 @@ export default function Home() {
     () =>
       FEATURES_RAW.map((f) => ({
         num: f.num,
-        title: lang === 'sk' ? f.title_sk : f.title_en,
-        desc: lang === 'sk' ? f.desc_sk : f.desc_en,
+        title: pick(lang, { en: f.title_en, sk: f.title_sk, cz: f.title_cz }),
+        desc: pick(lang, { en: f.desc_en, sk: f.desc_sk, cz: f.desc_cz }),
       })),
     [lang],
   );

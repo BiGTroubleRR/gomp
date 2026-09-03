@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
+import { pick } from '@/lib/i18n';
 import { useIsMobile } from '@/lib/use-media-query';
 import { createClient } from '@/lib/supabase/client';
 import { fetchComponentDb } from '@/lib/supabase/components';
@@ -42,13 +43,17 @@ type Order = {
   id: string;
   name_en: string;
   name_sk: string;
+  name_cz: string;
   date_en: string;
   date_sk: string;
+  date_cz: string;
   totalEur: number;
   status_en: OrderStatus;
   status_sk: string;
+  status_cz: string;
   eta_en: string;
   eta_sk: string;
+  eta_cz: string;
   items: string[];
 };
 
@@ -59,6 +64,12 @@ const STATUS_SK: Record<OrderStatus, string> = {
   Building: 'Vo výrobe',
   Shipped: 'Expedované',
   Delivered: 'Doručené',
+};
+
+const STATUS_CZ: Record<OrderStatus, string> = {
+  Building: 'Ve výrobě',
+  Shipped: 'Expedováno',
+  Delivered: 'Doručeno',
 };
 
 // Amber/gold for in-progress, muted maroon for shipped (unused by current seed data,
@@ -206,6 +217,68 @@ const TRANSLATIONS = {
     to_confirm: 'na potvrdenie trvalého vymazania:',
     confirm_delete: 'Potvrdiť vymazanie',
   },
+  cz: {
+    nav_home: 'Domů',
+    nav_shop: 'Obchod',
+    nav_build: 'Sestavit',
+    nav_about: 'O nás',
+    nav_account: 'Účet',
+    member_since: 'Členem od',
+    member_date: 'led 2026',
+    sign_out: 'Odhlásit se →',
+    my_account: 'Můj účet',
+    my_orders: 'Moje objednávky',
+    addresses: 'Adresy',
+    profile: 'Profil',
+    security: 'Zabezpečení',
+    components: 'Komponenty',
+    delivery: 'Doručení',
+    warranty_note: 'Tříletá záruka na všechny díly a práci. V případě problémů kontaktujte podporu.',
+    track_order: 'Sledovat objednávku',
+    download_invoice: 'Stáhnout fakturu',
+    add_address: 'Přidat adresu',
+    default_badge: 'Výchozí',
+    edit: 'Upravit',
+    set_default: 'Nastavit jako výchozí',
+    remove: 'Odebrat',
+    label_field: 'Název',
+    label_placeholder: 'např. Domov',
+    street_address: 'Ulice a číslo',
+    city: 'Město',
+    zip: 'PSČ',
+    country: 'Země',
+    cancel: 'Zrušit',
+    save_address: 'Uložit adresu',
+    new_address: 'Nová adresa',
+    edit_address: 'Upravit adresu',
+    edit_profile: 'Upravit profil',
+    profile_updated: 'Profil byl úspěšně aktualizován',
+    first_name: 'Jméno',
+    last_name: 'Příjmení',
+    email_address: 'E-mailová adresa',
+    phone: 'Telefon',
+    save_changes: 'Uložit změny',
+    change_password: 'Změnit heslo',
+    change_password_desc: 'Zvolte si jedinečné heslo, které nepoužíváte jinde.',
+    current_password: 'Současné heslo',
+    new_password: 'Nové heslo',
+    confirm_new_password: 'Potvrdit nové heslo',
+    password_updated: 'Heslo bylo úspěšně aktualizováno',
+    update_password: 'Aktualizovat heslo',
+    recent_activity: 'Nedávná aktivita',
+    last_signin: 'Poslední přihlášení',
+    previous_signin: 'Předchozí přihlášení',
+    signin_location: 'Praha, Česká republika · Chrome · macOS',
+    today_time: 'Dnes, 11:32',
+    previous_time: '29. červen, 9:14',
+    danger_zone: 'Nebezpečná zóna',
+    delete_account: 'Smazat účet',
+    delete_account_desc:
+      'Trvale smažete svůj účet, historii objednávek, adresy a všechny související údaje. Tuto akci nelze vrátit zpět.',
+    type_delete: 'Napište',
+    to_confirm: 'pro potvrzení trvalého smazání:',
+    confirm_delete: 'Potvrdit smazání',
+  },
 };
 
 type T = typeof TRANSLATIONS.en;
@@ -329,23 +402,29 @@ function mapOrderRow(
   const created = new Date(row.created_at);
   const date_en = created.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const date_sk = created.toLocaleDateString('sk-SK', { year: 'numeric', month: 'long', day: 'numeric' });
+  const date_cz = created.toLocaleDateString('cs-CZ', { year: 'numeric', month: 'long', day: 'numeric' });
 
   const etaDate = row.eta ? new Date(row.eta) : null;
   const etaStr_en = etaDate ? etaDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
   const etaStr_sk = etaDate ? etaDate.toLocaleDateString('sk-SK', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+  const etaStr_cz = etaDate ? etaDate.toLocaleDateString('cs-CZ', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
   const delivered = row.status === 'Delivered';
 
   return {
     id: row.order_number,
     name_en: row.name,
     name_sk: row.name,
+    name_cz: row.name,
     date_en,
     date_sk,
+    date_cz,
     totalEur: row.total_eur,
     status_en: row.status,
     status_sk: STATUS_SK[row.status],
+    status_cz: STATUS_CZ[row.status],
     eta_en: etaDate ? `${delivered ? 'Delivered' : 'Est. delivery'} ${etaStr_en}` : '',
     eta_sk: etaDate ? `${delivered ? 'Doručené' : 'Predpokladané doručenie'} ${etaStr_sk}` : '',
+    eta_cz: etaDate ? `${delivered ? 'Doručeno' : 'Předpokládané doručení'} ${etaStr_cz}` : '',
     items: row.order_items.map((it) => it.name),
   };
 }
@@ -380,20 +459,35 @@ function AuthGate({ isMobile }: { isMobile: boolean }) {
           toSignIn: 'Už máte účet? Prihláste sa',
           checkEmail: 'Skontrolujte si e-mail a potvrďte registráciu, potom sa prihláste.',
         }
-      : {
-          title: 'Your Account',
-          subtitleIn: 'Sign in to manage your builds and orders.',
-          subtitleUp: 'Create an account to save your builds and orders.',
-          email: 'Email',
-          password: 'Password',
-          first: 'First name',
-          last: 'Last name',
-          signIn: 'Sign in',
-          signUp: 'Create account',
-          toSignUp: "Don't have an account? Sign up",
-          toSignIn: 'Already have an account? Sign in',
-          checkEmail: 'Check your email to confirm your account, then sign in.',
-        };
+      : lang === 'cz'
+        ? {
+            title: 'Váš účet',
+            subtitleIn: 'Přihlaste se a spravujte své sestavy a objednávky.',
+            subtitleUp: 'Vytvořte si účet a uložte si své sestavy a objednávky.',
+            email: 'E-mail',
+            password: 'Heslo',
+            first: 'Jméno',
+            last: 'Příjmení',
+            signIn: 'Přihlásit se',
+            signUp: 'Vytvořit účet',
+            toSignUp: 'Nemáte účet? Zaregistrujte se',
+            toSignIn: 'Už máte účet? Přihlaste se',
+            checkEmail: 'Zkontrolujte si e-mail a potvrďte registraci, poté se přihlaste.',
+          }
+        : {
+            title: 'Your Account',
+            subtitleIn: 'Sign in to manage your builds and orders.',
+            subtitleUp: 'Create an account to save your builds and orders.',
+            email: 'Email',
+            password: 'Password',
+            first: 'First name',
+            last: 'Last name',
+            signIn: 'Sign in',
+            signUp: 'Create account',
+            toSignUp: "Don't have an account? Sign up",
+            toSignIn: 'Already have an account? Sign in',
+            checkEmail: 'Check your email to confirm your account, then sign in.',
+          };
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -879,7 +973,11 @@ export default function Account() {
                   {!ordersLoading && orders.length === 0 && (
                     <div style={{ ...panelStyle, padding: isMobile ? 24 : 32, textAlign: 'center' }}>
                       <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469' }}>
-                        {lang === 'sk' ? 'Zatiaľ nemáte žiadne objednávky.' : "You don't have any orders yet."}
+                        {pick(lang, {
+                          en: "You don't have any orders yet.",
+                          sk: 'Zatiaľ nemáte žiadne objednávky.',
+                          cz: 'Zatím nemáte žádné objednávky.',
+                        })}
                       </span>
                     </div>
                   )}
@@ -887,10 +985,10 @@ export default function Account() {
                     {orders.map((order) => {
                       const expanded = expandedOrderId === order.id;
                       const s = STATUS_COLORS[order.status_en];
-                      const name = lang === 'sk' ? order.name_sk : order.name_en;
-                      const date = lang === 'sk' ? order.date_sk : order.date_en;
-                      const eta = lang === 'sk' ? order.eta_sk : order.eta_en;
-                      const status = lang === 'sk' ? order.status_sk : order.status_en;
+                      const name = pick(lang, { en: order.name_en, sk: order.name_sk, cz: order.name_cz });
+                      const date = pick(lang, { en: order.date_en, sk: order.date_sk, cz: order.date_cz });
+                      const eta = pick(lang, { en: order.eta_en, sk: order.eta_sk, cz: order.eta_cz });
+                      const status = pick<string>(lang, { en: order.status_en, sk: order.status_sk, cz: order.status_cz });
                       return (
                         <div key={order.id} style={{ ...panelStyle, overflow: 'hidden' }}>
                           <div

@@ -700,8 +700,12 @@ export default function AdminPage() {
   const [gbbSearchTerm, setGbbSearchTerm] = useState<Record<string, string>>({});
   const [gbbProposalDraft, setGbbProposalDraft] = useState<Record<string, { price: string; notes: string }>>({});
 
-  const t = TRANSLATIONS[lang];
-  const catLabels = CAT_LABELS[lang];
+  // Admin stays SK/EN only (internal tool, not customer-facing) — a shared lang state of
+  // 'cz' picked up from browsing the public site falls back to Slovak here rather than
+  // needing its own Czech translation.
+  const adminLang = lang === 'en' ? 'en' : 'sk';
+  const t = TRANSLATIONS[adminLang];
+  const catLabels = CAT_LABELS[adminLang];
 
   // Ask the server whether this Clerk user is an admin. Re-runs when the Clerk
   // session settles or changes (sign-in / sign-out / switch user).

@@ -48,9 +48,21 @@ const CHROME = {
     privacy_note: 'Podrobnosti o spracovaní osobných údajov nájdete v dokumente',
     privacy_link: 'Ochrana osobných údajov',
   },
+  cz: {
+    nav_startbuilding: 'Začít stavět →',
+    eyebrow: 'Právní',
+    title: 'Obchodní podmínky',
+    subtitle: 'Všeobecné obchodní podmínky (VOP)',
+    updated: 'Poslední aktualizace: [TODO: doplnit datum účinnosti]',
+    intro:
+      'Tyto Všeobecné obchodní podmínky ("VOP") upravují nákup zboží prostřednictvím internetového obchodu GOMP provozovaného na těchto webových stránkách. Před odesláním objednávky si je, prosím, přečtěte. Tyto VOP se řídí právním řádem České republiky, neboť společnost má sídlo v České republice (viz níže).',
+    toc_label: 'Obsah',
+    privacy_note: 'Podrobnosti o zpracování osobních údajů naleznete v dokumentu',
+    privacy_link: 'Ochrana osobních údajů',
+  },
 } as const;
 
-const SECTIONS: Record<'en' | 'sk', Section[]> = {
+const SECTIONS: Record<'en' | 'sk' | 'cz', Section[]> = {
   en: [
     {
       id: 'definitions',
@@ -246,6 +258,105 @@ const SECTIONS: Record<'en' | 'sk', Section[]> = {
         { p: 'Tieto VOP, ako aj každá kúpna zmluva uzatvorená prostredníctvom webovej stránky, sa riadia právnym poriadkom Českej republiky, najmä zákonom č. 89/2012 Sb., občianskym zákonníkom, a ak je Kupujúci Spotrebiteľom, zákonom č. 634/1992 Sb., o ochrane spotrebiteľa, bez toho, aby boli dotknuté kogentné spotrebiteľské predpisy krajiny obvyklého pobytu Spotrebiteľa.' },
         { p: 'Ak sa niektoré ustanovenie týchto VOP stane neplatným alebo nevymáhateľným, nemá to vplyv na platnosť ostatných ustanovení; neplatné ustanovenie bude nahradené platným ustanovením, ktoré najlepšie zodpovedá jeho pôvodnému účelu.' },
         { p: 'Predávajúci môže tieto VOP meniť; pre danú objednávku platí znenie účinné v čase jej odoslania. Aktuálne znenie je vždy dostupné na tejto stránke.' },
+      ],
+    },
+  ],
+  cz: [
+    {
+      id: 'definitions',
+      title: '1. Definice a rozsah působnosti',
+      blocks: [
+        { p: 'Pro účely těchto VOP: „Prodávající" je provozovatel těchto webových stránek uvedený v článku 2 níže; „Kupující" nebo „Zákazník" je jakákoli fyzická nebo právnická osoba, která zadá objednávku prostřednictvím webových stránek; „Spotřebitel" je Kupující, který je fyzickou osobou jednající mimo rámec své podnikatelské činnosti, řemesla nebo povolání ve smyslu § 419 zákona č. 89/2012 Sb., občanského zákoníku; „Zboží" jsou individuálně konfigurované i předsestavené počítačové sestavy, komponenty a příslušenství nabízené k prodeji na webových stránkách.' },
+        { p: 'Tyto VOP se vztahují na všechny kupní smlouvy uzavřené mezi Prodávajícím a Kupujícím prostřednictvím webových stránek bez ohledu na to, zda je Kupující Spotřebitelem, nebo jedná v rámci své podnikatelské činnosti („Podnikatelský kupující"). Některá ustanovení níže — zejména zákonné právo odstoupit od smlouvy v článku 6 — se vztahují výhradně na Spotřebitele, jak je uvedeno.' },
+        { p: 'Tyto VOP tvoří nedílnou součást každé kupní smlouvy uzavřené prostřednictvím webových stránek. Odlišná ujednání sjednaná písemně individuálně s konkrétním Kupujícím mají přednost před těmito VOP.' },
+      ],
+    },
+    {
+      id: 'seller',
+      title: '2. Identifikace prodávajícího',
+      blocks: [
+        { ul: [
+          'Obchodní firma: [TODO: doplnit registrovaný název společnosti]',
+          'Sídlo: [TODO: doplnit sídlo / adresu]',
+          'IČO: [TODO: doplnit IČO]',
+          'DIČ, je-li plátcem DPH: [TODO: doplnit DIČ]',
+          'Zápis v rejstříku: [TODO: doplnit zápis v obchodním rejstříku, např. „Městský soud v Praze, oddíl C, vložka č. ___", nebo číslo živnostenského oprávnění]',
+          'Kontaktní e-mail: [TODO: doplnit kontaktní e-mail]',
+          'Kontaktní telefon (nepovinné): [TODO: doplnit, nebo odstranit, pokud se neposkytuje]',
+        ] },
+      ],
+    },
+    {
+      id: 'ordering',
+      title: '3. Objednávka a uzavření smlouvy',
+      blocks: [
+        { p: 'Webové stránky umožňují Kupujícímu zakoupit předsestavenou konfiguraci uvedenou v sekci Obchod, nebo si prostřednictvím 3D konfigurátoru sestavit vlastní konfiguraci výběrem jednotlivých komponent (základní deska, procesor, chladič, RAM, grafická karta, úložiště, zdroj a skříň).' },
+        { p: 'Odesláním objednávky prostřednictvím pokladny činí Kupující závaznou nabídku na koupi vybraného Zboží za cenu zobrazenou v okamžiku objednávky. Kupní smlouva je uzavřena okamžikem, kdy Prodávající potvrdí přijetí objednávky (například e-mailovým potvrzením objednávky nebo zobrazením potvrzující obrazovky). Prodávající si vyhrazuje právo objednávku odmítnout — například pokud vybraná komponenta již není dostupná, je-li zjevná chyba v ceně, nebo pokud Kupující v minulosti nesplnil platební povinnosti — a v takovém případě o tom Kupujícího bez zbytečného odkladu informuje.' },
+        { p: 'Kupující odpovídá za správnost dodacích a fakturačních údajů uvedených při objednávce. Prodávající neodpovídá za prodlení nebo nedoručení způsobené nesprávnými údaji poskytnutými Kupujícím.' },
+      ],
+    },
+    {
+      id: 'pricing',
+      title: '4. Ceny a platební podmínky',
+      blocks: [
+        { p: 'Všechny ceny zobrazené na webových stránkách jsou uvedeny v EUR, s orientačním přepočtem na CZK v patičce stránky, který slouží pouze pro informaci; závaznou cenou je cena potvrzená v pokladně ve zvolené měně Kupujícího. Ceny zahrnují příslušnou zákonnou DPH, není-li uvedeno jinak.' },
+        { p: 'Ceny komponent, a tedy i celková cena vlastní konfigurace, se mohou průběžně měnit podle tržních podmínek; pro danou objednávku platí cena zobrazená v okamžiku jejího odeslání, nikoli cena zobrazená dříve nebo později.' },
+        { p: '[TODO: doplnit akceptovaný způsob(y) platby — např. platební karta prostřednictvím [platební brána], bankovní převod, dobírka — a kdy je platba splatná (předem / při doručení). K pokladně v současnosti není připojena žádná platební brána; tuto část je třeba doplnit před zpracováním skutečných plateb.]' },
+      ],
+    },
+    {
+      id: 'delivery',
+      title: '5. Dodací podmínky',
+      blocks: [
+        { p: 'Prodávající usiluje o ruční sestavení, otestování a expedici každé sestavy do sedmi (7) pracovních dnů od potvrzení objednávky, jak je uvedeno na webových stránkách. Jde o orientační, nikoli garantovanou dobu dodání, která se může u vlastních konfigurací, při nedostatku komponent nebo v období vysoké poptávky prodloužit; o podstatném prodlení bude Kupující informován.' },
+        { p: '[TODO: doplnit způsoby a dopravce doručení, náklady na dopravu nebo hranici pro dopravu zdarma a území, kam se dodává.]' },
+        { p: 'Nebezpečí škody na Zboží přechází na Podnikatelského kupujícího předáním dopravci a na Spotřebitele převzetím Zboží, v souladu s § 2121 občanského zákoníku.' },
+      ],
+    },
+    {
+      id: 'withdrawal',
+      title: '6. Právo odstoupit od smlouvy (pouze pro spotřebitele)',
+      blocks: [
+        { p: 'Je-li Kupující Spotřebitelem a smlouva byla uzavřena jako smlouva uzavřená distančním způsobem (tj. prostřednictvím těchto webových stránek), má Spotřebitel právo odstoupit od smlouvy bez udání důvodu do čtrnácti (14) kalendářních dnů ode dne převzetí Zboží, v souladu s § 1829 občanského zákoníku.' },
+        { p: 'K uplatnění tohoto práva musí Spotřebitel zaslat jednoznačné prohlášení o odstoupení na kontaktní e-mail Prodávajícího (viz článek 2) před uplynutím 14denní lhůty. [TODO: potvrdit, zda bude poskytnut vzorový formulář pro odstoupení, a adresu pro vrácení Zboží.]' },
+        { p: 'Důležitá výjimka pro vlastní konfigurace: podle § 1837 písm. d) občanského zákoníku se právo odstoupit od smlouvy nevztahuje na zboží vyrobené podle přání Spotřebitele nebo přizpůsobené jeho osobním potřebám. Jelikož sestavy poskládané prostřednictvím 3D konfigurátoru vznikají podle vlastního výběru komponent Kupujícího, jsou takové vlastní sestavy zpravidla z 14denního práva na odstoupení vyloučeny. Tato výjimka se nevztahuje na nezměněné, předsestavené konfigurace zakoupené ze sekce Obchod.' },
+        { p: 'Uplatňuje-li se právo odstoupit od smlouvy, musí Spotřebitel Zboží vrátit bez zbytečného odkladu, nejpozději do 14 dnů od odeslání prohlášení o odstoupení, na vlastní náklady, není-li dohodnuto jinak. Prodávající vrátí všechny přijaté platby včetně standardních nákladů na doručení bez zbytečného odkladu, nejpozději do 14 dnů od obdržení oznámení o odstoupení, stejným způsobem platby, jaký použil Spotřebitel, nedohodne-li se jinak; Prodávající může vrácení platby zadržet do přijetí Zboží zpět nebo prokázání jeho odeslání zpět.' },
+        { p: 'Spotřebitel odpovídá za snížení hodnoty Zboží, které vzniklo v důsledku nakládání s ním nad rámec toho, co je nutné ke zjištění povahy, vlastností a funkčnosti Zboží.' },
+      ],
+    },
+    {
+      id: 'complaints',
+      title: '7. Reklamační řád a záruka',
+      blocks: [
+        { p: 'Prodávající odpovídá za vady, které má Zboží při převzetí a které se projeví v zákonné lhůtě, jež pro Spotřebitele činí dvacet čtyři (24) měsíců od převzetí Zboží, podle § 2165 a násl. občanského zákoníku.' },
+        { p: 'Nad rámec této zákonné odpovědnosti poskytuje Prodávající na ručně skládané sestavy obchodní záruku tři (3) roky na díly a práci, jak je uvedeno na webových stránkách. [TODO: potvrdit přesný rozsah/výluky obchodní záruky — např. zda se vztahuje na poškození způsobené uživatelem, přetaktování nebo poruchu komponenty třetí strany — a proces/dobu vyřízení reklamace v rámci záruky.]' },
+        { p: 'Reklamaci uplatňuje Kupující na kontaktním e-mailu z článku 2, s popisem vady a dokladem o koupi. Prodávající potvrdí přijetí reklamace a rozhodne o ní, včetně případného nároku, do třiceti (30) dnů, nedohodne-li se s Kupujícím na delší lhůtě, v souladu s § 19 zákona č. 634/1992 Sb., o ochraně spotřebitele.' },
+        { p: 'Podle povahy vady má Kupující nárok na opravu, výměnu, přiměřenou slevu z ceny nebo odstoupení od smlouvy, v souladu s § 2169 a § 2106–2107 občanského zákoníku.' },
+      ],
+    },
+    {
+      id: 'liability',
+      title: '8. Omezení odpovědnosti',
+      blocks: [
+        { p: 'Nic v těchto VOP neomezuje ani nevylučuje odpovědnost, kterou podle platného českého práva nelze omezit ani vyloučit, včetně odpovědnosti za usmrcení nebo újmu na zdraví, nebo odpovědnosti vyplývající z porušení zákonných ustanovení na ochranu spotřebitele.' },
+        { p: 'S výhradou výše uvedeného se odpovědnost Prodávajícího za nepřímou nebo následnou škodu (například ztrátu dat, ztrátu obchodní příležitosti nebo ušlý zisk) vyplývající z používání Zboží vylučuje v maximálním rozsahu povoleném zákonem. Skóre benchmarků, výkonnostní údaje a odkazy na PassMark uvedené na webových stránkách jsou orientační a pocházejí z databází třetích stran; skutečný výkon v praxi se může lišit podle zátěže a konfigurace.' },
+      ],
+    },
+    {
+      id: 'disputes',
+      title: '9. Řešení sporů',
+      blocks: [
+        { p: 'Nepodaří-li se spor vyplývající z kupní smlouvy vyřešit přímo mezi Kupujícím a Prodávajícím, má Spotřebitel právo obrátit se na mimosoudní řešení spotřebitelských sporů („ADR") u České obchodní inspekce („ČOI"), Štěpánská 567/15, 120 00 Praha 2, web: www.coi.cz / adr.coi.cz.' },
+        { p: 'Spotřebitel s bydlištěm v EU může k podání stížnosti využít rovněž platformu Evropské komise pro řešení sporů online na adrese https://ec.europa.eu/consumers/odr, která bude postoupena ČOI.' },
+      ],
+    },
+    {
+      id: 'final',
+      title: '10. Závěrečná ustanovení',
+      blocks: [
+        { p: 'Tyto VOP, jakož i každá kupní smlouva uzavřená prostřednictvím webových stránek, se řídí právním řádem České republiky, zejména zákonem č. 89/2012 Sb., občanským zákoníkem, a je-li Kupující Spotřebitelem, zákonem č. 634/1992 Sb., o ochraně spotřebitele, aniž jsou dotčena kogentní spotřebitelská pravidla země obvyklého bydliště Spotřebitele.' },
+        { p: 'Stane-li se některé ustanovení těchto VOP neplatným nebo nevymahatelným, nemá to vliv na platnost ostatních ustanovení; neplatné ustanovení bude nahrazeno platným ustanovením, které nejlépe odpovídá jeho původnímu účelu.' },
+        { p: 'Prodávající může tyto VOP měnit; pro danou objednávku platí znění účinné v okamžiku jejího odeslání. Aktuální znění je vždy dostupné na této stránce.' },
       ],
     },
   ],

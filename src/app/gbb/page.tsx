@@ -72,6 +72,31 @@ const T = {
     back_home: '← Späť na hlavnú stránku',
     error_generic: 'Niečo sa pokazilo. Skúste to znova.',
   },
+  cz: {
+    nav_home: 'Domů', nav_shop: 'Obchod', nav_build: 'Sestavit', nav_about: 'O nás', nav_account: 'Účet',
+    eyebrow: 'GOMP BUDGET BUILDS',
+    title: 'Skvělé PC nemusí být nové.',
+    intro:
+      'Řekněte nám svůj rozpočet a k čemu počítač potřebujete. Naceníme sestavu z pečlivě prověřených bazarových komponent a pošleme vám návrh — bez závazku, bez automatického oceňování, jen reálný přehled o tom, co je zrovna dostupné.',
+    point1_title: 'Reálné, aktuální ceny',
+    point1_body: 'Každý návrh je naceněn podle toho, co je právě v nabídce — ne podle starého průměru.',
+    point2_title: 'Prověřeno před odesláním',
+    point2_body: 'Každá bazarová součástka je otestována dřív, než se dostane do vaší sestavy, stejně jako u sestav z nových dílů.',
+    point3_title: 'Jasno v tom, co je použité',
+    point3_body: 'Budete přesně vědět, co je bazarové, v jakém je stavu a jakou má záruku.',
+    form_title: 'Vyžádat si návrh',
+    first_name: 'Jméno', last_name: 'Příjmení', email: 'E-mail', phone: 'Telefon',
+    budget: 'Rozpočet (EUR)', budget_placeholder: 'např. 500',
+    use_case: 'K čemu to bude?',
+    use_case_gaming: 'Hraní', use_case_office: 'Kancelář a běžné použití', use_case_creative: 'Tvorba obsahu / střih',
+    use_case_server: 'Domácí server / NAS', use_case_other: 'Něco jiného',
+    notes: 'Něco konkrétního?', notes_placeholder: 'Preferovaná značka, chcete využít vlastní součástku, tichý provoz…',
+    submit: 'Odeslat žádost →', submitting: 'Odesílám…',
+    success_title: 'Žádost odeslána.',
+    success_body: 'Jakmile ověříme aktuální nabídku, pošleme vám e-mailem cenový návrh. Obvykle do 1–2 pracovních dnů.',
+    back_home: '← Zpět na hlavní stránku',
+    error_generic: 'Něco se pokazilo. Zkuste to prosím znovu.',
+  },
 } as const;
 
 const INPUT_STYLE: CSSProperties = {
@@ -87,7 +112,7 @@ export default function GbbPage() {
   const { lang } = useSite();
   const { user, profile } = useAuth();
   const isMobile = useIsMobile();
-  const t = T[lang === 'sk' ? 'sk' : 'en'];
+  const t = T[lang] ?? T.en;
 
   const [firstName, setFirstName] = useState(profile?.first_name ?? '');
   const [lastName, setLastName] = useState(profile?.last_name ?? '');

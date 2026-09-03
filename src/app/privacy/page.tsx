@@ -44,9 +44,21 @@ const CHROME = {
     terms_note: 'Podmienky upravujúce nákup nájdete v dokumente',
     terms_link: 'Obchodné podmienky',
   },
+  cz: {
+    nav_startbuilding: 'Začít stavět →',
+    eyebrow: 'Právní',
+    title: 'Ochrana osobních údajů',
+    subtitle: 'Zásady ochrany osobních údajů',
+    updated: 'Poslední aktualizace: [TODO: doplnit datum účinnosti]',
+    intro:
+      'Tyto Zásady ochrany osobních údajů vysvětlují, jaké osobní údaje společnost GOMP shromažďuje prostřednictvím těchto webových stránek, proč, komu jsou předávány a jaká práva máte podle Obecného nařízení o ochraně osobních údajů (EU) 2016/679 („GDPR") a příslušných předpisů České republiky (zákon č. 110/2019 Sb., o zpracování osobních údajů).',
+    toc_label: 'Obsah',
+    terms_note: 'Podmínky upravující nákup naleznete v dokumentu',
+    terms_link: 'Obchodní podmínky',
+  },
 } as const;
 
-const SECTIONS: Record<'en' | 'sk', Section[]> = {
+const SECTIONS: Record<'en' | 'sk' | 'cz', Section[]> = {
   en: [
     {
       id: 'controller',
@@ -242,6 +254,105 @@ const SECTIONS: Record<'en' | 'sk', Section[]> = {
       title: '9. Zmeny týchto zásad',
       blocks: [
         { p: 'Tieto Zásady ochrany osobných údajov môžeme priebežne aktualizovať, najmä v súvislosti so zmenami spracovateľov, ktorých využívame, alebo platnej legislatívy. Aktuálne znenie je vždy dostupné na tejto stránke.' },
+      ],
+    },
+  ],
+  cz: [
+    {
+      id: 'controller',
+      title: '1. Kdo jsme (správce údajů)',
+      blocks: [
+        { p: 'Správcem odpovědným za osobní údaje zpracovávané prostřednictvím těchto webových stránek je:' },
+        { ul: [
+          'Obchodní firma: [TODO: doplnit registrovaný název společnosti]',
+          'Sídlo: [TODO: doplnit sídlo / adresu]',
+          'IČO: [TODO: doplnit IČO]',
+          'Kontaktní e-mail pro dotazy týkající se ochrany údajů: [TODO: doplnit vyhrazený kontaktní e-mail]',
+        ] },
+        { p: '[TODO: je-li jmenován pověřenec pro ochranu osobních údajů (DPO), jeho jméno a kontakt patří sem; není-li relevantní, tento řádek lze odstranit.]' },
+      ],
+    },
+    {
+      id: 'data',
+      title: '2. Jaké údaje zpracováváme a proč',
+      blocks: [
+        { p: 'Údaje o účtu a přihlášení. Při vytvoření účtu zpracováváme (prostřednictvím našich poskytovatelů autentizace, Supabase Auth a/nebo Clerk — viz článek 4) vaše jméno, e-mailovou adresu a bezpečně zahashované heslo, případně telefonní číslo, které doplníte ve svém profilu. Činíme tak za účelem vytvoření a provozu vašeho účtu a umožnění přihlášení — právní základ: plnění smlouvy s vámi (čl. 6 odst. 1 písm. b) GDPR).' },
+        { p: 'Údaje o objednávce a doručení. Při vytvoření objednávky zpracováváme vybrané komponenty/konfiguraci, celkovou cenu objednávky, stav objednávky a případnou uloženou doručovací adresu. Činíme tak za účelem vyřízení vaší objednávky a splnění účetních a daňových povinností — právní základ: plnění smlouvy (čl. 6 odst. 1 písm. b)) a právní povinnost (čl. 6 odst. 1 písm. c)).' },
+        { p: 'Údaje o poptávce bazarové sestavy (Gomp Budget Builds). Pokud odešlete poptávku „Gomp Budget Builds", zpracováváme vaše jméno, příjmení, e-mailovou adresu, telefonní číslo, rozpočet a případné poznámky, které uvedete, abychom mohli prozkoumat aktuální nabídky na bazarovém trhu a zaslat vám cenový návrh. Činíme tak na základě kroků, o které jste požádali směrem k případné smlouvě — právní základ: kroky před uzavřením smlouvy na vaši žádost (čl. 6 odst. 1 písm. b)).' },
+        { p: 'Údaje o preferencích v prohlížeči. Vaše nastavení jazyka, měny a zobrazení zařízení, jakož i rozpracovaná sestava/objednávka, se ukládají lokálně ve vašem prohlížeči (nikoli na našich serverech), aby si stránka pamatovala vaše volby mezi jednotlivými návštěvami. To je nezbytně nutné pro fungování stránky a nevyžaduje souhlas.' },
+        { p: 'Výkonnostní/technické údaje. Používáme Vercel Speed Insights k souhrnnému měření rychlosti načítání stránky (Core Web Vitals), abychom stránku udrželi rychlou. Ve standardním nastavení se tím nenastavují sledovací cookies ani nejste individuálně identifikováni — právní základ: náš oprávněný zájem na provozu spolehlivých webových stránek (čl. 6 odst. 1 písm. f)). [TODO: před spoléháním se na tento právní základ potvrdit aktuální nastavení Speed Insights a zda se sbírají nějaké identifikátory.]' },
+      ],
+    },
+    {
+      id: 'ai',
+      title: '3. Automatizované zpracování a nástroje AI',
+      blocks: [
+        { p: 'Umělou inteligenci ani jiný automatizovaný systém nepoužíváme k přijímání rozhodnutí o vás nebo vaší objednávce, která by měla právní účinky nebo by se vás jinak významně dotýkala, aniž by je nejprve zkontroloval člověk — každý cenový návrh, objednávku i odpověď na váš dotaz před odesláním zkontroluje člověk (čl. 22 GDPR).' },
+        { p: 'Fotografiím produktů na těchto stránkách může být odstraněno pozadí pomocí nástroje strojového učení, který běží přímo v prohlížeči administrátora v okamžiku nahrání fotografie. Tento nástroj zpracovává pouze fotografie produktů, které nahráváme my, a nikdy nezpracovává žádné vaše osobní údaje.' },
+        { p: 'Pokud někdy k vypracování odpovědi na váš dotaz použijeme obecného AI asistenta, sdílíme s ním pouze to, co je nezbytné pro danou konkrétní odpověď, a vaše údaje nepoužíváme k trénování modelů poskytovatele AI, je-li k dispozici možnost takové použití odmítnout. [TODO: pokud se v praxi pro tento účel používá konkrétní nástroj/poskytovatel AI, uvést jej zde a před spoléháním se na tento odstavec potvrdit jeho podmínky týkající se trénování a umístění údajů.]' },
+      ],
+    },
+    {
+      id: 'processors',
+      title: '4. Třetí strany, se kterými sdílíme údaje',
+      blocks: [
+        { p: 'K provozu webových stránek a uložení vašich údajů využíváme následující zpracovatele. Osobní údaje nikomu neprodáváme.' },
+        { ul: [
+          'Supabase — hosting databáze a (je-li využívána) autentizace. Ukládá údaje o účtu, profilu, adresách, objednávkách a poptávkách Gomp Budget Builds. [TODO: potvrdit aktuální region hostingu — v době psaní je projekt umístěn v regionu AWS v EU.]',
+          'Clerk — poskytovatel autentizace (přihlášení/registrace). Zpracovává vaše jméno, e-mail a údaje o relaci/autentizaci. Společnost Clerk, Inc. má sídlo ve Spojených státech. [TODO: potvrdit a uvést konkrétní mechanismus zajišťující ochranu při předání údajů — např. rámec EU-U.S. Data Privacy Framework nebo standardní smluvní doložky — a zda je aktivována možnost uložení údajů v EU.]',
+          'Vercel — hosting webových stránek a funkce Speed Insights popsaná výše. Společnost Vercel Inc. má sídlo ve Spojených státech. [TODO: potvrdit a uvést mechanismus zajišťující ochranu při předání údajů, jako výše.]',
+          '[TODO: doplnit poskytovatele e-mailových služeb použitého k zasílání potvrzení objednávek, pokud/až bude zapojen.]',
+          '[TODO: doplnit platebního poskytovatele použitého ke zpracování plateb, pokud/až bude zapojen — v době psaní není k pokladně připojena žádná platební brána.]',
+        ] },
+      ],
+    },
+    {
+      id: 'retention',
+      title: '5. Jak dlouho vaše údaje uchováváme',
+      blocks: [
+        { p: '[TODO: doplnit dobu uchovávání údajů o účtu — např. po dobu trvání aktivního účtu a stanovenou dobu po jeho zrušení.]' },
+        { p: 'Doklady o objednávkách a fakturaci je podle obecného pravidla českého účetního a daňového práva třeba uchovávat deset (10) let od konce účetního období, kterého se týkají. [TODO: potvrdit skutečně uplatňovanou dobu uchovávání a zdokumentovat ji zde.]' },
+        { p: '[TODO: doplnit dobu uchovávání pro jakoukoli jinou kategorii údajů neuvedenou výše.]' },
+      ],
+    },
+    {
+      id: 'transfers',
+      title: '6. Mezinárodní předávání údajů',
+      blocks: [
+        { p: 'Někteří naši zpracovatelé (Clerk a Vercel, uvedení v článku 4) mají sídlo ve Spojených státech, což znamená, že osobní údaje mohou být předávány mimo Evropský hospodářský prostor. V takovém případě se spoléháme na mechanismus předání, který daný zpracovatel nabízí — například rámec EU-U.S. Data Privacy Framework nebo standardní smluvní doložky Evropské komise. [TODO: před spoléháním se na tento článek potvrdit a zdokumentovat konkrétní mechanismus pro každého zpracovatele.]' },
+      ],
+    },
+    {
+      id: 'cookies',
+      title: '7. Cookies a lokální úložiště',
+      blocks: [
+        { p: 'Tyto webové stránky v současnosti nepoužívají sledovací, analytické ani marketingové cookies. Stránka ukládá malý počet položek do lokálního úložiště vašeho prohlížeče — nejedná se o cookie v přísném slova smyslu, ale o obdobný mechanismus na straně klienta — aby si zapamatovala váš jazyk, měnu, preferenci zobrazení zařízení a rozpracovanou sestavu/objednávku. Všechny tyto položky jsou nezbytně nutné pro zamýšlené fungování stránky a nevyžadují váš souhlas podle pravidel ePrivacy.' },
+        { p: 'Vercel Speed Insights, popsaný v článku 2, funguje ve výchozím nastavení bez nastavování cookies.' },
+        { p: 'Mezera, kterou je třeba doplnit: tyto stránky v současnosti nezobrazují cookie/consent lištu. To je v souladu s tím, že dnes využívají pouze nezbytně nutné lokální úložiště, avšak pokud bude v budoucnu přidána jakákoli analytická, reklamní nebo jiná nikoli nezbytná cookie, musí být před jejím nastavením implementována souhlasová lišta s reálnou možností volby (kategorizovanou na nezbytné / analytické / marketingové) a tento článek musí být odpovídajícím způsobem aktualizován.' },
+      ],
+    },
+    {
+      id: 'rights',
+      title: '8. Vaše práva',
+      blocks: [
+        { p: 'Podle GDPR máte právo na:' },
+        { ul: [
+          'Přístup k osobním údajům, které o vás uchováváme;',
+          'Opravu nepřesných nebo neúplných údajů;',
+          'Výmaz vašich údajů („právo být zapomenut"), s výhradou jakékoli právní povinnosti, kterou máme je uchovávat;',
+          'Omezení zpracování za určitých okolností;',
+          'Přenositelnost údajů, tj. získání vašich údajů ve strukturovaném, běžně používaném formátu;',
+          'Vznést námitku proti zpracování založenému na našem oprávněném zájmu;',
+          'Kdykoli odvolat souhlas, je-li zpracování založeno na souhlasu, aniž by tím bylo dotčeno zpracování prováděné před jeho odvoláním.',
+        ] },
+        { p: 'Kterékoli z těchto práv můžete uplatnit na e-mailové adrese uvedené v článku 1. Máte také právo podat stížnost u Úřadu pro ochranu osobních údajů („ÚOOÚ"), Pplk. Sochora 27, 170 00 Praha 7, web: www.uoou.cz, domníváte-li se, že naše zpracování vašich údajů porušuje GDPR.' },
+      ],
+    },
+    {
+      id: 'changes',
+      title: '9. Změny těchto zásad',
+      blocks: [
+        { p: 'Tyto Zásady ochrany osobních údajů můžeme čas od času aktualizovat, zejména v souvislosti se změnami zpracovatelů, které využíváme, nebo platné legislativy. Aktuální znění je vždy dostupné na této stránce.' },
       ],
     },
   ],
