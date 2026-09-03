@@ -78,13 +78,14 @@ export type SizeScale = { x: number; y: number; z: number };
 // sizeScale happens to be animating.
 // ---------------------------------------------------------------------------
 // scalesMesh: false marks a spec that should still draw its annotation but must NOT drive the
-// placeholder mesh's scale — e.g. an AIO's radiator length has no matching geometry on the
-// pump-block placeholder mesh, so treating it as a real axis-length would balloon the whole
-// part rather than actually depict a radiator. lineLengthMm overrides how long the tick+line
-// itself is drawn, independent of `mm` (which always drives the label text) — for that same
-// radiator case, the label must still quote the true 360mm spec, but the line has no real
-// geometry to span, so it draws at a small placeholder length instead of stretching across
-// the whole case.
+// placeholder mesh's scale via the generic per-axis pipeline — e.g. an AIO's radiator now has
+// real geometry (see buildAioCoolerMesh), but it's built directly at its true mm length at
+// rebuild time (setSizeScale's cooler branch), not resized afterward — the generic pipeline
+// would stretch the WHOLE cooler group (pump and LCD included) to match a 360mm target, which is
+// wrong for parts that don't actually grow with the radiator. lineLengthMm overrides how long
+// the tick+line itself is drawn, independent of `mm` (which always drives the label text) — for
+// that same radiator case, the tick is a small fixed length rather than spanning the real
+// (already fully baked into the mesh) radiator length.
 // annotate: false marks a spec that should still drive the placeholder mesh's scale (so the
 // part's footprint in the scene stays physically correct) but must NOT draw a blueprint
 // annotation or quote a label — the opposite of scalesMesh: false above. Used for motherboards,
@@ -472,26 +473,12 @@ function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
       g.add(sub);
       return g;
     }
-    case 'cooler': {
-      const g = new T.Group();
-      g.add(new T.Mesh(new T.BoxGeometry(0.36, 0.36, 0.38), new T.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.2, metalness: 0.85 })));
-      const lcd = new T.Mesh(
-        new T.CircleGeometry(0.12, 16),
-        new T.MeshStandardMaterial({ color: 0x6e1423, emissive: 0x6e1423, emissiveIntensity: 1.0, side: T.DoubleSide }),
-      );
-      lcd.rotation.y = Math.PI / 2;
-      lcd.position.x = 0.185;
-      g.add(lcd);
-      const tubeMat = new T.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.6 });
-      [-0.1, 0.1].forEach((z) => {
-        const tube = new T.Mesh(new T.CylinderGeometry(0.016, 0.016, 0.16, 8), tubeMat);
-        tube.rotation.z = Math.PI / 5;
-        tube.position.z = z;
-        g.add(tube);
-      });
-      g.scale.setScalar(0.85);
-      return g;
-    }
+    // Real content (air-tower fins vs. AIO radiator+fans) depends on which specific cooler is
+    // selected, which isn't known yet at this one-time-per-category init — setSizeScale's cooler
+    // branch rebuilds this mesh's actual children as soon as a real selection comes in. Air tower
+    // is just an arbitrary starting default.
+    case 'cooler':
+      return buildAirCoolerMesh();
     case 'ram': {
       const g = new T.Group();
       // 4 fixed DIMM slots, evenly spaced along local X (the PCB-thickness axis — real slots
@@ -745,6 +732,109 @@ function buildFanMesh(sizeMm: number): THREE.Group {
   return group;
 }
 
+// A plain air-tower cooler: a stack of thin heatsink fins threaded by two copper heatpipes, with
+// a single intake fan mounted on the side blowing through the stack. Visually distinct from the
+// AIO's pump/radiator look below — reusing that mesh (just resized) for an air tower, as the
+// placeholder used to, was never actually correct for what an air cooler looks like. Built along
+// local Y as the "height" axis, matching dimensionSpecsFor's existing `{axis:'y', mm:
+// coolerHeightMm}` — the fin stack (not the fixed-size fan) is what should read as "this is the
+// dimension that grows with a taller cooler".
+function buildAirCoolerMesh(): THREE.Group {
+  const T = THREE;
+  const g = new T.Group();
+  const finMat = new T.MeshStandardMaterial({ color: 0x8a8a90, roughness: 0.3, metalness: 0.75 });
+  const pipeMat = new T.MeshStandardMaterial({ color: 0xc4823a, roughness: 0.25, metalness: 0.85 });
+  const baseMat = new T.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.35, metalness: 0.6 });
+
+  // Contact base plate, sitting directly on the CPU.
+  const base = new T.Mesh(new T.BoxGeometry(0.06, 0.22, 0.22), baseMat);
+  base.position.x = -0.03;
+  g.add(base);
+
+  // Fin stack, spread along Y — each fin a thin, wide plate.
+  const finCount = 8;
+  const finSpan = 0.52;
+  for (let i = 0; i < finCount; i++) {
+    const fin = new T.Mesh(new T.BoxGeometry(0.32, 0.018, 0.34), finMat);
+    fin.position.y = -finSpan / 2 + (finSpan / (finCount - 1)) * i;
+    g.add(fin);
+  }
+
+  // Two heatpipes running vertically through the fin stack.
+  [-0.09, 0.09].forEach((z) => {
+    const pipe = new T.Mesh(new T.CylinderGeometry(0.018, 0.018, finSpan + 0.08, 12), pipeMat);
+    pipe.position.z = z;
+    g.add(pipe);
+  });
+
+  // Single intake fan on the side, facing into the fin stack (local +Z default rotated to face
+  // +X, the same outward-facing axis the AIO's pump/LCD below uses).
+  const fan = buildFanMesh(120);
+  fan.rotation.y = Math.PI / 2;
+  fan.position.x = 0.19;
+  g.add(fan);
+
+  g.scale.setScalar(0.85);
+  return g;
+}
+
+// AIO liquid cooler: keeps the original pump-block + LCD head, and adds the radiator + radiator
+// fans that were missing entirely before (an AIO's radiator length only ever drove a text
+// annotation, never real geometry — see dimensionSpecsFor's cooler branch). Radiator length is
+// baked directly from the real mm spec at build time rather than left to the generic per-axis
+// sizeScale pipeline, which would stretch the whole group (pump and LCD included) to match a
+// 360mm target — setSizeScale's cooler branch rebuilds this whole mesh fresh whenever the
+// selected cooler's real radiator size changes, the same way updateCase() rebuilds fresh on a
+// case change, rather than trying to resize it after the fact.
+function buildAioCoolerMesh(radiatorMm: number): THREE.Group {
+  const T = THREE;
+  const g = new T.Group();
+
+  g.add(new T.Mesh(new T.BoxGeometry(0.36, 0.36, 0.38), new T.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.2, metalness: 0.85 })));
+  const lcd = new T.Mesh(
+    new T.CircleGeometry(0.12, 16),
+    new T.MeshStandardMaterial({ color: 0x6e1423, emissive: 0x6e1423, emissiveIntensity: 1.0, side: T.DoubleSide }),
+  );
+  lcd.rotation.y = Math.PI / 2;
+  lcd.position.x = 0.185;
+  g.add(lcd);
+
+  // Radiator + fan row, mounted above the pump (toward the case's top panel). One 120mm fan per
+  // ~120mm of radiator (360mm -> 3 fans, 240mm -> 2), matching how a real radiator is populated.
+  const fanSizeMm = 120;
+  const fanCount = Math.max(1, Math.min(3, Math.round(radiatorMm / fanSizeMm)));
+  const radiatorLengthUnits = mmToUnits(radiatorMm);
+  const radiatorThicknessUnits = mmToUnits(27); // a typical radiator's real thickness
+  const fanUnits = mmToUnits(fanSizeMm);
+
+  const radiatorGroup = new T.Group();
+  const radiatorMat = new T.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.35, metalness: 0.7 });
+  const radiator = new T.Mesh(new T.BoxGeometry(radiatorLengthUnits, radiatorThicknessUnits, fanUnits * 0.94), radiatorMat);
+  radiatorGroup.add(radiator);
+
+  const fanSpacing = radiatorLengthUnits / fanCount;
+  for (let i = 0; i < fanCount; i++) {
+    const fan = buildFanMesh(fanSizeMm);
+    fan.rotation.x = -Math.PI / 2; // faces +Y, blowing up out of the radiator's top face
+    fan.position.set(-radiatorLengthUnits / 2 + fanSpacing * (i + 0.5), radiatorThicknessUnits / 2 + fanUnits * 0.06, 0);
+    radiatorGroup.add(fan);
+  }
+  radiatorGroup.position.y = 0.62;
+  g.add(radiatorGroup);
+
+  // Tubes routed up from the pump to the radiator.
+  const tubeMat = new T.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.6 });
+  const tubeLength = radiatorGroup.position.y - 0.05;
+  [-0.1, 0.1].forEach((z) => {
+    const tube = new T.Mesh(new T.CylinderGeometry(0.016, 0.016, tubeLength, 8), tubeMat);
+    tube.position.set(0, tubeLength / 2, z);
+    g.add(tube);
+  });
+
+  g.scale.setScalar(0.85);
+  return g;
+}
+
 // Fan-mount position -> world placement, spread evenly across the relevant span of the current
 // case's real size, sitting just outside the panel it's mounted on, facing outward (matching
 // buildFanMesh's local +Z default face). front/rear/side spread vertically (along Y, like a
@@ -942,6 +1032,12 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   // size by this to get the exact per-axis scale that makes the mesh true to its own quoted
   // dimension, rather than every SKU in a category sharing one fixed placeholder size.
   const naturalSize: Partial<Record<Exclude<CompId, 'case'>, SizeScale>> = {};
+
+  // Which cooler variant is currently built into objects.cooler.mesh, so setSizeScale's cooler
+  // branch only pays for a rebuild when the selection actually crosses the air/AIO line (or picks
+  // a different radiator size), not on every call.
+  let lastCoolerIsAio: boolean | null = null;
+  let lastCoolerRadiatorMm: number | undefined;
 
   // Axes with no real-mm spec of their own (e.g. a mobo's PCB thickness, or a GPU's width/
   // height) are left at scale 1 — their own placeholder size — rather than inheriting some
@@ -1539,6 +1635,56 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   function setSizeScale(id: CompId, specs: DimensionSpec[]) {
     const obj = objects[id];
     if (!obj || id === 'case') return;
+    if (id === 'cooler') {
+      // The AIO branch of dimensionSpecsFor is the one tell-tale sign: `{axis:'x', ...,
+      // scalesMesh:false}` only ever appears for a cooler with a real radiator spec (see
+      // dimensionSpecsFor above) — anything else (including no cooler spec at all) means air
+      // tower. Only rebuild when the variant (or, for AIO, the specific radiator size) actually
+      // changed, since this swaps out real geometry rather than just adjusting a scale factor.
+      const radiatorSpec = specs.find((s) => s.axis === 'x' && s.scalesMesh === false);
+      const isAio = !!radiatorSpec;
+      const radiatorMm = radiatorSpec?.mm;
+      if (isAio !== lastCoolerIsAio || (isAio && radiatorMm !== lastCoolerRadiatorMm)) {
+        const mesh = obj.mesh;
+        disposeSceneContents(mesh);
+        obj.baseMats.forEach((m) => m.dispose());
+        obj.selMats.forEach((m) => m.dispose());
+        obj.baseMats = [];
+        mesh.clear();
+        // Nested as a single child (not hoisted up) so the variant builder's own baked
+        // g.scale.setScalar(0.85) survives — flattening it onto mesh directly would silently
+        // drop that scale, since it lives on the wrapper group being replaced, not the children.
+        const rebuilt = isAio ? buildAioCoolerMesh(radiatorMm!) : buildAirCoolerMesh();
+        mesh.add(rebuilt);
+        // Measure with mesh's own scale reset to identity first — mesh.scale is very likely
+        // still sitting at its collapsed 0.001 (pre-selection) or a stale prior-cooler ratio at
+        // this point (setSizeScale runs before toggleComponent's own scale/visibility handling),
+        // and Box3.setFromObject bakes in whatever scale is live when it's called. Measuring
+        // through a near-zero scale would make every subsequent ratio computed against it
+        // enormous. Same save/measure/restore shape as gpuVerticalAnchoredY above.
+        const prevScale = mesh.scale.clone();
+        mesh.scale.set(1, 1, 1);
+        naturalSize.cooler = new THREE.Box3().setFromObject(mesh).getSize(new THREE.Vector3());
+        mesh.scale.copy(prevScale);
+        obj.selMats = cloneWithEmissiveGlow(mesh);
+        // Re-apply whichever material set (selected/glowing or not) was already active, the same
+        // swap toggleComponent does on a selection change — the rebuild just replaced every child
+        // this was tracking, so the old index-matched materials no longer apply to anything.
+        if (obj.selected) {
+          let i = 0;
+          mesh.traverse((child) => {
+            const m = child as THREE.Mesh;
+            if (m.isMesh && obj.selMats[i]) {
+              obj.baseMats.push(m.material as THREE.Material);
+              m.material = obj.selMats[i];
+              i++;
+            }
+          });
+        }
+        lastCoolerIsAio = isAio;
+        lastCoolerRadiatorMm = radiatorMm;
+      }
+    }
     const sizeScale = sizeScaleFromSpecs(id, specs);
     obj.sizeScale = sizeScale;
     if (obj.selected && obj.moveStart == null) {
