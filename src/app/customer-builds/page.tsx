@@ -471,8 +471,8 @@ export default function CustomerBuildsPage() {
                     {b.specs && (
                       <div style={{ marginTop: 14 }}>
                         {b.specs.split('\n').map((line, li) =>
-                          line.trim() === '' || line === gpu?.line || line === cpu?.line ? (
-                            line.trim() === '' ? <div key={li} style={{ height: 8 }} /> : null
+                          line.trim() === '' ? (
+                            <div key={li} style={{ height: 8 }} />
                           ) : (
                             line.split(' · ').map((s, si) => (
                               <div

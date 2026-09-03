@@ -361,7 +361,7 @@ a[data-gomp-nav]:not([style*='background']):hover {
   }
 }
 .gomp-float-photo {
-  animation: gompFloat 5.5s ease-in-out infinite;
+  animation: gompFloat 8s ease-in-out infinite;
   will-change: transform;
 }
 @media (prefers-reduced-motion: reduce) {
