@@ -154,7 +154,7 @@ export default function GbbPage() {
       <style>{`@keyframes gompPulseDot { 0%,100% { opacity:0.18; transform:scale(0.8); } 50% { opacity:0.6; transform:scale(1.2); } }`}</style>
       <SiteNav />
 
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '32px 20px 60px' : '56px 32px 90px', position: 'relative' }}>
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '56px 20px 60px' : '84px 32px 90px', position: 'relative' }}>
         <div style={{ position: 'relative' }}>
           {/* ambient floaties, mirrors the landing-page hero — same motif, green instead of bordeaux */}
           {!isMobile && (

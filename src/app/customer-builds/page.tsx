@@ -425,9 +425,9 @@ export default function CustomerBuildsPage() {
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
       <SiteNav />
 
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '32px 20px 60px' : '56px 32px 90px' }}>
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '56px 20px 60px' : '84px 32px 90px' }}>
         <Reveal>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MAROON, letterSpacing: 1.2, marginBottom: 10 }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600, fontStyle: 'italic', color: MAROON, letterSpacing: 1.5, marginBottom: 12 }}>
             {t.eyebrow}
           </div>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 30 : 42, color: INK, margin: '0 0 14px', lineHeight: 1.1 }}>
