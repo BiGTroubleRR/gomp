@@ -29,6 +29,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Dict> = {
     hero_title_line1: 'Build your', hero_title_em: 'Legend.',
     hero_desc: 'Configure your dream machine part by part. Every GOMP build is hand-assembled, benchmarked, and ships in seven days.',
     hero_cta_build: 'Start Building →', hero_cta_browse: 'Browse builds',
+    undervolt_badge: 'Every CPU & GPU Undervolted →',
     stress_tested: 'STRESS TESTED',
     featured_build: 'Featured Build', apex_tagline: 'Ultimate 4K gaming & creation',
     spec_storage: 'Storage', spec_cooling: 'Cooling',
@@ -50,6 +51,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Dict> = {
     hero_title_line1: 'Postav si svoju', hero_title_em: 'Legendu.',
     hero_desc: 'Vysnený, ručne stavaný, testovaný, tvoj.',
     hero_cta_build: 'Začať stavať →', hero_cta_browse: 'Prehliadať zostavy',
+    undervolt_badge: 'Každý CPU & GPU podvoltovaný →',
     stress_tested: 'ZÁŤAŽOVO TESTOVANÉ',
     featured_build: 'Odporúčaná zostava', apex_tagline: 'Špičkové 4K hranie a tvorba',
     spec_storage: 'Úložisko', spec_cooling: 'Chladenie',
@@ -86,6 +88,7 @@ const FEATURES_RAW: FeatureRaw[] = [
   { num: '02', title_en: '3-Year Warranty', title_sk: '3-ročná záruka', desc_en: 'Comprehensive coverage on all parts and labor. No questions, no runarounds, ever.', desc_sk: 'Kompletné krytie všetkých dielov a práce. Bez zbytočných otázok a prieťahov.' },
   { num: '03', title_en: 'Benchmark Tested', title_sk: 'Otestované benchmarkmi', desc_en: 'Every machine ships with a printed performance validation sheet from our testing rig.', desc_sk: 'Každý počítač expedujeme s tlačeným protokolom o výkonnostných testoch.' },
   { num: '04', title_en: 'Ships in 7 Days', title_sk: 'Expedícia do 7 dní', desc_en: 'From order confirmation to your door in under a week, guaranteed.', desc_sk: 'Od potvrdenia objednávky až k vašim dverám za menej než týždeň, garantovane.' },
+  { num: '05', title_en: 'Undervolted by Default', title_sk: 'Podvoltované ako štandard', desc_en: 'Every CPU and GPU is undervolted wherever the platform allows it — lower temperatures, quieter fans, less power draw, with zero performance lost.', desc_sk: 'Každý CPU a GPU podvoltujeme všade, kde to platforma umožňuje — nižšie teploty, tichšie ventilátory, nižšia spotreba, bez straty výkonu.' },
 ];
 
 // ---- Small presentational helpers ----
@@ -219,6 +222,7 @@ export default function Home() {
           50%     { opacity:1; transform:scale(1.04); }
         }
         @keyframes gompFloatC { 0%,100% { transform:translate(0,0) rotate(0deg); } 50% { transform:translate(6px,-10px) rotate(6deg); } }
+        @keyframes gompFloatBubble { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
       `}</style>
 
       <div style={{ position: 'relative', zIndex: 2, background: BG, minHeight: '100vh' }}>
@@ -342,9 +346,30 @@ export default function Home() {
                 <br />
                 <span style={{ fontStyle: 'italic', color: MAROON }}>{t.hero_title_em}</span>
               </h1>
-              <p style={{ fontFamily: 'var(--font-sans)', fontSize: isMobile ? 15 : 17, lineHeight: 1.75, color: MUTED, margin: isMobile ? '0 0 32px' : '0 0 48px', maxWidth: 420, fontWeight: 300 }}>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: isMobile ? 15 : 17, lineHeight: 1.75, color: MUTED, margin: isMobile ? '0 0 20px' : '0 0 24px', maxWidth: 420, fontWeight: 300 }}>
                 {t.hero_desc}
               </p>
+              <TransitionLink
+                href="/undervolting"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '7px 14px',
+                  borderRadius: 20,
+                  border: '0.5px solid rgba(110,20,35,0.3)',
+                  background: 'rgba(110,20,35,0.06)',
+                  textDecoration: 'none',
+                  marginBottom: isMobile ? 24 : 32,
+                  boxShadow: '0 14px 26px -14px rgba(110,20,35,0.35)',
+                  animation: 'gompFloatBubble 3.4s ease-in-out infinite',
+                }}
+              >
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: MAROON, flexShrink: 0 }} />
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase', color: MAROON }}>
+                  {t.undervolt_badge}
+                </span>
+              </TransitionLink>
               <div style={{ display: 'flex', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
                 <button
                   onClick={startBuilding}
@@ -732,7 +757,7 @@ export default function Home() {
                 {t.gomp_standard}
               </h2>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4,1fr)', borderTop: '0.5px solid rgba(28,28,26,0.12)', position: 'relative' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(5,1fr)', borderTop: '0.5px solid rgba(28,28,26,0.12)', position: 'relative' }}>
               {!isMobile && (
                 <>
                   <div style={{ position: 'absolute', top: -3, left: '50%', width: 5, height: 5, borderRadius: '50%', background: MAROON, pointerEvents: 'none', animation: 'gompPulseDot 4.8s ease-in-out infinite 0.4s' }} />

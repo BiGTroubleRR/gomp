@@ -21,6 +21,7 @@ const LINKS: { href: string; en: string; sk: string }[] = [
   { href: '/build', en: 'Build', sk: 'Zostaviť' },
   { href: '/gbb', en: 'Budget Builds', sk: 'Budget Builds' },
   { href: '/customer-builds', en: 'Customer GOMPs', sk: 'Zákaznícke GOMPy' },
+  { href: '/undervolting', en: 'Why undervolt?', sk: 'Prečo undervolt?' },
   { href: '/about', en: 'About', sk: 'O nás' },
 ];
 
@@ -168,16 +169,17 @@ function LogoSwitcher({ onNavigate }: { onNavigate?: () => void }) {
 // dark-chrome area). Collapses to a hamburger + full-screen menu below the 768px breakpoint —
 // the desktop layout has no room for 4 links + account + lang/currency + a CTA on a phone.
 //
-// The desktop row itself needs ~900px to lay out without wrapping (longer Slovak labels like
-// "O nás" and "Začať stavať →" are the tightest fit) — well above the 768px point where the
-// rest of each page's grids/hero switch to their mobile layout. So the nav collapses to the
-// hamburger earlier than the page body does, on its own wider threshold, rather than letting
-// the row run out of room and wrap link/button text onto a second line mid-bar.
+// The desktop row itself needs ~1180px to lay out without wrapping (7 links plus account,
+// lang/currency, and a CTA — longer Slovak labels like "O nás" and "Začať stavať →" are the
+// tightest fit) — well above the 768px point where the rest of each page's grids/hero switch
+// to their mobile layout. So the nav collapses to the hamburger earlier than the page body
+// does, on its own wider threshold, rather than letting the row run out of room and wrap
+// link/button text onto a second line mid-bar.
 export default function SiteNav({ cta }: { cta?: ReactNode }) {
   const { lang } = useSite();
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const navTooNarrow = useMediaQuery('(max-width: 960px)');
+  const navTooNarrow = useMediaQuery('(max-width: 1180px)');
   const showMobileNav = isMobile || navTooNarrow;
   const [menuOpen, setMenuOpen] = useState(false);
 
