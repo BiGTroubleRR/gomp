@@ -778,15 +778,13 @@ function buildAirCoolerMesh(): THREE.Group {
   return g;
 }
 
-// AIO liquid cooler: keeps the original pump-block + LCD head, and adds the radiator + radiator
-// fans that were missing entirely before (an AIO's radiator length only ever drove a text
-// annotation, never real geometry — see dimensionSpecsFor's cooler branch). Radiator length is
-// baked directly from the real mm spec at build time rather than left to the generic per-axis
-// sizeScale pipeline, which would stretch the whole group (pump and LCD included) to match a
-// 360mm target — setSizeScale's cooler branch rebuilds this whole mesh fresh whenever the
-// selected cooler's real radiator size changes, the same way updateCase() rebuilds fresh on a
-// case change, rather than trying to resize it after the fact.
-function buildAioCoolerMesh(radiatorMm: number): THREE.Group {
+// AIO liquid cooler pump/LCD head — just the block that sits on the CPU socket, mobo-anchored
+// exactly like every other part in that group (see resetComponentPositions). The radiator itself
+// no longer lives inside this mesh: a real AIO's radiator mounts to a case *wall* (front, by
+// default here — see buildAioRadiatorGroup/updateAioRadiator below), which is a case-anchored
+// position entirely independent of where the pump/mobo sit, so it has to be its own top-level
+// scene object (like the case's own fanGroup) rather than a child of this mobo-anchored mesh.
+function buildAioCoolerMesh(): THREE.Group {
   const T = THREE;
   const g = new T.Group();
 
@@ -799,39 +797,75 @@ function buildAioCoolerMesh(radiatorMm: number): THREE.Group {
   lcd.position.x = 0.185;
   g.add(lcd);
 
-  // Radiator + fan row, mounted above the pump (toward the case's top panel). One 120mm fan per
-  // ~120mm of radiator (360mm -> 3 fans, 240mm -> 2), matching how a real radiator is populated.
+  g.scale.setScalar(0.85);
+  return g;
+}
+
+// A front-mounted AIO radiator: a slab + one 120mm fan per ~120mm of radiator (360mm -> 3 fans,
+// 240mm -> 2, 120mm -> 1), stacked vertically. Lives in its own top-level group anchored directly
+// to the selected case's real size (see updateAioRadiator), not nested under the cooler's own
+// mobo-anchored, 0.85-baked pump mesh above — so unlike that mesh, this is built in true
+// mm-derived units with no extra fudge scale, the same way rebuildFans' case fans are: both end
+// up living in the same case-relative coordinate space and need to agree with it directly.
+// Oriented so its length runs along Y (vertical, spread across the front panel's height) and its
+// thickness along Z (the front wall's own normal) — the opposite axis pairing from the old
+// top-mounted version, which ran length along X and thickness along Y.
+function buildAioRadiatorGroup(radiatorMm: number): THREE.Group {
+  const T = THREE;
+  const g = new T.Group();
   const fanSizeMm = 120;
   const fanCount = Math.max(1, Math.min(3, Math.round(radiatorMm / fanSizeMm)));
   const radiatorLengthUnits = mmToUnits(radiatorMm);
   const radiatorThicknessUnits = mmToUnits(27); // a typical radiator's real thickness
   const fanUnits = mmToUnits(fanSizeMm);
 
-  const radiatorGroup = new T.Group();
   const radiatorMat = new T.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.35, metalness: 0.7 });
-  const radiator = new T.Mesh(new T.BoxGeometry(radiatorLengthUnits, radiatorThicknessUnits, fanUnits * 0.94), radiatorMat);
-  radiatorGroup.add(radiator);
+  const radiator = new T.Mesh(new T.BoxGeometry(fanUnits * 0.94, radiatorLengthUnits, radiatorThicknessUnits), radiatorMat);
+  g.add(radiator);
 
   const fanSpacing = radiatorLengthUnits / fanCount;
   for (let i = 0; i < fanCount; i++) {
     const fan = buildFanMesh(fanSizeMm);
-    fan.rotation.x = -Math.PI / 2; // faces +Y, blowing up out of the radiator's top face
-    fan.position.set(-radiatorLengthUnits / 2 + fanSpacing * (i + 0.5), radiatorThicknessUnits / 2 + fanUnits * 0.06, 0);
-    radiatorGroup.add(fan);
+    fan.rotation.y = Math.PI; // faces +Z (into the case), matching fanTransform('front', ...)'s own rotation
+    fan.position.set(0, -radiatorLengthUnits / 2 + fanSpacing * (i + 0.5), radiatorThicknessUnits / 2 + fanUnits * 0.06);
+    g.add(fan);
   }
-  radiatorGroup.position.y = 0.62;
-  g.add(radiatorGroup);
+  return g;
+}
 
-  // Tubes routed up from the pump to the radiator.
+// Simple two-segment (Manhattan/L-bend) rectilinear tube pair connecting the pump to a
+// front-mounted radiator elsewhere in the case: one run along Z (front-to-back) at the pump's own
+// Y, then a bend and a second run along Y at the radiator's Z — the two points rarely share
+// either coordinate. No curve/TubeGeometry precedent exists anywhere in this file; a small chain
+// of axis-aligned cylinders matches how every other part here (fin-stack heatpipes, the old
+// straight AIO tubes) is already built.
+function buildAioTubes(pumpPos: THREE.Vector3, radiatorPos: THREE.Vector3): THREE.Group {
+  const T = THREE;
+  const g = new T.Group();
   const tubeMat = new T.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.6 });
-  const tubeLength = radiatorGroup.position.y - 0.05;
-  [-0.1, 0.1].forEach((z) => {
-    const tube = new T.Mesh(new T.CylinderGeometry(0.016, 0.016, tubeLength, 8), tubeMat);
-    tube.position.set(0, tubeLength / 2, z);
-    g.add(tube);
+  const radius = 0.016;
+
+  [-0.05, 0.05].forEach((xOffset) => {
+    const x = pumpPos.x + xOffset;
+    const bendZ = radiatorPos.z;
+    const bendY = pumpPos.y;
+
+    const zLen = Math.abs(bendZ - pumpPos.z);
+    if (zLen > 0.001) {
+      const seg = new T.Mesh(new T.CylinderGeometry(radius, radius, zLen, 8), tubeMat);
+      seg.rotation.x = Math.PI / 2;
+      seg.position.set(x, bendY, (pumpPos.z + bendZ) / 2);
+      g.add(seg);
+    }
+
+    const yLen = Math.abs(radiatorPos.y - bendY);
+    if (yLen > 0.001) {
+      const seg = new T.Mesh(new T.CylinderGeometry(radius, radius, yLen, 8), tubeMat);
+      seg.position.set(x, (bendY + radiatorPos.y) / 2, bendZ);
+      g.add(seg);
+    }
   });
 
-  g.scale.setScalar(0.85);
   return g;
 }
 
@@ -1263,6 +1297,27 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     rebuildFans();
   }
 
+  // ---- AIO radiator (front-mounted) ----
+  // Separate top-level group, same reasoning as fanGroup above: its position depends on the
+  // selected case's real size (front wall), not on the cooler mesh's own mobo-anchored transform,
+  // so it can't live inside objects.cooler.mesh. Rebuilt whenever the case size changes
+  // (updateCase) or the installed cooler changes (setSizeScale's cooler branch, toggleComponent).
+  const FRONT_RADIATOR_CLEARANCE = 0.02;
+  const aioRadiatorGroup = new THREE.Group();
+  scene.add(aioRadiatorGroup);
+
+  function updateAioRadiator() {
+    aioRadiatorGroup.clear();
+    const coolerObj = objects.cooler;
+    if (!coolerObj || !coolerObj.selected || !lastCoolerIsAio || lastCoolerRadiatorMm == null) return;
+    const radiatorThicknessUnits = mmToUnits(27);
+    const radiatorZ = -lastCaseSize.d / 2 + FRONT_RADIATOR_CLEARANCE + radiatorThicknessUnits / 2;
+    const radiatorGroup = buildAioRadiatorGroup(lastCoolerRadiatorMm);
+    radiatorGroup.position.set(0, 0, radiatorZ);
+    aioRadiatorGroup.add(radiatorGroup);
+    aioRadiatorGroup.add(buildAioTubes(coolerObj.finalPos, new THREE.Vector3(0, 0, radiatorZ)));
+  }
+
   // mobo/cpu/cooler/ram/storage move as a rigid group, sharing whatever position the
   // motherboard itself sits at — and that position is pinned to the *selected case's* actual
   // interior (rear wall for Z, solid side wall for X) rather than BASE_POS.mobo's fixed
@@ -1406,6 +1461,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     positionCan();
     refreshCanDimensions();
     rebuildFans();
+    updateAioRadiator();
   }
 
   // sizeScale is set by a prior setSizeScale(id, specs) call (see changeSelection in the page,
@@ -1461,6 +1517,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     obj.scaleFrom = mesh.scale.clone();
     obj.moveStart = Date.now();
     obj.moveDur = nextSelected ? 650 : 550;
+    if (id === 'cooler') updateAioRadiator();
     controls.autoRotate = false;
   }
 
@@ -1654,7 +1711,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
         // Nested as a single child (not hoisted up) so the variant builder's own baked
         // g.scale.setScalar(0.85) survives — flattening it onto mesh directly would silently
         // drop that scale, since it lives on the wrapper group being replaced, not the children.
-        const rebuilt = isAio ? buildAioCoolerMesh(radiatorMm!) : buildAirCoolerMesh();
+        const rebuilt = isAio ? buildAioCoolerMesh() : buildAirCoolerMesh();
         mesh.add(rebuilt);
         // Measure with mesh's own scale reset to identity first — mesh.scale is very likely
         // still sitting at its collapsed 0.001 (pre-selection) or a stale prior-cooler ratio at
@@ -1683,6 +1740,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
         }
         lastCoolerIsAio = isAio;
         lastCoolerRadiatorMm = radiatorMm;
+        updateAioRadiator();
       }
     }
     const sizeScale = sizeScaleFromSpecs(id, specs);

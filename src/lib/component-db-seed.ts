@@ -359,6 +359,8 @@ export function defaultComponentDb(): ComponentDb {
     ],
     cooler: [
       { id: 'co1', name: 'NZXT Kraken 360 RGB', price: 156, specs: '360mm AIO · LCD head · AM5/LGA1700', tier: 'S', coolerRadiatorMm: 360 },
+      { id: 'co3', name: 'NZXT Kraken Water 240mm RGB White', price: 130, specs: '240mm AIO', coolerRadiatorMm: 240 },
+      { id: 'co4', name: 'Corsair H60 (2018) Water 120mm 57.2 CFM Black', price: 90, specs: '120mm AIO', coolerRadiatorMm: 120 },
       { id: 'co2', name: 'Noctua NH-D15 chromax', price: 86, specs: 'Dual tower · 165mm', tier: 'A', coolerHeightMm: 165 },
     ],
     psu: [
