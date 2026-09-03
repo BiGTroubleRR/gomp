@@ -254,6 +254,7 @@ type Translations = {
   customer_gomps_tab: string; customer_gomps_title: string; add_customer_gomp: string;
   cg_title_label: string; cg_customer_label: string; cg_customer_placeholder: string;
   cg_specs_label: string; cg_specs_help: string; cg_price_label: string; cg_built_on_label: string;
+  cg_photos_label: string; cg_add_photo: string;
   cg_listed: (n: number) => string;
 };
 
@@ -334,6 +335,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     cg_title_label: 'Title', cg_customer_label: 'Customer', cg_customer_placeholder: 'First name/initial only — e.g. "Built for Martin K."',
     cg_specs_label: 'Specs', cg_specs_help: 'Separate each spec with " · ", same as the Components tab.',
     cg_price_label: 'Price (EUR)', cg_built_on_label: 'Built on',
+    cg_photos_label: 'Photos', cg_add_photo: 'Add photo',
     cg_listed: (n) => `${n} build${n === 1 ? '' : 's'}`,
   },
   sk: {
@@ -412,6 +414,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     cg_title_label: 'Názov', cg_customer_label: 'Zákazník', cg_customer_placeholder: 'Len meno/iniciálka — napr. "Postavené pre Martina K."',
     cg_specs_label: 'Špecifikácie', cg_specs_help: 'Oddeľte jednotlivé položky pomocou " · ", rovnako ako v záložke Komponenty.',
     cg_price_label: 'Cena (EUR)', cg_built_on_label: 'Dátum dokončenia',
+    cg_photos_label: 'Fotky', cg_add_photo: 'Pridať fotku',
     cg_listed: (n) => `${n} ${n === 1 ? 'zostava' : n >= 2 && n <= 4 ? 'zostavy' : 'zostáv'}`,
   },
 };
@@ -545,11 +548,11 @@ function validateImageFile(file: File): string | null {
 
 // "Zákaznícke GOMPy" (customer_builds) add/edit form state.
 type CgFormState = {
-  title: string; customerLabel: string; specs: string; priceEur: string; builtOn: string; imageUrl: string;
+  title: string; customerLabel: string; specs: string; priceEur: string; builtOn: string; imageUrls: string[];
 };
 
 function initialCgForm(): CgFormState {
-  return { title: '', customerLabel: '', specs: '', priceEur: '', builtOn: '', imageUrl: '' };
+  return { title: '', customerLabel: '', specs: '', priceEur: '', builtOn: '', imageUrls: [] };
 }
 
 // Width of the floating edit popup on desktop (see openEditComp) — wide enough that a case's
@@ -918,7 +921,7 @@ export default function AdminPage() {
       specs: b.specs,
       priceEur: b.priceEur != null ? String(b.priceEur) : '',
       builtOn: b.builtOn || '',
-      imageUrl: b.imageUrl || '',
+      imageUrls: [...b.imageUrls],
     });
     setCgImageStatus('idle');
     setCgImageError(null);
@@ -939,7 +942,7 @@ export default function AdminPage() {
       specs: cgForm.specs.trim(),
       priceEur: cgForm.priceEur !== '' ? parseFloat(cgForm.priceEur) || 0 : null,
       builtOn: cgForm.builtOn || null,
-      imageUrl: cgForm.imageUrl || null,
+      imageUrls: cgForm.imageUrls,
       isLive: true,
       sortOrder: 0,
       createdAt: '',
@@ -970,28 +973,38 @@ export default function AdminPage() {
 
   // Same plain-upload flow as handleImageUpload (see the Components tab) — no
   // background removal, the admin pre-cuts the photo themselves if they want transparency.
-  async function handleCgImageUpload(file: File) {
-    const invalidReason = validateImageFile(file);
-    if (invalidReason) {
-      setCgImageStatus('error');
-      setCgImageError(invalidReason);
-      return;
-    }
+  // Uploads each file in turn (the endpoint is single-file) and appends each resulting URL
+  // to the album as it resolves, so a partial failure partway through a multi-file pick
+  // still keeps whatever uploaded successfully before it.
+  async function handleCgImageUpload(files: FileList) {
     setCgImageStatus('uploading');
     setCgImageError(null);
-    try {
-      const body = new FormData();
-      body.append('file', file, file.name || 'customer-build.png');
-      body.append('nameHint', cgForm.title || 'customer-build');
-      const res = await fetch('/api/admin/upload-image', { method: 'POST', body });
-      const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
-      if (!res.ok || !json.url) throw new Error(json.error || 'Upload failed.');
-      setCgForm((f) => ({ ...f, imageUrl: json.url! }));
-      setCgImageStatus('idle');
-    } catch (e) {
-      setCgImageStatus('error');
-      setCgImageError(e instanceof Error ? e.message : 'Image upload failed.');
+    for (const file of Array.from(files)) {
+      const invalidReason = validateImageFile(file);
+      if (invalidReason) {
+        setCgImageStatus('error');
+        setCgImageError(invalidReason);
+        return;
+      }
+      try {
+        const body = new FormData();
+        body.append('file', file, file.name || 'customer-build.png');
+        body.append('nameHint', cgForm.title || 'customer-build');
+        const res = await fetch('/api/admin/upload-image', { method: 'POST', body });
+        const json = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+        if (!res.ok || !json.url) throw new Error(json.error || 'Upload failed.');
+        setCgForm((f) => ({ ...f, imageUrls: [...f.imageUrls, json.url!] }));
+      } catch (e) {
+        setCgImageStatus('error');
+        setCgImageError(e instanceof Error ? e.message : 'Image upload failed.');
+        return;
+      }
     }
+    setCgImageStatus('idle');
+  }
+
+  function removeCgImage(url: string) {
+    setCgForm((f) => ({ ...f, imageUrls: f.imageUrls.filter((u) => u !== url) }));
   }
 
   // ---- margin ----
@@ -2022,60 +2035,61 @@ export default function AdminPage() {
                     </div>
                   </div>
                   <div style={{ marginBottom: 22 }}>
-                    <div style={LABEL_STYLE}>{t.image_label}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <div
+                    <div style={LABEL_STYLE}>{t.cg_photos_label}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      {cgForm.imageUrls.map((url) => (
+                        <div key={url} style={{ position: 'relative', width: 64, height: 64, flexShrink: 0 }}>
+                          <div
+                            style={{
+                              width: 64, height: 64, borderRadius: 2,
+                              border: '0.5px solid rgba(28,28,26,0.15)',
+                              background: 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 12px 12px',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                            }}
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                          </div>
+                          <button
+                            onClick={() => removeCgImage(url)}
+                            title={t.image_remove}
+                            style={{
+                              position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%',
+                              background: '#1C1C1A', color: '#FDFAF4', border: '1px solid #FDFAF4',
+                              fontSize: 10, lineHeight: '16px', cursor: 'pointer', padding: 0,
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                      <label
                         style={{
-                          width: 64, height: 64, borderRadius: 2, flexShrink: 0,
-                          border: '0.5px solid rgba(28,28,26,0.15)',
-                          background: cgForm.imageUrl
-                            ? 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 12px 12px'
-                            : '#FDFAF4',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                          width: 64, height: 64, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6E1423', cursor: 'pointer', textAlign: 'center',
+                          border: '0.5px dashed rgba(110,20,35,0.35)', borderRadius: 2, padding: 4,
                         }}
                       >
-                        {cgForm.imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={cgForm.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                        ) : (
-                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890' }}>—</span>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <label
-                          style={{
-                            fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6E1423', cursor: 'pointer',
-                            border: '0.5px solid rgba(110,20,35,0.35)', borderRadius: 2, padding: '5px 10px', width: 'fit-content',
+                        {t.cg_add_photo}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            e.target.value = '';
+                            if (files && files.length) handleCgImageUpload(files);
                           }}
-                        >
-                          {cgForm.imageUrl ? t.image_replace : t.image_label}
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              e.target.value = '';
-                              if (file) handleCgImageUpload(file);
-                            }}
-                            style={{ display: 'none' }}
-                          />
-                        </label>
-                        {cgImageStatus === 'uploading' && (
-                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469' }}>{t.image_uploading}</span>
-                        )}
-                        {cgImageStatus === 'error' && (
-                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#CC3333' }}>{cgImageError}</span>
-                        )}
-                        {cgForm.imageUrl && cgImageStatus === 'idle' && (
-                          <button
-                            onClick={() => setCgForm((f) => ({ ...f, imageUrl: '' }))}
-                            style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
-                          >
-                            {t.image_remove}
-                          </button>
-                        )}
-                      </div>
+                          style={{ display: 'none' }}
+                        />
+                      </label>
                     </div>
+                    {cgImageStatus === 'uploading' && (
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginTop: 6 }}>{t.image_uploading}</div>
+                    )}
+                    {cgImageStatus === 'error' && (
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#CC3333', marginTop: 6 }}>{cgImageError}</div>
+                    )}
                   </div>
                   <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 18 }}>
                     <button onClick={cancelEditCg} style={{ background: 'transparent', color: '#7A7469', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, padding: '9px 20px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
@@ -2098,19 +2112,31 @@ export default function AdminPage() {
                       display: 'flex', gap: 14, opacity: b.isLive ? 1 : 0.65,
                     }}
                   >
-                    <div
-                      style={{
-                        width: 72, height: 72, borderRadius: 2, flexShrink: 0,
-                        border: '0.5px solid rgba(28,28,26,0.12)',
-                        background: b.imageUrl ? 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 12px 12px' : '#F5F0E6',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-                      }}
-                    >
-                      {b.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={b.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                      ) : (
-                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890' }}>—</span>
+                    <div style={{ position: 'relative', width: 72, height: 72, flexShrink: 0 }}>
+                      <div
+                        style={{
+                          width: 72, height: 72, borderRadius: 2,
+                          border: '0.5px solid rgba(28,28,26,0.12)',
+                          background: b.imageUrls[0] ? 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 12px 12px' : '#F5F0E6',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                        }}
+                      >
+                        {b.imageUrls[0] ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={b.imageUrls[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        ) : (
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890' }}>—</span>
+                        )}
+                      </div>
+                      {b.imageUrls.length > 1 && (
+                        <div
+                          style={{
+                            position: 'absolute', bottom: -4, right: -4, padding: '1px 5px', borderRadius: 8,
+                            background: '#1C1C1A', color: '#FDFAF4', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
+                          }}
+                        >
+                          +{b.imageUrls.length - 1}
+                        </div>
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>

@@ -438,6 +438,10 @@ create table if not exists public.customer_builds (
   updated_at timestamptz not null default now()
 );
 
+-- Full photo album for a build. image_url is kept as the "cover" photo (image_urls[0])
+-- for anything still reading the legacy single column; the app reads image_urls only.
+alter table public.customer_builds add column if not exists image_urls text[] not null default '{}';
+
 alter table public.customer_builds enable row level security;
 
 drop policy if exists "customer_builds_select_public" on public.customer_builds;

@@ -15,7 +15,7 @@ export type CustomerBuild = {
   specs: string;
   priceEur: number | null;
   builtOn: string | null;
-  imageUrl: string | null;
+  imageUrls: string[];
   isLive: boolean;
   sortOrder: number;
   createdAt: string;
@@ -30,7 +30,10 @@ export function rowToCustomerBuild(row: CustomerBuildRow): CustomerBuild {
     specs: row.specs,
     priceEur: row.price_eur != null ? Number(row.price_eur) : null,
     builtOn: row.built_on,
-    imageUrl: row.image_url,
+    // image_urls is the source of truth going forward; rows saved before this column
+    // existed only have the legacy single image_url, so fall back to that as a one-photo
+    // album rather than requiring a data backfill.
+    imageUrls: row.image_urls?.length ? row.image_urls : row.image_url ? [row.image_url] : [],
     isLive: row.is_live,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
@@ -45,7 +48,9 @@ export function customerBuildToRow(build: CustomerBuild, sortOrder: number): Cus
     specs: build.specs,
     price_eur: build.priceEur,
     built_on: build.builtOn,
-    image_url: build.imageUrl,
+    image_urls: build.imageUrls,
+    // Kept in sync as a "cover photo" for anything still reading the legacy single column.
+    image_url: build.imageUrls[0] ?? null,
     is_live: build.isLive ?? true,
     sort_order: sortOrder,
   };

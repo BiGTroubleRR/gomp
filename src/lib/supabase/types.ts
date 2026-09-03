@@ -233,6 +233,7 @@ export type Database = {
           price_eur: number | null;
           built_on: string | null;
           image_url: string | null;
+          image_urls: string[] | null;
           is_live: boolean;
           sort_order: number;
           created_at: string;
@@ -246,6 +247,7 @@ export type Database = {
           price_eur?: number | null;
           built_on?: string | null;
           image_url?: string | null;
+          image_urls?: string[] | null;
           is_live?: boolean;
           sort_order?: number;
         };
@@ -256,6 +258,7 @@ export type Database = {
           price_eur?: number | null;
           built_on?: string | null;
           image_url?: string | null;
+          image_urls?: string[] | null;
           is_live?: boolean;
           sort_order?: number;
         };
