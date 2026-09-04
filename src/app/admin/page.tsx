@@ -47,8 +47,8 @@ type Suggestion = { name: string; passmark?: number; passmarkUrl?: string; specs
 const CATEGORY_TAB_ORDER: Category[] = ['gpu', 'cpu', 'ram', 'storage', 'mobo', 'cooler', 'psu', 'case', 'fan'];
 
 const CAT_LABELS: Record<'en' | 'sk', Record<Category, string>> = {
-  en: { gpu: 'GPU', cpu: 'CPU', ram: 'RAM', storage: 'Storage', mobo: 'Motherboard', cooler: 'Cooler', psu: 'PSU', case: 'Case', fan: 'Fan' },
-  sk: { gpu: 'GPU', cpu: 'CPU', ram: 'RAM', storage: 'Úložisko', mobo: 'Základná doska', cooler: 'Chladič', psu: 'PSU', case: 'Skriňa', fan: 'Ventilátor' },
+  en: { gpu: 'GPU', cpu: 'CPU', ram: 'RAM', storage: 'SSD', mobo: 'Motherboard', cooler: 'Cooler', psu: 'PSU', case: 'Case', fan: 'Fan' },
+  sk: { gpu: 'GPU', cpu: 'CPU', ram: 'RAM', storage: 'SSD', mobo: 'Základná doska', cooler: 'Chladič', psu: 'PSU', case: 'Skriňa', fan: 'Ventilátor' },
 };
 
 const CASE_CATS = ['Full Tower', 'Mid Tower', 'Mini Tower', 'SFF'];
@@ -265,7 +265,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     manage: 'Manage', builds_tab: 'Builds', components_tab: 'Components',
     database: 'Database', builds_listed: 'Builds listed', components_word: 'Components',
     pc_builds: 'PC Builds', add_build: '+ Add Build',
-    name_label: 'Name *', tagline_label: 'Tagline', storage_label: 'Storage',
+    name_label: 'Name *', tagline_label: 'Tagline', storage_label: 'SSD',
     mobo_label: 'Motherboard', cooler_label: 'Cooler',
     category_label: 'Category', cat_flagship: 'Flagship', cat_performance: 'Performance', cat_midrange: 'Mid-Range', cat_entry: 'Entry',
     tier_label: 'Tier', tier_s: 'S — Legendary', tier_a: 'A — Excellent', tier_b: 'B — Great', tier_c: 'C — Good', tier_d: 'D — Decent',
@@ -344,7 +344,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     manage: 'Správa', builds_tab: 'Zostavy', components_tab: 'Komponenty',
     database: 'Databáza', builds_listed: 'Uvedených zostáv', components_word: 'Komponenty',
     pc_builds: 'Zostavy PC', add_build: '+ Pridať zostavu',
-    name_label: 'Názov *', tagline_label: 'Slogan', storage_label: 'Úložisko',
+    name_label: 'Názov *', tagline_label: 'Slogan', storage_label: 'SSD',
     mobo_label: 'Základná doska', cooler_label: 'Chladič',
     category_label: 'Kategória', cat_flagship: 'Vlajková loď', cat_performance: 'Výkonnostná', cat_midrange: 'Stredná trieda', cat_entry: 'Základná',
     tier_label: 'Trieda', tier_s: 'S — Legendárna', tier_a: 'A — Výborná', tier_b: 'B — Skvelá', tier_c: 'C — Dobrá', tier_d: 'D — Slušná',

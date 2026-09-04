@@ -66,7 +66,7 @@ const T = {
     show_can: 'Add Can for Scale', hide_can: 'Remove Can', show_dims: 'Show Dimensions', hide_dims: 'Hide Dimensions',
     continue_benchmarks: 'Continue to Benchmarks →', save_build: 'Save Build', preparing_order: 'Booting up your legend...',
     no_components: '(no components — add in Admin)', none_add_admin: '(none — add in Admin)',
-    cat_names: { mobo: 'Motherboard', cpu: 'CPU', cooler: 'CPU Cooler', ram: 'RAM', gpu: 'GPU', storage: 'Storage', psu: 'PSU', case: 'Case' },
+    cat_names: { mobo: 'Motherboard', cpu: 'CPU', cooler: 'CPU Cooler', ram: 'RAM', gpu: 'GPU', storage: 'SSD', psu: 'PSU', case: 'Case' },
     cat_desc: {
       mobo: 'The foundation of your build — defines CPU compatibility, expansion options, and overclocking potential.',
       cpu: 'The brain of your system, handling all compute tasks from gaming to content creation.',
@@ -132,7 +132,7 @@ const T = {
     show_can: 'Vložiť plechovku pre mierku', hide_can: 'Odstrániť plechovku', show_dims: 'Zobraziť rozmery', hide_dims: 'Skryť rozmery',
     continue_benchmarks: 'Pokračovať na benchmarky →', save_build: 'Uložiť zostavu', preparing_order: 'Spúšťame vašu legendu...',
     no_components: '(žiadne komponenty — pridajte v Admine)', none_add_admin: '(žiadne — pridajte v Admine)',
-    cat_names: { mobo: 'Základná doska', cpu: 'CPU', cooler: 'Chladič CPU', ram: 'RAM', gpu: 'GPU', storage: 'Úložisko', psu: 'Zdroj', case: 'Skriňa' },
+    cat_names: { mobo: 'Základná doska', cpu: 'CPU', cooler: 'Chladič CPU', ram: 'RAM', gpu: 'GPU', storage: 'SSD', psu: 'Zdroj', case: 'Skriňa' },
     cat_desc: {
       mobo: 'Základ vašej zostavy — určuje kompatibilitu s CPU, možnosti rozšírenia a potenciál na pretaktovanie.',
       cpu: 'Mozog vášho systému, ktorý zvláda všetky výpočtové úlohy od hrania po tvorbu obsahu.',
@@ -198,7 +198,7 @@ const T = {
     show_can: 'Vložit plechovku pro měřítko', hide_can: 'Odebrat plechovku', show_dims: 'Zobrazit rozměry', hide_dims: 'Skrýt rozměry',
     continue_benchmarks: 'Pokračovat na benchmarky →', save_build: 'Uložit sestavu', preparing_order: 'Spouštíme vaši legendu...',
     no_components: '(žádné komponenty — přidejte v Adminu)', none_add_admin: '(žádné — přidejte v Adminu)',
-    cat_names: { mobo: 'Základní deska', cpu: 'CPU', cooler: 'Chladič CPU', ram: 'RAM', gpu: 'GPU', storage: 'Úložiště', psu: 'Zdroj', case: 'Skříň' },
+    cat_names: { mobo: 'Základní deska', cpu: 'CPU', cooler: 'Chladič CPU', ram: 'RAM', gpu: 'GPU', storage: 'SSD', psu: 'Zdroj', case: 'Skříň' },
     cat_desc: {
       mobo: 'Základ vaší sestavy — určuje kompatibilitu s CPU, možnosti rozšíření a potenciál pro přetaktování.',
       cpu: 'Mozek vašeho systému, který zvládá všechny výpočetní úlohy od hraní po tvorbu obsahu.',

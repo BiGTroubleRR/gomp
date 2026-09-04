@@ -42,7 +42,7 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     undervolt_badge: 'Every CPU & GPU Undervolted →',
     stress_tested: 'STRESS TESTED',
     featured_build: 'Featured Build', apex_tagline: 'Ultimate 4K gaming & creation',
-    spec_storage: 'Storage', spec_cooling: 'Cooling',
+    spec_storage: 'SSD', spec_cooling: 'Cooling',
     configure_this: 'Configure this build →', configure_arrow: 'Configure →',
     stat1: 'Custom builds shipped', stat2: 'Average rating · 3,200+ reviews',
     stat3: 'Day average build & ship', stat4: 'Parts & labor warranty',
@@ -64,7 +64,7 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     undervolt_badge: 'Každý CPU & GPU podvoltovaný →',
     stress_tested: 'ZÁŤAŽOVO TESTOVANÉ',
     featured_build: 'Odporúčaná zostava', apex_tagline: 'Špičkové 4K hranie a tvorba',
-    spec_storage: 'Úložisko', spec_cooling: 'Chladenie',
+    spec_storage: 'SSD', spec_cooling: 'Chladenie',
     configure_this: 'Nakonfigurovať túto zostavu →', configure_arrow: 'Konfigurovať →',
     stat1: 'Expedovaných zostáv na mieru', stat2: 'Priemerné hodnotenie · 3200+ recenzií',
     stat3: 'Dní priemerná výroba a expedícia', stat4: 'Záruka na diely a prácu',
@@ -86,7 +86,7 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     undervolt_badge: 'Každý CPU & GPU podvoltovaný →',
     stress_tested: 'ZÁTĚŽOVĚ OTESTOVÁNO',
     featured_build: 'Doporučená sestava', apex_tagline: 'Špičkové 4K hraní a tvorba',
-    spec_storage: 'Úložiště', spec_cooling: 'Chlazení',
+    spec_storage: 'SSD', spec_cooling: 'Chlazení',
     configure_this: 'Nakonfigurovat tuto sestavu →', configure_arrow: 'Konfigurovat →',
     stat1: 'Expedovaných sestav na míru', stat2: 'Průměrné hodnocení · 3200+ recenzí',
     stat3: 'Dní průměrná výroba a expedice', stat4: 'Záruka na díly a práci',
@@ -127,7 +127,7 @@ function SpecRow({ label, value, last }: { label: string; value: string; last?: 
         borderBottom: last ? 'none' : '0.5px solid rgba(28,28,26,0.08)',
       }}
     >
-      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>
+      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: MAROON, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
         {label}
       </span>
       <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: INK }}>{value}</span>
@@ -146,7 +146,7 @@ function BuildSpecRow({ label, value, last }: { label: string; value: string; la
         borderBottom: last ? 'none' : '0.5px solid rgba(28,28,26,0.07)',
       }}
     >
-      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>
+      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: MAROON, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
         {label}
       </span>
       <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: INK }}>{value}</span>
@@ -737,7 +737,7 @@ export default function Home() {
                     <BuildSpecRow label="GPU" value={build.gpu} />
                     <BuildSpecRow label="CPU" value={build.cpu} />
                     <BuildSpecRow label="RAM" value={build.ram} />
-                    <BuildSpecRow label="SSD" value={build.storage} last />
+                    <BuildSpecRow label={t.spec_storage} value={build.storage} last />
                   </div>
 
                   <div

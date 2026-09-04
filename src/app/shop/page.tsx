@@ -55,6 +55,7 @@ const TRANSLATIONS = {
     tier_entry: 'Entry',
     verify_passmark: 'Verify ↗',
     vat_included: 'Price includes VAT',
+    spec_storage: 'SSD',
     showing: (n: number) => `Showing ${n} configurations`,
   },
   sk: {
@@ -86,6 +87,7 @@ const TRANSLATIONS = {
     tier_entry: 'Základná',
     verify_passmark: 'Overiť ↗',
     vat_included: 'Cena vrátane DPH',
+    spec_storage: 'SSD',
     showing: (n: number) => `Zobrazených ${n} konfigurácií`,
   },
   cz: {
@@ -117,6 +119,7 @@ const TRANSLATIONS = {
     tier_entry: 'Základní',
     verify_passmark: 'Ověřit ↗',
     vat_included: 'Cena včetně DPH',
+    spec_storage: 'SSD',
     showing: (n: number) => {
       const mod10 = n % 10;
       const mod100 = n % 100;
@@ -171,7 +174,8 @@ function SpecRow({
           style={{
             fontFamily: 'var(--font-sans)',
             fontSize: 10,
-            color: '#7A7469',
+            color: '#6E1423',
+            fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: 1,
           }}
@@ -387,7 +391,7 @@ export default function Shop() {
                   <SpecRow label="GPU" value={prod.gpu} passmarkName={prod.gpu} verifyLabel={t.verify_passmark} />
                   <SpecRow label="CPU" value={prod.cpu} passmarkName={prod.cpu} verifyLabel={t.verify_passmark} />
                   <SpecRow label="RAM" value={prod.ram} />
-                  <SpecRow label="SSD" value={prod.storage} last />
+                  <SpecRow label={t.spec_storage} value={prod.storage} last />
                 </div>
                 <div
                   style={{
