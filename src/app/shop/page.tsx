@@ -498,7 +498,7 @@ export default function Shop() {
                     </div>
                   </div>
                   <TransitionLink
-                    href="/build"
+                    href={`/build?prebuilt=${prod.id}`}
                     style={{
                       fontFamily: 'var(--font-sans)',
                       fontSize: 12,

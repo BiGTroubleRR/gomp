@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, useCallback, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState, useCallback, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { PREBUILT_PRESETS } from '@/lib/prebuilt-products';
 import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
@@ -433,9 +434,19 @@ function dimensionLabel(id: CompId, comp: Component | undefined): string | null 
 }
 
 export default function BuildPage() {
+  return (
+    <Suspense fallback={null}>
+      <BuildPageContent />
+    </Suspense>
+  );
+}
+
+function BuildPageContent() {
   const { lang, fmt } = useSite();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [prebuiltName, setPrebuiltName] = useState<string | null>(null);
   const t = T[lang];
   function autoBuildNoteMessage(note: AutoBuildNote): string {
     switch (note.code) {
@@ -595,6 +606,30 @@ export default function BuildPage() {
     const timer = setTimeout(() => sceneRef.current?.triggerCompletion(), 1400);
     return () => clearTimeout(timer);
   }, [selected]);
+
+  // Carries a /shop prebuilt's exact parts into the configurator when arriving via
+  // /build?prebuilt=<id> (see PREBUILT_PRESETS) — replays the same selectCard install path a
+  // manual click or runFreshBuild already use, so the existing "all slots filled" effect above
+  // triggers the completion animation automatically once it finishes. Gated on
+  // catalogInitializedRef (set once the live catalog — not the static seed fallback — has
+  // loaded) so every name resolves against real, current compDb entries rather than a stale
+  // closure's default data; prebuiltAppliedRef makes this a one-time replay even though the
+  // effect re-runs on every catalog refresh broadcast.
+  const prebuiltAppliedRef = useRef(false);
+  useEffect(() => {
+    if (prebuiltAppliedRef.current || !catalogInitializedRef.current || !sceneRef.current) return;
+    const presetId = Number(searchParams.get('prebuilt'));
+    const preset = PREBUILT_PRESETS.find((p) => p.id === presetId);
+    prebuiltAppliedRef.current = true;
+    if (!preset) return;
+    clearAll();
+    setPrebuiltName(preset.name);
+    SLOTS.forEach((id, i) => {
+      const name = preset.components[id];
+      if (!name) return;
+      setTimeout(() => selectCard(id, name, false), 600 + i * 90);
+    });
+  }, [compDb, searchParams]);
 
   // Swaps the native cursor for the same gold dot used on nav-link hovers whenever the
   // pointer is over a built component in the 3D view (see handleViewportPointerMove below).
@@ -1800,7 +1835,7 @@ export default function BuildPage() {
                     {t.complete}
                   </div>
                   <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 500, fontSize: isMobile ? 34 : 58, color: '#FDFAF4', margin: '10px 0' }}>
-                    {t.your_build}
+                    {prebuiltName ?? t.your_build}
                   </div>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: isMobile ? 26 : 38, color: GOLD, fontWeight: 600, letterSpacing: 1 }}>{fmt(totalPrice)}</div>
                 </div>
