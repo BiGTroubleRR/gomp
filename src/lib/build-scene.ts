@@ -878,6 +878,12 @@ function fanTransform(
   index: number,
   count: number,
   caseSize: { w: number; h: number; d: number },
+  sizeMm: number,
+  // Only meaningful for 'side': the Z to center the row on, computed by the caller (which has
+  // access to the mobo's own anchored position — see moboAnchoredZ/moboHalfDepth — that this
+  // standalone function otherwise has no way to know). Falls back to hugging the front wall if
+  // the caller doesn't have a mobo placed yet to center against.
+  sideCenterZ?: number,
 ): { pos: [number, number, number]; rot: [number, number, number] } {
   const { w, h, d } = caseSize;
   const gap = 0.04;
@@ -894,8 +900,23 @@ function fanTransform(
       return { pos: [0, h / 2 + gap, along(d)], rot: [-Math.PI / 2, 0, 0] };
     case 'bottom':
       return { pos: [0, -h / 2 - gap, along(d)], rot: [Math.PI / 2, 0, 0] };
-    case 'side':
-      return { pos: [w / 2 + gap, along(h), 0], rot: [0, Math.PI / 2, 0] };
+    case 'side': {
+      // Mounted on the motherboard's own wall (the solid/tray side, see moboAnchoredX) — but,
+      // unlike front/rear/top/bottom, *inside* the case rather than outside it: this isn't the
+      // case's outer shell, it's an internal bracket, so the fan's own half-thickness (not just
+      // `gap`) has to clear the tray wall, or the far half of the fan pokes out the back of the
+      // case through it. Rotating to face +X (see buildFanMesh's local +Z default face) swaps
+      // which local axis lands on which world one: local Z (the fan's thickness) becomes world X,
+      // and local X (the fan's full frame width) becomes world Z.
+      const sizeUnits = mmToUnits(sizeMm);
+      const halfThickness = sizeUnits * 0.105; // buildFanMesh's depth = size * 0.21
+      const insideX = -w / 2 + halfThickness + gap;
+      // Centered in the empty span between the front wall and the mobo's own front edge, not
+      // hugging the front wall — a real bracket like this sits in the gap left over once the
+      // (rear-anchored) board claims its own footprint, not jammed against the intake.
+      const insideZ = sideCenterZ ?? -d / 2 + sizeUnits / 2 + gap;
+      return { pos: [insideX, along(h), insideZ], rot: [0, Math.PI / 2, 0] };
+    }
   }
 }
 
@@ -1279,12 +1300,26 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
 
   function rebuildFans() {
     fanGroup.clear();
+    // Side fans center themselves in the gap between the front wall and the mobo's own front
+    // edge (see fanTransform's 'side' case) — only meaningful once a board is actually placed to
+    // measure that gap against; fanTransform falls back to hugging the front wall otherwise.
+    const moboObj = objects.mobo;
+    const sideCenterZ = moboObj?.selected
+      ? (-lastCaseSize.d / 2 + (moboAnchoredZ() - moboHalfDepth())) / 2
+      : undefined;
     (Object.keys(fanConfig) as FanMountPosition[]).forEach((position) => {
       const cfg = fanConfig[position];
       if (!cfg || cfg.count <= 0) return;
       for (let i = 0; i < cfg.count; i++) {
         const fan = buildFanMesh(cfg.sizeMm);
-        const { pos, rot } = fanTransform(position, i, cfg.count, lastCaseSize);
+        const { pos, rot } = fanTransform(
+          position,
+          i,
+          cfg.count,
+          lastCaseSize,
+          cfg.sizeMm,
+          position === 'side' ? sideCenterZ : undefined,
+        );
         fan.position.set(...pos);
         fan.rotation.set(...rot);
         fanGroup.add(fan);
@@ -1345,12 +1380,14 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   // being the raw (pre-bake) geometry size times sizeScale.z alone, not naturalSize.z*sizeScale.z
   // — dividing the bake back out here first is what makes halfDepth match what actually renders.
   const MOBO_BAKED_SCALE = 0.86;
-  function moboAnchoredZ(): number {
+  function moboHalfDepth(): number {
     const mobo = objects.mobo;
     const nat = naturalSize.mobo;
-    const halfDepth = mobo && nat ? ((nat.z / MOBO_BAKED_SCALE) * mobo.sizeScale.z) / 2 : 0.75;
+    return mobo && nat ? ((nat.z / MOBO_BAKED_SCALE) * mobo.sizeScale.z) / 2 : 0.75;
+  }
+  function moboAnchoredZ(): number {
     // +d/2 is the rear wall (see buildCase's `rear` panel) — the case's front sits at -d/2.
-    return lastCaseSize.d / 2 - MOBO_REAR_CLEARANCE - halfDepth;
+    return lastCaseSize.d / 2 - MOBO_REAR_CLEARANCE - moboHalfDepth();
   }
   function moboAnchoredX(): number {
     // The glass panel sits at +w/2 (see buildCase's glassMesh) — the tray/solid side is -w/2.
@@ -1518,6 +1555,10 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     obj.moveStart = Date.now();
     obj.moveDur = nextSelected ? 650 : 550;
     if (id === 'cooler') updateAioRadiator();
+    // Side fans center themselves against the mobo's own front edge (see rebuildFans/
+    // fanTransform's 'side' case) — installing or removing the board changes where that edge is,
+    // so the already-built fan row needs redoing, the same way a case-size change does.
+    if (id === 'mobo') rebuildFans();
     controls.autoRotate = false;
   }
 

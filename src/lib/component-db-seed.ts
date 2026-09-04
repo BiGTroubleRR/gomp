@@ -14,8 +14,10 @@ export type FormFactor = 'E-ATX' | 'ATX' | 'mATX' | 'Mini-ITX';
 
 // A case's fan mounting positions — real manufacturer spec (max fan count and which sizes fit),
 // not something buildcores-open-db's PCCase schema tracks at all, so this is hand-sourced per
-// case rather than mined. 'side' is a mount on the (usually glass) side panel opposite the
-// motherboard tray, distinct from 'front'/'top'/'bottom'/'rear'.
+// case rather than mined. 'side' is an internal bracket near the front, on the motherboard's own
+// side of the case (the solid/tray panel a board mounts against, not the glass panel across from
+// it) — beside the board, toward the front of the case, not behind it or on the far wall —
+// distinct from 'front'/'top'/'bottom'/'rear', which mount on the case's outer shell.
 export type FanMountPosition = 'front' | 'top' | 'rear' | 'bottom' | 'side';
 export type FanMountSpec = {
   position: FanMountPosition;
