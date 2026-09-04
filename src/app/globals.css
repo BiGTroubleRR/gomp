@@ -315,6 +315,44 @@ a[data-gomp-nav]:not([style*='background']):hover {
   }
 }
 
+/* Nav bar: lightning-bolt flicker on the "Prečo undervolt?" tab (see SiteNav.tsx's
+   UndervoltBolts), timed like a spark flicker rather than a smooth fade. */
+@keyframes gompBoltFlash {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.75);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.05);
+  }
+  28% {
+    opacity: 0.15;
+  }
+  42% {
+    opacity: 0.9;
+  }
+  60% {
+    opacity: 0;
+  }
+}
+.gomp-bolt {
+  /* Resting opacity before its (staggered) animation-delay elapses — without this, a delayed
+     bolt would flash at full opacity in its raw, untransformed position for a moment first. */
+  opacity: 0;
+  animation: gompBoltFlash 850ms ease-in-out infinite;
+}
+.gomp-bolt-b {
+  animation-delay: 260ms;
+}
+.gomp-bolt-c {
+  animation-delay: 420ms;
+}
+.gomp-bolt-d {
+  animation-delay: 620ms;
+}
+
 /* Customer GOMPs showcase (/customer-builds): a gentle up-down bob on each build's photo. */
 @keyframes gompFloat {
   0%,

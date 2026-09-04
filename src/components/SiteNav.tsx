@@ -26,6 +26,43 @@ const LINKS: { href: string; en: string; sk: string; cz: string }[] = [
   { href: '/gbb', en: 'Budget Builds', sk: 'Budget Builds', cz: 'Budget Builds' },
 ];
 
+// Small hand-drawn zigzag bolts, reused (mirrored, restacked at different heights) with the two
+// brand colors — a one-off attention-to-detail flourish for the undervolt tab specifically
+// (undervolting is literally about voltage), only mounted while that one tab is hovered. Width
+// stays inside the wrapper's own padding (see the span in the desktop LINKS render below) so
+// none of them get clipped away by its overflow:hidden — only height grows for a "longer" bolt.
+const BOLT_PATH = 'M8 0 L2 9 L6 9 L1 18 L10 8 L6 8 Z';
+const BOLTS = [
+  { cls: 'gomp-bolt-a', side: 'left', top: '28%', fill: '#FFC72C' },
+  { cls: 'gomp-bolt-b', side: 'right', top: '28%', fill: MAROON },
+  { cls: 'gomp-bolt-c', side: 'left', top: '72%', fill: MAROON },
+  { cls: 'gomp-bolt-d', side: 'right', top: '72%', fill: '#FFC72C' },
+] as const;
+function UndervoltBolts() {
+  return (
+    <>
+      {BOLTS.map((b) => (
+        <svg
+          key={b.cls}
+          className={`gomp-bolt ${b.cls}`}
+          viewBox="0 0 10 18"
+          style={{
+            position: 'absolute',
+            [b.side]: 0,
+            top: b.top,
+            width: 7,
+            height: 15,
+            fill: b.fill,
+            transform: b.side === 'right' ? 'scaleX(-1)' : undefined,
+          }}
+        >
+          <path d={BOLT_PATH} />
+        </svg>
+      ))}
+    </>
+  );
+}
+
 function LangCurrencyRow({ stacked }: { stacked?: boolean }) {
   const { lang, currency, setLang, setCurrency } = useSite();
   return (
@@ -289,6 +326,7 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
           {LINKS.map((l) => {
             const active = l.href === pathname;
             const isGbbHover = l.href === '/gbb' && hoveredHref === '/gbb';
+            const isUndervoltHover = l.href === '/undervolting' && hoveredHref === '/undervolting';
             return (
               <TransitionLink
                 key={l.href}
@@ -301,7 +339,10 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
                   fontWeight: active ? 700 : 400,
                 }}
               >
-                {pick(lang, l)}
+                <span style={{ position: 'relative', display: 'inline-block', overflow: 'hidden', padding: '2px 8px', margin: '-2px -8px' }}>
+                  {pick(lang, l)}
+                  {isUndervoltHover && <UndervoltBolts />}
+                </span>
               </TransitionLink>
             );
           })}
