@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
@@ -8,119 +8,22 @@ import SiteNav from '@/components/SiteNav';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
 import { useIsMobile } from '@/lib/use-media-query';
 import { pick } from '@/lib/i18n';
+import { fetchPrebuilts, subscribePrebuilts } from '@/lib/supabase/prebuilts';
+import type { Build } from '@/lib/component-db-seed';
 
 type FilterId = 'all' | 'flagship' | 'performance' | 'midrange' | 'entry';
 
 type TierKey = 'tier_flagship' | 'tier_performance' | 'tier_midrange' | 'tier_entry';
-
-type Product = {
-  id: number;
-  name: string;
-  cat: Exclude<FilterId, 'all'>;
-  tagline_en: string;
-  tagline_sk: string;
-  tagline_cz: string;
-  gpu: string;
-  cpu: string;
-  ram: string;
-  storage: string;
-  priceEur: number;
-  tier: TierKey;
-  rating: string;
+const CAT_TIER_KEY: Record<Build['cat'], TierKey> = {
+  flagship: 'tier_flagship',
+  performance: 'tier_performance',
+  midrange: 'tier_midrange',
+  entry: 'tier_entry',
 };
 
-const PRODUCTS: Product[] = [
-  {
-    id: 1,
-    name: 'The Apex Predator',
-    cat: 'flagship',
-    tagline_en: 'Ultimate 4K gaming & creation',
-    tagline_sk: 'Špičkové 4K hranie a tvorba',
-    tagline_cz: 'Špičkové 4K hraní a tvorba',
-    gpu: 'RTX 5090 FE',
-    cpu: 'Ryzen 9 9950X',
-    ram: '32GB DDR5 6400',
-    storage: '2TB NVMe Gen5',
-    priceEur: 3739,
-    tier: 'tier_flagship',
-    rating: '4.9 / 5',
-  },
-  {
-    id: 2,
-    name: 'The Marauder Pro',
-    cat: 'performance',
-    tagline_en: 'Unstoppable 4K all-rounder',
-    tagline_sk: 'Neporaziteľný univerzál pre 4K',
-    tagline_cz: 'Neporazitelný univerzál pro 4K',
-    gpu: 'RTX 4090',
-    cpu: 'Core i9-14900K',
-    ram: '32GB DDR5 5600',
-    storage: '2TB NVMe Gen4',
-    priceEur: 2869,
-    tier: 'tier_performance',
-    rating: '4.8 / 5',
-  },
-  {
-    id: 3,
-    name: 'The Marauder',
-    cat: 'performance',
-    tagline_en: 'Dominant 1440p performer',
-    tagline_sk: 'Dominantný výkon v 1440p',
-    tagline_cz: 'Dominantní výkon v 1440p',
-    gpu: 'RTX 4080 Super',
-    cpu: 'Core i9-14900KS',
-    ram: '32GB DDR5 5200',
-    storage: '1TB NVMe Gen4',
-    priceEur: 2169,
-    tier: 'tier_performance',
-    rating: '4.7 / 5',
-  },
-  {
-    id: 4,
-    name: 'The Ranger',
-    cat: 'midrange',
-    tagline_en: 'Smooth 1440p at great value',
-    tagline_sk: 'Plynulé 1440p za skvelú cenu',
-    tagline_cz: 'Plynulé 1440p za skvělou cenu',
-    gpu: 'RTX 4070 Ti Super',
-    cpu: 'Core i7-14700K',
-    ram: '32GB DDR4 3600',
-    storage: '1TB NVMe Gen4',
-    priceEur: 1569,
-    tier: 'tier_midrange',
-    rating: '4.6 / 5',
-  },
-  {
-    id: 5,
-    name: 'The Scout Pro',
-    cat: 'midrange',
-    tagline_en: '1080p powerhouse, real value',
-    tagline_sk: 'Silák na 1080p za rozumnú cenu',
-    tagline_cz: 'Silák na 1080p za rozumnou cenu',
-    gpu: 'RTX 4070 Super',
-    cpu: 'Core i5-14600K',
-    ram: '16GB DDR5 5200',
-    storage: '1TB NVMe Gen3',
-    priceEur: 1299,
-    tier: 'tier_midrange',
-    rating: '4.7 / 5',
-  },
-  {
-    id: 6,
-    name: 'The Scout',
-    cat: 'entry',
-    tagline_en: 'Entry-level gaming excellence',
-    tagline_sk: 'Špička v základnej triede',
-    tagline_cz: 'Špička v základní třídě',
-    gpu: 'RTX 4070',
-    cpu: 'Core i5-14600K',
-    ram: '16GB DDR4 3600',
-    storage: '1TB NVMe Gen3',
-    priceEur: 1039,
-    tier: 'tier_entry',
-    rating: '4.5 / 5',
-  },
-];
+// Product data now lives in the `prebuilt_pcs` Supabase table (see src/lib/supabase/prebuilts.ts)
+// so an Admin edit reaches this page, the homepage hero, and the /build carry-over live — see
+// the `products`/`useEffect` below instead of a hardcoded array.
 
 const TRANSLATIONS = {
   en: {
@@ -309,8 +212,24 @@ export default function Shop() {
   const [filter, setFilter] = useState<FilterId>('all');
   const isMobile = useIsMobile();
 
+  const [products, setProducts] = useState<Build[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const data = await fetchPrebuilts();
+      if (!cancelled) setProducts(data);
+    }
+    load();
+    const unsubscribe = subscribePrebuilts(load);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
   const t = TRANSLATIONS[lang];
-  const filtered = filter === 'all' ? PRODUCTS : PRODUCTS.filter((p) => p.cat === filter);
+  const live = products.filter((p) => p.isLive);
+  const filtered = filter === 'all' ? live : live.filter((p) => p.cat === filter);
 
   return (
     <div style={{ position: 'relative', zIndex: 2, background: '#F5F0E6', minHeight: '100vh' }}>
@@ -444,9 +363,9 @@ export default function Shop() {
                       textTransform: 'uppercase',
                     }}
                   >
-                    {t[prod.tier]}
+                    {t[CAT_TIER_KEY[prod.cat]]}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469' }}>{prod.rating}</div>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469' }}>{prod.rating.toFixed(1)} / 5</div>
                 </div>
                 <div
                   style={{
@@ -462,7 +381,7 @@ export default function Shop() {
                   {prod.name}
                 </div>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', marginBottom: 28, fontWeight: 300 }}>
-                  {pick(lang, { en: prod.tagline_en, sk: prod.tagline_sk, cz: prod.tagline_cz })}
+                  {pick(lang, { en: prod.taglineEn, sk: prod.taglineSk, cz: prod.taglineCz })}
                 </div>
                 <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.1)', flex: 1, marginBottom: 24 }}>
                   <SpecRow label="GPU" value={prod.gpu} passmarkName={prod.gpu} verifyLabel={t.verify_passmark} />
@@ -491,7 +410,7 @@ export default function Shop() {
                         lineHeight: 1,
                       }}
                     >
-                      {fmt(prod.priceEur)}
+                      {fmt(prod.price)}
                     </div>
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginTop: 3, fontWeight: 300 }}>
                       {t.vat_included}

@@ -1,6 +1,6 @@
 'use client';
 
-import { CSSProperties, useMemo, useRef, useState } from 'react';
+import { CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
@@ -10,6 +10,15 @@ import SiteFooter from '@/components/SiteFooter';
 import { navigateWithTransition } from '@/lib/gomp-nav';
 import { useIsMobile } from '@/lib/use-media-query';
 import { pick } from '@/lib/i18n';
+import { fetchPrebuilts, subscribePrebuilts } from '@/lib/supabase/prebuilts';
+import type { Build } from '@/lib/component-db-seed';
+
+const CAT_LABEL: Record<Build['cat'], { en: string; sk: string; cz: string }> = {
+  flagship: { en: 'Flagship', sk: 'Vlajková loď', cz: 'Vlajková loď' },
+  performance: { en: 'Performance', sk: 'Výkonnostná', cz: 'Výkonnostní' },
+  midrange: { en: 'Value', sk: 'Hodnotová', cz: 'Hodnotová' },
+  entry: { en: 'Entry', sk: 'Základná', cz: 'Základní' },
+};
 
 // ---- Palette (exact literal hex values from the original site) ----
 const BG = '#F5F0E6';
@@ -92,17 +101,9 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
 };
 
 // ---- Static content (translated fields resolved per-language at render time) ----
-type BuildRaw = {
-  tier_en: string; tier_sk: string; tier_cz: string; name: string;
-  tagline_en: string; tagline_sk: string; tagline_cz: string;
-  gpu: string; cpu: string; ram: string; storage: string; priceEur: number;
-};
-
-const BUILDS_RAW: BuildRaw[] = [
-  { tier_en: 'Flagship', tier_sk: 'Vlajková loď', tier_cz: 'Vlajková loď', name: 'The Apex Predator', tagline_en: 'Ultimate 4K gaming & creation', tagline_sk: 'Špičkové 4K hranie a tvorba', tagline_cz: 'Špičkové 4K hraní a tvorba', gpu: 'RTX 5090 FE', cpu: 'Ryzen 9 9950X', ram: '32GB DDR5 6400', storage: '2TB NVMe Gen5', priceEur: 3739 },
-  { tier_en: 'Performance', tier_sk: 'Výkonnostná', tier_cz: 'Výkonnostní', name: 'The Marauder', tagline_en: 'Dominant 1440p performer', tagline_sk: 'Dominantný výkon v 1440p', tagline_cz: 'Dominantní výkon v 1440p', gpu: 'RTX 4090', cpu: 'Core i9-14900K', ram: '32GB DDR5 5600', storage: '2TB NVMe Gen4', priceEur: 2609 },
-  { tier_en: 'Value', tier_sk: 'Hodnotová', tier_cz: 'Hodnotová', name: 'The Scout', tagline_en: 'Entry-level excellence', tagline_sk: 'Špička v základnej triede', tagline_cz: 'Špička v základní třídě', gpu: 'RTX 4070 Ti Super', cpu: 'Core i5-14600K', ram: '16GB DDR4 3600', storage: '1TB NVMe Gen4', priceEur: 1129 },
-];
+// Prebuilt content (hero card + Featured Builds grid) now comes from the `prebuilt_pcs`
+// Supabase table (see src/lib/supabase/prebuilts.ts) instead of a hardcoded array, so an Admin
+// edit reaches this page live — see the `prebuilts`/`useEffect` inside Home() below.
 
 type FeatureRaw = { num: string; title_en: string; title_sk: string; title_cz: string; desc_en: string; desc_sk: string; desc_cz: string };
 
@@ -180,19 +181,37 @@ export default function Home() {
 
   const t = TRANSLATIONS[lang];
 
+  const [prebuilts, setPrebuilts] = useState<Build[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const data = await fetchPrebuilts();
+      if (!cancelled) setPrebuilts(data);
+    }
+    load();
+    const unsubscribe = subscribePrebuilts(load);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+  const livePrebuilts = useMemo(() => prebuilts.filter((p) => p.isLive), [prebuilts]);
+  const hero = livePrebuilts[0];
+
   const builds = useMemo(
     () =>
-      BUILDS_RAW.map((b) => ({
-        tier: pick(lang, { en: b.tier_en, sk: b.tier_sk, cz: b.tier_cz }),
+      livePrebuilts.slice(0, 3).map((b) => ({
+        id: b.id,
+        tier: pick(lang, CAT_LABEL[b.cat]),
         name: b.name,
-        tagline: pick(lang, { en: b.tagline_en, sk: b.tagline_sk, cz: b.tagline_cz }),
+        tagline: pick(lang, { en: b.taglineEn, sk: b.taglineSk, cz: b.taglineCz }),
         gpu: b.gpu,
         cpu: b.cpu,
         ram: b.ram,
         storage: b.storage,
-        priceStr: fmt(b.priceEur),
+        priceStr: fmt(b.price),
       })),
-    [lang, fmt],
+    [livePrebuilts, lang, fmt],
   );
 
   const features = useMemo(
@@ -539,24 +558,26 @@ export default function Home() {
                   {t.featured_build}
                 </div>
                 <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, fontWeight: 600, color: INK, letterSpacing: -0.5, marginBottom: 4, lineHeight: 1.1 }}>
-                  The Apex Predator
+                  {hero?.name ?? ''}
                 </div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, marginBottom: 32 }}>{t.apex_tagline}</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, marginBottom: 32 }}>
+                  {hero ? pick(lang, { en: hero.taglineEn, sk: hero.taglineSk, cz: hero.taglineCz }) : ''}
+                </div>
 
                 <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.12)' }}>
-                  <SpecRow label="GPU" value="RTX 5090 FE" />
-                  <SpecRow label="CPU" value="Ryzen 9 9950X" />
-                  <SpecRow label="RAM" value="32GB DDR5 6400" />
-                  <SpecRow label={t.spec_storage} value="2TB NVMe Gen5" />
-                  <SpecRow label={t.spec_cooling} value="360mm AIO" last />
+                  <SpecRow label="GPU" value={hero?.gpu ?? ''} />
+                  <SpecRow label="CPU" value={hero?.cpu ?? ''} />
+                  <SpecRow label="RAM" value={hero?.ram ?? ''} />
+                  <SpecRow label={t.spec_storage} value={hero?.storage ?? ''} />
+                  <SpecRow label={t.spec_cooling} value={hero?.cooler ?? ''} last />
                 </div>
 
                 <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.18)', paddingTop: 24, marginTop: 8 }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: 40, fontWeight: 500, color: INK, letterSpacing: -1, marginBottom: 16, lineHeight: 1 }}>
-                    {fmt(3739)}
+                    {hero ? fmt(hero.price) : ''}
                   </div>
                   <TransitionLink
-                    href="/build"
+                    href={hero ? `/build?prebuilt=${hero.id}` : '/build'}
                     style={{
                       display: 'block',
                       textAlign: 'center',
@@ -682,7 +703,7 @@ export default function Home() {
               {!isMobile && <CornerTicks color={GOLD} size={22} inset={-8} />}
               {builds.map((build, i) => (
                 <Reveal
-                  key={build.name}
+                  key={build.id}
                   revealKey={`featured-${i}`}
                   delay={i * 100}
                   style={{
@@ -733,7 +754,7 @@ export default function Home() {
                       {build.priceStr}
                     </div>
                     <TransitionLink
-                      href="/build"
+                      href={`/build?prebuilt=${build.id}`}
                       style={{
                         fontFamily: 'var(--font-sans)',
                         fontSize: 12,

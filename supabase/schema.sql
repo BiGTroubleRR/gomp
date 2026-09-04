@@ -468,3 +468,68 @@ begin
 end $$;
 
 alter table public.rate_limit_hits enable row level security;
+
+-- ---------------------------------------------------------------------------
+-- prebuilt_pcs — the "Configure this PC" catalog shown on the homepage hero,
+-- the Featured Builds grid, and /shop, and carried into the /build
+-- configurator via /build?prebuilt=<id>. Same RLS shape as `components` and
+-- `customer_builds` (a shared public catalog, not a row a single visitor
+-- owns): anyone can read, nobody can write with the anon key. Writes go
+-- through src/app/api/admin/prebuilts/route.ts, Clerk-admin-gated,
+-- service-role — see the note on `components` above for why there is
+-- deliberately no insert/update/delete policy here.
+--
+-- Every one of the 8 component fields (mobo/cpu/cooler/ram/gpu/storage/psu/
+-- case) must hold an EXACT `components.name` value, not free-text display
+-- copy — Admin's form enforces this with a dropdown per field, sourced from
+-- the live components catalog, so anything saved here is guaranteed
+-- installable by the /build carry-over.
+-- ---------------------------------------------------------------------------
+create table if not exists public.prebuilt_pcs (
+  id uuid primary key default gen_random_uuid(),
+  name text not null default '',
+  tagline_en text not null default '',
+  tagline_sk text not null default '',
+  tagline_cz text not null default '',
+  cat text not null default 'flagship' check (cat in ('flagship', 'performance', 'midrange', 'entry')),
+  tier text check (tier is null or tier in ('S', 'A', 'B', 'C', 'D')),
+  price_eur numeric(10, 2) not null default 0,
+  rating numeric(2, 1) not null default 4.5,
+  mobo text not null default '',
+  cpu text not null default '',
+  cooler text not null default '',
+  ram text not null default '',
+  gpu text not null default '',
+  storage text not null default '',
+  psu text not null default '',
+  "case" text not null default '',
+  is_live boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.prebuilt_pcs enable row level security;
+
+drop policy if exists "prebuilt_pcs_select_public" on public.prebuilt_pcs;
+create policy "prebuilt_pcs_select_public" on public.prebuilt_pcs
+  for select using (true);
+
+-- No write policy for anon/authenticated — service-role only, same reasoning
+-- as components_write_public above.
+drop policy if exists "prebuilt_pcs_write_public" on public.prebuilt_pcs;
+
+drop trigger if exists prebuilt_pcs_set_updated_at on public.prebuilt_pcs;
+create trigger prebuilt_pcs_set_updated_at
+  before update on public.prebuilt_pcs
+  for each row execute procedure public.set_updated_at();
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'prebuilt_pcs'
+  ) then
+    alter publication supabase_realtime add table public.prebuilt_pcs;
+  end if;
+end $$;

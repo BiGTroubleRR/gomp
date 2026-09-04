@@ -264,6 +264,75 @@ export type Database = {
         };
         Relationships: [];
       };
+      // The "Configure this PC" catalog — homepage hero, Featured Builds grid, /shop,
+      // and the /build?prebuilt=<id> carry-over all read this same table.
+      prebuilt_pcs: {
+        Row: {
+          id: string;
+          name: string;
+          tagline_en: string;
+          tagline_sk: string;
+          tagline_cz: string;
+          cat: 'flagship' | 'performance' | 'midrange' | 'entry';
+          tier: 'S' | 'A' | 'B' | 'C' | 'D' | null;
+          price_eur: number;
+          rating: number;
+          mobo: string;
+          cpu: string;
+          cooler: string;
+          ram: string;
+          gpu: string;
+          storage: string;
+          psu: string;
+          case: string;
+          is_live: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name?: string;
+          tagline_en?: string;
+          tagline_sk?: string;
+          tagline_cz?: string;
+          cat?: 'flagship' | 'performance' | 'midrange' | 'entry';
+          tier?: 'S' | 'A' | 'B' | 'C' | 'D' | null;
+          price_eur?: number;
+          rating?: number;
+          mobo?: string;
+          cpu?: string;
+          cooler?: string;
+          ram?: string;
+          gpu?: string;
+          storage?: string;
+          psu?: string;
+          case?: string;
+          is_live?: boolean;
+          sort_order?: number;
+        };
+        Update: {
+          name?: string;
+          tagline_en?: string;
+          tagline_sk?: string;
+          tagline_cz?: string;
+          cat?: 'flagship' | 'performance' | 'midrange' | 'entry';
+          tier?: 'S' | 'A' | 'B' | 'C' | 'D' | null;
+          price_eur?: number;
+          rating?: number;
+          mobo?: string;
+          cpu?: string;
+          cooler?: string;
+          ram?: string;
+          gpu?: string;
+          storage?: string;
+          psu?: string;
+          case?: string;
+          is_live?: boolean;
+          sort_order?: number;
+        };
+        Relationships: [];
+      };
       // Demand-signal rows from /checkout. Intentionally has no card-data
       // fields — see the table comment in supabase/schema.sql.
       checkout_intents: {

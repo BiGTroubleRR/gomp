@@ -20,11 +20,11 @@ import {
   deleteCustomerBuild,
 } from '@/lib/supabase/customer-builds';
 import type { CustomerBuild } from '@/lib/supabase/customer-build-mapping';
+import { fetchPrebuilts, subscribePrebuilts, insertPrebuilt, updatePrebuilt, deletePrebuilt } from '@/lib/supabase/prebuilts';
 import { passmarkLookup, tierFromPassmark, ramTier, TIER_COLORS } from '@/lib/passmark';
 import TierGlowOrb from '@/components/TierGlowOrb';
 import {
   defaultComponentDb,
-  defaultBuilds,
   defaultMargin,
   computePrice,
   type Category,
@@ -306,7 +306,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     psu_length_mm: 'Length',
     update_arrow: 'Update →', add_prefix: 'Add ', edit_prefix: 'Edit ',
     select_prefix: '— Select ', select_suffix: ' —',
-    listings: (n) => `${n} listings · changes save to localStorage and sync to Shop`,
+    listings: (n) => `${n} listings · changes save live to the homepage, Shop, and configurator`,
     price_auto_note: (mp, m) => `Auto: €${mp} market + margin = €${m} sell price`,
     checking_access: 'Checking access…',
     sign_in_clerk_desc: 'Sign in with your GOMP account. Admin access is granted per account.',
@@ -385,7 +385,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     psu_length_mm: 'Dĺžka',
     update_arrow: 'Aktualizovať →', add_prefix: 'Pridať ', edit_prefix: 'Upraviť ',
     select_prefix: '— Vybrať ', select_suffix: ' —',
-    listings: (n) => `${n} položiek · zmeny sa ukladajú do localStorage a synchronizujú s obchodom`,
+    listings: (n) => `${n} položiek · zmeny sa ukladajú naživo na hlavnú stránku, do obchodu a konfigurátora`,
     price_auto_note: (mp, m) => `Auto: €${mp} trh + marža = €${m} predajná cena`,
     checking_access: 'Kontrolujeme prístup…',
     sign_in_clerk_desc: 'Prihláste sa svojím GOMP účtom. Prístup do administrácie sa udeľuje jednotlivým účtom.',
@@ -424,13 +424,13 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
 // ---------------------------------------------------------------------------
 
 type BuildFormState = {
-  name: string; tagline: string; cat: Build['cat']; tier: Tier;
-  gpu: string; cpu: string; ram: string; storage: string; mobo: string; cooler: string; psu: string;
+  name: string; taglineEn: string; taglineSk: string; taglineCz: string; cat: Build['cat']; tier: Tier;
+  gpu: string; cpu: string; ram: string; storage: string; mobo: string; cooler: string; psu: string; case: string;
   price: string; rating: string;
 };
 
 function initialBuildForm(): BuildFormState {
-  return { name: '', tagline: '', cat: 'flagship', tier: 'S', gpu: '', cpu: '', ram: '', storage: '', mobo: '', cooler: '', psu: '', price: '', rating: '4.9' };
+  return { name: '', taglineEn: '', taglineSk: '', taglineCz: '', cat: 'flagship', tier: 'S', gpu: '', cpu: '', ram: '', storage: '', mobo: '', cooler: '', psu: '', case: '', price: '', rating: '4.9' };
 }
 
 type CompFormState = {
@@ -524,10 +524,6 @@ function recomputeMarginPrices(db: ComponentDb, margin: Margin): ComponentDb {
     });
   });
   return out;
-}
-
-function computeNextBuildId(builds: Build[]): number {
-  return builds.reduce((m, b) => Math.max(m, b.id || 0), 0) + 1;
 }
 
 // Mirrors the server's own checks (MAX_BYTES and the component-images Storage bucket's
@@ -661,7 +657,7 @@ export default function AdminPage() {
   const [cgImageError, setCgImageError] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<number | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<BuildFormState>(initialBuildForm());
 
   const [compCat, setCompCat] = useState<Category>('gpu');
@@ -679,7 +675,6 @@ export default function AdminPage() {
   const [imageError, setImageError] = useState<string | null>(null);
 
   const [saveMsg, setSaveMsg] = useState('');
-  const [nextBuildId, setNextBuildId] = useState(1);
 
   const [margin, setMarginState] = useState<Margin>(defaultMargin());
   const [marginValueInput, setMarginValueInput] = useState('0');
@@ -735,14 +730,8 @@ export default function AdminPage() {
   useEffect(() => {
     if (!authed) return;
     const storedMargin = readJSON<Margin>('gomp_margin', defaultMargin());
-    const hadBuilds = typeof window !== 'undefined' && localStorage.getItem('gomp_builds_db') != null;
-    const loadedBuilds = readJSON<Build[]>('gomp_builds_db', defaultBuilds());
-    if (!hadBuilds) writeJSON('gomp_builds_db', loadedBuilds);
-
     setMarginState(storedMargin);
     setMarginValueInput(String(storedMargin.value));
-    setBuilds(loadedBuilds);
-    setNextBuildId(computeNextBuildId(loadedBuilds));
 
     let cancelled = false;
     async function loadCatalog() {
@@ -768,6 +757,24 @@ export default function AdminPage() {
     }
     loadCustomerGomps();
     const unsubscribe = subscribeCustomerBuilds(loadCustomerGomps);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [authed]);
+
+  // "Configure this PC" catalog (prebuilt_pcs) — same live-catalog pattern as above. This is the
+  // one table the homepage hero, Featured Builds grid, /shop, and the /build carry-over all read,
+  // so an edit here reaches every one of those without a redeploy.
+  useEffect(() => {
+    if (!authed) return;
+    let cancelled = false;
+    async function loadPrebuilts() {
+      const data = await fetchPrebuilts();
+      if (!cancelled) setBuilds(data);
+    }
+    loadPrebuilts();
+    const unsubscribe = subscribePrebuilts(loadPrebuilts);
     return () => {
       cancelled = true;
       unsubscribe();
@@ -859,49 +866,52 @@ export default function AdminPage() {
     setForm(initialBuildForm());
   }
 
-  function openEditBuild(id: number) {
+  function openEditBuild(id: string) {
     const b = builds.find((x) => x.id === id);
     if (!b) return;
     setShowForm(true);
     setEditId(id);
     setForm({
-      name: b.name, tagline: b.tagline, cat: b.cat, tier: b.tier,
-      gpu: b.gpu, cpu: b.cpu, ram: b.ram, storage: b.storage, mobo: b.mobo, cooler: b.cooler, psu: b.psu,
+      name: b.name, taglineEn: b.taglineEn, taglineSk: b.taglineSk, taglineCz: b.taglineCz, cat: b.cat, tier: b.tier,
+      gpu: b.gpu, cpu: b.cpu, ram: b.ram, storage: b.storage, mobo: b.mobo, cooler: b.cooler, psu: b.psu, case: b.case,
       price: String(b.price), rating: String(b.rating),
     });
   }
 
-  function saveBuild() {
+  async function saveBuild() {
     if (!form.name.trim()) return;
     const build: Build = {
-      id: editId !== null ? editId : nextBuildId,
-      name: form.name.trim(), tagline: form.tagline.trim(), cat: form.cat, tier: form.tier,
-      gpu: form.gpu, cpu: form.cpu, ram: form.ram, storage: form.storage, mobo: form.mobo, cooler: form.cooler, psu: form.psu,
-      price: parseFloat(form.price) || 0, rating: parseFloat(form.rating) || 0, visible: true,
+      id: editId ?? '', // placeholder — Supabase assigns the real id on insert
+      name: form.name.trim(), taglineEn: form.taglineEn.trim(), taglineSk: form.taglineSk.trim(), taglineCz: form.taglineCz.trim(),
+      cat: form.cat, tier: form.tier,
+      gpu: form.gpu, cpu: form.cpu, ram: form.ram, storage: form.storage, mobo: form.mobo, cooler: form.cooler, psu: form.psu, case: form.case,
+      price: parseFloat(form.price) || 0, rating: parseFloat(form.rating) || 0, isLive: true, sortOrder: 0,
     };
-    const newBuilds = editId !== null ? builds.map((b) => (b.id === editId ? build : b)) : [...builds, build];
-    writeJSON('gomp_builds_db', newBuilds);
-    const wasEditing = editId !== null;
-    setBuilds(newBuilds);
+    if (editId !== null) {
+      const saved = await updatePrebuilt(editId, build);
+      setBuilds((list) => list.map((b) => (b.id === editId ? saved : b)));
+    } else {
+      const saved = await insertPrebuilt(build, builds.length);
+      setBuilds((list) => [...list, saved]);
+    }
     setShowForm(false);
     setEditId(null);
-    if (!wasEditing) setNextBuildId(nextBuildId + 1);
     setSaveMsg('✓');
     setTimeout(() => setSaveMsg(''), 2500);
   }
 
-  function deleteBuild(id: number) {
+  async function deleteBuild(id: string) {
     const b = builds.find((x) => x.id === id);
     if (!window.confirm(`Delete "${b ? b.name : ''}"?`)) return;
-    const newBuilds = builds.filter((x) => x.id !== id);
-    writeJSON('gomp_builds_db', newBuilds);
-    setBuilds(newBuilds);
+    await deletePrebuilt(id);
+    setBuilds((list) => list.filter((x) => x.id !== id));
   }
 
-  function toggleVisible(id: number) {
-    const newBuilds = builds.map((b) => (b.id === id ? { ...b, visible: !b.visible } : b));
-    writeJSON('gomp_builds_db', newBuilds);
-    setBuilds(newBuilds);
+  async function toggleVisible(id: string) {
+    const b = builds.find((x) => x.id === id);
+    if (!b) return;
+    const saved = await updatePrebuilt(id, { ...b, isLive: !b.isLive });
+    setBuilds((list) => list.map((x) => (x.id === id ? saved : x)));
   }
 
   // ---- customer GOMPs (customer_builds) CRUD ----
@@ -1868,9 +1878,19 @@ export default function AdminPage() {
                       <div style={LABEL_STYLE}>{t.name_label}</div>
                       <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="The Apex Predator" style={INPUT_STYLE} />
                     </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
                     <div>
-                      <div style={LABEL_STYLE}>{t.tagline_label}</div>
-                      <input value={form.tagline} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="Ultimate 4K gaming & creation" style={INPUT_STYLE} />
+                      <div style={LABEL_STYLE}>{t.tagline_label} (EN)</div>
+                      <input value={form.taglineEn} onChange={(e) => setForm({ ...form, taglineEn: e.target.value })} placeholder="Ultimate 4K gaming & creation" style={INPUT_STYLE} />
+                    </div>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.tagline_label} (SK)</div>
+                      <input value={form.taglineSk} onChange={(e) => setForm({ ...form, taglineSk: e.target.value })} placeholder="Špičkové 4K hranie a tvorba" style={INPUT_STYLE} />
+                    </div>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.tagline_label} (CZ)</div>
+                      <input value={form.taglineCz} onChange={(e) => setForm({ ...form, taglineCz: e.target.value })} placeholder="Špičkové 4K hraní a tvorba" style={INPUT_STYLE} />
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
@@ -1879,10 +1899,11 @@ export default function AdminPage() {
                     <CompSelect label="RAM" value={form.ram} options={compDb.ram || []} placeholder="RAM" t={t} fmt={fmt} onChange={(v) => setForm({ ...form, ram: v })} />
                     <CompSelect label={t.storage_label} value={form.storage} options={compDb.storage || []} placeholder={catLabels.storage} t={t} fmt={fmt} onChange={(v) => setForm({ ...form, storage: v })} />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
                     <CompSelect label={t.mobo_label} value={form.mobo} options={compDb.mobo || []} placeholder={catLabels.mobo} t={t} fmt={fmt} onChange={(v) => setForm({ ...form, mobo: v })} />
                     <CompSelect label={t.cooler_label} value={form.cooler} options={compDb.cooler || []} placeholder={catLabels.cooler} t={t} fmt={fmt} onChange={(v) => setForm({ ...form, cooler: v })} />
                     <CompSelect label="PSU" value={form.psu} options={compDb.psu || []} placeholder="PSU" t={t} fmt={fmt} onChange={(v) => setForm({ ...form, psu: v })} />
+                    <CompSelect label={catLabels.case} value={form.case} options={compDb.case || []} placeholder={catLabels.case} t={t} fmt={fmt} onChange={(v) => setForm({ ...form, case: v })} />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 22 }}>
                     <div>
@@ -1936,7 +1957,7 @@ export default function AdminPage() {
                     </div>
                     {builds.map((b) => {
                       const tc = tierBadge(b.tier, BUILD_TIER_COLORS);
-                      const visible = b.visible !== false;
+                      const visible = b.isLive !== false;
                       const visibleColor = visible ? '#1A7040' : '#9090A0';
                       return (
                         <div
@@ -1945,7 +1966,7 @@ export default function AdminPage() {
                         >
                           <div>
                             <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: '#1C1C1A', marginBottom: 2 }}>{b.name}</div>
-                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', lineHeight: 1.4, fontWeight: 300 }}>{b.tagline}</div>
+                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', lineHeight: 1.4, fontWeight: 300 }}>{b.taglineEn}</div>
                           </div>
                           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', lineHeight: 1.8 }}>
                             {b.gpu}<br />{b.cpu}

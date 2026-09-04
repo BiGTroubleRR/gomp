@@ -456,10 +456,19 @@ export function defaultComponentDb(): ComponentDb {
   };
 }
 
+// The "Configure this PC" catalog — homepage hero, Featured Builds grid, /shop, and the
+// /build?prebuilt=<id> carry-over all read the same live Supabase `prebuilt_pcs` table (see
+// src/lib/supabase/prebuilts.ts); this type and defaultBuilds() below are only the offline
+// fallback used if that fetch fails, matching how defaultComponentDb() backs the main catalog.
+// Every one of the 8 component fields must hold an EXACT Component['name'] from the real
+// catalog (not free-text display copy) — Admin's form enforces this with a dropdown per field,
+// which is what guarantees a saved prebuilt is actually installable by the /build carry-over.
 export type Build = {
-  id: number;
+  id: string;
   name: string;
-  tagline: string;
+  taglineEn: string;
+  taglineSk: string;
+  taglineCz: string;
   cat: 'flagship' | 'performance' | 'midrange' | 'entry';
   tier: Tier;
   gpu: string;
@@ -469,25 +478,25 @@ export type Build = {
   mobo: string;
   cooler: string;
   psu: string;
+  case: string;
   price: number;
   rating: number;
-  visible: boolean;
+  isLive: boolean;
+  sortOrder: number;
 };
 
-// Derived from GOMP_Shop.dc.html's fully-specified ALL_RAW list (the only place all 6
-// builds' exact gpu/cpu/ram/storage/price/tier/rating were confirmed during porting).
-// mobo/cooler/psu are left blank: the original Admin defaultBuilds() seed for those 3 fields
-// wasn't legible during extraction, and guessing specific product names would misrepresent
-// data that was never actually confirmed — blank is a valid, honest "not set" state the
-// Admin build form already supports.
+// Real component names cross-checked against the live catalog (see scripts/seed-prebuilt-pcs.mjs,
+// which seeds this same data into prebuilt_pcs) — including the closest real substitute for the
+// three prebuilts whose original display specs referenced DDR4/1TB parts the catalog no longer
+// carries at all (Ranger, Scout Pro, Scout all now ship DDR5/2TB in the actual catalog).
 export function defaultBuilds(): Build[] {
   return [
-    { id: 1, name: 'The Apex Predator', tagline: 'Ultimate 4K gaming & creation', cat: 'flagship', tier: 'S', gpu: 'NVIDIA RTX 5090 FE', cpu: 'AMD Ryzen 9 9950X', ram: '32GB DDR5 6400', storage: '2TB NVMe Gen5', mobo: '', cooler: '', psu: '', price: 3739, rating: 4.9, visible: true },
-    { id: 2, name: 'The Marauder Pro', tagline: 'High-refresh 1440p / entry 4K', cat: 'performance', tier: 'A', gpu: 'NVIDIA RTX 4090', cpu: 'Intel Core i9-14900K', ram: '32GB DDR5 5600', storage: '2TB NVMe Gen4', mobo: '', cooler: '', psu: '', price: 2869, rating: 4.8, visible: true },
-    { id: 3, name: 'The Marauder', tagline: 'Performance 1440p', cat: 'performance', tier: 'A', gpu: 'NVIDIA RTX 4080 Super', cpu: 'Intel Core i9-14900KS', ram: '32GB DDR5', storage: '2TB NVMe', mobo: '', cooler: '', psu: '', price: 2169, rating: 4.7, visible: true },
-    { id: 4, name: 'The Ranger', tagline: 'Mid-range 1440p', cat: 'midrange', tier: 'B', gpu: 'NVIDIA RTX 4070 Ti Super', cpu: 'Intel Core i7-14700K', ram: '16GB DDR4 3600', storage: '1TB NVMe Gen4', mobo: '', cooler: '', psu: '', price: 1569, rating: 4.6, visible: true },
-    { id: 5, name: 'The Scout Pro', tagline: 'Mid-range 1080p/1440p', cat: 'midrange', tier: 'B', gpu: 'NVIDIA RTX 4070 Super', cpu: 'Intel Core i5-14600K', ram: '16GB DDR4 3600', storage: '1TB NVMe Gen4', mobo: '', cooler: '', psu: '', price: 1299, rating: 4.5, visible: true },
-    { id: 6, name: 'The Scout', tagline: 'Entry 1080p', cat: 'entry', tier: 'C', gpu: 'NVIDIA RTX 4070', cpu: 'Intel Core i5-14600K', ram: '16GB DDR4 3600', storage: '1TB NVMe Gen4', mobo: '', cooler: '', psu: '', price: 1039, rating: 4.4, visible: true },
+    { id: 'apex-predator', name: 'The Apex Predator', taglineEn: 'Ultimate 4K gaming & creation', taglineSk: 'Špičkové 4K hranie a tvorba', taglineCz: 'Špičkové 4K hraní a tvorba', cat: 'flagship', tier: 'S', gpu: 'NVIDIA RTX 5090 FE', cpu: 'AMD Ryzen 9 9950X', mobo: 'ASUS ROG STRIX X870E-E GAMING WIFI', ram: 'ADATA XPG LANCER RGB DDR5-6400 32GB (2x16GB) CL32 White', storage: 'ADATA LEGEND 970 2TB SSD M.2-2280 PCIe 5.0 X4 NVMe', cooler: 'NZXT Kraken 360 RGB', psu: 'Corsair HX1200i ATX 3.0', case: 'Lian Li O11D EVO XL', price: 3739, rating: 4.9, isLive: true, sortOrder: 0 },
+    { id: 'marauder-pro', name: 'The Marauder Pro', taglineEn: 'Unstoppable 4K all-rounder', taglineSk: 'Neporaziteľný univerzál pre 4K', taglineCz: 'Neporazitelný univerzál pro 4K', cat: 'performance', tier: 'A', gpu: 'NVIDIA RTX 4090', cpu: 'Intel Core i9-14900K', mobo: 'MSI MPG Z790 CARBON WIFI', ram: 'Corsair Dominator 32GB DDR5 5600', storage: 'Samsung 990 Pro 2TB NVMe', cooler: 'NZXT Kraken 360 RGB', psu: 'EVGA SuperNOVA 1200 P3 1200W 80+ Platinum Certified Fully Modular', case: 'NZXT H9 Flow RGB', price: 2869, rating: 4.8, isLive: true, sortOrder: 1 },
+    { id: 'marauder', name: 'The Marauder', taglineEn: 'Dominant 1440p performer', taglineSk: 'Dominantný výkon v 1440p', taglineCz: 'Dominantní výkon v 1440p', cat: 'performance', tier: 'A', gpu: 'NVIDIA RTX 4080 Super', cpu: 'Intel Core i9-14900K', mobo: 'Gigabyte Z790 AORUS ELITE AX', ram: 'G.Skill Trident Z5 RGB Metallic Silver DDR5-5200 CL40 32GB (2x16GB)', storage: 'TEAMGROUP Cardea A440 2TB M.2-2280 SSD PCIe 4.0 X4 NVMe', cooler: 'Thermalright Frozen Warframe PRO Water 360mm Black', psu: 'be quiet! Straight Power 11 Black 850W Fully Modular 80+ Platinum Certified', case: 'Fractal Design Meshify 2', price: 2169, rating: 4.7, isLive: true, sortOrder: 2 },
+    { id: 'ranger', name: 'The Ranger', taglineEn: 'Smooth 1440p at great value', taglineSk: 'Plynulé 1440p za skvelú cenu', taglineCz: 'Plynulé 1440p za skvělou cenu', cat: 'midrange', tier: 'B', gpu: 'NVIDIA RTX 4070 Ti Super', cpu: 'Intel Core i7-14700K', mobo: 'Gigabyte B760M GAMING WIFI DDR5 Micro ATX', ram: 'Crucial Pro Overclocking 32GB (2x16GB) DDR5 6000 CL36 Black', storage: 'PNY CS2140 2TB SSD M.2-2280 PCIe 4.0 x4 NVMe', cooler: 'Thermaltake TH240 V2 ARGB Black', psu: 'NZXT C850 (2024) Black 850W Fully Modular 80+ Gold Certified', case: 'Cooler Master MasterBox MB520 ARGB', price: 1569, rating: 4.6, isLive: true, sortOrder: 3 },
+    { id: 'scout-pro', name: 'The Scout Pro', taglineEn: '1080p powerhouse, real value', taglineSk: 'Silák na 1080p za rozumnú cenu', taglineCz: 'Silák na 1080p za rozumnou cenu', cat: 'midrange', tier: 'B', gpu: 'NVIDIA RTX 4070 Super', cpu: 'Intel Core i5-14600K', mobo: 'MAXSUN B760 iCraft B760M CROSS LGA1700 DDR5 Micro ATX', ram: 'Corsair Vengeance Black DDR5-5200 CL40 16GB (1x16GB)', storage: 'FFF Smart Life Connected G-Storategy NV470 w/Heatsink 2TB SSD M.2-2280 PCIe 4.0 X4 NVMe', cooler: 'Deepcool ICE BLADE PRO V2.0 Air 161mm 60.29 CFM', psu: 'Seasonic FOCUS GX-850', case: 'Fractal Design Core 2300', price: 1299, rating: 4.7, isLive: true, sortOrder: 4 },
+    { id: 'scout', name: 'The Scout', taglineEn: 'Entry-level gaming excellence', taglineSk: 'Špička v základnej triede', taglineCz: 'Špička v základní třídě', cat: 'entry', tier: 'C', gpu: 'NVIDIA RTX 4070', cpu: 'Intel Core i5-14600K', mobo: 'ASRock B760M-H2/M.2 DDR5 Micro ATX', ram: 'Kingston FURY Beast RGB Black DDR5-5200 CL36 16GB (1x16GB)', storage: 'Mushkin Vortex Redline 2TB SSD M.2 PCIe 4.0 NVMe', cooler: 'Cooler Master Hyper 212 LED Air 160mm 66.3 CFM Rifle Bearing', psu: 'PowerSpec PSX Black 850W Fully Modular 80+ Gold Certified', case: 'Fractal Design Pop Air', price: 1039, rating: 4.5, isLive: true, sortOrder: 5 },
   ];
 }
 

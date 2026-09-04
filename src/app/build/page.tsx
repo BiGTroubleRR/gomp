@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState, useCallback, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { PREBUILT_PRESETS } from '@/lib/prebuilt-products';
+import { fetchPrebuilts, subscribePrebuilts } from '@/lib/supabase/prebuilts';
 import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
@@ -32,6 +32,7 @@ import {
   type FanMountPosition,
   type FormFactor,
   type PcieGen,
+  type Build,
 } from '@/lib/component-db-seed';
 import { autoBuildForBudget, BUDGET_STEPS, type AutoBuildNote } from '@/lib/auto-build';
 import {
@@ -447,6 +448,23 @@ function BuildPageContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [prebuiltName, setPrebuiltName] = useState<string | null>(null);
+  // The "Configure this PC" catalog (prebuilt_pcs) — same table the homepage hero, Featured
+  // Builds grid, and /shop read, fetched here too so an Admin edit to a prebuilt's parts/name
+  // reaches this carry-over without a redeploy.
+  const [prebuiltPcs, setPrebuiltPcs] = useState<Build[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const data = await fetchPrebuilts();
+      if (!cancelled) setPrebuiltPcs(data);
+    }
+    load();
+    const unsubscribe = subscribePrebuilts(load);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
   const t = T[lang];
   function autoBuildNoteMessage(note: AutoBuildNote): string {
     switch (note.code) {
@@ -607,29 +625,39 @@ function BuildPageContent() {
     return () => clearTimeout(timer);
   }, [selected]);
 
-  // Carries a /shop prebuilt's exact parts into the configurator when arriving via
-  // /build?prebuilt=<id> (see PREBUILT_PRESETS) — replays the same selectCard install path a
-  // manual click or runFreshBuild already use, so the existing "all slots filled" effect above
-  // triggers the completion animation automatically once it finishes. Gated on
-  // catalogInitializedRef (set once the live catalog — not the static seed fallback — has
-  // loaded) so every name resolves against real, current compDb entries rather than a stale
-  // closure's default data; prebuiltAppliedRef makes this a one-time replay even though the
-  // effect re-runs on every catalog refresh broadcast.
+  // Carries a /shop (or homepage) prebuilt's exact parts into the configurator when arriving via
+  // /build?prebuilt=<id> (see the prebuiltPcs fetch above) — replays the same selectCard install
+  // path a manual click or runFreshBuild already use, so the existing "all slots filled" effect
+  // above triggers the completion animation automatically once it finishes. Gated on
+  // catalogInitializedRef (set once the live component catalog — not the static seed fallback —
+  // has loaded) so every name resolves against real, current compDb entries, and on prebuiltPcs
+  // actually having loaded (not just an empty initial state) so a slow prebuilt-catalog fetch
+  // can't get mistaken for "no matching id" and latch the one-shot guard early;
+  // prebuiltAppliedRef makes this a one-time replay even though the effect re-runs on every
+  // catalog refresh broadcast.
   const prebuiltAppliedRef = useRef(false);
   useEffect(() => {
-    if (prebuiltAppliedRef.current || !catalogInitializedRef.current || !sceneRef.current) return;
-    const presetId = Number(searchParams.get('prebuilt'));
-    const preset = PREBUILT_PRESETS.find((p) => p.id === presetId);
+    if (prebuiltAppliedRef.current || !catalogInitializedRef.current || !sceneRef.current || prebuiltPcs.length === 0) return;
+    const presetId = searchParams.get('prebuilt');
+    if (!presetId) {
+      prebuiltAppliedRef.current = true;
+      return;
+    }
+    const preset = prebuiltPcs.find((p) => p.id === presetId);
     prebuiltAppliedRef.current = true;
     if (!preset) return;
     clearAll();
     setPrebuiltName(preset.name);
+    const components: Partial<Record<CompId, string>> = {
+      mobo: preset.mobo, cpu: preset.cpu, cooler: preset.cooler, ram: preset.ram,
+      gpu: preset.gpu, storage: preset.storage, psu: preset.psu, case: preset.case,
+    };
     SLOTS.forEach((id, i) => {
-      const name = preset.components[id];
+      const name = components[id];
       if (!name) return;
       setTimeout(() => selectCard(id, name, false), 600 + i * 90);
     });
-  }, [compDb, searchParams]);
+  }, [compDb, searchParams, prebuiltPcs]);
 
   // Swaps the native cursor for the same gold dot used on nav-link hovers whenever the
   // pointer is over a built component in the 3D view (see handleViewportPointerMove below).
