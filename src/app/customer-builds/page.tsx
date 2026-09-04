@@ -16,6 +16,18 @@ const MAROON = '#6E1423';
 const PAGE_BG = '#F5F0E6';
 const PANEL = '#FDFAF4';
 
+// Spec lines are free admin-typed text ("Procesor: Intel Core i9-14900K"), not structured
+// {label, value} data — split on the first ':' so the label can be colored/bolded separately
+// from the value. A line with no ':' (freeform, no label) returns null and renders unchanged.
+function splitSpecLine(s: string): { label: string; value: string } | null {
+  const i = s.indexOf(':');
+  if (i < 0) return null;
+  return { label: s.slice(0, i).trim(), value: s.slice(i + 1).trim() };
+}
+// Matches the CPU/GPU label spellings admins actually type (Slovak/Czech and English) so those
+// two lines can get the extra standout badge — no fixed label template exists to key off instead.
+const STANDOUT_LABEL_RE = /procesor|cpu|processor|grafi|gpu|videokart|graphics/i;
+
 const T = {
   en: {
     eyebrow: 'ZÁKAZNÍCKE GOMPY',
@@ -481,15 +493,39 @@ export default function CustomerBuildsPage() {
                           line.trim() === '' ? (
                             <div key={li} style={{ height: 8 }} />
                           ) : (
-                            line.split(' · ').map((s, si) => (
-                              <div
-                                key={`${li}-${si}`}
-                                style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: 'var(--font-mono)', fontSize: 12.5, color: INK, marginBottom: 6 }}
-                              >
-                                <span style={{ width: 3, height: 3, borderRadius: '50%', background: MAROON, flexShrink: 0 }} />
-                                {s}
-                              </div>
-                            ))
+                            line.split(' · ').map((s, si) => {
+                              const parsed = splitSpecLine(s);
+                              const isStandout = !!parsed && STANDOUT_LABEL_RE.test(parsed.label);
+                              return (
+                                <div
+                                  key={`${li}-${si}`}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 7,
+                                    fontFamily: 'var(--font-mono)',
+                                    fontSize: 12.5,
+                                    color: INK,
+                                    marginBottom: 6,
+                                    ...(isStandout && {
+                                      background: 'rgba(110,20,35,0.07)',
+                                      border: '1px solid rgba(110,20,35,0.18)',
+                                      borderRadius: 6,
+                                      padding: '4px 8px',
+                                    }),
+                                  }}
+                                >
+                                  <span style={{ width: 3, height: 3, borderRadius: '50%', background: MAROON, flexShrink: 0 }} />
+                                  {parsed ? (
+                                    <span>
+                                      <span style={{ color: MAROON, fontWeight: 700 }}>{parsed.label}:</span> {parsed.value}
+                                    </span>
+                                  ) : (
+                                    s
+                                  )}
+                                </div>
+                              );
+                            })
                           )
                         )}
                       </div>
