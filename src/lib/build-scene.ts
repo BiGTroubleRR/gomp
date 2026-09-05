@@ -939,7 +939,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xf5f0e6);
   const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
-  camera.position.set(5.4, 2.2, 2.0);
+  camera.position.set(7.0, 2.9, 2.6); // ~30% further back than (5.4, 2.2, 2.0), same viewing angle
   camera.lookAt(0, 0.2, 0);
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -1028,6 +1028,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   const GLASS_REST_OPACITY = 0.13;
 
   function buildCase(w: number, h: number, d: number) {
+    disposeSceneContents(caseGroup);
     scene.remove(caseGroup);
     caseGroup = new THREE.Group();
     const panelMat = () =>
@@ -1299,6 +1300,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   scene.add(fanGroup);
 
   function rebuildFans() {
+    disposeSceneContents(fanGroup);
     fanGroup.clear();
     // Side fans center themselves in the gap between the front wall and the mobo's own front
     // edge (see fanTransform's 'side' case) — only meaningful once a board is actually placed to
@@ -1342,6 +1344,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   scene.add(aioRadiatorGroup);
 
   function updateAioRadiator() {
+    disposeSceneContents(aioRadiatorGroup);
     aioRadiatorGroup.clear();
     const coolerObj = objects.cooler;
     if (!coolerObj || !coolerObj.selected || !lastCoolerIsAio || lastCoolerRadiatorMm == null) return;

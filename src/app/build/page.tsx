@@ -9,7 +9,7 @@ import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
 import { navigateWithTransition } from '@/lib/gomp-nav';
 import { writeJSON } from '@/lib/gomp-storage';
-import { fetchComponentDb, subscribeComponents } from '@/lib/supabase/components';
+import { fetchComponentDb, subscribeComponents, getCachedComponentDb } from '@/lib/supabase/components';
 import { passmarkLookup, tierFromPassmark, ramTier, TIER_COLORS, type Tier } from '@/lib/passmark';
 import TierGlowOrb from '@/components/TierGlowOrb';
 import {
@@ -331,6 +331,21 @@ function synthesizeDoubledRamKits(ramList: Component[]): Component[] {
   return synthetic;
 }
 
+// Shared shaping applied to any raw ComponentDb before it's shown to the visitor — used both for
+// the live fetch below and for the cached copy an earlier /build mount already fetched (see
+// getCachedComponentDb), so a repeat visit's initial state matches what load() would produce
+// instead of needing its own copy of this logic.
+function normalizeComponentDb(raw: ComponentDb): ComponentDb {
+  const db: ComponentDb = { ...raw };
+  // fetchComponentDb is shared with Admin, which needs to see hidden SKUs too (to toggle them
+  // back live) — the public catalog is the one place that must actually drop them.
+  SLOTS.forEach((id) => {
+    db[id] = (db[id] || []).filter((c) => c.isLive !== false);
+  });
+  db.ram = [...(db.ram || []), ...synthesizeDoubledRamKits(db.ram || [])];
+  return db;
+}
+
 // fanName is optional: a position can still be filled with a generic, unbranded fan (free, purely
 // cosmetic — today's original behavior) when the case has no preinstalledFanName for it and the
 // visitor hasn't swapped in a real product from the 'fan' catalog either.
@@ -493,7 +508,15 @@ function BuildPageContent() {
       }
     : {};
 
-  const [compDb, setCompDb] = useState<ComponentDb>(defaultComponentDb());
+  // Seeded from an earlier /build mount's already-fetched catalog when one exists (see
+  // getCachedComponentDb) — /build has no persistent layout, so navigating away and back fully
+  // remounts this page, and without this the list would start from the static seed every single
+  // visit and visibly swap to live data a moment later. Only a genuinely first-ever visit this
+  // session falls back to the static seed.
+  const [compDb, setCompDb] = useState<ComponentDb>(() => {
+    const cached = getCachedComponentDb();
+    return cached ? normalizeComponentDb(cached) : defaultComponentDb();
+  });
   const [selected, setSelected] = useState<Record<CompId, boolean>>({} as Record<CompId, boolean>);
   const [selections, setSelections] = useState<Record<CompId, string>>({} as Record<CompId, string>);
   const [caseCat, setCaseCat] = useState('Mid Tower');
@@ -557,14 +580,9 @@ function BuildPageContent() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const db = await fetchComponentDb();
+      const raw = await fetchComponentDb();
       if (cancelled) return;
-      // fetchComponentDb is shared with Admin, which needs to see hidden SKUs too (to toggle them
-      // back live) — the public catalog is the one place that must actually drop them.
-      SLOTS.forEach((id) => {
-        db[id] = (db[id] || []).filter((c) => c.isLive !== false);
-      });
-      db.ram = [...(db.ram || []), ...synthesizeDoubledRamKits(db.ram || [])];
+      const db = normalizeComponentDb(raw);
       setCompDb(db);
       if (!catalogInitializedRef.current) {
         catalogInitializedRef.current = true;
@@ -1035,18 +1053,40 @@ function BuildPageContent() {
     });
   }
 
+  // Native pointermove fires far more often than the scene actually re-renders (some
+  // trackpads/mice deliver well over 60/s) — raycasting and re-rendering React on every single
+  // one competes with the scene's own render loop for main-thread time. Coalescing to one
+  // pick+setState per animation frame keeps hover tracking just as responsive to the eye while
+  // cutting the redundant work between frames.
+  const hoverRafRef = useRef<number | null>(null);
   function handleViewportPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
-    const rect = viewportRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const id = sceneRef.current?.pickComponentAt(e.clientX, e.clientY) ?? null;
-    setHoverId(id);
-    setHoverPos({ x: e.clientX - rect.left, y: e.clientY - rect.top, w: rect.width, h: rect.height });
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+    if (hoverRafRef.current != null) return;
+    hoverRafRef.current = requestAnimationFrame(() => {
+      hoverRafRef.current = null;
+      const rect = viewportRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const id = sceneRef.current?.pickComponentAt(clientX, clientY) ?? null;
+      setHoverId(id);
+      setHoverPos({ x: clientX - rect.left, y: clientY - rect.top, w: rect.width, h: rect.height });
+    });
   }
 
   function handleViewportPointerLeave() {
+    if (hoverRafRef.current != null) {
+      cancelAnimationFrame(hoverRafRef.current);
+      hoverRafRef.current = null;
+    }
     setHoverId(null);
     setHoverPos(null);
   }
+
+  useEffect(() => {
+    return () => {
+      if (hoverRafRef.current != null) cancelAnimationFrame(hoverRafRef.current);
+    };
+  }, []);
 
   // Builds a fresh, complete PC for the budget slider's current target — rather than the old
   // "just take whatever's first in the catalog" fallback (see findComp's list[0] default).

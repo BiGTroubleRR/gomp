@@ -21,6 +21,17 @@ async function parseJsonOrThrow(res: Response, fallbackMessage: string): Promise
   return body;
 }
 
+// Holds the last successfully fetched catalog for the lifetime of the page (module state, not
+// persisted) — /build has no persistent layout, so every navigation to it fully remounts the
+// page and would otherwise re-show the static seed and flicker to live data again on every
+// single visit, not just the first. Read via getCachedComponentDb for a synchronous initial
+// state; still refreshed by a real fetch (and kept live by subscribeComponents) on every mount.
+let cachedDb: ComponentDb | null = null;
+
+export function getCachedComponentDb(): ComponentDb | null {
+  return cachedDb;
+}
+
 // Reads the whole catalog, grouped back into the same ComponentDb shape Build/Admin already
 // work with. Falls back to the static seed on any error (offline, RLS misconfigured, table
 // not migrated yet) so a Supabase hiccup degrades to "last known good" instead of a blank page.
@@ -37,6 +48,7 @@ export async function fetchComponentDb(): Promise<ComponentDb> {
     if (!db[cat]) return;
     db[cat].push(rowToComponent(row));
   });
+  cachedDb = db;
   return db;
 }
 
