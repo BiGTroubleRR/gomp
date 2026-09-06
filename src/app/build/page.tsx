@@ -19,6 +19,7 @@ import {
   fitsInCase,
   cpuManufacturer,
   ramBrand,
+  gpuModelFor,
   extractWatts,
   BASE_WATTS,
   DEFAULT_FAN_WATTS,
@@ -97,6 +98,8 @@ const T = {
     ram_from_price: (price: string) => `from ${price}`,
     ram_back_to_brand_speed: '← Brand & speed',
     ram_choose_sticks: 'RAM count',
+    gpu_back_to_models: '← GPU models',
+    gpu_choose_variant: 'Choose manufacturer',
     ram_choose_capacity: 'Capacity per RAM',
     filter_all: 'All',
     show_more: (n: number) => `Show ${n} more`, show_less: 'Show less',
@@ -163,6 +166,8 @@ const T = {
     ram_from_price: (price: string) => `od ${price}`,
     ram_back_to_brand_speed: '← Značka a rýchlosť',
     ram_choose_sticks: 'Počet RAM',
+    gpu_back_to_models: '← Modely GPU',
+    gpu_choose_variant: 'Vyberte výrobcu',
     ram_choose_capacity: 'Kapacita na RAM',
     filter_all: 'Všetky',
     show_more: (n: number) => `Zobraziť ďalších ${n}`, show_less: 'Zobraziť menej',
@@ -229,6 +234,8 @@ const T = {
     ram_from_price: (price: string) => `od ${price}`,
     ram_back_to_brand_speed: '← Značka a rychlost',
     ram_choose_sticks: 'Počet modulů RAM',
+    gpu_back_to_models: '← Modely GPU',
+    gpu_choose_variant: 'Vyberte výrobce',
     ram_choose_capacity: 'Kapacita na modul',
     filter_all: 'Všechny',
     show_more: (n: number) => `Zobrazit dalších ${n}`, show_less: 'Zobrazit méně',
@@ -267,7 +274,7 @@ const POSH_GREEN = '#5C7A5C'; // muted sage, so the wattage bar's "safe" end sti
 const TIER_ORDER = ['S', 'A', 'B', 'C', 'D', ''];
 // mobo/cpu/ram get their own dedicated filters (socket+form-factor, manufacturer, DDR+speed)
 // instead — sort-by-tier is for the categories that only have a plain tier to go on.
-const SORT_BY_TIER_STEPS: CompId[] = ['cooler', 'gpu', 'storage', 'psu', 'case'];
+const SORT_BY_TIER_STEPS: CompId[] = ['cooler', 'storage', 'psu', 'case'];
 // How many picker rows render before the list caps to a "Show N more" button — mobo/cpu/gpu
 // already sit at 25 rows even in the small static fallback catalog, and the bulk-import scripts
 // are designed to push several categories into the hundreds, so an uncapped list isn't a
@@ -526,7 +533,7 @@ function BuildPageContent() {
   const [moboSocketFilter, setMoboSocketFilter] = useState(''); // '' = all sockets
   const [moboFormFactorFilter, setMoboFormFactorFilter] = useState(''); // '' = all form factors
   const [cpuMfrFilter, setCpuMfrFilter] = useState(''); // '' = all manufacturers
-  const [sortByTier, setSortByTier] = useState(false); // cooler/gpu/storage/psu/case only
+  const [sortByTier, setSortByTier] = useState(false); // cooler/storage/psu/case only — gpu has its own model-grouped ordering
   // Two-stage RAM picker: stage 1 picks brand + speed, stage 2 switches to a 1×/2×/4×
   // stick-count filter for that group (with a capacity sub-choice only when a count maps to more
   // than one per-stick capacity). selectedBrandSpeedKey is `${brand}|${speedMHz}` — see
@@ -537,6 +544,10 @@ function BuildPageContent() {
   // Once a stick count maps to more than one per-stick capacity, this holds which count is
   // currently expanded to show its capacity sub-row (null = no count expanded yet / resolved).
   const [expandedStickCount, setExpandedStickCount] = useState<number | null>(null);
+  // Two-stage GPU picker, same shape as RAM above: stage 1 picks a chip model (grouped by
+  // gpuModelFor), stage 2 shows that model's manufacturer variants.
+  const [gpuStage, setGpuStage] = useState<'model' | 'variant'>('model');
+  const [selectedGpuModel, setSelectedGpuModel] = useState<string | null>(null);
   // Per-category "show all" flag for the picker list cap (see SHOW_MORE_STEP below) — a category
   // stays expanded if you leave and come back to it, but a freshly-opened one starts capped.
   const [showAllByStep, setShowAllByStep] = useState<Partial<Record<CompId, boolean>>>({});
@@ -549,6 +560,10 @@ function BuildPageContent() {
   // full detail card instead of its compact summary for a few seconds after a pick, then
   // collapses back down — see flashRecentlyPicked below.
   const [recentlyPickedId, setRecentlyPickedId] = useState<CompId | null>(null);
+  // User-toggled companion to recentlyPickedId above — clicking a card's header opens/closes its
+  // full detail view on demand, same single-open accordion as account/page.tsx's order history
+  // cards. Independent of the pick-triggered flash: either one being set expands the card.
+  const [expandedId, setExpandedId] = useState<CompId | null>(null);
   const recentlyPickedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeStep, setActiveStep] = useState<CompId>(SLOTS[0]);
   const [ordering, setOrdering] = useState(false);
@@ -1357,6 +1372,164 @@ function BuildPageContent() {
                 const selectedCpu = selected.cpu ? (compDb.cpu || []).find((c) => c.name === selections.cpu) : undefined;
                 const selectedCase = selected.case ? (compDb.case || []).find((c) => c.name === selections.case) : undefined;
 
+                // GPU gets its own two-stage picker too, same shape as RAM below: stage 1 groups
+                // by chip model (parsed from the name via gpuModelFor, since GPUs have no
+                // structured model field), stage 2 shows that model's manufacturer variants.
+                // Variants don't carry a real tier/passmark of their own (import-gpu-variants.mjs
+                // sets tier: null) so the group's tier is resolved once — via passmarkLookup on
+                // the parsed model, falling back to the cheapest variant's own tier — and applied
+                // to every variant card in the group; see gpuModelFor's own comment for why that's
+                // a reasonable simplification here.
+                if (activeStep === 'gpu') {
+                  let gpuList = compDb.gpu || [];
+                  if (selectedCase) gpuList = gpuList.filter((c) => fitsInCase('gpu', c, selectedCase));
+                  if (gpuList.length === 0) {
+                    const reason = selectedCase ? t.no_part_fit(selectedCase.name) : t.none_add_admin;
+                    return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', padding: '12px 0' }}>{reason}</div>;
+                  }
+
+                  const modelGroups = new Map<string, Component[]>();
+                  gpuList.forEach((c) => {
+                    const key = gpuModelFor(c.name) ?? c.name;
+                    if (!modelGroups.has(key)) modelGroups.set(key, []);
+                    modelGroups.get(key)!.push(c);
+                  });
+
+                  const tierForModel = (model: string, cheapest: Component): Tier | undefined => {
+                    const passmark = passmarkLookup(model);
+                    return passmark ? tierFromPassmark(true, passmark.score) : (cheapest.tier as Tier | undefined);
+                  };
+
+                  if (gpuStage === 'model' || !selectedGpuModel || !modelGroups.has(selectedGpuModel)) {
+                    const groups = Array.from(modelGroups.entries())
+                      .map(([model, rows]) => {
+                        const cheapest = rows.reduce((min, c) => (c.price < min.price ? c : min), rows[0]);
+                        return { model, cheapest, tier: tierForModel(model, cheapest) };
+                      })
+                      .sort((a, b) => TIER_ORDER.indexOf(a.tier ?? '') - TIER_ORDER.indexOf(b.tier ?? '') || a.cheapest.price - b.cheapest.price);
+                    return (
+                      <AnimatePresence initial={false} key="gpu-model">
+                        {groups.map((g) => (
+                          <motion.div
+                            key={g.model}
+                            layout="position"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.18 }}
+                            onClick={() => { setSelectedGpuModel(g.model); setGpuStage('variant'); }}
+                            onMouseEnter={() => setHoveredCardKey(g.model)}
+                            onMouseLeave={() => setHoveredCardKey((key) => (key === g.model ? null : key))}
+                            style={{
+                              border: '1.5px solid rgba(28,28,26,0.12)', background: 'transparent',
+                              borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
+                              position: 'relative', zIndex: 0, overflow: 'hidden',
+                            }}
+                          >
+                            <TierGlowOrb tier={g.tier} width={140} intense={hoveredCardKey === g.model} />
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: INK }}>{g.model}</div>
+                              <TierBadge tier={g.tier} small />
+                            </div>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: MUTED, marginTop: 4 }}>
+                              {t.ram_from_price(fmt(g.cheapest.price))}
+                            </div>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    );
+                  }
+
+                  const variantRows = [...modelGroups.get(selectedGpuModel)!].sort((a, b) => a.price - b.price);
+                  const groupCheapest = variantRows.reduce((min, c) => (c.price < min.price ? c : min), variantRows[0]);
+                  const groupTier = tierForModel(selectedGpuModel, groupCheapest);
+
+                  return (
+                    <div>
+                      <button
+                        onClick={() => setGpuStage('model')}
+                        style={{
+                          ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED,
+                          background: 'transparent', border: 'none', outline: 'none', cursor: 'pointer', padding: 0, marginBottom: 10,
+                        }}
+                      >
+                        {t.gpu_back_to_models}
+                      </button>
+                      <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: INK, marginBottom: 4 }}>
+                        {selectedGpuModel}
+                      </div>
+                      <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        {t.gpu_choose_variant}
+                      </div>
+                      <AnimatePresence initial={false} key={`gpu-variant-${selectedGpuModel}`}>
+                        {variantRows.map((c) => {
+                          const isThisSelected = selected.gpu && selections.gpu === c.name;
+                          const cardKey = c.id;
+                          return (
+                            <motion.div
+                              key={cardKey}
+                              layout="position"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.18 }}
+                              onClick={() => selectCard('gpu', c.name)}
+                              onMouseEnter={() => setHoveredCardKey(cardKey)}
+                              onMouseLeave={() => setHoveredCardKey((key) => (key === cardKey ? null : key))}
+                              style={{
+                                border: `1.5px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.12)'}`,
+                                background: isThisSelected ? 'rgba(110,20,35,0.06)' : 'transparent',
+                                borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
+                                position: 'relative', zIndex: 0, overflow: 'hidden',
+                              }}
+                            >
+                              <TierGlowOrb tier={groupTier} width={140} intense={hoveredCardKey === cardKey} />
+                              <div style={{ display: 'flex', gap: 10 }}>
+                                {c.imageUrl && (
+                                  <motion.div
+                                    whileHover={{ scale: 1.9, y: [0, -5, 0] }}
+                                    transition={{ scale: { duration: 0.2, ease: 'easeOut' }, y: { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } }}
+                                    style={{
+                                      width: 36, height: 36, borderRadius: 4, flexShrink: 0,
+                                      background: 'repeating-conic-gradient(rgba(28,28,26,0.06) 0% 25%, transparent 0% 50%) 0 0 / 10px 10px',
+                                      display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                                      transformOrigin: 'right center', position: 'relative', zIndex: 2,
+                                    }}
+                                  >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={c.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                  </motion.div>
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                    <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: isThisSelected ? MAROON : INK }}>{c.name}</div>
+                                    <TierBadge tier={groupTier} small />
+                                  </div>
+                                  <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {c.specs}
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
+                                    <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
+                                    <div
+                                      style={{
+                                        width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        background: isThisSelected ? MAROON : 'transparent', border: `1px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.3)'}`,
+                                        color: isThisSelected ? '#FDFAF4' : MUTED, fontSize: 10, fontWeight: 700,
+                                      }}
+                                    >
+                                      {isThisSelected ? '✓' : '+'}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
+                  );
+                }
+
                 // RAM gets its own two-stage picker instead of the generic per-SKU card list
                 // below: stage 1 picks brand + speed, stage 2 switches to a 1×/2×/4× stick-count
                 // filter (with a capacity sub-row only when a count maps to more than one
@@ -1557,7 +1730,7 @@ function BuildPageContent() {
                 } else if (activeStep === 'cpu') {
                   if (selectedMobo?.socket) list = list.filter((c) => c.socket === selectedMobo.socket);
                   if (cpuMfrFilter) list = list.filter((c) => cpuManufacturer(c.name) === cpuMfrFilter);
-                } else if (activeStep === 'gpu' || activeStep === 'cooler' || activeStep === 'psu') {
+                } else if (activeStep === 'cooler' || activeStep === 'psu') {
                   if (selectedCase) list = list.filter((c) => fitsInCase(activeStep, c, selectedCase));
                 } else if (activeStep === 'mobo') {
                   if (selectedCpu?.socket) list = list.filter((c) => c.socket === selectedCpu.socket);
@@ -1580,7 +1753,7 @@ function BuildPageContent() {
                           ? t.no_case_fit(selectedMobo.formFactor)
                           : activeStep === 'case'
                             ? t.no_case_fit_part
-                            : (activeStep === 'gpu' || activeStep === 'cooler' || activeStep === 'psu') && selectedCase
+                            : (activeStep === 'cooler' || activeStep === 'psu') && selectedCase
                               ? t.no_part_fit(selectedCase.name)
                               : activeStep === 'mobo' && selectedCpu?.socket
                                   ? t.no_socket_match_mobo(selectedCpu.socket)
@@ -1940,7 +2113,8 @@ function BuildPageContent() {
                   if (!comp) return null;
                   const passmark = passmarkLookup(comp.name);
                   const tier: Tier | undefined = passmark ? tierFromPassmark(id === 'gpu', passmark.score) : (comp.tier as Tier | undefined);
-                  const expanded = recentlyPickedId === id;
+                  const expanded = recentlyPickedId === id || expandedId === id;
+                  const toggleExpanded = () => setExpandedId((cur) => (cur === id ? null : id));
                   return (
                     <motion.div
                       key={id}
@@ -1953,10 +2127,15 @@ function BuildPageContent() {
                     >
                       {expanded ? (
                         <>
-                          <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.cat_names[id]}</div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: MAROON, fontWeight: 600 }}>{comp.name}</div>
-                            <TierBadge tier={tier} small />
+                          <div onClick={toggleExpanded} style={{ cursor: 'pointer' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.cat_names[id]}</div>
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: MUTED, width: 14, textAlign: 'center', userSelect: 'none' }}>−</div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: MAROON, fontWeight: 600 }}>{comp.name}</div>
+                              <TierBadge tier={tier} small />
+                            </div>
                           </div>
                           <p style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{t.cat_desc[id]}</p>
                           <div style={{ marginTop: 12 }}>
@@ -1982,7 +2161,7 @@ function BuildPageContent() {
                           <div style={{ ...textPop, marginTop: 12, fontFamily: 'var(--font-mono)', fontSize: 15, color: INK }}>{fmt(comp.price)}</div>
                         </>
                       ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <div onClick={toggleExpanded} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer' }}>
                           <div style={{ minWidth: 0 }}>
                             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>{t.cat_names[id]}</div>
                             <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: INK, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{comp.name}</div>
@@ -1990,6 +2169,7 @@ function BuildPageContent() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                             <TierBadge tier={tier} small />
                             <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: INK }}>{fmt(comp.price)}</div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: MUTED, width: 14, textAlign: 'center', userSelect: 'none' }}>+</div>
                           </div>
                         </div>
                       )}

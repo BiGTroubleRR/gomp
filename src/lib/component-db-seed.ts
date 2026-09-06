@@ -195,6 +195,29 @@ export function ramBrand(name: string): string {
   return RAM_BRAND_CANONICAL[raw.toUpperCase()] ?? raw;
 }
 
+// GPUs have no structured chip-model field either, but unlike CPU/RAM the model isn't the first
+// token — a board partner's marketing name sits between the brand and the chip ("ASUS ROG Strix
+// RTX 5070", "MSI Gaming X RTX 5070 OC") — so this scans the whole name for a known NVIDIA/AMD
+// chip pattern instead of just reading a prefix. Normalized (uppercase RTX/GTX/RX, "Ti"/"Super"
+// casing, no double spaces) so the result always matches one of passmark.ts's GPU alias strings
+// exactly — that's what lets the /build GPU picker resolve a manufacturer variant's tier via
+// passmarkLookup(gpuModelFor(name)) even though the variant's own (unbranded, un-tiered) name
+// never appears in that curated table itself. Returns null for anything unrecognized so an
+// unfamiliar/future card still shows up in the picker as its own single-item group instead of
+// silently vanishing.
+const GPU_MODEL_RE = /\b(RTX|GTX)\s?(\d{3,4})(?:\s?(Ti|Super))?(?:\s?(\d{1,2})\s?GB)?\b|\b(RX)\s?(\d{3,4})(?:\s?(XT))?\b/i;
+
+export function gpuModelFor(name: string): string | null {
+  const m = name.match(GPU_MODEL_RE);
+  if (!m) return null;
+  if (m[1]) {
+    const suffix = m[3] ? (m[3].toLowerCase() === 'ti' ? 'Ti' : 'Super') : '';
+    const gb = m[4] ? `${m[4]}GB` : '';
+    return [m[1].toUpperCase(), m[2], suffix, gb].filter(Boolean).join(' ');
+  }
+  return [m[5].toUpperCase(), m[6], m[7] ? m[7].toUpperCase() : ''].filter(Boolean).join(' ');
+}
+
 // GPU/CPU/PSU specs already quote their wattage as a plain "570W"-style token (the same text
 // the picker card displays), so this pulls the number straight from there instead of adding a
 // parallel structured field that could drift out of sync with what's shown on screen.
