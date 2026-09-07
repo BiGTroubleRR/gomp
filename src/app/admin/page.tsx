@@ -212,7 +212,7 @@ type Translations = {
   margin_eur: string; margin_pct: string;
   market_price_label: string; market_price_placeholder: string;
   original_price_label: string; web_price_label: string;
-  image_label: string; image_uploading: string; image_replace: string; image_remove: string;
+  image_label: string; image_uploading: string; image_replace: string; image_remove: string; image_download: string;
   apply_margin: string; margin_override_badge: string; margin_override_label: string; margin_override_desc: string; margin_override_use_global: string;
   specs_notes: string; tier_rating: string; tower_category: string; tower_category_help: string;
   ram_generation: string; ram_speed_mhz: string; ram_generation_help: string;
@@ -282,7 +282,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     market_price_label: 'Market Price (Alza/Heureka)', market_price_placeholder: 'e.g. 1650',
     original_price_label: 'Original', web_price_label: 'Web price',
     image_label: 'Product Image', image_uploading: 'Uploading…',
-    image_replace: 'Replace image', image_remove: 'Remove',
+    image_replace: 'Replace image', image_remove: 'Remove', image_download: 'Download',
     apply_margin: 'Apply margin →', margin_override_badge: 'Custom margin',
     margin_override_label: 'Margin Override', margin_override_desc: 'Give this one component its own margin instead of the site-wide one above.',
     margin_override_use_global: 'Use site-wide margin',
@@ -361,7 +361,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     market_price_label: 'Tržnová cena (Alza/Heureka)', market_price_placeholder: 'napr. 1650',
     original_price_label: 'Pôvodná', web_price_label: 'Cena na webe',
     image_label: 'Fotka produktu', image_uploading: 'Nahrávam…',
-    image_replace: 'Zmeniť fotku', image_remove: 'Odstrániť',
+    image_replace: 'Zmeniť fotku', image_remove: 'Odstrániť', image_download: 'Stiahnuť',
     apply_margin: 'Aplikovať maržu →', margin_override_badge: 'Vlastná marža',
     margin_override_label: 'Vlastná marža', margin_override_desc: 'Nastavte tomuto komponentu vlastnú maržu namiesto tej celkovej vyššie.',
     margin_override_use_global: 'Použiť celkovú maržu',
@@ -1274,6 +1274,35 @@ export default function AdminPage() {
     } catch (e) {
       setImageStatus('error');
       setImageError(e instanceof Error ? e.message : 'Image upload failed.');
+    }
+  }
+
+  function slugify(s: string): string {
+    return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+  }
+
+  // imageUrl points at Supabase Storage (a different origin from this app), so a plain
+  // `<a download>` would just navigate to/open the image instead of saving it — browsers only
+  // honor the download attribute for same-origin links. Fetching it as a blob and downloading
+  // that object URL forces the save regardless of origin.
+  async function handleImageDownload(imageUrl: string, name: string) {
+    try {
+      const res = await fetch(imageUrl);
+      if (!res.ok) throw new Error('Download failed.');
+      const blob = await res.blob();
+      const ext = imageUrl.split('.').pop()?.split(/[?#]/)[0] || 'jpg';
+      const filename = `${slugify(name || 'component')}.${ext}`;
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      setImageStatus('error');
+      setImageError('Image download failed.');
     }
   }
 
@@ -2465,6 +2494,14 @@ export default function AdminPage() {
                       )}
                       {imageStatus === 'error' && (
                         <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#CC3333' }}>{imageError}</span>
+                      )}
+                      {compForm.imageUrl && imageStatus === 'idle' && (
+                        <button
+                          onClick={() => handleImageDownload(compForm.imageUrl!, compForm.name)}
+                          style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                        >
+                          {t.image_download}
+                        </button>
                       )}
                       {compForm.imageUrl && imageStatus === 'idle' && (
                         <button
