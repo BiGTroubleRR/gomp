@@ -564,6 +564,10 @@ function BuildPageContent() {
   // full detail view on demand, same single-open accordion as account/page.tsx's order history
   // cards. Independent of the pick-triggered flash: either one being set expands the card.
   const [expandedId, setExpandedId] = useState<CompId | null>(null);
+  // Set while hovering a picker thumbnail — renders a large centered overlay (mounted outside
+  // the sidebar's backdrop-filter, which would otherwise clip a position:fixed descendant to
+  // its own box) so the product photo is actually big enough to inspect.
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
   const recentlyPickedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activeStep, setActiveStep] = useState<CompId>(SLOTS[0]);
   const [ordering, setOrdering] = useState(false);
@@ -1487,11 +1491,12 @@ function BuildPageContent() {
                               <div style={{ display: 'flex', gap: 10 }}>
                                 {c.imageUrl && (
                                   <motion.div
-                                    whileHover={{ scale: 1.9, y: [0, -5, 0] }}
-                                    transition={{ scale: { duration: 0.2, ease: 'easeOut' }, y: { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } }}
+                                    whileHover={{ scale: 1.15 }}
+                                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                                    onMouseEnter={() => setZoomImage(c.imageUrl!)}
+                                    onMouseLeave={() => setZoomImage((cur) => (cur === c.imageUrl ? null : cur))}
                                     style={{
                                       width: 36, height: 36, borderRadius: 4, flexShrink: 0,
-                                      background: 'repeating-conic-gradient(rgba(28,28,26,0.06) 0% 25%, transparent 0% 50%) 0 0 / 10px 10px',
                                       display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                                       transformOrigin: 'right center', position: 'relative', zIndex: 2,
                                     }}
@@ -1804,11 +1809,12 @@ function BuildPageContent() {
                       <div style={{ display: 'flex', gap: 10 }}>
                         {c.imageUrl && (
                           <motion.div
-                            whileHover={{ scale: 1.9, y: [0, -5, 0] }}
-                            transition={{ scale: { duration: 0.2, ease: 'easeOut' }, y: { repeat: Infinity, duration: 1.8, ease: 'easeInOut' } }}
+                            whileHover={{ scale: 1.15 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            onMouseEnter={() => setZoomImage(c.imageUrl!)}
+                            onMouseLeave={() => setZoomImage((cur) => (cur === c.imageUrl ? null : cur))}
                             style={{
                               width: 36, height: 36, borderRadius: 4, flexShrink: 0,
-                              background: 'repeating-conic-gradient(rgba(28,28,26,0.06) 0% 25%, transparent 0% 50%) 0 0 / 10px 10px',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                               transformOrigin: 'right center', position: 'relative', zIndex: 2,
                             }}
@@ -2024,7 +2030,6 @@ function BuildPageContent() {
                     <div
                       style={{
                         width: 44, height: 44, borderRadius: 4, flexShrink: 0,
-                        background: 'repeating-conic-gradient(rgba(245,240,230,0.08) 0% 25%, transparent 0% 50%) 0 0 / 8px 8px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                       }}
                     >
@@ -2343,6 +2348,36 @@ function BuildPageContent() {
           </div>
         </div>
       )}
+
+      {/* ---- Picker thumbnail zoom overlay ----
+          Mounted here (a sibling of the sidebar, not inside it) because the sidebar's own
+          backdrop-filter creates a containing block for position:fixed descendants — nesting
+          this inside it would confine the overlay to the sidebar's box instead of the viewport. */}
+      <AnimatePresence>
+        {zoomImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 999,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              pointerEvents: 'none',
+              background: 'rgba(28,28,26,0.35)',
+            }}
+          >
+            {/* No card behind the photo — the source PNGs already carry their own alpha
+                background, so the product just floats over the dimmed backdrop. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={zoomImage}
+              alt=""
+              style={{ width: 420, height: 420, objectFit: 'contain', filter: 'drop-shadow(0 20px 44px rgba(0,0,0,0.35))' }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
