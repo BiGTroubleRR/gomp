@@ -525,6 +525,23 @@ export function defaultBuilds(): Build[] {
   ];
 }
 
+const PREBUILT_SLOTS: Category[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case'];
+
+// Live total for a set of component names, resolved against the current catalog instead of the
+// stored `price` column, which is a number an admin types once and that silently drifts the
+// moment a referenced component's price changes (see /build's own totalPrice, src/app/build/
+// page.tsx, which already computes a carried-over prebuilt's total this same way). Takes a loose
+// partial-name map rather than requiring a full `Build` so Admin's in-progress edit form can also
+// preview a live total before saving. A slot whose name no longer resolves (component deleted or
+// renamed after the prebuilt was saved) is skipped rather than guessed at.
+export function computeBuildTotal(parts: Partial<Record<Category, string>>, compDb: ComponentDb): number {
+  return PREBUILT_SLOTS.reduce((sum, slot) => {
+    const name = parts[slot];
+    const comp = name ? (compDb[slot] || []).find((c) => c.name === name) : undefined;
+    return comp ? sum + comp.price : sum;
+  }, 0);
+}
+
 export type Margin = { type: 'eur' | 'pct'; value: number };
 export function defaultMargin(): Margin {
   return { type: 'eur', value: 0 };

@@ -27,6 +27,7 @@ import {
   defaultComponentDb,
   defaultMargin,
   computePrice,
+  computeBuildTotal,
   type Category,
   type Component,
   type ComponentDb,
@@ -201,7 +202,7 @@ type Translations = {
   mobo_label: string; cooler_label: string;
   category_label: string; cat_flagship: string; cat_performance: string; cat_midrange: string; cat_entry: string;
   tier_label: string; tier_s: string; tier_a: string; tier_b: string; tier_c: string; tier_d: string;
-  price_eur_label: string; price_eur_short: string; rating_label: string;
+  price_eur_label: string; price_eur_short: string; rating_label: string; live_total_label: string;
   cancel: string; save_build: string; edit: string; del: string;
   col_build: string; col_price: string; col_rating: string; col_status: string;
   live: string; hidden: string;
@@ -269,7 +270,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     mobo_label: 'Motherboard', cooler_label: 'Cooler',
     category_label: 'Category', cat_flagship: 'Flagship', cat_performance: 'Performance', cat_midrange: 'Mid-Range', cat_entry: 'Entry',
     tier_label: 'Tier', tier_s: 'S — Legendary', tier_a: 'A — Excellent', tier_b: 'B — Great', tier_c: 'C — Good', tier_d: 'D — Decent',
-    price_eur_label: 'Price (EUR)', price_eur_short: 'Price (€)', rating_label: 'Rating (0–5)',
+    price_eur_label: 'Price (EUR)', price_eur_short: 'Price (€)', rating_label: 'Rating (0–5)', live_total_label: 'Live total from components',
     cancel: 'Cancel', save_build: 'Save Build →', edit: 'Edit', del: 'Del',
     col_build: 'Build', col_price: 'Price', col_rating: 'Rating', col_status: 'Status',
     live: 'Live', hidden: 'Hidden',
@@ -348,7 +349,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     mobo_label: 'Základná doska', cooler_label: 'Chladič',
     category_label: 'Kategória', cat_flagship: 'Vlajková loď', cat_performance: 'Výkonnostná', cat_midrange: 'Stredná trieda', cat_entry: 'Základná',
     tier_label: 'Trieda', tier_s: 'S — Legendárna', tier_a: 'A — Výborná', tier_b: 'B — Skvelá', tier_c: 'C — Dobrá', tier_d: 'D — Slušná',
-    price_eur_label: 'Cena (EUR)', price_eur_short: 'Cena (€)', rating_label: 'Hodnotenie (0–5)',
+    price_eur_label: 'Cena (EUR)', price_eur_short: 'Cena (€)', rating_label: 'Hodnotenie (0–5)', live_total_label: 'Živý súčet z komponentov',
     cancel: 'Zrušiť', save_build: 'Uložiť zostavu →', edit: 'Upraviť', del: 'Zmazať',
     col_build: 'Zostava', col_price: 'Cena', col_rating: 'Hodnotenie', col_status: 'Stav',
     live: 'Aktívna', hidden: 'Skrytá',
@@ -1955,6 +1956,9 @@ export default function AdminPage() {
                     <div>
                       <div style={LABEL_STYLE}>{t.price_eur_label}</div>
                       <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="4299" style={INPUT_STYLE} />
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#9A9488', marginTop: 4 }}>
+                        {t.live_total_label}: {fmt(computeBuildTotal(form, compDb))}
+                      </div>
                     </div>
                     <div>
                       <div style={LABEL_STYLE}>{t.rating_label}</div>
@@ -2000,7 +2004,7 @@ export default function AdminPage() {
                           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', lineHeight: 1.8 }}>
                             {b.gpu}<br />{b.cpu}
                           </div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 500, color: '#1C1C1A' }}>{fmt(b.price)}</div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 500, color: '#1C1C1A' }}>{fmt(computeBuildTotal(b, compDb))}</div>
                           <div>
                             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: tc.bg, border: `1.5px solid ${tc.border}`, borderRadius: 4 }}>
                               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: tc.text }}>{b.tier}</span>

@@ -11,7 +11,8 @@ import { navigateWithTransition } from '@/lib/gomp-nav';
 import { useIsMobile } from '@/lib/use-media-query';
 import { pick } from '@/lib/i18n';
 import { fetchPrebuilts, subscribePrebuilts } from '@/lib/supabase/prebuilts';
-import type { Build } from '@/lib/component-db-seed';
+import { fetchComponentDb, subscribeComponents, getCachedComponentDb } from '@/lib/supabase/components';
+import { computeBuildTotal, defaultComponentDb, type Build, type ComponentDb } from '@/lib/component-db-seed';
 
 const CAT_LABEL: Record<Build['cat'], { en: string; sk: string; cz: string }> = {
   flagship: { en: 'Flagship', sk: 'Vlajková loď', cz: 'Vlajková loď' },
@@ -195,6 +196,23 @@ export default function Home() {
       unsubscribe();
     };
   }, []);
+
+  // Live component catalog, used to compute each listing's price from its actual parts instead
+  // of trusting the prebuilt's own stored (and easily stale) price field — see computeBuildTotal.
+  const [compDb, setCompDb] = useState<ComponentDb>(() => getCachedComponentDb() ?? defaultComponentDb());
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const db = await fetchComponentDb();
+      if (!cancelled) setCompDb(db);
+    }
+    load();
+    const unsubscribe = subscribeComponents(load);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
   const livePrebuilts = useMemo(() => prebuilts.filter((p) => p.isLive), [prebuilts]);
   const hero = livePrebuilts[0];
 
@@ -209,9 +227,9 @@ export default function Home() {
         cpu: b.cpu,
         ram: b.ram,
         storage: b.storage,
-        priceStr: fmt(b.price),
+        priceStr: fmt(computeBuildTotal(b, compDb)),
       })),
-    [livePrebuilts, lang, fmt],
+    [livePrebuilts, lang, fmt, compDb],
   );
 
   const features = useMemo(
@@ -574,7 +592,7 @@ export default function Home() {
 
                 <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.18)', paddingTop: 24, marginTop: 8 }}>
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: 40, fontWeight: 500, color: INK, letterSpacing: -1, marginBottom: 16, lineHeight: 1 }}>
-                    {hero ? fmt(hero.price) : ''}
+                    {hero ? fmt(computeBuildTotal(hero, compDb)) : ''}
                   </div>
                   <TransitionLink
                     href={hero ? `/build?prebuilt=${hero.id}` : '/build'}

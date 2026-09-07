@@ -9,7 +9,8 @@ import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
 import { useIsMobile } from '@/lib/use-media-query';
 import { pick } from '@/lib/i18n';
 import { fetchPrebuilts, subscribePrebuilts } from '@/lib/supabase/prebuilts';
-import type { Build } from '@/lib/component-db-seed';
+import { fetchComponentDb, subscribeComponents, getCachedComponentDb } from '@/lib/supabase/components';
+import { computeBuildTotal, defaultComponentDb, type Build, type ComponentDb } from '@/lib/component-db-seed';
 
 type FilterId = 'all' | 'flagship' | 'performance' | 'midrange' | 'entry';
 
@@ -231,6 +232,23 @@ export default function Shop() {
     };
   }, []);
 
+  // Live component catalog, used to compute each listing's price from its actual parts instead
+  // of trusting the prebuilt's own stored (and easily stale) price field — see computeBuildTotal.
+  const [compDb, setCompDb] = useState<ComponentDb>(() => getCachedComponentDb() ?? defaultComponentDb());
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const db = await fetchComponentDb();
+      if (!cancelled) setCompDb(db);
+    }
+    load();
+    const unsubscribe = subscribeComponents(load);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
   const t = TRANSLATIONS[lang];
   const live = products.filter((p) => p.isLive);
   const filtered = filter === 'all' ? live : live.filter((p) => p.cat === filter);
@@ -414,7 +432,7 @@ export default function Shop() {
                         lineHeight: 1,
                       }}
                     >
-                      {fmt(prod.price)}
+                      {fmt(computeBuildTotal(prod, compDb))}
                     </div>
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginTop: 3, fontWeight: 300 }}>
                       {t.vat_included}
