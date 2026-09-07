@@ -36,7 +36,7 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
   en: {
     nav_home: 'Home', nav_shop: 'Shop', nav_build: 'Build', nav_about: 'About', nav_account: 'Account',
     nav_startbuilding: 'Start Building →',
-    hero_eyebrow: 'Custom Gaming PCs · Prague',
+    hero_eyebrow: 'Custom Gaming PCs',
     hero_title_line1: 'Build your', hero_title_em: 'Legend.',
     hero_desc: 'Configure your dream machine part by part. Every GOMP build is hand-assembled, benchmarked, and ships in seven days.',
     hero_cta_build: 'Start Building →', hero_cta_browse: 'Browse builds',
@@ -58,7 +58,7 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
   sk: {
     nav_home: 'Domov', nav_shop: 'Obchod', nav_build: 'Zostaviť', nav_about: 'O nás', nav_account: 'Účet',
     nav_startbuilding: 'Začať stavať →',
-    hero_eyebrow: 'Herné počítače na mieru · Praha',
+    hero_eyebrow: 'Herné počítače na mieru',
     hero_title_line1: 'Postav si svoju', hero_title_em: 'Legendu.',
     hero_desc: 'Vysnený, ručne stavaný, testovaný, tvoj.',
     hero_cta_build: 'Začať stavať →', hero_cta_browse: 'Prehliadať zostavy',
@@ -80,7 +80,7 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
   cz: {
     nav_home: 'Domů', nav_shop: 'Obchod', nav_build: 'Sestavit', nav_about: 'O nás', nav_account: 'Účet',
     nav_startbuilding: 'Začít stavět →',
-    hero_eyebrow: 'Herní počítače na míru · Praha',
+    hero_eyebrow: 'Herní počítače na míru',
     hero_title_line1: 'Postav si svou', hero_title_em: 'Legendu.',
     hero_desc: 'Vysněný stroj po částech. Každá sestava GOMP je ručně sestavená, otestovaná a expedovaná do sedmi dnů.',
     hero_cta_build: 'Začít stavět →', hero_cta_browse: 'Prohlédnout sestavy',
@@ -124,14 +124,15 @@ function SpecRow({ label, value, last }: { label: string; value: string; last?: 
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        gap: 16,
         padding: '11px 0',
         borderBottom: last ? 'none' : '0.5px solid rgba(28,28,26,0.08)',
       }}
     >
-      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: MAROON, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: MAROON, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, flexShrink: 0 }}>
         {label}
       </span>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: INK }}>{value}</span>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: INK, textAlign: 'right', flex: 1, minWidth: 0 }}>{value}</span>
     </div>
   );
 }
@@ -143,14 +144,15 @@ function BuildSpecRow({ label, value, last }: { label: string; value: string; la
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        gap: 16,
         padding: '10px 0',
         borderBottom: last ? 'none' : '0.5px solid rgba(28,28,26,0.07)',
       }}
     >
-      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: MAROON, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: MAROON, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, flexShrink: 0 }}>
         {label}
       </span>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: INK }}>{value}</span>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: INK, textAlign: 'right', flex: 1, minWidth: 0 }}>{value}</span>
     </div>
   );
 }

@@ -5,12 +5,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
-import { passmarkLookup, tierFromPassmark, TIER_COLORS } from '@/lib/passmark';
+import { passmarkLookup, tierFromPassmark, TIER_COLORS, type Tier } from '@/lib/passmark';
 import { useIsMobile } from '@/lib/use-media-query';
 import { pick } from '@/lib/i18n';
 import { fetchPrebuilts, subscribePrebuilts } from '@/lib/supabase/prebuilts';
 import { fetchComponentDb, subscribeComponents, getCachedComponentDb } from '@/lib/supabase/components';
-import { computeBuildTotal, defaultComponentDb, type Build, type ComponentDb } from '@/lib/component-db-seed';
+import { computeBuildTotal, defaultComponentDb, gpuModelFor, type Build, type ComponentDb } from '@/lib/component-db-seed';
 
 type FilterId = 'all' | 'flagship' | 'performance' | 'midrange' | 'entry';
 
@@ -144,22 +144,55 @@ const FILTER_DEFS: { id: FilterId; key: StringKey }[] = [
 const ACTIVE_COLOR = '#6E1423';
 const INACTIVE_COLOR = '#7A7469';
 
+type PassmarkDisplay = { score: number; tier: Tier; url?: string };
+
+// A chip with a real score but no curated permalink (most CPUs, and any GPU chip passmark.ts
+// hasn't hand-curated) still deserves a working "Verify" link rather than none at all — this
+// points at PassMark's own search for that chip name instead of a specific cached page/id, since
+// we don't have a verified permalink for it.
+function fallbackPassmarkUrl(name: string, isGpu: boolean): string {
+  const base = isGpu ? 'https://www.videocardbenchmark.net/gpu.php' : 'https://www.cpubenchmark.net/cpu.php';
+  const param = isGpu ? 'gpu' : 'cpu';
+  return `${base}?${param}=${encodeURIComponent(name)}`;
+}
+
+// Resolves a display PassMark for any GPU/CPU name, not just the ~25 canonical chips
+// passmark.ts curates aliases for. A board-partner SKU ("MSI GeForce RTX 5080 16G GAMING TRIO
+// OC GDDR7") never appears in that curated alias list itself, so this first tries the same
+// chip-model extraction /build's own GPU picker already uses (gpuModelFor) to resolve it to its
+// chip's curated score — that also gives a real, verified permalink. Failing that (no curated
+// entry for this chip at all, e.g. most CPUs), it falls back to whatever passmark/tier the
+// catalog row itself already carries (real data from the eD import), with a best-effort search
+// link standing in for a verified permalink we don't have.
+function resolvePassmark(name: string, isGpu: boolean, compDb: ComponentDb): PassmarkDisplay | null {
+  const key = isGpu ? (gpuModelFor(name) ?? name) : name;
+  const curated = passmarkLookup(key);
+  if (curated) return { score: curated.score, tier: tierFromPassmark(isGpu, curated.score), url: curated.url };
+  const stored = (compDb[isGpu ? 'gpu' : 'cpu'] || []).find((c) => c.name === name);
+  if (stored?.passmark != null) {
+    return {
+      score: stored.passmark,
+      tier: stored.tier ?? tierFromPassmark(isGpu, stored.passmark),
+      url: stored.passmarkUrl ?? fallbackPassmarkUrl(key, isGpu),
+    };
+  }
+  return null;
+}
+
 function SpecRow({
   label,
   value,
-  passmarkName,
+  passmark,
   verifyLabel,
   last,
 }: {
   label: string;
   value: string;
-  passmarkName?: string;
+  passmark?: PassmarkDisplay | null;
   verifyLabel?: string;
   last?: boolean;
 }) {
-  const isGpu = label === 'GPU';
-  const pm = passmarkName ? passmarkLookup(passmarkName) : null;
-  const tierColor = pm ? TIER_COLORS[tierFromPassmark(isGpu, pm.score)].text : null;
+  const tierColor = passmark ? TIER_COLORS[passmark.tier].text : null;
 
   return (
     <>
@@ -167,6 +200,7 @@ function SpecRow({
         style={{
           display: 'flex',
           justifyContent: 'space-between',
+          gap: 16,
           padding: '10px 0',
           borderBottom: last ? 'none' : '0.5px solid rgba(28,28,26,0.07)',
         }}
@@ -179,13 +213,14 @@ function SpecRow({
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: 1,
+            flexShrink: 0,
           }}
         >
           {label}
         </span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#1C1C1A' }}>{value}</span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#1C1C1A', textAlign: 'right', flex: 1, minWidth: 0 }}>{value}</span>
       </div>
-      {pm && (
+      {passmark && (
         <div
           style={{
             display: 'flex',
@@ -196,16 +231,18 @@ function SpecRow({
           }}
         >
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: tierColor ?? undefined, fontWeight: 600 }}>
-            PassMark {pm.score.toLocaleString()}
+            PassMark {passmark.score.toLocaleString()}
           </span>
-          <a
-            href={pm.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6E1423', textDecoration: 'none', fontWeight: 500 }}
-          >
-            {verifyLabel}
-          </a>
+          {passmark.url && (
+            <a
+              href={passmark.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6E1423', textDecoration: 'none', fontWeight: 500 }}
+            >
+              {verifyLabel}
+            </a>
+          )}
         </div>
       )}
     </>
@@ -406,8 +443,8 @@ export default function Shop() {
                   {pick(lang, { en: prod.taglineEn, sk: prod.taglineSk, cz: prod.taglineCz })}
                 </div>
                 <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.1)', flex: 1, marginBottom: 24 }}>
-                  <SpecRow label="GPU" value={prod.gpu} passmarkName={prod.gpu} verifyLabel={t.verify_passmark} />
-                  <SpecRow label="CPU" value={prod.cpu} passmarkName={prod.cpu} verifyLabel={t.verify_passmark} />
+                  <SpecRow label="GPU" value={prod.gpu} passmark={resolvePassmark(prod.gpu, true, compDb)} verifyLabel={t.verify_passmark} />
+                  <SpecRow label="CPU" value={prod.cpu} passmark={resolvePassmark(prod.cpu, false, compDb)} verifyLabel={t.verify_passmark} />
                   <SpecRow label="RAM" value={prod.ram} />
                   <SpecRow label={t.spec_storage} value={prod.storage} last />
                 </div>
