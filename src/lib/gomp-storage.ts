@@ -20,11 +20,11 @@ export function setLang(lang: Lang) {
 }
 
 export function getCurrency(): Currency {
-  if (typeof window === 'undefined') return 'eur';
+  if (typeof window === 'undefined') return 'czk';
   try {
-    return (localStorage.getItem(CURRENCY_KEY) as Currency) || 'eur';
+    return (localStorage.getItem(CURRENCY_KEY) as Currency) || 'czk';
   } catch {
-    return 'eur';
+    return 'czk';
   }
 }
 
@@ -34,16 +34,18 @@ export function setCurrency(currency: Currency) {
   } catch {}
 }
 
-// Same conversion/rounding/locale rules used across every original page. The number and
-// currency symbol are joined with a non-breaking space, not a plain one, so the pair can
-// never wrap onto separate lines at narrow widths (a plain space let the symbol drop onto
+// Prices are stored/native in CZK (Kč) — every Component.price/Build.price number is a real
+// koruna amount (sourced directly from eD systems for cpu/gpu/mobo). EUR is the derived display
+// currency, converted at the same reference rate GOMP has always quoted (1 € ≈ 24.30 Kč). The
+// number and currency symbol are joined with a non-breaking space, not a plain one, so the pair
+// can never wrap onto separate lines at narrow widths (a plain space let the symbol drop onto
 // its own line mid-resize, which read as the currency sign "jumping around").
-export function fmtPrice(eur: number, currency: Currency): string {
-  if (currency === 'czk') {
-    const czk = Math.round((eur * 24.3) / 10) * 10;
-    return czk.toLocaleString('cs-CZ') + ' Kč';
+export function fmtPrice(czk: number, currency: Currency): string {
+  if (currency === 'eur') {
+    const eur = Math.round(czk / 24.3);
+    return eur.toLocaleString('sk-SK') + ' €';
   }
-  return eur.toLocaleString('sk-SK') + ' €';
+  return czk.toLocaleString('cs-CZ') + ' Kč';
 }
 
 export function readJSON<T>(key: string, fallback: T): T {

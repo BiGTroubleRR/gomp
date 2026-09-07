@@ -8,7 +8,7 @@ type SiteContextValue = {
   currency: Currency;
   setLang: (l: Lang) => void;
   setCurrency: (c: Currency) => void;
-  fmt: (eur: number) => string;
+  fmt: (czk: number) => string;
 };
 
 const SiteContext = createContext<SiteContextValue | null>(null);
@@ -17,7 +17,7 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
   // Defaults match the original site's getLang()/getCurrency() fallbacks. Real values are
   // adopted from localStorage on mount (client-only) to avoid an SSR/client markup mismatch.
   const [lang, setLangState] = useState<Lang>('sk');
-  const [currency, setCurrencyState] = useState<Currency>('eur');
+  const [currency, setCurrencyState] = useState<Currency>('czk');
 
   useEffect(() => {
     setLangState(getLang());
@@ -36,7 +36,7 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
         persistCurrency(c);
         setCurrencyState(c);
       },
-      fmt: (eur: number) => fmtPrice(eur, currency),
+      fmt: (czk: number) => fmtPrice(czk, currency),
     }),
     [lang, currency],
   );

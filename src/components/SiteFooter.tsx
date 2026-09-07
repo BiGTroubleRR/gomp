@@ -33,7 +33,7 @@ const T = {
     rights: 'All rights reserved.',
     madein: 'Hand-built in Prague, CZ',
     disclaimer:
-      'Prices are shown for guidance only, converted at approximate market rates (1 € ≈ 24.30 Kč, reference Jul 2026). Final price confirmed at checkout.',
+      'Prices are shown in CZK (Kč); the € figure is an approximate conversion (1 € ≈ 24.30 Kč, reference Jul 2026). Final price confirmed at checkout.',
     data_attribution_pre: 'Component dimensions and specifications include information from ',
     data_attribution_name: 'BuildCores OpenDB',
     data_attribution_mid: ', made available under the ',
@@ -59,7 +59,7 @@ const T = {
     rights: 'Všetky práva vyhradené.',
     madein: 'Ručne vyrábané v Prahe, ČR',
     disclaimer:
-      'Ceny slúžia len na orientáciu, prepočítané približným trhovým kurzom (1 € ≈ 24,30 Kč, referenčný júl 2026). Konečná cena bude potvrdená pri objednávke.',
+      'Ceny sú uvedené v Kč; suma v € je približný prepočet (1 € ≈ 24,30 Kč, referenčný júl 2026). Konečná cena bude potvrdená pri objednávke.',
     data_attribution_pre: 'Rozmery a parametre komponentov obsahujú informácie z databázy ',
     data_attribution_name: 'BuildCores OpenDB',
     data_attribution_mid: ', dostupnej pod licenciou ',
@@ -85,7 +85,7 @@ const T = {
     rights: 'Všechna práva vyhrazena.',
     madein: 'Ručně vyrobeno v Praze, ČR',
     disclaimer:
-      'Ceny slouží pouze pro orientaci, přepočtené přibližným tržním kurzem (1 € ≈ 24,30 Kč, referenční červenec 2026). Konečná cena bude potvrzena při objednávce.',
+      'Ceny jsou uvedeny v Kč; částka v € je přibližný přepočet (1 € ≈ 24,30 Kč, referenční červenec 2026). Konečná cena bude potvrzena při objednávce.',
     data_attribution_pre: 'Rozměry a parametry komponent obsahují informace z databáze ',
     data_attribution_name: 'BuildCores OpenDB',
     data_attribution_mid: ', dostupné pod licencí ',

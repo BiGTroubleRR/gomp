@@ -21,8 +21,11 @@ type PaymentMethod = 'card' | 'google_pay' | 'apple_pay';
 type ShippingMethod = 'standard' | 'express' | 'overnight';
 
 const PAYMENT_METHODS: PaymentMethod[] = ['card', 'google_pay', 'apple_pay'];
-const SHIPPING_COSTS_EUR: Record<ShippingMethod, number> = { standard: 0, express: 43, overnight: 112 };
-const ASSEMBLY_FEE_EUR = 130;
+// Values are CZK (Kč) — the site's native/stored currency; see src/lib/gomp-storage.ts's
+// fmtPrice(). The "_EUR" suffix is legacy naming from before that switch, kept as-is rather than
+// renamed everywhere it's referenced.
+const SHIPPING_COSTS_EUR: Record<ShippingMethod, number> = { standard: 0, express: 1045, overnight: 2722 };
+const ASSEMBLY_FEE_EUR = 3159;
 const PROMO_CODE = 'gomp2026';
 const PROMO_DISCOUNT_RATE = 0.05;
 
@@ -133,7 +136,7 @@ export async function POST(request: Request) {
     total_eur: totalEur,
     promo_code: promoApplied ? promoCodeInput : '',
     build_items: buildItems,
-    display_currency: (body.displayCurrency ?? 'EUR').trim(),
+    display_currency: (body.displayCurrency ?? 'CZK').trim(),
     lang: (body.lang ?? 'en').trim(),
     contact_consent: Boolean(body.contactConsent),
   });

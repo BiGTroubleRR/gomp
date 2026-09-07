@@ -60,11 +60,13 @@ const EMPTY_FORM: CheckoutForm = {
 
 const SHIPPING_OPTIONS: { id: ShippingId; name_en: string; name_sk: string; name_cz: string; eta_en: string; eta_sk: string; eta_cz: string; priceEur: number }[] = [
   { id: 'standard', name_en: 'Standard Shipping', name_sk: 'Štandardná doprava', name_cz: 'Standardní doprava', eta_en: '8–12 business days', eta_sk: '8 – 12 pracovných dní', eta_cz: '8–12 pracovních dnů', priceEur: 0 },
-  { id: 'express', name_en: 'Express Shipping', name_sk: 'Expresná doprava', name_cz: 'Expresní doprava', eta_en: '3–5 business days', eta_sk: '3 – 5 pracovných dní', eta_cz: '3–5 pracovních dnů', priceEur: 43 },
-  { id: 'overnight', name_en: 'Overnight', name_sk: 'Cez noc', name_cz: 'Přes noc', eta_en: 'Next business day', eta_sk: 'Nasledujúci pracovný deň', eta_cz: 'Následující pracovní den', priceEur: 112 },
+  { id: 'express', name_en: 'Express Shipping', name_sk: 'Expresná doprava', name_cz: 'Expresní doprava', eta_en: '3–5 business days', eta_sk: '3 – 5 pracovných dní', eta_cz: '3–5 pracovních dnů', priceEur: 1045 },
+  { id: 'overnight', name_en: 'Overnight', name_sk: 'Cez noc', name_cz: 'Přes noc', eta_en: 'Next business day', eta_sk: 'Nasledujúci pracovný deň', eta_cz: 'Následující pracovní den', priceEur: 2722 },
 ];
 
-const ASSEMBLY_FEE_EUR = 130;
+// Values are CZK (Kč) — the site's native/stored currency; see src/lib/gomp-storage.ts's
+// fmtPrice(). The "Eur" naming is legacy from before that switch, kept as-is.
+const ASSEMBLY_FEE_EUR = 3159;
 
 // Code-split out of checkout's main bundle — it pulls in three.js purely to re-render the
 // build's case, and WebGL has nothing to do during SSR anyway, so `ssr: false` also skips a
@@ -83,13 +85,13 @@ const CAT: Record<string, string> = {
 };
 
 const FALLBACK_ITEMS: { category: string; name: string; priceEur: number }[] = [
-  { category: 'Motherboard', name: 'ASUS ROG STRIX X870E-E', priceEur: 478 },
-  { category: 'CPU', name: 'AMD Ryzen 9 9950X', priceEur: 608 },
-  { category: 'GPU', name: 'NVIDIA RTX 5090 FE', priceEur: 1739 },
-  { category: 'RAM', name: 'G.Skill Trident Z5 32GB', priceEur: 164 },
-  { category: 'Storage', name: 'Samsung 990 Pro 2TB', priceEur: 156 },
-  { category: 'PSU', name: 'Corsair HX1200i ATX 3.0', priceEur: 199 },
-  { category: 'Case', name: 'NZXT H1 V2', priceEur: 217 },
+  { category: 'Motherboard', name: 'ASUS ROG STRIX X870E-E', priceEur: 11615 },
+  { category: 'CPU', name: 'AMD Ryzen 9 9950X', priceEur: 14774 },
+  { category: 'GPU', name: 'NVIDIA RTX 5090 FE', priceEur: 42258 },
+  { category: 'RAM', name: 'G.Skill Trident Z5 32GB', priceEur: 3985 },
+  { category: 'Storage', name: 'Samsung 990 Pro 2TB', priceEur: 3791 },
+  { category: 'PSU', name: 'Corsair HX1200i ATX 3.0', priceEur: 4836 },
+  { category: 'Case', name: 'NZXT H1 V2', priceEur: 5273 },
 ];
 
 const TRANSLATIONS = {
@@ -106,7 +108,7 @@ const TRANSLATIONS = {
     total: 'Total',
     estimated_delivery: 'Estimated Delivery',
     price_disclaimer:
-      'Prices shown in EUR, converted to CZK at an approximate market rate (1 € ≈ 24.30 Kč, reference Jul 2026). Informative only — final price is confirmed at checkout.',
+      'Prices shown in CZK, converted to EUR at an approximate market rate (1 € ≈ 24.30 Kč, reference Jul 2026). Informative only — final price is confirmed at checkout.',
     shipping_details: 'Shipping Details',
     shipping_details_desc: 'Where should we deliver your build?',
     saved_addresses: 'Saved Addresses',
@@ -172,7 +174,7 @@ const TRANSLATIONS = {
     total: 'Spolu',
     estimated_delivery: 'Predpokladané doručenie',
     price_disclaimer:
-      'Ceny sú uvedené v EUR, prepočet na CZK približným trhovým kurzom (1 € ≈ 24,30 Kč, referenčný júl 2026). Slúži len na orientáciu — konečná cena je potvrdená pri pokladni.',
+      'Ceny sú uvedené v CZK, prepočet na EUR približným trhovým kurzom (1 € ≈ 24,30 Kč, referenčný júl 2026). Slúži len na orientáciu — konečná cena je potvrdená pri pokladni.',
     shipping_details: 'Údaje o doručení',
     shipping_details_desc: 'Kam máme doručiť vašu zostavu?',
     saved_addresses: 'Uložené adresy',
@@ -235,7 +237,7 @@ const TRANSLATIONS = {
     total: 'Celkem',
     estimated_delivery: 'Předpokládané doručení',
     price_disclaimer:
-      'Ceny jsou uvedeny v EUR, přepočet na CZK přibližným tržním kurzem (1 € ≈ 24,30 Kč, referenční červenec 2026). Slouží pouze pro orientaci — konečná cena je potvrzena při pokladně.',
+      'Ceny jsou uvedeny v CZK, přepočet na EUR přibližným tržním kurzem (1 € ≈ 24,30 Kč, referenční červenec 2026). Slouží pouze pro orientaci — konečná cena je potvrzena při pokladně.',
     shipping_details: 'Údaje o doručení',
     shipping_details_desc: 'Kam máme doručit vaši sestavu?',
     saved_addresses: 'Uložené adresy',

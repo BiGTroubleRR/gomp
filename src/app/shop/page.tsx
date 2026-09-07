@@ -44,7 +44,7 @@ const TRANSLATIONS = {
     footer_terms: 'Terms & Conditions',
     footer_privacy: 'Privacy Policy',
     footer_disclaimer:
-      'Prices are shown for guidance only, converted at approximate market rates (1 € ≈ 24.30 Kč, reference Jul 2026). Final price confirmed at checkout.',
+      'Prices are shown in CZK (Kč); the € figure is an approximate conversion (1 € ≈ 24.30 Kč, reference Jul 2026). Final price confirmed at checkout.',
     filter_all: 'All',
     filter_flagship: 'Flagship',
     filter_performance: 'Performance',
@@ -76,7 +76,7 @@ const TRANSLATIONS = {
     footer_terms: 'Obchodné podmienky',
     footer_privacy: 'Ochrana osobných údajov',
     footer_disclaimer:
-      'Ceny slúžia len na orientáciu, prepočítané približným trhovým kurzom (1 € ≈ 24,30 Kč, referenčný júl 2026). Konečná cena bude potvrdená pri objednávke.',
+      'Ceny sú uvedené v Kč; suma v € je približný prepočet (1 € ≈ 24,30 Kč, referenčný júl 2026). Konečná cena bude potvrdená pri objednávke.',
     filter_all: 'Všetky',
     filter_flagship: 'Vlajkové',
     filter_performance: 'Výkonné',
@@ -108,7 +108,7 @@ const TRANSLATIONS = {
     footer_terms: 'Obchodní podmínky',
     footer_privacy: 'Ochrana osobních údajů',
     footer_disclaimer:
-      'Ceny slouží pouze pro orientaci, přepočítané přibližným tržním kurzem (1 € ≈ 24,30 Kč, referenční červenec 2026). Konečná cena bude potvrzena při objednávce.',
+      'Ceny jsou uvedeny v Kč; částka v € je přibližný přepočet (1 € ≈ 24,30 Kč, referenční červenec 2026). Konečná cena bude potvrzena při objednávce.',
     filter_all: 'Všechny',
     filter_flagship: 'Vlajkové',
     filter_performance: 'Výkonné',

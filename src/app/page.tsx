@@ -931,7 +931,7 @@ export default function Home() {
                 {t.build_from}
               </div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: isMobile ? 40 : 56, fontWeight: 500, color: INK, letterSpacing: -2, lineHeight: 1, marginBottom: 8 }}>
-                {fmt(1039)}
+                {fmt(25248)}
               </div>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, marginBottom: 32, fontWeight: 300 }}>{t.entry_scales}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

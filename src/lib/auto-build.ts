@@ -19,8 +19,9 @@ import {
 
 // Common budget breakpoints for the slider to snap to, the same "snap to real values, not 1-unit
 // steps" convention already used by the RAM min-speed slider — a round, recognizable number
-// ("€1500") reads as an intentional choice in a way "€1487" doesn't.
-export const BUDGET_STEPS = [600, 800, 1000, 1200, 1500, 1800, 2200, 2600, 3200, 4000, 5000, 6000];
+// ("36 500 Kč") reads as an intentional choice in a way "36 447 Kč" doesn't. Values are CZK (the
+// site's native currency, see gomp-storage.ts) — roughly the old €600–€6000 range at ≈24.3 Kč/€.
+export const BUDGET_STEPS = [14600, 19400, 24300, 29200, 36500, 43700, 53500, 63200, 77800, 97200, 121500, 145800];
 
 // How a budget splits across categories before any part is picked. GPU/CPU get the largest
 // shares since they're what "performance" mostly means to a buyer; case/PSU get enough to
