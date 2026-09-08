@@ -51,11 +51,15 @@ export type Component = {
   category?: string; // case only: Full Tower | Mid Tower | Mini Tower | SFF
   socket?: string; // cpu + mobo only: AM5 | AM4 | LGA1700 | LGA1851
   formFactor?: FormFactor; // mobo only
-  // Real physical dimensions (mm) for the categories where per-SKU size actually varies enough
-  // to matter. Drives the Build page's 3D scene scaling in build-scene.ts. Optional and often
-  // unset — fitsInCase/build-scene.ts both fall back to generic per-category sizing when a value
-  // is missing, so leaving these blank never breaks the 3D configurator, just makes part
-  // placement/collision-checking less precise for that SKU.
+  // Real physical dimensions (mm), independently verifiable on each manufacturer's own spec page
+  // (not sourced from any third-party dataset), for the categories where per-SKU size actually
+  // varies enough to matter. Drives the Build page's 3D scene scaling in build-scene.ts — for a
+  // cooler specifically, whether coolerRadiatorMm is set is also what decides AIO vs air-tower
+  // 3D model (see dimensionSpecsFor/buildAioCoolerMesh in build-scene.ts), not just clearance
+  // checking. Optional and often unset — fitsInCase/build-scene.ts both fall back to generic
+  // per-category sizing when a value is missing, so leaving these blank never breaks the 3D
+  // configurator, just makes part placement/collision-checking (and, for coolers, the model
+  // choice) less precise for that SKU.
   caseWidthMm?: number; // case only
   caseHeightMm?: number; // case only
   caseDepthMm?: number; // case only
@@ -296,31 +300,31 @@ export function storagePcieGeneration(storage: Component | undefined): PcieGen |
 export function defaultComponentDb(): ComponentDb {
   return {
     gpu: [
-      { id: 'g1', name: 'NVIDIA RTX 5090 FE', price: 1999, specs: '32GB GDDR7 · 575W · PCIe 5.0', tier: 'S', passmark: 38965, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5090&id=5725' },
-      { id: 'g2', name: 'NVIDIA RTX 4090', price: 1599, specs: '24GB GDDR6X · 450W · PCIe 4.0', tier: 'S', passmark: 38039, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4090&id=4606' },
-      { id: 'g3', name: 'NVIDIA RTX 5080', price: 1099, specs: '16GB GDDR7 · 360W · PCIe 5.0', tier: 'A', passmark: 35624, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5080&id=5721' },
-      { id: 'g4', name: 'NVIDIA RTX 4080 Super', price: 999, specs: '16GB GDDR6X · 320W · PCIe 4.0', tier: 'A', passmark: 34226, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4080+SUPER&id=4984' },
-      { id: 'g5', name: 'NVIDIA RTX 4080', price: 1099, specs: '16GB GDDR6X · 320W · PCIe 4.0', tier: 'A', passmark: 34443, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4080&id=4622' },
-      { id: 'g6', name: 'AMD Radeon RX 7900 XTX', price: 899, specs: '24GB GDDR6 · 355W · PCIe 4.0', tier: 'A', passmark: 31443, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7900+XTX&id=4644' },
-      { id: 'g7', name: 'NVIDIA RTX 5070 Ti', price: 899, specs: '16GB GDDR7 · 300W · PCIe 5.0', tier: 'A', passmark: 32349, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5070+Ti&id=5878' },
-      { id: 'g8', name: 'NVIDIA RTX 4070 Ti Super', price: 799, specs: '16GB GDDR6X · 285W · PCIe 4.0', tier: 'A', passmark: 31834, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+Ti+SUPER&id=4980' },
-      { id: 'g9', name: 'NVIDIA RTX 4070 Ti', price: 749, specs: '12GB GDDR6X · 285W · PCIe 4.0', tier: 'A', passmark: 31540, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+Ti&id=4699' },
-      { id: 'g10', name: 'NVIDIA RTX 3090 Ti', price: 799, specs: '24GB GDDR6X · 450W · PCIe 4.0', tier: 'B', passmark: 29257, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3090+Ti&id=4524' },
-      { id: 'g11', name: 'AMD Radeon RX 7900 XT', price: 749, specs: '20GB GDDR6 · 315W · PCIe 4.0', tier: 'B', passmark: 29083, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7900+XT&id=4646' },
-      { id: 'g12', name: 'NVIDIA RTX 4070 Super', price: 599, specs: '12GB GDDR6X · 220W · PCIe 4.0', tier: 'B', passmark: 29946, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+SUPER&id=4973' },
-      { id: 'g13', name: 'NVIDIA RTX 5070', price: 599, specs: '12GB GDDR7 · 250W · PCIe 5.0', tier: 'B', passmark: 28648, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5070&id=5940' },
-      { id: 'g14', name: 'AMD Radeon RX 9070 XT', price: 599, specs: '16GB GDDR6 · 304W · PCIe 5.0', tier: 'C', passmark: 26922, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9070+XT&id=5956' },
-      { id: 'g15', name: 'NVIDIA RTX 3080 Ti', price: 549, specs: '12GB GDDR6X · 350W · PCIe 4.0', tier: 'C', passmark: 26754, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3080+Ti&id=4409' },
-      { id: 'g16', name: 'NVIDIA RTX 4070', price: 549, specs: '12GB GDDR6X · 200W · PCIe 4.0', tier: 'C', passmark: 26874, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070&id=4795' },
-      { id: 'g17', name: 'AMD Radeon RX 9070', price: 549, specs: '16GB GDDR6 · 220W · PCIe 5.0', tier: 'C', passmark: 25371, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9070&id=5958' },
-      { id: 'g18', name: 'AMD Radeon RX 6800 XT', price: 449, specs: '16GB GDDR6 · 300W · PCIe 4.0', tier: 'C', passmark: 25068, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+6800+XT&id=4312' },
-      { id: 'g19', name: 'AMD Radeon RX 7800 XT', price: 499, specs: '16GB GDDR6 · 263W · PCIe 4.0', tier: 'C', passmark: 24433, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7800+XT&id=4917' },
-      { id: 'g20', name: 'NVIDIA RTX 5060 Ti 16GB', price: 499, specs: '16GB GDDR7 · 180W · PCIe 5.0', tier: 'D', passmark: 22614, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5060+Ti+16GB&id=6160' },
-      { id: 'g21', name: 'NVIDIA RTX 4060 Ti', price: 399, specs: '8GB GDDR6 · 160W · PCIe 4.0', tier: 'D', passmark: 22596, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4060+Ti&id=4827' },
-      { id: 'g22', name: 'NVIDIA RTX 3070 Ti', price: 379, specs: '8GB GDDR6X · 290W · PCIe 4.0', tier: 'D', passmark: 23181, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3070+Ti&id=4413' },
-      { id: 'g23', name: 'NVIDIA RTX 5060', price: 329, specs: '8GB GDDR7 · 145W · PCIe 5.0', tier: 'D', passmark: 20663, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5060&id=5602' },
-      { id: 'g24', name: 'NVIDIA RTX 3060 Ti', price: 299, specs: '8GB GDDR6 · 200W · PCIe 4.0', tier: 'D', passmark: 20236, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3060+Ti&id=4318' },
-      { id: 'g25', name: 'NVIDIA RTX 4060', price: 299, specs: '8GB GDDR6 · 115W · PCIe 4.0', tier: 'D', passmark: 19491, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4060&id=4850' },
+      { id: 'g1', name: 'NVIDIA RTX 5090 FE', price: 1999, specs: '32GB GDDR7 · 575W · PCIe 5.0', tier: 'S', passmark: 38965, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5090&id=5725', gpuLengthMm: 304, gpuSlotWidth: 2 },
+      { id: 'g2', name: 'NVIDIA RTX 4090', price: 1599, specs: '24GB GDDR6X · 450W · PCIe 4.0', tier: 'S', passmark: 38039, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4090&id=4606', gpuLengthMm: 304, gpuSlotWidth: 3 },
+      { id: 'g3', name: 'NVIDIA RTX 5080', price: 1099, specs: '16GB GDDR7 · 360W · PCIe 5.0', tier: 'A', passmark: 35624, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5080&id=5721', gpuLengthMm: 304, gpuSlotWidth: 2 },
+      { id: 'g4', name: 'NVIDIA RTX 4080 Super', price: 999, specs: '16GB GDDR6X · 320W · PCIe 4.0', tier: 'A', passmark: 34226, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4080+SUPER&id=4984', gpuLengthMm: 304, gpuSlotWidth: 3 },
+      { id: 'g5', name: 'NVIDIA RTX 4080', price: 1099, specs: '16GB GDDR6X · 320W · PCIe 4.0', tier: 'A', passmark: 34443, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4080&id=4622', gpuLengthMm: 304, gpuSlotWidth: 3 },
+      { id: 'g6', name: 'AMD Radeon RX 7900 XTX', price: 899, specs: '24GB GDDR6 · 355W · PCIe 4.0', tier: 'A', passmark: 31443, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7900+XTX&id=4644', gpuLengthMm: 320, gpuSlotWidth: 3 },
+      { id: 'g7', name: 'NVIDIA RTX 5070 Ti', price: 899, specs: '16GB GDDR7 · 300W · PCIe 5.0', tier: 'A', passmark: 32349, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5070+Ti&id=5878', gpuLengthMm: 310, gpuSlotWidth: 3 },
+      { id: 'g8', name: 'NVIDIA RTX 4070 Ti Super', price: 799, specs: '16GB GDDR6X · 285W · PCIe 4.0', tier: 'A', passmark: 31834, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+Ti+SUPER&id=4980', gpuLengthMm: 307, gpuSlotWidth: 3 },
+      { id: 'g9', name: 'NVIDIA RTX 4070 Ti', price: 749, specs: '12GB GDDR6X · 285W · PCIe 4.0', tier: 'A', passmark: 31540, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+Ti&id=4699', gpuLengthMm: 308, gpuSlotWidth: 3 },
+      { id: 'g10', name: 'NVIDIA RTX 3090 Ti', price: 799, specs: '24GB GDDR6X · 450W · PCIe 4.0', tier: 'B', passmark: 29257, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3090+Ti&id=4524', gpuLengthMm: 313, gpuSlotWidth: 3 },
+      { id: 'g11', name: 'AMD Radeon RX 7900 XT', price: 749, specs: '20GB GDDR6 · 315W · PCIe 4.0', tier: 'B', passmark: 29083, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7900+XT&id=4646', gpuLengthMm: 317, gpuSlotWidth: 2.8 },
+      { id: 'g12', name: 'NVIDIA RTX 4070 Super', price: 599, specs: '12GB GDDR6X · 220W · PCIe 4.0', tier: 'B', passmark: 29946, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+SUPER&id=4973', gpuLengthMm: 244, gpuSlotWidth: 2 },
+      { id: 'g13', name: 'NVIDIA RTX 5070', price: 599, specs: '12GB GDDR7 · 250W · PCIe 5.0', tier: 'B', passmark: 28648, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5070&id=5940', gpuLengthMm: 242, gpuSlotWidth: 2 },
+      { id: 'g14', name: 'AMD Radeon RX 9070 XT', price: 599, specs: '16GB GDDR6 · 304W · PCIe 5.0', tier: 'C', passmark: 26922, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9070+XT&id=5956', gpuLengthMm: 338, gpuSlotWidth: 3.5 },
+      { id: 'g15', name: 'NVIDIA RTX 3080 Ti', price: 549, specs: '12GB GDDR6X · 350W · PCIe 4.0', tier: 'C', passmark: 26754, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3080+Ti&id=4409', gpuLengthMm: 285, gpuSlotWidth: 2 },
+      { id: 'g16', name: 'NVIDIA RTX 4070', price: 549, specs: '12GB GDDR6X · 200W · PCIe 4.0', tier: 'C', passmark: 26874, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070&id=4795', gpuLengthMm: 244, gpuSlotWidth: 2 },
+      { id: 'g17', name: 'AMD Radeon RX 9070', price: 549, specs: '16GB GDDR6 · 220W · PCIe 5.0', tier: 'C', passmark: 25371, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9070&id=5958', gpuLengthMm: 343, gpuSlotWidth: 3.5 },
+      { id: 'g18', name: 'AMD Radeon RX 6800 XT', price: 449, specs: '16GB GDDR6 · 300W · PCIe 4.0', tier: 'C', passmark: 25068, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+6800+XT&id=4312', gpuLengthMm: 325, gpuSlotWidth: 3 },
+      { id: 'g19', name: 'AMD Radeon RX 7800 XT', price: 499, specs: '16GB GDDR6 · 263W · PCIe 4.0', tier: 'C', passmark: 24433, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7800+XT&id=4917', gpuLengthMm: 274, gpuSlotWidth: 2.5 },
+      { id: 'g20', name: 'NVIDIA RTX 5060 Ti 16GB', price: 499, specs: '16GB GDDR7 · 180W · PCIe 5.0', tier: 'D', passmark: 22614, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5060+Ti+16GB&id=6160', gpuLengthMm: 232, gpuSlotWidth: 2 },
+      { id: 'g21', name: 'NVIDIA RTX 4060 Ti', price: 399, specs: '8GB GDDR6 · 160W · PCIe 4.0', tier: 'D', passmark: 22596, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4060+Ti&id=4827', gpuLengthMm: 244, gpuSlotWidth: 2 },
+      { id: 'g22', name: 'NVIDIA RTX 3070 Ti', price: 379, specs: '8GB GDDR6X · 290W · PCIe 4.0', tier: 'D', passmark: 23181, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3070+Ti&id=4413', gpuLengthMm: 267, gpuSlotWidth: 2 },
+      { id: 'g23', name: 'NVIDIA RTX 5060', price: 329, specs: '8GB GDDR7 · 145W · PCIe 5.0', tier: 'D', passmark: 20663, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5060&id=5602', gpuLengthMm: 247, gpuSlotWidth: 2 },
+      { id: 'g24', name: 'NVIDIA RTX 3060 Ti', price: 299, specs: '8GB GDDR6 · 200W · PCIe 4.0', tier: 'D', passmark: 20236, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3060+Ti&id=4318', gpuLengthMm: 242, gpuSlotWidth: 2 },
+      { id: 'g25', name: 'NVIDIA RTX 4060', price: 299, specs: '8GB GDDR6 · 115W · PCIe 4.0', tier: 'D', passmark: 19491, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4060&id=4850', gpuLengthMm: 244, gpuSlotWidth: 2 },
     ],
     cpu: [
       { id: 'c1', name: 'AMD Ryzen 9 9950X3D', price: 650, specs: '16C/32T · 5.7GHz · 170W · 3D V-Cache', tier: 'S', socket: 'AM5', passmark: 70109, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+9+9950X3D&id=6549' },
@@ -350,8 +354,8 @@ export function defaultComponentDb(): ComponentDb {
       { id: 'c25', name: 'Intel Core i5-13600K', price: 319, specs: '14C/20T · 5.1GHz · 125W', tier: 'C', socket: 'LGA1700', passmark: 37462, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i5-13600K&id=5008' },
     ],
     ram: [
-      { id: 'r1', name: 'G.Skill Trident Z5 32GB DDR5 6400', price: 130, specs: '2×16GB · CL32 · EXPO/XMP3', tier: 'S', ramGeneration: 5, ramSpeedMhz: 6400 },
-      { id: 'r2', name: 'Corsair Dominator 32GB DDR5 5600', price: 112, specs: '2×16GB · CL36', tier: 'A', ramGeneration: 5, ramSpeedMhz: 5600 },
+      { id: 'r1', name: 'G.Skill Trident Z5 32GB DDR5 6400', price: 130, specs: '2×16GB · CL32 · EXPO/XMP3', tier: 'S', ramHeightMm: 44, ramGeneration: 5, ramSpeedMhz: 6400 },
+      { id: 'r2', name: 'Corsair Dominator 32GB DDR5 5600', price: 112, specs: '2×16GB · CL36', tier: 'A', ramHeightMm: 56, ramGeneration: 5, ramSpeedMhz: 5600 },
     ],
     storage: [
       { id: 's1', name: 'Samsung 990 Pro 2TB NVMe', price: 164, specs: 'PCIe 4.0 · 7450MB/s read', tier: 'S' },
@@ -385,14 +389,14 @@ export function defaultComponentDb(): ComponentDb {
       { id: 'm25', name: 'ASUS PRIME B860M-A WIFI', price: 180, specs: 'B860 · DDR5 · PCIe 4.0 · 3×M.2 · WiFi 6E', tier: 'C', socket: 'LGA1851', formFactor: 'mATX' },
     ],
     cooler: [
-      { id: 'co1', name: 'NZXT Kraken 360 RGB', price: 156, specs: '360mm AIO · LCD head · AM5/LGA1700', tier: 'S' },
-      { id: 'co3', name: 'NZXT Kraken Water 240mm RGB White', price: 130, specs: '240mm AIO' },
-      { id: 'co4', name: 'Corsair H60 (2018) Water 120mm 57.2 CFM Black', price: 90, specs: '120mm AIO' },
-      { id: 'co2', name: 'Noctua NH-D15 chromax', price: 86, specs: 'Dual tower · 165mm', tier: 'A' },
+      { id: 'co1', name: 'NZXT Kraken 360 RGB', price: 156, specs: '360mm AIO · LCD head · AM5/LGA1700', tier: 'S', coolerRadiatorMm: 360 },
+      { id: 'co3', name: 'NZXT Kraken Water 240mm RGB White', price: 130, specs: '240mm AIO', coolerRadiatorMm: 240 },
+      { id: 'co4', name: 'Corsair H60 (2018) Water 120mm 57.2 CFM Black', price: 90, specs: '120mm AIO', coolerRadiatorMm: 120 },
+      { id: 'co2', name: 'Noctua NH-D15 chromax', price: 86, specs: 'Dual tower · 165mm', tier: 'A', coolerHeightMm: 165 },
     ],
     psu: [
-      { id: 'p1', name: 'Corsair HX1200i ATX 3.0', price: 217, specs: '1200W · 80+ Platinum · Modular', tier: 'S' },
-      { id: 'p2', name: 'Seasonic FOCUS GX-850', price: 130, specs: '850W · 80+ Gold · Modular', tier: 'A' },
+      { id: 'p1', name: 'Corsair HX1200i ATX 3.0', price: 217, specs: '1200W · 80+ Platinum · Modular', tier: 'S', psuLengthMm: 200 },
+      { id: 'p2', name: 'Seasonic FOCUS GX-850', price: 130, specs: '850W · 80+ Gold · Modular', tier: 'A', psuLengthMm: 140 },
     ],
     case: [
       {
@@ -413,6 +417,13 @@ export function defaultComponentDb(): ComponentDb {
         specs: 'Micro-ATX · Mesh Front · 280mm AIO Ready',
         tier: 'B',
         category: 'Mini Tower',
+        caseWidthMm: 215,
+        caseHeightMm: 454,
+        caseDepthMm: 473.5,
+        maxGpuLengthMm: 405,
+        maxCoolerHeightMm: 170,
+        maxRadiatorMm: 280,
+        maxPsuLengthMm: 170,
         fanMounts: [
           { position: 'front', maxCount: 2, sizesMm: [120, 140] },
           { position: 'top', maxCount: 2, sizesMm: [120, 140] },
@@ -426,6 +437,13 @@ export function defaultComponentDb(): ComponentDb {
         specs: 'Mid-Tower ATX · Mesh Front · 420mm AIO Ready',
         tier: 'A',
         category: 'Mid Tower',
+        caseWidthMm: 210,
+        caseHeightMm: 475,
+        caseDepthMm: 424,
+        maxGpuLengthMm: 467,
+        maxCoolerHeightMm: 169,
+        maxRadiatorMm: 420,
+        maxPsuLengthMm: 250,
         fanMounts: [
           { position: 'front', maxCount: 3, sizesMm: [120, 140] },
           { position: 'top', maxCount: 3, sizesMm: [120, 140] },
@@ -440,6 +458,13 @@ export function defaultComponentDb(): ComponentDb {
         specs: 'Full-Tower E-ATX · Tempered Glass · 420mm AIO Ready',
         tier: 'S',
         category: 'Full Tower',
+        caseWidthMm: 285,
+        caseHeightMm: 517,
+        caseDepthMm: 490,
+        maxGpuLengthMm: 460,
+        maxCoolerHeightMm: 167,
+        maxRadiatorMm: 420,
+        maxPsuLengthMm: 220,
         fanMounts: [
           { position: 'top', maxCount: 3, sizesMm: [120, 140] },
           { position: 'side', maxCount: 3, sizesMm: [120, 140] },

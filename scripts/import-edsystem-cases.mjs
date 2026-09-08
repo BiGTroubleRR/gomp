@@ -3,13 +3,13 @@
 // genuinely rich per-model spec sheet — including real fan-mount and radiator-support data per
 // position.
 //
-// Case width/height/depth are deliberately NOT populated here: eD's own dimension triplet order is
-// brand-inconsistent (NZXT lists H x W x D; Fractal/Cooler Master list D x W x H) with no reliable
-// way to tell which axis is which from the listing alone, and this project no longer cross-checks
-// against any third-party dataset to resolve that — see scripts/strip-buildcores-dimensions.mjs for
-// why. Leaving case_width_mm/case_height_mm/case_depth_mm unset here is safe: build-scene.ts falls
-// back to generic per-category sizing. Fan mounts, radiator support, and max GPU/cooler/PSU length
-// ARE eD's own data, read directly off each product's spec table; one product (NZXT H5 Flow) had
+// Dimensions (case_width/height/depth_mm) are each manufacturer's own independently-published
+// spec (Fractal Design / Cooler Master / NZXT's own product pages), cross-checked against eD's own
+// "Velikost" field where given — eD's own dimension triplet order is brand-inconsistent (NZXT
+// lists H x W x D; Fractal/Cooler Master list D x W x H), so the manufacturer's own labelled
+// width/height/depth was used to be sure which axis is which; getting this wrong would visibly
+// distort the case box in the 3D viewport. Fan mounts, radiator support, max GPU/cooler/PSU length
+// are eD-only data, read directly off each product's spec table; one product (NZXT H5 Flow) had
 // its "Podpora vodního chlazení" (water-cooling) and "Podpora ventilátorů" (fan support) table
 // sections mislabelled/swapped on the live site — corrected by hand below, values otherwise taken
 // as published. Fan preinstall counts/positions are inferred from each product's own title (e.g.
@@ -31,6 +31,7 @@ const PRICE_BY_BUCKET = { 'Full Tower': 208, 'Mid Tower': 130, 'Mini Tower': 95,
 const CASES = [
   {
     name: 'Fractal Design Define 7 XL',
+    dims: { width: 240, height: 566, depth: 604 },
     bucket: 'Full Tower',
     gpu: 524,
     cooler: 185,
@@ -46,6 +47,7 @@ const CASES = [
   },
   {
     name: 'Fractal Design Define 7',
+    dims: { width: 240, height: 475, depth: 547 },
     bucket: 'Mid Tower',
     gpu: 467,
     cooler: 185,
@@ -61,6 +63,7 @@ const CASES = [
   },
   {
     name: 'Fractal Design North XL',
+    dims: { width: 240, height: 509, depth: 503 },
     bucket: 'Full Tower',
     gpu: 413,
     cooler: 185,
@@ -76,6 +79,7 @@ const CASES = [
   },
   {
     name: 'Fractal Design Core 2300',
+    dims: { width: 195, height: 431, depth: 450 },
     bucket: 'Mid Tower',
     gpu: 380,
     cooler: 162,
@@ -92,6 +96,7 @@ const CASES = [
   },
   {
     name: 'Cooler Master MasterBox MB520 ARGB',
+    dims: { width: 217, height: 469, depth: 496 },
     bucket: 'Mid Tower',
     gpu: 410,
     cooler: 165,
@@ -106,6 +111,7 @@ const CASES = [
   },
   {
     name: 'Cooler Master MasterFrame 600',
+    dims: { width: 261, height: 544, depth: 531 },
     bucket: 'Mid Tower',
     gpu: 485,
     cooler: 190,
@@ -122,6 +128,7 @@ const CASES = [
   },
   {
     name: 'Cooler Master Elite 600',
+    dims: { width: 285, height: 410, depth: 445 },
     bucket: 'Mid Tower',
     gpu: 425,
     cooler: 160,
@@ -137,6 +144,7 @@ const CASES = [
   },
   {
     name: 'Cooler Master Elite 302',
+    dims: { width: 203.5, height: 430, depth: 390 },
     bucket: 'Mini Tower',
     gpu: 365,
     cooler: 163.5,
@@ -151,6 +159,7 @@ const CASES = [
   },
   {
     name: 'Cooler Master CMP 520',
+    dims: { width: 204, height: 463, depth: 439 },
     bucket: 'Mid Tower',
     gpu: 350,
     cooler: 161,
@@ -165,6 +174,7 @@ const CASES = [
   },
   {
     name: 'NZXT H9 Flow RGB',
+    dims: { width: 315, height: 506, depth: 481 },
     bucket: 'Full Tower',
     gpu: 459,
     cooler: 165,
@@ -180,6 +190,7 @@ const CASES = [
   },
   {
     name: 'NZXT H6 Flow',
+    dims: { width: 287, height: 435, depth: 415 },
     bucket: 'Mid Tower',
     gpu: 365,
     cooler: 163,
@@ -195,6 +206,7 @@ const CASES = [
   },
   {
     name: 'NZXT H5 Flow',
+    dims: { width: 225, height: 465, depth: 430 },
     bucket: 'Mid Tower',
     gpu: 410,
     cooler: 170,
@@ -210,6 +222,7 @@ const CASES = [
   },
   {
     name: 'NZXT H3 Flow',
+    dims: { width: 225, height: 400, depth: 389 },
     bucket: 'Mini Tower',
     gpu: 377,
     cooler: 170,
@@ -251,9 +264,12 @@ for (const c of CASES) {
     category: 'case',
     name: c.name,
     price: PRICE_BY_BUCKET[c.bucket],
-    specs: c.bucket,
+    specs: `${c.bucket} · ${c.dims.width}×${c.dims.height}×${c.dims.depth}mm`,
     tier: null,
     case_size: c.bucket,
+    case_width_mm: c.dims.width,
+    case_height_mm: c.dims.height,
+    case_depth_mm: c.dims.depth,
     max_gpu_length_mm: c.gpu,
     max_cooler_height_mm: c.cooler,
     max_psu_length_mm: c.psu,
