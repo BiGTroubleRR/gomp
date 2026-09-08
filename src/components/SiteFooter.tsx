@@ -34,11 +34,6 @@ const T = {
     madein: 'Hand-built in Prague, CZ',
     disclaimer:
       'Prices are shown in CZK (Kč); the € figure is an approximate conversion (1 € ≈ 24.30 Kč, reference Jul 2026). Final price confirmed at checkout.',
-    data_attribution_pre: 'Component dimensions and specifications include information from ',
-    data_attribution_name: 'BuildCores OpenDB',
-    data_attribution_mid: ', made available under the ',
-    data_attribution_license: 'ODC Attribution License',
-    data_attribution_post: '.',
     tier_explanation:
       'Every GOMP is rated on a tier scale from S (top) down to D (entry-level), calculated as the average tier of its individual components.',
   },
@@ -62,11 +57,6 @@ const T = {
     madein: 'Ručne vyrábané v Prahe, ČR',
     disclaimer:
       'Ceny sú uvedené v Kč; suma v € je približný prepočet (1 € ≈ 24,30 Kč, referenčný júl 2026). Konečná cena bude potvrdená pri objednávke.',
-    data_attribution_pre: 'Rozmery a parametre komponentov obsahujú informácie z databázy ',
-    data_attribution_name: 'BuildCores OpenDB',
-    data_attribution_mid: ', dostupnej pod licenciou ',
-    data_attribution_license: 'ODC Attribution License',
-    data_attribution_post: '.',
     tier_explanation:
       'Každý GOMP má hodnotenie na škále S (najvyššie) až D (základné), vypočítané ako priemer úrovní jeho jednotlivých komponentov.',
   },
@@ -90,11 +80,6 @@ const T = {
     madein: 'Ručně vyrobeno v Praze, ČR',
     disclaimer:
       'Ceny jsou uvedeny v Kč; částka v € je přibližný přepočet (1 € ≈ 24,30 Kč, referenční červenec 2026). Konečná cena bude potvrzena při objednávce.',
-    data_attribution_pre: 'Rozměry a parametry komponent obsahují informace z databáze ',
-    data_attribution_name: 'BuildCores OpenDB',
-    data_attribution_mid: ', dostupné pod licencí ',
-    data_attribution_license: 'ODC Attribution License',
-    data_attribution_post: '.',
     tier_explanation:
       'Každý GOMP má hodnocení na škále S (nejvyšší) až D (základní), vypočítané jako průměr úrovní jeho jednotlivých komponentů.',
   },
@@ -177,18 +162,6 @@ export default function SiteFooter() {
         </div>
         <div style={{ borderTop: '0.5px solid rgba(245,240,230,0.08)', marginTop: 20, paddingTop: 20 }}>
           <span style={{ ...sans, fontSize: 11, color: 'rgba(245,240,230,0.28)', fontWeight: 300, lineHeight: 1.6 }}>{t.disclaimer}</span>
-          <br />
-          <span style={{ ...sans, fontSize: 11, color: 'rgba(245,240,230,0.28)', fontWeight: 300, lineHeight: 1.6 }}>
-            {t.data_attribution_pre}
-            <a href="https://github.com/buildcores/buildcores-open-db" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(245,240,230,0.42)' }}>
-              {t.data_attribution_name}
-            </a>
-            {t.data_attribution_mid}
-            <a href="https://opendatacommons.org/licenses/by/1-0/" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(245,240,230,0.42)' }}>
-              {t.data_attribution_license}
-            </a>
-            {t.data_attribution_post}
-          </span>
           <br />
           <span style={{ ...sans, fontSize: 11, color: 'rgba(245,240,230,0.28)', fontWeight: 300, lineHeight: 1.6 }}>{t.tier_explanation}</span>
         </div>

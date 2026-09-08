@@ -1,21 +1,20 @@
 // One-off import: 13 real cases from Fractal Design, Cooler Master and NZXT, hand-sourced from
 // eD system a.s. (edshop.edsystem.cz), a Czech B2B IT distributor whose product pages carry a
 // genuinely rich per-model spec sheet — including real fan-mount and radiator-support data per
-// position, which buildcores-open-db (the source for scripts/import-case-variants.mjs) has never
-// had for the case category at all (see that script's own header comment).
+// position.
 //
-// Dimensions (case_width/height/depth_mm) are taken from buildcores-open-db instead of eD's own
-// "Velikost" field wherever a match exists, because eD's dimension triplet order turned out to be
-// brand-inconsistent (NZXT lists H x W x D; Fractal/Cooler Master list D x W x H) and cross-checking
-// against buildcores-open-db's separately-labelled width/height/depth fields was the only reliable
-// way to be sure which axis was which — getting this wrong would visibly distort the case box in
-// the 3D viewport. Fan mounts, radiator support, max GPU/cooler/PSU length are eD-only data (not in
-// buildcores-open-db) and were read directly off each product's spec table; one product (NZXT H5
-// Flow) had its "Podpora vodního chlazení" (water-cooling) and "Podpora ventilátorů" (fan support)
-// table sections mislabelled/swapped on the live site — corrected by hand below, values otherwise
-// taken as published. Fan preinstall counts/positions are inferred from each product's own title
-// (e.g. "3x 120mm ARGB Fan") distributed across the position(s) that size fits — a heuristic default
-// like the rest of this category's fan_mounts data, refinable later via Admin.
+// Case width/height/depth are deliberately NOT populated here: eD's own dimension triplet order is
+// brand-inconsistent (NZXT lists H x W x D; Fractal/Cooler Master list D x W x H) with no reliable
+// way to tell which axis is which from the listing alone, and this project no longer cross-checks
+// against any third-party dataset to resolve that — see scripts/strip-buildcores-dimensions.mjs for
+// why. Leaving case_width_mm/case_height_mm/case_depth_mm unset here is safe: build-scene.ts falls
+// back to generic per-category sizing. Fan mounts, radiator support, and max GPU/cooler/PSU length
+// ARE eD's own data, read directly off each product's spec table; one product (NZXT H5 Flow) had
+// its "Podpora vodního chlazení" (water-cooling) and "Podpora ventilátorů" (fan support) table
+// sections mislabelled/swapped on the live site — corrected by hand below, values otherwise taken
+// as published. Fan preinstall counts/positions are inferred from each product's own title (e.g.
+// "3x 120mm ARGB Fan") distributed across the position(s) that size fits — a heuristic default like
+// the rest of this category's fan_mounts data, refinable later via Admin.
 //
 // Product photos are the site's own "_0a.jpg" gallery image (confirmed to be the largest/original
 // variant available, vs. the smaller "_0a_7.jpg"/"_0a_9.jpg" IMGCACHE-resized thumbnails used in
@@ -33,7 +32,6 @@ const CASES = [
   {
     name: 'Fractal Design Define 7 XL',
     bucket: 'Full Tower',
-    dims: { width: 240, height: 566, depth: 604 },
     gpu: 524,
     cooler: 185,
     psu: 250,
@@ -49,7 +47,6 @@ const CASES = [
   {
     name: 'Fractal Design Define 7',
     bucket: 'Mid Tower',
-    dims: { width: 240, height: 475, depth: 547 },
     gpu: 467,
     cooler: 185,
     psu: 250,
@@ -65,7 +62,6 @@ const CASES = [
   {
     name: 'Fractal Design North XL',
     bucket: 'Full Tower',
-    dims: { width: 240, height: 509, depth: 503 },
     gpu: 413,
     cooler: 185,
     psu: 175,
@@ -81,7 +77,6 @@ const CASES = [
   {
     name: 'Fractal Design Core 2300',
     bucket: 'Mid Tower',
-    dims: { width: 195, height: 431, depth: 450 },
     gpu: 380,
     cooler: 162,
     psu: 185,
@@ -98,7 +93,6 @@ const CASES = [
   {
     name: 'Cooler Master MasterBox MB520 ARGB',
     bucket: 'Mid Tower',
-    dims: { width: 217, height: 469, depth: 496 },
     gpu: 410,
     cooler: 165,
     psu: 180,
@@ -113,7 +107,6 @@ const CASES = [
   {
     name: 'Cooler Master MasterFrame 600',
     bucket: 'Mid Tower',
-    dims: { width: 261, height: 544, depth: 531 },
     gpu: 485,
     cooler: 190,
     psu: 235,
@@ -130,7 +123,6 @@ const CASES = [
   {
     name: 'Cooler Master Elite 600',
     bucket: 'Mid Tower',
-    dims: { width: 285, height: 410, depth: 445 },
     gpu: 425,
     cooler: 160,
     psu: 240,
@@ -146,7 +138,6 @@ const CASES = [
   {
     name: 'Cooler Master Elite 302',
     bucket: 'Mini Tower',
-    dims: { width: 203.5, height: 430, depth: 390 },
     gpu: 365,
     cooler: 163.5,
     psu: 160,
@@ -161,7 +152,6 @@ const CASES = [
   {
     name: 'Cooler Master CMP 520',
     bucket: 'Mid Tower',
-    dims: { width: 204, height: 463, depth: 439 },
     gpu: 350,
     cooler: 161,
     psu: 160,
@@ -176,7 +166,6 @@ const CASES = [
   {
     name: 'NZXT H9 Flow RGB',
     bucket: 'Full Tower',
-    dims: { width: 315, height: 506, depth: 481 },
     gpu: 459,
     cooler: 165,
     psu: 200,
@@ -192,7 +181,6 @@ const CASES = [
   {
     name: 'NZXT H6 Flow',
     bucket: 'Mid Tower',
-    dims: { width: 287, height: 435, depth: 415 },
     gpu: 365,
     cooler: 163,
     psu: 200,
@@ -208,7 +196,6 @@ const CASES = [
   {
     name: 'NZXT H5 Flow',
     bucket: 'Mid Tower',
-    dims: { width: 225, height: 465, depth: 430 },
     gpu: 410,
     cooler: 170,
     psu: 200,
@@ -224,7 +211,6 @@ const CASES = [
   {
     name: 'NZXT H3 Flow',
     bucket: 'Mini Tower',
-    dims: { width: 225, height: 400, depth: 389 },
     gpu: 377,
     cooler: 170,
     psu: 185,
@@ -265,12 +251,9 @@ for (const c of CASES) {
     category: 'case',
     name: c.name,
     price: PRICE_BY_BUCKET[c.bucket],
-    specs: `${c.bucket} · ${c.dims.width}×${c.dims.height}×${c.dims.depth}mm`,
+    specs: c.bucket,
     tier: null,
     case_size: c.bucket,
-    case_width_mm: c.dims.width,
-    case_height_mm: c.dims.height,
-    case_depth_mm: c.dims.depth,
     max_gpu_length_mm: c.gpu,
     max_cooler_height_mm: c.cooler,
     max_psu_length_mm: c.psu,

@@ -142,12 +142,14 @@ create table if not exists public.components (
   case_size text, -- case only: Full Tower | Mid Tower | Mini Tower | SFF
   socket text, -- cpu + mobo only: AM5 | AM4 | LGA1700 | LGA1851
   form_factor text, -- mobo only: E-ATX | ATX | mATX | Mini-ITX
-  -- Real physical dimensions (mm), sourced from buildcores-open-db (ODC-By
-  -- licensed — see the attribution note on /about) for the categories where
-  -- per-SKU size actually varies enough to matter: case, gpu, cooler, psu.
-  -- Motherboard/CPU/RAM/storage are close enough to standardized by form
-  -- factor that per-SKU dimensions wouldn't change anything visually, so
-  -- those are left to the existing form_factor/socket fields instead.
+  -- Real physical dimensions (mm) for the categories where per-SKU size
+  -- actually varies enough to matter: case, gpu, cooler, psu. Motherboard/
+  -- CPU/RAM/storage are close enough to standardized by form factor that
+  -- per-SKU dimensions wouldn't change anything visually, so those are left
+  -- to the existing form_factor/socket fields instead. Source these from eD
+  -- system's own spec pages or manufacturer datasheets going forward — never
+  -- populate them from BuildCores OpenDB (removed catalog-wide; see the
+  -- migration below).
   case_width_mm numeric(6, 1), -- case only
   case_height_mm numeric(6, 1), -- case only
   case_depth_mm numeric(6, 1), -- case only
@@ -225,6 +227,28 @@ alter table public.components add column if not exists margin_override jsonb;
 alter table public.components add column if not exists ram_family text;
 alter table public.components add column if not exists is_live boolean not null default true;
 alter table public.components add column if not exists fan_size_mm numeric(5, 1);
+
+-- Every value ever stored in these 9 columns traced back to BuildCores OpenDB (either directly,
+-- or copied by hand from it into an eD system import script) — confirmed against the live catalog
+-- and documented in scripts/hide-buildcores-only-components.mjs / strip-buildcores-dimensions.mjs.
+-- Nulled catalog-wide there; repeated here so a fresh database restore matches. Safe: every reader
+-- (fitsInCase in component-db-seed.ts, build-scene.ts) already falls back to generic per-category
+-- sizing when these are unset. NOT included: max_gpu_length_mm/max_cooler_height_mm/
+-- max_psu_length_mm/max_radiator_mm/fan_mounts, which are eD system's own case-clearance spec-table
+-- data, not BuildCores.
+update public.components set
+  case_width_mm = null,
+  case_height_mm = null,
+  case_depth_mm = null,
+  gpu_length_mm = null,
+  gpu_slot_width = null,
+  cooler_height_mm = null,
+  cooler_radiator_mm = null,
+  psu_length_mm = null,
+  ram_height_mm = null
+where case_width_mm is not null or case_height_mm is not null or case_depth_mm is not null
+   or gpu_length_mm is not null or gpu_slot_width is not null or cooler_height_mm is not null
+   or cooler_radiator_mm is not null or psu_length_mm is not null or ram_height_mm is not null;
 
 -- 'fan' added as its own catalog category (see Category in component-db-seed.ts) — the original
 -- check constraint predates it and would reject every fan row's insert otherwise.
