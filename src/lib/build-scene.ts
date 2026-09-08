@@ -19,13 +19,17 @@ import {
 export type CompId = 'mobo' | 'cpu' | 'cooler' | 'ram' | 'gpu' | 'storage' | 'psu' | 'case';
 export const SLOTS: CompId[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case'];
 
-// The BASE_POS entries Admin's alignment panel can adjust — mobo/gpu/psu use separate anchoring
-// mechanisms (moboAnchoredX/Z, applyGpuPosition, psuAnchoredY/Z) so aren't included.
-export type AlignmentTunableId = 'cpu' | 'cooler' | 'ram' | 'storage';
+// The BASE_POS entries Admin's alignment panel can adjust — gpu moves with this group in its
+// normal (horizontal) mount, same as cpu/cooler/ram/storage; mobo/psu use separate anchoring
+// mechanisms (moboAnchoredX/Z, psuAnchoredY/Z) so aren't included. gpu's *vertical* (riser-mount
+// case) mount stays separately anchored — see gpuSideClearance/gpuVerticalBottomClearance below.
+export type AlignmentTunableId = 'cpu' | 'cooler' | 'ram' | 'storage' | 'gpu';
 export type AlignmentTuning = {
   basePos: Record<AlignmentTunableId, [number, number, number]>;
   moboRearClearance: number;
   moboSideClearance: number;
+  gpuSideClearance: number;
+  gpuVerticalBottomClearance: number;
   aioTubeSpacing: number;
   aioTubeRadius: number;
   aioBendOffset: [number, number, number];
@@ -64,9 +68,12 @@ export const DEFAULT_ALIGNMENT_TUNING: AlignmentTuning = {
     cooler: [...BASE_POS.cooler],
     ram: [...BASE_POS.ram],
     storage: [...BASE_POS.storage],
+    gpu: [...BASE_POS.gpu],
   } as Record<AlignmentTunableId, [number, number, number]>,
   moboRearClearance: 0.04,
   moboSideClearance: 0.18,
+  gpuSideClearance: 0.04,
+  gpuVerticalBottomClearance: 0.04,
   aioTubeSpacing: 0.05,
   aioTubeRadius: 0.016,
   aioBendOffset: [0, 0, 0],
@@ -979,9 +986,12 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       cooler: [...DEFAULT_ALIGNMENT_TUNING.basePos.cooler],
       ram: [...DEFAULT_ALIGNMENT_TUNING.basePos.ram],
       storage: [...DEFAULT_ALIGNMENT_TUNING.basePos.storage],
+      gpu: [...DEFAULT_ALIGNMENT_TUNING.basePos.gpu],
     } as Record<AlignmentTunableId, [number, number, number]>,
     moboRearClearance: DEFAULT_ALIGNMENT_TUNING.moboRearClearance,
     moboSideClearance: DEFAULT_ALIGNMENT_TUNING.moboSideClearance,
+    gpuSideClearance: DEFAULT_ALIGNMENT_TUNING.gpuSideClearance,
+    gpuVerticalBottomClearance: DEFAULT_ALIGNMENT_TUNING.gpuVerticalBottomClearance,
     aioTubeSpacing: DEFAULT_ALIGNMENT_TUNING.aioTubeSpacing,
     aioTubeRadius: DEFAULT_ALIGNMENT_TUNING.aioTubeRadius,
     aioBendOffset: [...DEFAULT_ALIGNMENT_TUNING.aioBendOffset],
@@ -1270,6 +1280,19 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     dimensionGroups[id] = set;
   }
 
+  // A dimension annotation is only ever (re)built from scratch by setComponentDimensions, at
+  // whatever position the part happens to be at that moment — it never re-reads finalPos on its
+  // own afterward. Anything that can move an *already-annotated* part without going through
+  // setComponentDimensions (resetComponentPositions' mobo/case/psu-triggered group move,
+  // applyGpuPosition, Admin's applyAlignmentTuning) left the annotation visibly stranded at the
+  // pre-move spot. Called right after each part's finalPos is (re)computed, this keeps it pinned
+  // to the part instead of needing every mover to remember to also call setComponentDimensions.
+  function repositionDimensionGroup(id: CompId) {
+    const group = dimensionGroups[id];
+    const obj = objects[id];
+    if (group && obj) group.position.copy(obj.finalPos);
+  }
+
   function setDimensionsVisible(visible: boolean) {
     dimensionsVisible = visible;
     Object.values(dimensionGroups).forEach((g) => {
@@ -1488,34 +1511,32 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     // The glass panel sits at +w/2 (see buildCase's glassMesh) — the tray/solid side is -w/2.
     return -lastCaseSize.w / 2 + alignmentTuning.moboSideClearance;
   }
+  // How much bigger/smaller the selected board's real width/depth is than ATX — shared by
+  // resetComponentPositions (the mobo/cpu/cooler/ram/storage group) and applyGpuPosition's
+  // horizontal branch (gpu now moves with that same group, see BASE_POS.gpu below) so an
+  // off-ATX board scales both consistently instead of drifting apart.
+  function moboScales() {
+    return {
+      width: lastMoboSizeMm.width / MOBO_FORM_FACTOR_SIZE_MM.ATX.width,
+      depth: lastMoboSizeMm.depth / MOBO_FORM_FACTOR_SIZE_MM.ATX.depth,
+    };
+  }
 
-  // The GPU's height (world X, in both horizontal and vertical-riser mount — rotating the
-  // wrapper about world X for a vertical mount never moves X itself) used to sit at a fixed
-  // constant, tuned back when GPU_HEIGHT_MM didn't exist and X stayed at scale 1 (the
-  // placeholder mesh's own tiny baked size). Now that height is a real ~137mm, an un-anchored
-  // constant overflows the case's side wall for anything smaller than a Full Tower — same class
-  // of bug moboAnchoredX/gpuAnchoredZ/psuAnchoredZ already exist to prevent for their own axes.
-  const GPU_SIDE_CLEARANCE = 0.04;
-  function gpuAnchoredX(): number {
+  // The GPU's height (world X) in the riser/vertical mount only — rotating the wrapper about
+  // world X never moves X itself, so this is the one axis vertical mode still anchors to the
+  // case's side wall rather than the mobo; horizontal mount instead moves with the mobo group
+  // (see BASE_POS.gpu, applyGpuPosition). Clearance (default 0.04, see DEFAULT_ALIGNMENT_TUNING)
+  // lives in alignmentTuning rather than a fixed const, so Admin's alignment panel can override it.
+  function gpuVerticalAnchoredX(): number {
     const gpu = objects.gpu;
     const nat = naturalSize.gpu;
     const halfHeight = gpu && nat ? (nat.x * gpu.sizeScale.x) / 2 : 0.3;
-    return -lastCaseSize.w / 2 + GPU_SIDE_CLEARANCE + halfHeight;
+    return -lastCaseSize.w / 2 + alignmentTuning.gpuSideClearance + halfHeight;
   }
 
-  // GPU and PSU are anchored the same rear-wall way as the motherboard, each using its own real
-  // length — a card's rear bracket (port cutouts) and a PSU's rear-facing end both mount at the
-  // case's back, not centered front-to-back. GPU's vertical (riser-mount) position is a fixed,
-  // separately-tuned chamber location (see applyGpuPosition), so this anchor only applies when
-  // it's mounted the normal horizontal way.
-  const GPU_REAR_CLEARANCE = 0.04;
+  // PSU is anchored the same rear-wall way as the motherboard, using its own real length — a
+  // PSU's rear-facing end mounts at the case's back, not centered front-to-back.
   const PSU_REAR_CLEARANCE = 0.04;
-  function gpuAnchoredZ(): number {
-    const gpu = objects.gpu;
-    const nat = naturalSize.gpu;
-    const halfLength = gpu && nat ? (nat.z * gpu.sizeScale.z) / 2 : 0.45;
-    return lastCaseSize.d / 2 - GPU_REAR_CLEARANCE - halfLength;
-  }
   function psuAnchoredZ(): number {
     const psu = objects.psu;
     const nat = naturalSize.psu;
@@ -1542,20 +1563,25 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     const moboX = moboAnchoredX();
     const psuZ = psuAnchoredZ();
     const psuY = psuAnchoredY();
-    // cpu/cooler/ram/storage's BASE_POS offsets from the mobo were hand-tuned against a
+    // cpu/cooler/ram/storage/gpu's BASE_POS offsets from the mobo were hand-tuned against a
     // full-size ATX board — scaling them by how much smaller/bigger the *actual* selected
     // board's real width/depth is (vs. ATX) keeps them proportionally in the same spot on the
     // PCB instead of the same absolute offset, which is what pushed them past a much smaller
     // Mini-ITX board's real edges (170mm vs ATX's 305x244mm).
-    const moboWidthScale = lastMoboSizeMm.width / MOBO_FORM_FACTOR_SIZE_MM.ATX.width;
-    const moboDepthScale = lastMoboSizeMm.depth / MOBO_FORM_FACTOR_SIZE_MM.ATX.depth;
+    const { width: moboWidthScale, depth: moboDepthScale } = moboScales();
     (Object.keys(BASE_POS) as Exclude<CompId, 'case'>[]).forEach((id) => {
       const obj = objects[id];
       if (!obj) return;
-      // Dev-tuning panel overrides land here for cpu/cooler/ram/storage; mobo/gpu/psu always
-      // read the fixed module const (see debugTuning above).
+      // Admin's alignment panel overrides land here for cpu/cooler/ram/storage/gpu; mobo/psu
+      // always read the fixed module const (see alignmentTuning above).
       const base = alignmentTuning.basePos[id as AlignmentTunableId] ?? BASE_POS[id];
-      const inMoboGroup = id === 'mobo' || id === 'cpu' || id === 'cooler' || id === 'ram' || id === 'storage';
+      // gpu only moves with this group in its normal (horizontal) mount — vertical/riser mode is
+      // repositioned separately by applyGpuPosition right after, whenever gpu's mount can change
+      // (setGpuOrientation) or something in this group can (toggleComponent's mobo/psu branches,
+      // updateCase — always paired with a setGpuOrientation call in page.tsx, applyAlignmentTuning
+      // below), so a stale horizontal-style finalPos set here for a vertical-mounted card is never
+      // actually rendered.
+      const inMoboGroup = id === 'mobo' || id === 'cpu' || id === 'cooler' || id === 'ram' || id === 'storage' || id === 'gpu';
       const x = inMoboGroup ? moboX + (base[0] - BASE_POS.mobo[0]) : base[0];
       const y = inMoboGroup ? BASE_POS.mobo[1] + (base[1] - BASE_POS.mobo[1]) * moboWidthScale : id === 'psu' ? psuY : base[1];
       const z = inMoboGroup ? moboZ + (base[2] - BASE_POS.mobo[2]) * moboDepthScale : id === 'psu' ? psuZ : base[2];
@@ -1564,6 +1590,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
         obj.targetPos.copy(obj.finalPos);
         obj.mesh.position.copy(obj.finalPos);
       }
+      repositionDimensionGroup(id);
     });
     // The empty-DIMM-slot outlines are a standalone group (see ramSlotOutlineGroup below), not
     // one of the objects looped above, so they need their own copy of the same ram position —
@@ -1987,7 +2014,6 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   // I/O shield does, not centered front-to-back. Vertical (riser-mount case): a fixed, already-
   // tuned chamber position — that layout puts the card in its own enclosure opposite the mobo
   // tray, not case-depth-relative the way the horizontal mount is.
-  const GPU_VERTICAL_BOTTOM_CLEARANCE = 0.04;
   // Vertical mode adds a second rotation (wrapper.rotation.x, set in setGpuOrientation) on top of
   // the inner group's own baked -90° Z rotation (see buildComponentMesh's gpu case) — composing
   // the two by hand to find where the card's real length actually lands in world Y is exactly the
@@ -2014,16 +2040,30 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     mesh.rotation.copy(prevRot);
     mesh.scale.copy(prevScale);
     mesh.updateMatrixWorld(true);
-    const bottomWall = -lastCaseSize.h / 2 + GPU_VERTICAL_BOTTOM_CLEARANCE;
+    const bottomWall = -lastCaseSize.h / 2 + alignmentTuning.gpuVerticalBottomClearance;
     return bottomWall - box.min.y;
   }
 
   function applyGpuPosition() {
     const obj = objects.gpu;
     if (!obj) return;
-    const pos = gpuVerticalMode
-      ? new THREE.Vector3(gpuAnchoredX(), gpuVerticalAnchoredY(), GPU_VERTICAL_POS[2])
-      : new THREE.Vector3(gpuAnchoredX(), BASE_POS.gpu[1], gpuAnchoredZ());
+    let pos: THREE.Vector3;
+    if (gpuVerticalMode) {
+      pos = new THREE.Vector3(gpuVerticalAnchoredX(), gpuVerticalAnchoredY(), GPU_VERTICAL_POS[2]);
+    } else {
+      // Horizontal mount: moves with the mobo/cpu/cooler/ram/storage group instead of its own
+      // case-wall anchor, same BASE_POS-offset-from-mobo pattern as every other component (see
+      // resetComponentPositions, which already computes this identically for gpu — this just
+      // needs its own copy since it also has to run from setGpuOrientation/setSizeScale, which
+      // don't call that function).
+      const base = alignmentTuning.basePos.gpu;
+      const { width: moboWidthScale, depth: moboDepthScale } = moboScales();
+      pos = new THREE.Vector3(
+        moboAnchoredX() + (base[0] - BASE_POS.mobo[0]),
+        BASE_POS.mobo[1] + (base[1] - BASE_POS.mobo[1]) * moboWidthScale,
+        moboAnchoredZ() + (base[2] - BASE_POS.mobo[2]) * moboDepthScale,
+      );
+    }
     obj.finalPos.copy(pos);
     // Matches resetComponentPositions' own guard (just `obj.selected`, no moveStart check): the
     // auto-build flow toggles gpu on and then, ~90ms later while its 650ms entrance animation is
@@ -2038,6 +2078,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       obj.targetPos.copy(pos);
       if (obj.moveStart == null) obj.mesh.position.copy(pos);
     }
+    repositionDimensionGroup('gpu');
   }
 
   // Tips the GPU wrapper onto its side for a riser-mounted vertical case (world Z, where its
@@ -2145,6 +2186,8 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       }
       if (typeof partial.moboRearClearance === 'number') alignmentTuning.moboRearClearance = partial.moboRearClearance;
       if (typeof partial.moboSideClearance === 'number') alignmentTuning.moboSideClearance = partial.moboSideClearance;
+      if (typeof partial.gpuSideClearance === 'number') alignmentTuning.gpuSideClearance = partial.gpuSideClearance;
+      if (typeof partial.gpuVerticalBottomClearance === 'number') alignmentTuning.gpuVerticalBottomClearance = partial.gpuVerticalBottomClearance;
       if (typeof partial.aioTubeSpacing === 'number') alignmentTuning.aioTubeSpacing = partial.aioTubeSpacing;
       if (typeof partial.aioTubeRadius === 'number') alignmentTuning.aioTubeRadius = partial.aioTubeRadius;
       if (Array.isArray(partial.aioBendOffset) && partial.aioBendOffset.length === 3) {
@@ -2156,6 +2199,11 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       // the cooler (a basePos override or a clearance override moving the whole mobo group) must
       // explicitly re-run this too, or the tube stays visibly pinned to the pre-override spot.
       updateAioRadiator();
+      // resetComponentPositions() above only gets gpu right for its horizontal mount (see its own
+      // comment) — a vertical/riser-mounted card needs applyGpuPosition's own branch to land in
+      // the right spot, same pairing every other resetComponentPositions() caller already needs
+      // (toggleComponent, setGpuOrientation).
+      applyGpuPosition();
     },
     dispose() {
       running = false;

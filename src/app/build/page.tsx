@@ -52,7 +52,7 @@ import {
 } from '@/lib/build-scene';
 import { useIsMobile } from '@/lib/use-media-query';
 import { setDustCursorVisible, isDustEnabled } from '@/lib/cursor-dust';
-import { fetchAlignmentTuning, subscribeAlignmentTuning } from '@/lib/supabase/alignment-tuning';
+import { fetchAlignmentTuningConfig, subscribeAlignmentTuning, resolveAlignmentTuning, type AlignmentTuningConfig } from '@/lib/supabase/alignment-tuning';
 
 const T = {
   en: {
@@ -652,20 +652,44 @@ function BuildPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Admin-tuned 3D alignment (mobo/CPU/cooler/RAM/storage offsets, mobo clearances, AIO tube
-  // routing) lives in Supabase, not in this page — see src/app/admin/page.tsx's "Alignment" tab
-  // and src/lib/supabase/alignment-tuning.ts. Applied once on scene-ready, then kept live via the
-  // same Realtime-subscribe-and-refetch pattern subscribeComponents already uses, so an Admin
-  // change reaches this viewport (and every other already-open one) without a reload.
+  // Admin-tuned 3D alignment (mobo/CPU/cooler/RAM/storage/GPU offsets, mobo clearances, AIO tube
+  // routing, GPU vertical-mount clearances) lives in Supabase, versioned per motherboard form
+  // factor — see src/app/admin/page.tsx's "Alignment" tab and src/lib/supabase/alignment-tuning.ts.
+  // Kept live via the same Realtime-subscribe-and-refetch pattern subscribeComponents already
+  // uses, so an Admin change reaches this viewport (and every other already-open one) without a
+  // reload.
+  const alignmentConfigRef = useRef<Partial<AlignmentTuningConfig> | null>(null);
+  // Derived from state every mobo pick/swap path (selectCard, changeSelection, toggleComponent,
+  // auto-build) already updates, rather than hooking each of those individually — any of them
+  // changing `selected.mobo`/`selections.mobo` re-derives this and the effect below re-applies.
+  const currentMoboFormFactor = useMemo<FormFactor>(() => {
+    const comp = selected.mobo ? (compDb.mobo || []).find((c) => c.name === selections.mobo) : undefined;
+    return comp?.formFactor ?? 'ATX';
+  }, [selected.mobo, selections.mobo, compDb.mobo]);
+  // Mirrors currentMoboFormFactor for the Realtime subscription below, whose callback closure is
+  // registered once (on sceneReady) and must still resolve against whatever form factor is
+  // *currently* active whenever a change arrives, not whatever it was at subscribe time.
+  const currentMoboFormFactorRef = useRef<FormFactor>('ATX');
+  useEffect(() => {
+    currentMoboFormFactorRef.current = currentMoboFormFactor;
+  }, [currentMoboFormFactor]);
+
+  useEffect(() => {
+    if (!sceneReady) return;
+    sceneRef.current?.applyAlignmentTuning(resolveAlignmentTuning(alignmentConfigRef.current, currentMoboFormFactor));
+  }, [sceneReady, currentMoboFormFactor]);
+
   useEffect(() => {
     if (!sceneReady) return;
     let cancelled = false;
-    async function apply() {
-      const tuning = await fetchAlignmentTuning();
-      if (!cancelled && tuning) sceneRef.current?.applyAlignmentTuning(tuning);
+    async function loadAndApply() {
+      const config = await fetchAlignmentTuningConfig();
+      if (cancelled) return;
+      alignmentConfigRef.current = config;
+      sceneRef.current?.applyAlignmentTuning(resolveAlignmentTuning(config, currentMoboFormFactorRef.current));
     }
-    apply();
-    const unsubscribe = subscribeAlignmentTuning(apply);
+    loadAndApply();
+    const unsubscribe = subscribeAlignmentTuning(loadAndApply);
     return () => {
       cancelled = true;
       unsubscribe();
