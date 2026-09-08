@@ -843,7 +843,7 @@ function BuildPageContent() {
   }
 
   const toggleComponent = useCallback(
-    (id: CompId) => {
+    (id: CompId, delayMs = 0) => {
       const next = !selected[id];
       setSelected((s) => ({ ...s, [id]: next }));
       if (next) flashRecentlyPicked(id);
@@ -863,7 +863,7 @@ function BuildPageContent() {
       }
       if (comp) sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp));
       if (id === 'ram' && comp) sceneRef.current?.setRamModules(ramModuleCount(comp));
-      sceneRef.current?.toggleComponent(id, next);
+      sceneRef.current?.toggleComponent(id, next, delayMs);
       const gpuVertical =
         id === 'gpu' && selected.case
           ? caseHasVerticalGpuMount((compDb.case || []).find((c) => c.name === selections.case)?.name)
@@ -959,7 +959,7 @@ function BuildPageContent() {
   // the last step once it's done, so letting each of its 8 picks auto-advance too would flip
   // the visible category (and thus the whole card list + its enter/exit animation) through
   // every step in rapid succession, which is what made the button visibly lag the page.
-  function selectCard(id: CompId, name: string, advanceStep = true) {
+  function selectCard(id: CompId, name: string, advanceStep = true, flyInDelayMs = 0) {
     if (selected[id] && selections[id] === name) {
       setSelected((s) => ({ ...s, [id]: false }));
       sceneRef.current?.toggleComponent(id, false);
@@ -977,7 +977,7 @@ function BuildPageContent() {
     flashRecentlyPicked(id);
     if (!selected[id]) {
       setSelected((s) => ({ ...s, [id]: true }));
-      sceneRef.current?.toggleComponent(id, true);
+      sceneRef.current?.toggleComponent(id, true, flyInDelayMs);
       const comp = (compDb[id] || []).find((c) => c.name === name);
       const gpuVertical =
         id === 'gpu' && selected.case
@@ -1114,10 +1114,16 @@ function BuildPageContent() {
   function runFreshBuild() {
     const { selections: picks, notes } = autoBuildForBudget(BUDGET_STEPS[budgetIdx], compDb, {});
     setAutoBuildNotes(notes);
+    // Staggering these via setTimeout used to mean 8 separate macrotasks, each triggering its own
+    // full page re-render (and a Framer layout pass on the growing sidebar list) — with all 8
+    // spread across ~720ms of the 3D scene's own rAF loop, that's what made the whole site visibly
+    // lag. Calling them synchronously here lets React batch all 8 into a single render; the
+    // staggered fly-in is unaffected since that timing now lives in the scene itself
+    // (toggleComponent's delayMs — see build-scene.ts).
     SLOTS.forEach((id, i) => {
       const name = picks[id];
       if (!name) return;
-      setTimeout(() => selectCard(id, name, false), i * 90);
+      selectCard(id, name, false, i * 90);
     });
     setActiveStep(SLOTS[SLOTS.length - 1]);
   }
@@ -1156,8 +1162,12 @@ function BuildPageContent() {
       runFreshBuild();
       return;
     }
+    // Synchronous (not staggered via setTimeout) so React batches all these into one render —
+    // see runFreshBuild's own comment for why 8 separate setTimeout-triggered renders were what
+    // actually made this moment lag, not the 3D animation itself. The visual fly-out stagger is
+    // preserved via toggleComponent's own delayMs.
     currentlySelected.forEach((id, i) => {
-      setTimeout(() => toggleComponent(id), i * 80);
+      toggleComponent(id, i * 80);
     });
     setRebuildPending(true);
   }
@@ -1166,7 +1176,7 @@ function BuildPageContent() {
     if (completionRunning) return;
     SLOTS.forEach((id, i) => {
       if (!selected[id]) return;
-      setTimeout(() => toggleComponent(id), i * 80);
+      toggleComponent(id, i * 80);
     });
     setShowComplete(false);
     setActiveStep(SLOTS[0]);

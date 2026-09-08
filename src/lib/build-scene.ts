@@ -1536,7 +1536,11 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   // sizeScale is set by a prior setSizeScale(id, specs) call (see changeSelection in the page,
   // which always calls it before installing a part) — true-to-size scale doesn't depend on
   // which case is selected, so there is nothing case-relative left to apply here.
-  function toggleComponent(id: CompId, nextSelected: boolean) {
+  // delayMs lets a caller stagger several installs/removals visually (each starting its own
+  // fly-in a bit after the previous) while still applying all of them — and their React state —
+  // in one synchronous batch, rather than needing one setTimeout per part just to space out the
+  // animation starts (that pattern used to force a separate render per part; see runFreshBuild).
+  function toggleComponent(id: CompId, nextSelected: boolean, delayMs = 0) {
     const obj = objects[id];
     if (!obj) return;
     obj.selected = nextSelected;
@@ -1547,7 +1551,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       obj.moveFrom = caseGroup.position.clone();
       obj.scaleFrom = caseGroup.scale.clone();
       obj.targetScale.copy(nextSelected ? new THREE.Vector3(1, 1, 1) : new THREE.Vector3(0.001, 0.001, 0.001));
-      obj.moveStart = Date.now();
+      obj.moveStart = Date.now() + delayMs;
       obj.moveDur = nextSelected ? 650 : 550;
       obj.exiting = !nextSelected;
       return;
@@ -1584,7 +1588,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     }
     obj.moveFrom = mesh.position.clone();
     obj.scaleFrom = mesh.scale.clone();
-    obj.moveStart = Date.now();
+    obj.moveStart = Date.now() + delayMs;
     obj.moveDur = nextSelected ? 650 : 550;
     if (id === 'cooler') updateAioRadiator();
     // Side fans center themselves against the mobo's own front edge (see rebuildFans/
@@ -1774,7 +1778,10 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       if (!obj) return;
       if (obj.moveStart != null && obj.moveFrom && obj.scaleFrom) {
         const dur = obj.moveDur || 600;
-        const p = Math.min(1, (Date.now() - obj.moveStart) / dur);
+        // Clamped below at 0, not just above at 1 — moveStart can now be in the future (a
+        // staggered fly-in's delayMs), and without this floor a not-yet-started object would
+        // get a negative interpolation factor and briefly overshoot backwards past moveFrom.
+        const p = Math.max(0, Math.min(1, (Date.now() - obj.moveStart) / dur));
         const eased = 1 - Math.pow(1 - p, 3);
         obj.mesh.position.lerpVectors(obj.moveFrom, obj.targetPos, eased);
         obj.mesh.scale.lerpVectors(obj.scaleFrom, obj.targetScale, eased);
