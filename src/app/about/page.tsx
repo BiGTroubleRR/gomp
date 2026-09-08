@@ -241,7 +241,7 @@ export default function AboutPage() {
             style={{
               ...serif,
               fontSize: isMobile ? 42 : 88,
-              fontWeight: 600,
+              fontWeight: 400,
               lineHeight: 0.92,
               letterSpacing: isMobile ? '-1px' : '-2.5px',
               color: INK,
@@ -252,7 +252,7 @@ export default function AboutPage() {
           >
             {t.hero_line1}
             <br />
-            {t.hero_line2} <span style={{ fontStyle: 'italic', color: MAROON }}>{t.hero_line3}</span>
+            {t.hero_line2} <span style={{ color: MAROON, fontWeight: 600 }}>{t.hero_line3}</span>
           </h1>
         </div>
       </section>
@@ -323,7 +323,7 @@ export default function AboutPage() {
           </div>
           <div style={{ paddingTop: isMobile ? 0 : 8 }}>
             <div style={{ borderLeft: `2px solid ${MAROON}`, paddingLeft: isMobile ? 20 : 36, marginBottom: isMobile ? 32 : 48 }}>
-              <div style={{ ...serif, fontSize: isMobile ? 22 : 32, fontWeight: 600, fontStyle: 'italic', color: INK, lineHeight: 1.3, marginBottom: 24 }}>
+              <div style={{ ...serif, fontSize: isMobile ? 22 : 32, fontWeight: 600, color: INK, lineHeight: 1.3, marginBottom: 24 }}>
                 {t.pull_quote}
               </div>
               <div style={{ ...sans, fontSize: 13, color: MUTED, fontWeight: 300 }}>{t.quote_author}</div>
@@ -523,7 +523,6 @@ export default function AboutPage() {
               display: isMobile ? 'none' : 'block',
               fontSize: 80,
               fontWeight: 400,
-              fontStyle: 'italic',
               color: 'rgba(28,28,26,0.06)',
               letterSpacing: '-3px',
               lineHeight: 0.85,

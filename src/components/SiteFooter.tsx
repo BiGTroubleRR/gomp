@@ -125,7 +125,7 @@ export default function SiteFooter() {
           }}
         >
           <div>
-            <div style={{ ...serif, fontSize: 19, fontWeight: 600, fontStyle: 'italic', color: GOLD, letterSpacing: 1.5, marginBottom: 16 }}>
+            <div style={{ ...serif, fontSize: 19, fontWeight: 600, color: GOLD, letterSpacing: 1.5, marginBottom: 16 }}>
               GOMP
             </div>
             <p style={{ ...sans, fontSize: 13, color: MUTED, lineHeight: 1.75, maxWidth: 260, margin: 0, fontWeight: 300 }}>{t.blurb}</p>

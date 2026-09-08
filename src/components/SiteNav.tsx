@@ -170,7 +170,6 @@ function Logo({ onNavigate }: { onNavigate?: () => void }) {
       onClick={onNavigate}
       style={{
         fontFamily: 'var(--font-serif)',
-        fontStyle: 'italic',
         fontWeight: 600,
         letterSpacing: 1.5,
         fontSize: 17,

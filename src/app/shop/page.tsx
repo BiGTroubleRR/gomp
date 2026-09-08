@@ -461,7 +461,7 @@ export default function Shop() {
                   <div>
                     <div
                       style={{
-                        fontFamily: 'var(--font-mono)',
+                        fontFamily: 'var(--font-serif)',
                         fontSize: 26,
                         fontWeight: 500,
                         color: '#1C1C1A',
@@ -561,7 +561,7 @@ export default function Shop() {
               gap: isMobile ? 20 : 0,
             }}
           >
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 19, fontWeight: 600, fontStyle: 'italic', color: '#C4A35A', letterSpacing: 1.5 }}>
+            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 19, fontWeight: 600, color: '#C4A35A', letterSpacing: 1.5 }}>
               GOMP
             </div>
             <div style={{ display: 'flex', gap: 28, flexWrap: isMobile ? 'wrap' : undefined }}>

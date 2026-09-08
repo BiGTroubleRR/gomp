@@ -1320,7 +1320,7 @@ function BuildPageContent() {
             <div style={{ padding: isMobile ? '0 20px 14px' : '0 20px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.budget}</span>
-                <span style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: MAROON, fontWeight: 600 }}>{fmt(BUDGET_STEPS[budgetIdx])}</span>
+                <span style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 14, color: MAROON, fontWeight: 600 }}>{fmt(BUDGET_STEPS[budgetIdx])}</span>
               </div>
               <input
                 type="range"
@@ -1365,7 +1365,7 @@ function BuildPageContent() {
 
               {/* ---- Active category ---- */}
               <div style={{ marginBottom: 12 }}>
-                <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 20, color: INK }}>{t.cat_names[activeStep]}</div>
+                <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 20, color: INK }}>{t.cat_names[activeStep]}</div>
                 <p style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginTop: 4, lineHeight: 1.4 }}>{t.cat_desc[activeStep]}</p>
               </div>
 
@@ -1615,7 +1615,7 @@ function BuildPageContent() {
                                     {c.specs}
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                                    <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
+                                    <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
                                     <div
                                       style={{
                                         width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1811,7 +1811,7 @@ function BuildPageContent() {
                                   <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: isThisSelected ? MAROON : INK }}>
                                     {capacity ? `${capacity}GB/RAM` : c.specs}
                                   </div>
-                                  <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
+                                  <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
                                 </motion.div>
                               );
                             })}
@@ -1960,7 +1960,7 @@ function BuildPageContent() {
                             </div>
                           )}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
                             <div
                               style={{
                                 width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -2164,7 +2164,7 @@ function BuildPageContent() {
                     <span style={{ fontFamily: 'var(--font-mono)', color: 'rgba(245,240,230,0.9)' }}>{hoverPassmark.score.toLocaleString()}</span>
                   </div>
                 )}
-                <div style={{ borderTop: '0.5px solid rgba(245,240,230,0.14)', paddingTop: 8, fontFamily: 'var(--font-mono)', fontSize: 14, color: '#FDFAF4', fontWeight: 500 }}>
+                <div style={{ borderTop: '0.5px solid rgba(245,240,230,0.14)', paddingTop: 8, fontFamily: 'var(--font-serif)', fontSize: 14, color: '#FDFAF4', fontWeight: 500 }}>
                   {fmt(hoverComp.price)}
                 </div>
               </div>
@@ -2186,10 +2186,10 @@ function BuildPageContent() {
                   <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, letterSpacing: isMobile ? 4 : 7, color: 'rgba(245,240,230,0.65)', textTransform: 'uppercase' }}>
                     {t.complete}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontWeight: 500, fontSize: isMobile ? 34 : 58, color: '#FDFAF4', margin: '10px 0' }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: isMobile ? 34 : 58, color: '#FDFAF4', margin: '10px 0' }}>
                     {prebuiltName ?? t.your_build}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: isMobile ? 26 : 38, color: GOLD, fontWeight: 600, letterSpacing: 1 }}>{fmt(totalPrice)}</div>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 26 : 38, color: GOLD, fontWeight: 600, letterSpacing: 1 }}>{fmt(totalPrice)}</div>
                 </div>
               </div>
             )}
@@ -2320,7 +2320,7 @@ function BuildPageContent() {
                               <a href={passmark.url} target="_blank" rel="noopener noreferrer" style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MAROON }}>{t.verify_passmark}</a>
                             </div>
                           )}
-                          <div style={{ ...textPop, marginTop: 12, fontFamily: 'var(--font-mono)', fontSize: 15, color: INK }}>{fmt(comp.price)}</div>
+                          <div style={{ ...textPop, marginTop: 12, fontFamily: 'var(--font-serif)', fontSize: 15, color: INK }}>{fmt(comp.price)}</div>
                         </>
                       ) : (
                         <div onClick={toggleExpanded} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer' }}>
@@ -2330,7 +2330,7 @@ function BuildPageContent() {
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                             <TierBadge tier={tier} small />
-                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: INK }}>{fmt(comp.price)}</div>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 12, color: INK }}>{fmt(comp.price)}</div>
                             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: MUTED, width: 14, textAlign: 'center', userSelect: 'none' }}>+</div>
                           </div>
                         </div>
@@ -2447,7 +2447,7 @@ function BuildPageContent() {
           )}
           <div style={{ padding: 20, borderTop: estimatedWatts > 0 ? 'none' : '0.5px solid rgba(28,28,26,0.1)', marginTop: 'auto' }}>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.build_total}</div>
-            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 40, color: INK, fontWeight: 500, margin: '4px 0' }}>{fmt(totalPrice)}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 40, color: INK, fontWeight: 500, margin: '4px 0' }}>{fmt(totalPrice)}</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', marginBottom: 14 }}>{t.ofComponents(installedCount)}</div>
             <button onClick={handleOrder} style={{ width: '100%', padding: 13, background: MAROON, color: '#FDFAF4', border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>
               {t.continue_benchmarks}
@@ -2483,7 +2483,7 @@ function BuildPageContent() {
         >
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.build_total}</div>
-            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 18, color: INK, fontWeight: 600 }}>{fmt(totalPrice)}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 18, color: INK, fontWeight: 600 }}>{fmt(totalPrice)}</div>
           </div>
           <button
             onClick={handleOrder}

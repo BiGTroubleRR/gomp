@@ -579,24 +579,24 @@ export default function CheckoutPage() {
                     {item.name}
                   </div>
                 </div>
-                <div style={{ ...mono, fontSize: 13, color: INK, flexShrink: 0, paddingTop: 14 }}>{fmt(item.priceEur)}</div>
+                <div style={{ ...serif, fontSize: 13, color: INK, flexShrink: 0, paddingTop: 14 }}>{fmt(item.priceEur)}</div>
               </div>
             ))}
           </div>
           <div style={{ height: 0.5, background: 'rgba(28,28,26,0.15)', margin: '20px 0 16px' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ ...sans, fontSize: 12, color: MUTED }}>{t.shipping}</span>
-            <span style={{ ...mono, fontSize: 12, color: MUTED }}>
+            <span style={{ ...serif, fontSize: 12, color: MUTED }}>
               {shippingCostEur === 0 ? pick(lang, { en: 'Free', sk: 'Zadarmo', cz: 'Zdarma' }) : fmt(shippingCostEur)}
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <span style={{ ...sans, fontSize: 12, color: MUTED }}>{t.assembly_testing}</span>
-            <span style={{ ...mono, fontSize: 12, color: MUTED }}>{fmt(ASSEMBLY_FEE_EUR)}</span>
+            <span style={{ ...serif, fontSize: 12, color: MUTED }}>{fmt(ASSEMBLY_FEE_EUR)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 24 }}>
             <span style={{ ...sans, fontSize: 13, fontWeight: 500, color: INK }}>{t.total}</span>
-            <span style={{ ...mono, fontSize: 26, fontWeight: 500, color: INK, letterSpacing: -0.5 }}>{fmt(grandTotalEur)}</span>
+            <span style={{ ...serif, fontSize: 26, fontWeight: 500, color: INK, letterSpacing: -0.5 }}>{fmt(grandTotalEur)}</span>
           </div>
           <div style={{ background: 'rgba(110,20,35,0.06)', border: '0.5px solid rgba(110,20,35,0.14)', borderRadius: 2, padding: '14px 16px', marginBottom: 14 }}>
             <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MAROON, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
@@ -773,7 +773,7 @@ export default function CheckoutPage() {
                           <div style={{ ...sans, fontSize: 11, color: MUTED, marginTop: 1 }}>{eta}</div>
                         </div>
                       </div>
-                      <div style={{ ...mono, fontSize: 13, color: INK }}>{priceStr}</div>
+                      <div style={{ ...serif, fontSize: 13, color: INK }}>{priceStr}</div>
                     </div>
                   );
                 })}

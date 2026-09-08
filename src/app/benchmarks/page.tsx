@@ -779,8 +779,8 @@ export default function BenchmarksPage() {
             </div>
 
             {/* Header */}
-            <div style={{ ...serif, fontSize: isMobile ? 30 : 44, fontWeight: 600, color: INK, letterSpacing: '-1px', marginBottom: 10, lineHeight: 1.1 }}>
-              {t.choose_title_line1} <span style={{ fontStyle: 'italic', color: MAROON }}>{t.choose_title_em}</span>
+            <div style={{ ...serif, fontSize: isMobile ? 30 : 44, fontWeight: 400, color: INK, letterSpacing: '-1px', marginBottom: 10, lineHeight: 1.1 }}>
+              {t.choose_title_line1} <span style={{ color: MAROON, fontWeight: 600 }}>{t.choose_title_em}</span>
             </div>
             <p style={{ ...sans, fontSize: isMobile ? 13 : 15, lineHeight: 1.7, color: MUTED, margin: '0 0 28px', maxWidth: 600, fontWeight: 300 }}>{t.choose_desc}</p>
 

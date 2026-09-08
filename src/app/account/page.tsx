@@ -1020,7 +1020,7 @@ export default function Account() {
                                 flexWrap: 'wrap',
                               }}
                             >
-                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 500, color: '#1C1C1A', whiteSpace: 'nowrap' }}>
+                              <div style={{ fontFamily: 'var(--font-serif)', fontSize: 16, fontWeight: 500, color: '#1C1C1A', whiteSpace: 'nowrap' }}>
                                 {fmt(order.totalEur)}
                               </div>
                               <div style={{ padding: '4px 11px', borderRadius: 2, background: s.bg, border: `0.5px solid ${s.border}` }}>

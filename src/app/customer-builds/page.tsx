@@ -439,7 +439,7 @@ export default function CustomerBuildsPage() {
 
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '56px 20px 60px' : '84px 32px 90px' }}>
         <Reveal>
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600, fontStyle: 'italic', color: MAROON, letterSpacing: 1.5, marginBottom: 12 }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600, color: MAROON, letterSpacing: 1.5, marginBottom: 12 }}>
             {t.eyebrow}
           </div>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 30 : 42, color: INK, margin: '0 0 14px', lineHeight: 1.1 }}>
@@ -531,7 +531,7 @@ export default function CustomerBuildsPage() {
                       </div>
                     )}
                     {b.priceEur != null && (
-                      <div style={{ marginTop: 12, fontFamily: 'var(--font-mono)', fontSize: 15, color: MAROON, fontWeight: 600 }}>
+                      <div style={{ marginTop: 12, fontFamily: 'var(--font-serif)', fontSize: 15, color: MAROON, fontWeight: 600 }}>
                         {fmt(b.priceEur)}
                       </div>
                     )}

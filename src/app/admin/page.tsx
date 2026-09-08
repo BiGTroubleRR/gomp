@@ -1356,7 +1356,7 @@ export default function AdminPage() {
         }}
       >
         <div style={{ background: '#FDFAF4', borderRadius: 2, padding: isMobile ? 28 : 52, width: isMobile ? '100%' : 400, maxWidth: 400, boxSizing: 'border-box', border: '0.5px solid rgba(28,28,26,0.1)' }}>
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 17, fontWeight: 600, fontStyle: 'italic', letterSpacing: 1.5, color: '#C4A35A', marginBottom: 6 }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 17, fontWeight: 600, letterSpacing: 1.5, color: '#C4A35A', marginBottom: 6 }}>
             GOMP
           </div>
           <div style={{ fontFamily: 'var(--font-sans)', fontSize: 26, fontWeight: 600, color: '#1C1C1A', marginBottom: 6, letterSpacing: -0.5 }}>
@@ -1420,7 +1420,7 @@ export default function AdminPage() {
       >
         <TransitionLink
           href="/"
-          style={{ fontFamily: 'var(--font-serif)', fontSize: 16, fontWeight: 600, fontStyle: 'italic', color: '#C4A35A', textDecoration: 'none', letterSpacing: 1.5, marginRight: 14 }}
+          style={{ fontFamily: 'var(--font-serif)', fontSize: 16, fontWeight: 600, color: '#C4A35A', textDecoration: 'none', letterSpacing: 1.5, marginRight: 14 }}
         >
           GOMP
         </TransitionLink>
@@ -1639,7 +1639,7 @@ export default function AdminPage() {
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', marginTop: 3 }}>{it.email}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 15, color: '#1C1C1A' }}>{fmt(Number(it.total_eur))}</div>
+                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, color: '#1C1C1A' }}>{fmt(Number(it.total_eur))}</div>
                         <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890', marginTop: 2 }}>
                           {t.method_labels[it.payment_method]} · {new Date(it.created_at).toLocaleDateString(lang === 'sk' ? 'sk-SK' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </div>
@@ -1690,7 +1690,7 @@ export default function AdminPage() {
                             <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '5px 0', borderBottom: '0.5px solid rgba(28,28,26,0.06)' }}>
                               <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', minWidth: 90 }}>{bi.category}</span>
                               <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1C1C1A', flex: 1 }}>{bi.name}</span>
-                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#1C1C1A' }}>{fmt(Number(bi.price_eur))}</span>
+                              <span style={{ fontFamily: 'var(--font-serif)', fontSize: 12, color: '#1C1C1A' }}>{fmt(Number(bi.price_eur))}</span>
                             </div>
                           ))}
                         </div>
@@ -1778,7 +1778,7 @@ export default function AdminPage() {
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', marginTop: 3 }}>{r.email}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 15, color: '#1C1C1A' }}>{r.budget_eur != null ? fmt(Number(r.budget_eur)) : '—'}</div>
+                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, color: '#1C1C1A' }}>{r.budget_eur != null ? fmt(Number(r.budget_eur)) : '—'}</div>
                         <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890', marginTop: 2 }}>
                           {t.gbb_use_case_labels[r.use_case] ?? r.use_case} · {new Date(r.created_at).toLocaleDateString(lang === 'sk' ? 'sk-SK' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </div>
@@ -1973,7 +1973,7 @@ export default function AdminPage() {
                     <div>
                       <div style={LABEL_STYLE}>{t.price_eur_label}</div>
                       <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="4299" style={INPUT_STYLE} />
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#9A9488', marginTop: 4 }}>
+                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: 10, color: '#9A9488', marginTop: 4 }}>
                         {t.live_total_label}: {fmt(computeBuildTotal(form, compDb))}
                       </div>
                     </div>
@@ -2021,7 +2021,7 @@ export default function AdminPage() {
                           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', lineHeight: 1.8 }}>
                             {b.gpu}<br />{b.cpu}
                           </div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 500, color: '#1C1C1A' }}>{fmt(computeBuildTotal(b, compDb))}</div>
+                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 13, fontWeight: 500, color: '#1C1C1A' }}>{fmt(computeBuildTotal(b, compDb))}</div>
                           <div>
                             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: tc.bg, border: `1.5px solid ${tc.border}`, borderRadius: 4 }}>
                               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: tc.text }}>{b.tier}</span>
@@ -2362,7 +2362,7 @@ export default function AdminPage() {
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', marginBottom: 9, lineHeight: 1.6 }}>{comp.specs}</div>
                         <div style={{ marginBottom: 4 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#A09890' }}>{t.original_price_label}: €{basePrice}</span>
+                            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 10, color: '#A09890' }}>{t.original_price_label}: €{basePrice}</span>
                             {comp.marginOverride && (
                               <span
                                 style={{
@@ -2375,7 +2375,7 @@ export default function AdminPage() {
                               </span>
                             )}
                           </div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, color: '#6E1423' }}>{t.web_price_label}: {fmt(webPrice)}</div>
+                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 14, fontWeight: 600, color: '#6E1423' }}>{t.web_price_label}: {fmt(webPrice)}</div>
                           {comp.marketPrice == null && (
                             <button
                               onClick={() => applyMarginTo(compCat, comp)}

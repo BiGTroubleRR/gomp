@@ -88,7 +88,7 @@ export default function UndervoltingPage() {
           )}
           <div
             style={{
-              fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600, fontStyle: 'italic',
+              fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600,
               letterSpacing: 1.5, color: MAROON, marginBottom: 12, position: 'relative', zIndex: 2,
             }}
           >

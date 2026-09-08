@@ -169,7 +169,7 @@ export default function GbbPage() {
           )}
           <div
             style={{
-              fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600, fontStyle: 'italic',
+              fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600,
               letterSpacing: 1.5, color: GBB_GREEN, marginBottom: 12, position: 'relative', zIndex: 2,
             }}
           >

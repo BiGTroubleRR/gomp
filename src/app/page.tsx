@@ -397,7 +397,7 @@ export default function Home() {
                 style={{
                   fontFamily: 'var(--font-serif)',
                   fontSize: isMobile ? 44 : 96,
-                  fontWeight: 600,
+                  fontWeight: 400,
                   lineHeight: 0.95,
                   letterSpacing: isMobile ? -1 : -2,
                   color: INK,
@@ -406,7 +406,7 @@ export default function Home() {
               >
                 {t.hero_title_line1}
                 <br />
-                <span style={{ fontStyle: 'italic', color: MAROON }}>{t.hero_title_em}</span>
+                <span style={{ color: MAROON, fontWeight: 600 }}>{t.hero_title_em}</span>
               </h1>
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: isMobile ? 15 : 17, lineHeight: 1.75, color: MUTED, margin: isMobile ? '0 0 20px' : '0 0 24px', maxWidth: 420, fontWeight: 300 }}>
                 {t.hero_desc}
@@ -593,7 +593,7 @@ export default function Home() {
                 </div>
 
                 <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.18)', paddingTop: 24, marginTop: 8 }}>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 40, fontWeight: 500, color: INK, letterSpacing: -1, marginBottom: 16, lineHeight: 1 }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: 40, fontWeight: 500, color: INK, letterSpacing: -1, marginBottom: 16, lineHeight: 1 }}>
                     {hero ? fmt(computeBuildTotal(hero, compDb)) : ''}
                   </div>
                   <TransitionLink
@@ -770,7 +770,7 @@ export default function Home() {
                       marginTop: 'auto',
                     }}
                   >
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 500, color: INK, letterSpacing: -0.5, lineHeight: 1 }}>
+                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 500, color: INK, letterSpacing: -0.5, lineHeight: 1 }}>
                       {build.priceStr}
                     </div>
                     <TransitionLink
@@ -883,10 +883,10 @@ export default function Home() {
               </>
             )}
             <Reveal revealKey="cta-text">
-              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 38 : 64, fontWeight: 600, letterSpacing: isMobile ? -1 : -2, color: INK, margin: '0 0 20px', lineHeight: 0.95 }}>
+              <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 38 : 64, fontWeight: 400, letterSpacing: isMobile ? -1 : -2, color: INK, margin: '0 0 20px', lineHeight: 0.95 }}>
                 {t.yourbuild_line1}
                 <br />
-                <span style={{ fontStyle: 'italic', color: MAROON }}>{t.yourbuild_line2}</span>
+                <span style={{ color: MAROON, fontWeight: 600 }}>{t.yourbuild_line2}</span>
               </h2>
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: 16, color: MUTED, margin: '0 0 40px', lineHeight: 1.75, maxWidth: 400, fontWeight: 300 }}>
                 {t.builder_desc}
@@ -930,7 +930,7 @@ export default function Home() {
               >
                 {t.build_from}
               </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: isMobile ? 40 : 56, fontWeight: 500, color: INK, letterSpacing: -2, lineHeight: 1, marginBottom: 8 }}>
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 40 : 56, fontWeight: 500, color: INK, letterSpacing: -2, lineHeight: 1, marginBottom: 8 }}>
                 {fmt(25248)}
               </div>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, marginBottom: 32, fontWeight: 300 }}>{t.entry_scales}</div>
@@ -1012,7 +1012,6 @@ export default function Home() {
                 fontFamily: 'var(--font-serif)',
                 fontSize: 38,
                 fontWeight: 600,
-                fontStyle: 'italic',
                 letterSpacing: 2,
                 color: GOLD,
                 display: 'flex',
