@@ -1020,6 +1020,32 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   });
   let motionOn = true;
 
+  // ---- Hover outline ----
+  // Unlit, back-face-only material — inflating a sub-mesh's own geometry by a few percent and
+  // rendering only its back faces makes the enlarged copy poke out from behind the real surface as
+  // a clean rim, without any postprocessing pipeline. One shared instance: every hover outline sub-
+  // mesh reuses it, so there's nothing new to dispose per hover change. Declared here (rather than
+  // near pickComponentAt below) because buildCase() runs once immediately during setup and needs
+  // to be able to clear hoverOutlineGroup from the start.
+  const hoverOutlineMaterial = new THREE.MeshBasicMaterial({
+    color: 0xc4a35a,
+    side: THREE.BackSide,
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false,
+  });
+  const hoverOutlineGroup = new THREE.Group();
+  scene.add(hoverOutlineGroup);
+  // The case's own glow uses its edge wireframe (see buildCase's EdgesGeometry LineSegments)
+  // instead of the backface-hull technique above: the case is built from a handful of large
+  // panel planes, so wrapping those the same way as a component reads as the whole side panel
+  // lighting up rather than an outline. Edges only keeps it a rim, matching every other part.
+  const hoverOutlineEdgeMaterial = new THREE.LineBasicMaterial({
+    color: 0xc4a35a,
+    transparent: true,
+    opacity: 0.95,
+  });
+
   // ---- Case ----
   let caseGroup = new THREE.Group();
   scene.add(caseGroup);
@@ -1028,6 +1054,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   const GLASS_REST_OPACITY = 0.13;
 
   function buildCase(w: number, h: number, d: number) {
+    hoverOutlineGroup.clear();
     disposeSceneContents(caseGroup);
     scene.remove(caseGroup);
     caseGroup = new THREE.Group();
@@ -1300,6 +1327,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   scene.add(fanGroup);
 
   function rebuildFans() {
+    hoverOutlineGroup.clear();
     disposeSceneContents(fanGroup);
     fanGroup.clear();
     // Side fans center themselves in the gap between the front wall and the mobo's own front
@@ -1344,6 +1372,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   scene.add(aioRadiatorGroup);
 
   function updateAioRadiator() {
+    hoverOutlineGroup.clear();
     disposeSceneContents(aioRadiatorGroup);
     aioRadiatorGroup.clear();
     const coolerObj = objects.cooler;
@@ -1630,6 +1659,20 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   const raycaster = new THREE.Raycaster();
   const pointerNDC = new THREE.Vector2();
 
+  // Three.js's raycaster deliberately doesn't check `.visible` at all (Mesh.raycast has no such
+  // guard) — it hits hidden geometry exactly like shown geometry. Several components keep hidden
+  // children around instead of removing them (e.g. RAM's unpopulated DIMM slots, toggled via
+  // `slot.visible = false`), so without this check a ray landing on that hidden geometry — empty-
+  // looking space right next to the CPU, say — would still report a hover hit on it.
+  function isEffectivelyVisible(obj: THREE.Object3D): boolean {
+    let o: THREE.Object3D | null = obj;
+    while (o) {
+      if (!o.visible) return false;
+      o = o.parent;
+    }
+    return true;
+  }
+
   function pickComponentAt(clientX: number, clientY: number): CompId | null {
     const rect = renderer.domElement.getBoundingClientRect();
     pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
@@ -1638,7 +1681,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
 
     const nonCaseIds = SLOTS.filter((id) => id !== 'case' && objects[id]?.selected && objects[id]?.mesh.visible);
     const nonCaseMeshes = nonCaseIds.map((id) => objects[id]!.mesh);
-    const hits = raycaster.intersectObjects(nonCaseMeshes, true);
+    const hits = raycaster.intersectObjects(nonCaseMeshes, true).filter((hit) => isEffectivelyVisible(hit.object));
     if (hits.length) {
       let obj: THREE.Object3D | null = hits[0].object;
       while (obj) {
@@ -1649,10 +1692,50 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     }
 
     if (objects.case?.selected && objects.case.mesh.visible) {
-      const caseHits = raycaster.intersectObject(objects.case.mesh, true);
+      const caseHits = raycaster.intersectObject(objects.case.mesh, true).filter((hit) => isEffectivelyVisible(hit.object));
       if (caseHits.length) return 'case';
     }
     return null;
+  }
+
+  // Called from the hover pointer handlers in page.tsx. Reuses the real component's own geometry
+  // (no cloning) — each outline sub-mesh is just a thin wrapper around the same BufferGeometry,
+  // scaled up slightly and given the unlit rim material, so clearing old ones is just removing
+  // children, nothing to .dispose(). Walks the tree manually (rather than Object3D.traverse,
+  // which descends into every descendant unconditionally) so a hidden branch — e.g. RAM's
+  // unpopulated DIMM slots, toggled via `slot.visible = false` rather than being removed from
+  // the scene graph — is skipped instead of getting its own stray outline.
+  function setHoverOutline(id: CompId | null) {
+    hoverOutlineGroup.clear();
+    if (!id) return;
+    const rec = objects[id];
+    if (!rec || !rec.mesh.visible) return;
+
+    function walk(obj: THREE.Object3D) {
+      if (!obj.visible) return;
+      if (id === 'case') {
+        if (obj instanceof THREE.LineSegments) {
+          const outline = new THREE.LineSegments(obj.geometry, hoverOutlineEdgeMaterial);
+          obj.getWorldPosition(outline.position);
+          obj.getWorldQuaternion(outline.quaternion);
+          obj.getWorldScale(outline.scale);
+          outline.scale.multiplyScalar(1.015);
+          hoverOutlineGroup.add(outline);
+        }
+      } else {
+        const m = obj as THREE.Mesh;
+        if (m.isMesh) {
+          const outline = new THREE.Mesh(m.geometry, hoverOutlineMaterial);
+          m.getWorldPosition(outline.position);
+          m.getWorldQuaternion(outline.quaternion);
+          m.getWorldScale(outline.scale);
+          outline.scale.multiplyScalar(1.04);
+          hoverOutlineGroup.add(outline);
+        }
+      }
+      obj.children.forEach(walk);
+    }
+    walk(rec.mesh);
   }
 
   let running = true;
@@ -1951,6 +2034,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     toggleGlass,
     triggerCompletion,
     pickComponentAt,
+    setHoverOutline,
     setSizeScale,
     setGpuOrientation,
     setRamModules,

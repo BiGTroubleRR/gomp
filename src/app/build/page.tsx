@@ -1088,6 +1088,7 @@ function BuildPageContent() {
       if (!rect) return;
       const id = sceneRef.current?.pickComponentAt(clientX, clientY) ?? null;
       setHoverId(id);
+      sceneRef.current?.setHoverOutline(id);
       setHoverPos({ x: clientX - rect.left, y: clientY - rect.top, w: rect.width, h: rect.height });
     });
   }
@@ -1098,6 +1099,7 @@ function BuildPageContent() {
       hoverRafRef.current = null;
     }
     setHoverId(null);
+    sceneRef.current?.setHoverOutline(null);
     setHoverPos(null);
   }
 
