@@ -19,6 +19,18 @@ import {
 export type CompId = 'mobo' | 'cpu' | 'cooler' | 'ram' | 'gpu' | 'storage' | 'psu' | 'case';
 export const SLOTS: CompId[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case'];
 
+// The BASE_POS entries Admin's alignment panel can adjust — mobo/gpu/psu use separate anchoring
+// mechanisms (moboAnchoredX/Z, applyGpuPosition, psuAnchoredY/Z) so aren't included.
+export type AlignmentTunableId = 'cpu' | 'cooler' | 'ram' | 'storage';
+export type AlignmentTuning = {
+  basePos: Record<AlignmentTunableId, [number, number, number]>;
+  moboRearClearance: number;
+  moboSideClearance: number;
+  aioTubeSpacing: number;
+  aioTubeRadius: number;
+  aioBendOffset: [number, number, number];
+};
+
 // mobo/cpu/cooler/ram are all mounted flush on the motherboard's own face, so they share a Z
 // shift toward the case's rear panel — a real board's rear I/O sits flush against that wall,
 // not centered front-to-back the way the old z≈0 values had it. These three Z values are only
@@ -40,6 +52,24 @@ const BASE_POS: Record<Exclude<CompId, 'case'>, [number, number, number]> = {
   gpu: [-0.45, -0.5, 0.1],
   storage: [-0.8, 0.08, 0.37],
   psu: [0.1, -1.88, 0.0],
+};
+
+// The out-of-the-box values for everything Admin's alignment panel can override — both the
+// scene's own per-instance starting point (cloned fresh in createBuildScene below) and, on the
+// Admin side, what a blank/partial saved row falls back to for any field that's never been
+// customized. Single source of truth so the two never drift apart.
+export const DEFAULT_ALIGNMENT_TUNING: AlignmentTuning = {
+  basePos: {
+    cpu: [...BASE_POS.cpu],
+    cooler: [...BASE_POS.cooler],
+    ram: [...BASE_POS.ram],
+    storage: [...BASE_POS.storage],
+  } as Record<AlignmentTunableId, [number, number, number]>,
+  moboRearClearance: 0.04,
+  moboSideClearance: 0.18,
+  aioTubeSpacing: 0.05,
+  aioTubeRadius: 0.016,
+  aioBendOffset: [0, 0, 0],
 };
 
 // Riser-mounted vertical-GPU cases (NZXT H1 V2 and similar dual-chamber designs) put the card
@@ -839,16 +869,26 @@ function buildAioRadiatorGroup(radiatorMm: number): THREE.Group {
 // either coordinate. No curve/TubeGeometry precedent exists anywhere in this file; a small chain
 // of axis-aligned cylinders matches how every other part here (fin-stack heatpipes, the old
 // straight AIO tubes) is already built.
-function buildAioTubes(pumpPos: THREE.Vector3, radiatorPos: THREE.Vector3): THREE.Group {
+type AioTubeTuning = { spacing: number; radius: number; bendOffset: [number, number, number] };
+
+function buildAioTubes(
+  pumpPos: THREE.Vector3,
+  radiatorPos: THREE.Vector3,
+  tuning: AioTubeTuning = {
+    spacing: DEFAULT_ALIGNMENT_TUNING.aioTubeSpacing,
+    radius: DEFAULT_ALIGNMENT_TUNING.aioTubeRadius,
+    bendOffset: DEFAULT_ALIGNMENT_TUNING.aioBendOffset,
+  },
+): THREE.Group {
   const T = THREE;
   const g = new T.Group();
   const tubeMat = new T.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.6 });
-  const radius = 0.016;
+  const { spacing, radius, bendOffset } = tuning;
 
-  [-0.05, 0.05].forEach((xOffset) => {
-    const x = pumpPos.x + xOffset;
-    const bendZ = radiatorPos.z;
-    const bendY = pumpPos.y;
+  [-spacing, spacing].forEach((xOffset) => {
+    const x = pumpPos.x + xOffset + bendOffset[0];
+    const bendZ = radiatorPos.z + bendOffset[2];
+    const bendY = pumpPos.y + bendOffset[1];
 
     const zLen = Math.abs(bendZ - pumpPos.z);
     if (zLen > 0.001) {
@@ -928,6 +968,24 @@ export type SceneCallbacks = {
 export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks = {}) {
   const W = container.clientWidth || 800;
   const H = container.clientHeight || 600;
+
+  // Admin-tunable scene alignment (see AdminAlignmentPanel + applyAlignmentTuning below) — a
+  // per-instance clone of DEFAULT_ALIGNMENT_TUNING, never mutating that module const itself, so a
+  // scene create/dispose cycle always starts back at the original hand-tuned values until/unless
+  // /build's alignment-tuning fetch applies a saved override on top.
+  const alignmentTuning: AlignmentTuning = {
+    basePos: {
+      cpu: [...DEFAULT_ALIGNMENT_TUNING.basePos.cpu],
+      cooler: [...DEFAULT_ALIGNMENT_TUNING.basePos.cooler],
+      ram: [...DEFAULT_ALIGNMENT_TUNING.basePos.ram],
+      storage: [...DEFAULT_ALIGNMENT_TUNING.basePos.storage],
+    } as Record<AlignmentTunableId, [number, number, number]>,
+    moboRearClearance: DEFAULT_ALIGNMENT_TUNING.moboRearClearance,
+    moboSideClearance: DEFAULT_ALIGNMENT_TUNING.moboSideClearance,
+    aioTubeSpacing: DEFAULT_ALIGNMENT_TUNING.aioTubeSpacing,
+    aioTubeRadius: DEFAULT_ALIGNMENT_TUNING.aioTubeRadius,
+    aioBendOffset: [...DEFAULT_ALIGNMENT_TUNING.aioBendOffset],
+  };
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
@@ -1382,7 +1440,13 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     const radiatorGroup = buildAioRadiatorGroup(lastCoolerRadiatorMm);
     radiatorGroup.position.set(0, 0, radiatorZ);
     aioRadiatorGroup.add(radiatorGroup);
-    aioRadiatorGroup.add(buildAioTubes(coolerObj.finalPos, new THREE.Vector3(0, 0, radiatorZ)));
+    aioRadiatorGroup.add(
+      buildAioTubes(coolerObj.finalPos, new THREE.Vector3(0, 0, radiatorZ), {
+        spacing: alignmentTuning.aioTubeSpacing,
+        radius: alignmentTuning.aioTubeRadius,
+        bendOffset: alignmentTuning.aioBendOffset,
+      }),
+    );
   }
 
   // mobo/cpu/cooler/ram/storage move as a rigid group, sharing whatever position the
@@ -1396,15 +1460,14 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   // halfDepth reads the motherboard's own real depth (E-ATX's 330mm vs Mini-ITX's 170mm sit
   // differently even in the same case) once a real SKU's sizeScale is on file; before that, it
   // falls back to the unscaled placeholder's own extent.
-  const MOBO_REAR_CLEARANCE = 0.04;
-  // 0.12 alone reproduced the old fixed X constant (-0.88) exactly, but the rear-IO shield's
-  // bounding box isn't centered on the group origin (see buildComponentMesh's mobo case: the
-  // io group sits offset in local X) — measured live, that pushes the mesh's near edge about
-  // 0.06 further past the solid wall than this clearance alone accounts for, on every case and
-  // form factor equally (mobo's X axis never gets a real-mm sizeScale, so this offset is constant
-  // rather than something that scales away for smaller boards). The extra 0.06 absorbs exactly
-  // that, closing the gap without changing which case the old -0.88 default now lands near.
-  const MOBO_SIDE_CLEARANCE = 0.18;
+  // Rear/side clearance (default 0.04/0.18, see DEFAULT_ALIGNMENT_TUNING) live in alignmentTuning
+  // rather than as fixed consts here, so Admin's alignment panel can override them — 0.18 alone
+  // reproduced the old fixed X constant (-0.88) exactly, but the rear-IO shield's bounding box
+  // isn't centered on the group origin (see buildComponentMesh's mobo case: the io group sits
+  // offset in local X) — measured live, that pushes the mesh's near edge about 0.06 further past
+  // the solid wall than clearance alone accounts for, on every case and form factor equally
+  // (mobo's X axis never gets a real-mm sizeScale, so this offset is constant rather than
+  // something that scales away for smaller boards). The extra 0.06 absorbs exactly that.
   // buildComponentMesh's mobo case bakes `g.scale.setScalar(0.86)` into the mesh at construction,
   // so naturalSize.mobo (measured right after, at that baked scale) already has it folded in —
   // but setSizeScale later does `mesh.scale.set(sizeScale...)`, which *overwrites* scale rather
@@ -1419,11 +1482,11 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   }
   function moboAnchoredZ(): number {
     // +d/2 is the rear wall (see buildCase's `rear` panel) — the case's front sits at -d/2.
-    return lastCaseSize.d / 2 - MOBO_REAR_CLEARANCE - moboHalfDepth();
+    return lastCaseSize.d / 2 - alignmentTuning.moboRearClearance - moboHalfDepth();
   }
   function moboAnchoredX(): number {
     // The glass panel sits at +w/2 (see buildCase's glassMesh) — the tray/solid side is -w/2.
-    return -lastCaseSize.w / 2 + MOBO_SIDE_CLEARANCE;
+    return -lastCaseSize.w / 2 + alignmentTuning.moboSideClearance;
   }
 
   // The GPU's height (world X, in both horizontal and vertical-riser mount — rotating the
@@ -1489,7 +1552,9 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     (Object.keys(BASE_POS) as Exclude<CompId, 'case'>[]).forEach((id) => {
       const obj = objects[id];
       if (!obj) return;
-      const base = BASE_POS[id];
+      // Dev-tuning panel overrides land here for cpu/cooler/ram/storage; mobo/gpu/psu always
+      // read the fixed module const (see debugTuning above).
+      const base = alignmentTuning.basePos[id as AlignmentTunableId] ?? BASE_POS[id];
       const inMoboGroup = id === 'mobo' || id === 'cpu' || id === 'cooler' || id === 'ram' || id === 'storage';
       const x = inMoboGroup ? moboX + (base[0] - BASE_POS.mobo[0]) : base[0];
       const y = inMoboGroup ? BASE_POS.mobo[1] + (base[1] - BASE_POS.mobo[1]) * moboWidthScale : id === 'psu' ? psuY : base[1];
@@ -1506,9 +1571,9 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     // object moves with the mobo assembly's case-anchored position, drifting apart on any case/
     // motherboard but the exact one BASE_POS.ram's constants happened to be tuned against.
     ramSlotOutlineGroup.position.set(
-      moboX + (BASE_POS.ram[0] - BASE_POS.mobo[0]),
-      BASE_POS.mobo[1] + (BASE_POS.ram[1] - BASE_POS.mobo[1]) * moboWidthScale,
-      moboZ + (BASE_POS.ram[2] - BASE_POS.mobo[2]) * moboDepthScale,
+      moboX + (alignmentTuning.basePos.ram[0] - BASE_POS.mobo[0]),
+      BASE_POS.mobo[1] + (alignmentTuning.basePos.ram[1] - BASE_POS.mobo[1]) * moboWidthScale,
+      moboZ + (alignmentTuning.basePos.ram[2] - BASE_POS.mobo[2]) * moboDepthScale,
     );
     // GPU isn't looped above (its position also depends on vertical/horizontal orientation,
     // which this function doesn't track) — see applyGpuPosition, called separately wherever
@@ -2067,6 +2132,31 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     },
     isCompletionRunning: () => completionRunning,
     getCaseSizeFor: (category: string) => SIZES[category] || SIZES['Mid Tower'],
+    // Applies an admin-saved alignment override (fetched from Supabase — see
+    // src/lib/supabase/alignment-tuning.ts) on top of this scene's DEFAULT_ALIGNMENT_TUNING
+    // starting point. Partial by design: a saved row only ever carries the fields Admin has
+    // actually changed, so anything omitted keeps whatever alignmentTuning already holds.
+    applyAlignmentTuning(partial: Partial<AlignmentTuning>) {
+      if (partial.basePos) {
+        (Object.keys(partial.basePos) as AlignmentTunableId[]).forEach((id) => {
+          const v = partial.basePos![id];
+          if (Array.isArray(v) && v.length === 3) alignmentTuning.basePos[id] = [v[0], v[1], v[2]];
+        });
+      }
+      if (typeof partial.moboRearClearance === 'number') alignmentTuning.moboRearClearance = partial.moboRearClearance;
+      if (typeof partial.moboSideClearance === 'number') alignmentTuning.moboSideClearance = partial.moboSideClearance;
+      if (typeof partial.aioTubeSpacing === 'number') alignmentTuning.aioTubeSpacing = partial.aioTubeSpacing;
+      if (typeof partial.aioTubeRadius === 'number') alignmentTuning.aioTubeRadius = partial.aioTubeRadius;
+      if (Array.isArray(partial.aioBendOffset) && partial.aioBendOffset.length === 3) {
+        alignmentTuning.aioBendOffset = [partial.aioBendOffset[0], partial.aioBendOffset[1], partial.aioBendOffset[2]];
+      }
+      resetComponentPositions();
+      // See the cooler-move comment history above — the AIO tube group is built once from the
+      // cooler's finalPos at that moment, not read live every frame, so any change that can move
+      // the cooler (a basePos override or a clearance override moving the whole mobo group) must
+      // explicitly re-run this too, or the tube stays visibly pinned to the pre-override spot.
+      updateAioRadiator();
+    },
     dispose() {
       running = false;
       window.removeEventListener('resize', onResize);

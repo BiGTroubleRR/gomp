@@ -52,6 +52,7 @@ import {
 } from '@/lib/build-scene';
 import { useIsMobile } from '@/lib/use-media-query';
 import { setDustCursorVisible, isDustEnabled } from '@/lib/cursor-dust';
+import { fetchAlignmentTuning, subscribeAlignmentTuning } from '@/lib/supabase/alignment-tuning';
 
 const T = {
   en: {
@@ -589,6 +590,7 @@ function BuildPageContent() {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<BuildScene | null>(null);
+  const [sceneReady, setSceneReady] = useState(false);
   // Keyed by component id so a viewport click can scroll that row into view — the sidebar list
   // is independently scrollable, so an expanded row picked in 3D might otherwise land off-screen.
   const rowRefs = useRef<Partial<Record<CompId, HTMLDivElement | null>>>({});
@@ -641,12 +643,34 @@ function BuildPageContent() {
     sceneRef.current = scene;
     const size = CASE_SIZES[caseCat] || CASE_SIZES['Mid Tower'];
     scene.updateCase(size.w, size.h, size.d);
+    setSceneReady(true);
     return () => {
+      setSceneReady(false);
       scene.dispose();
       sceneRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Admin-tuned 3D alignment (mobo/CPU/cooler/RAM/storage offsets, mobo clearances, AIO tube
+  // routing) lives in Supabase, not in this page — see src/app/admin/page.tsx's "Alignment" tab
+  // and src/lib/supabase/alignment-tuning.ts. Applied once on scene-ready, then kept live via the
+  // same Realtime-subscribe-and-refetch pattern subscribeComponents already uses, so an Admin
+  // change reaches this viewport (and every other already-open one) without a reload.
+  useEffect(() => {
+    if (!sceneReady) return;
+    let cancelled = false;
+    async function apply() {
+      const tuning = await fetchAlignmentTuning();
+      if (!cancelled && tuning) sceneRef.current?.applyAlignmentTuning(tuning);
+    }
+    apply();
+    const unsubscribe = subscribeAlignmentTuning(apply);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [sceneReady]);
 
   // Fires the completion camera sequence once, exactly once, when every slot becomes filled.
   // The `armed` ref (rather than firing inline inside toggleComponent's setSelected updater)

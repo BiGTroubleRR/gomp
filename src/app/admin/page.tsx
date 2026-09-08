@@ -23,6 +23,7 @@ import type { CustomerBuild } from '@/lib/supabase/customer-build-mapping';
 import { fetchPrebuilts, subscribePrebuilts, insertPrebuilt, updatePrebuilt, deletePrebuilt } from '@/lib/supabase/prebuilts';
 import { passmarkLookup, tierFromPassmark, ramTier, TIER_COLORS } from '@/lib/passmark';
 import TierGlowOrb from '@/components/TierGlowOrb';
+import AdminAlignmentPanel from '@/components/AdminAlignmentPanel';
 import {
   defaultComponentDb,
   defaultMargin,
@@ -195,7 +196,7 @@ const SUGGESTIONS: Record<Category, Suggestion[]> = {
 type Translations = {
   admin_panel: string; sign_in: string;
   admin_crumb: string; view_shop: string;
-  manage: string; builds_tab: string; components_tab: string;
+  manage: string; builds_tab: string; components_tab: string; alignment_tab: string; alignment_title: string;
   database: string; builds_listed: string; components_word: string;
   pc_builds: string; add_build: string;
   name_label: string; tagline_label: string; storage_label: string;
@@ -338,6 +339,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     cg_price_label: 'Price (EUR)', cg_built_on_label: 'Built on',
     cg_photos_label: 'Photos', cg_add_photo: 'Add photo',
     cg_listed: (n) => `${n} build${n === 1 ? '' : 's'}`,
+    alignment_tab: 'Alignment', alignment_title: '3D Alignment',
   },
   sk: {
     admin_panel: 'Admin panel', sign_in: 'Prihlásiť sa →',
@@ -417,6 +419,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     cg_price_label: 'Cena (EUR)', cg_built_on_label: 'Dátum dokončenia',
     cg_photos_label: 'Fotky', cg_add_photo: 'Pridať fotku',
     cg_listed: (n) => `${n} ${n === 1 ? 'zostava' : n >= 2 && n <= 4 ? 'zostavy' : 'zostáv'}`,
+    alignment_tab: 'Zarovnanie', alignment_title: '3D zarovnanie',
   },
 };
 
@@ -646,7 +649,7 @@ export default function AdminPage() {
           : 'no';
   const authed = adminState === 'yes';
 
-  const [tab, setTab] = useState<'builds' | 'components' | 'requests' | 'gbb' | 'customerGomps'>('requests');
+  const [tab, setTab] = useState<'builds' | 'components' | 'requests' | 'gbb' | 'customerGomps' | 'alignment'>('requests');
   const [builds, setBuilds] = useState<Build[]>([]);
   const [compDb, setCompDb] = useState<ComponentDb>(defaultComponentDb());
 
@@ -1554,6 +1557,20 @@ export default function AdminPage() {
             >
               {t.customer_gomps_tab}
             </button>
+            <button
+              onClick={() => setTab('alignment')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 10,
+                width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
+                background: tab === 'alignment' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                border: 'none',
+                borderLeft: isMobile ? 'none' : `2px solid ${tab === 'alignment' ? '#4A90D9' : 'transparent'}`,
+                borderBottom: isMobile ? `2px solid ${tab === 'alignment' ? '#4A90D9' : 'transparent'}` : 'none',
+                color: tab === 'alignment' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'alignment' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              }}
+            >
+              {t.alignment_tab}
+            </button>
           </div>
           {!isMobile && (
             <div style={{ padding: '24px 18px 0', marginTop: 20, borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
@@ -2228,6 +2245,15 @@ export default function AdminPage() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {tab === 'alignment' && (
+            <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
+              <div style={{ marginBottom: 28 }}>
+                <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.alignment_title}</h1>
+              </div>
+              <AdminAlignmentPanel />
             </div>
           )}
 

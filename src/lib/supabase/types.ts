@@ -222,6 +222,25 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Single-row settings table: Admin's 3D-alignment overrides for /build's scene (mobo/CPU/
+      // cooler/RAM/storage offsets, mobo clearances, AIO tube routing). `id` is always `true` —
+      // there is exactly one row. `data` is a partial AlignmentTuning (src/lib/build-scene.ts):
+      // only the fields Admin has actually changed, merged over the scene's own defaults.
+      alignment_tuning: {
+        Row: {
+          id: boolean;
+          data: Record<string, unknown>;
+          updated_at: string;
+        };
+        Insert: {
+          id?: boolean;
+          data?: Record<string, unknown>;
+        };
+        Update: {
+          data?: Record<string, unknown>;
+        };
+        Relationships: [];
+      };
       // "Zákaznícke GOMPy" — already-completed customer builds shown at
       // /customer-builds. Same public-read/service-role-write shape as `components`.
       customer_builds: {

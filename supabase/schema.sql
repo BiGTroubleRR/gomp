@@ -533,3 +533,47 @@ begin
     alter publication supabase_realtime add table public.prebuilt_pcs;
   end if;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- alignment_tuning — single-row settings table for Admin's 3D-alignment overrides
+-- (mobo/CPU/cooler/RAM/storage offsets, mobo clearances, AIO tube routing — see
+-- src/lib/build-scene.ts's AlignmentTuning type). `id` is fixed to `true` so the
+-- table can only ever hold one row; `data` is a *partial* AlignmentTuning — only
+-- the fields Admin has actually changed, merged client-side over the scene's own
+-- hardcoded defaults, so an empty '{}' row is a valid "nothing customized yet".
+-- ---------------------------------------------------------------------------
+create table if not exists public.alignment_tuning (
+  id boolean primary key default true check (id),
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.alignment_tuning (id, data)
+values (true, '{}'::jsonb)
+on conflict (id) do nothing;
+
+alter table public.alignment_tuning enable row level security;
+
+drop policy if exists "alignment_tuning_select_public" on public.alignment_tuning;
+create policy "alignment_tuning_select_public" on public.alignment_tuning
+  for select using (true);
+
+-- No write policy for anon/authenticated. Only the service-role key (used
+-- exclusively by /api/admin/alignment-tuning, after a Clerk admin check) can
+-- write; it bypasses RLS entirely, so it needs no policy of its own.
+drop policy if exists "alignment_tuning_write_public" on public.alignment_tuning;
+
+drop trigger if exists alignment_tuning_set_updated_at on public.alignment_tuning;
+create trigger alignment_tuning_set_updated_at
+  before update on public.alignment_tuning
+  for each row execute procedure public.set_updated_at();
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'alignment_tuning'
+  ) then
+    alter publication supabase_realtime add table public.alignment_tuning;
+  end if;
+end $$;
