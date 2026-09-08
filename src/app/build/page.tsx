@@ -2121,15 +2121,35 @@ function BuildPageContent() {
                   const passmark = passmarkLookup(comp.name);
                   const tier: Tier | undefined = passmark ? tierFromPassmark(id === 'gpu', passmark.score) : (comp.tier as Tier | undefined);
                   const expanded = recentlyPickedId === id || expandedId === id;
-                  const toggleExpanded = () => setExpandedId((cur) => (cur === id ? null : id));
+                  // Toggling off the *current* `expanded` value (rather than only ever flipping
+                  // expandedId) means a click always does the opposite of what's showing right
+                  // now, even while the post-pick auto-flash (recentlyPickedId) is what's holding
+                  // it open — otherwise a click during that window set expandedId without clearing
+                  // recentlyPickedId, so expanded stayed true and the row didn't actually close
+                  // until a second click.
+                  const toggleExpanded = () => {
+                    if (expanded) {
+                      setRecentlyPickedId((cur) => (cur === id ? null : cur));
+                      setExpandedId((cur) => (cur === id ? null : cur));
+                    } else {
+                      setExpandedId(id);
+                    }
+                  };
                   return (
                     <motion.div
                       key={id}
-                      layout
+                      // "position" (not the default full `layout`, which is `true`) tracks this
+                      // row's shifting position as siblings resize, without also FLIP-animating
+                      // this row's OWN size via a scale() transform — that scale trick is what
+                      // was visibly stretching/squishing the text on expand/collapse, since plain
+                      // (non-motion) text nodes don't get Motion's automatic counter-scale
+                      // correction. The size change itself now just snaps instantly, crossfaded
+                      // by the opacity transition below, which reads as clean rather than warped.
+                      layout="position"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      transition={{ opacity: { duration: 0.18 } }}
+                      transition={{ layout: { duration: 0.22, ease: 'easeInOut' }, opacity: { duration: 0.18 } }}
                       style={{ marginBottom: 8, border: '1px solid rgba(28,28,26,0.1)', borderRadius: 6, padding: expanded ? 12 : '8px 10px', overflow: 'hidden' }}
                     >
                       {expanded ? (
@@ -2140,6 +2160,22 @@ function BuildPageContent() {
                               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: MUTED, width: 14, textAlign: 'center', userSelect: 'none' }}>−</div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                              {comp.imageUrl && (
+                                <motion.div
+                                  whileHover={{ scale: 1.15 }}
+                                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                                  onMouseEnter={() => setZoomImage(comp.imageUrl!)}
+                                  onMouseLeave={() => setZoomImage((cur) => (cur === comp.imageUrl ? null : cur))}
+                                  style={{
+                                    width: 36, height: 36, borderRadius: 4, flexShrink: 0,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                                    position: 'relative', zIndex: 2,
+                                  }}
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={comp.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                </motion.div>
+                              )}
                               <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: MAROON, fontWeight: 600 }}>{comp.name}</div>
                               <TierBadge tier={tier} small />
                             </div>
