@@ -131,7 +131,7 @@ const SECTIONS: Record<'en' | 'sk' | 'cz', Section[]> = {
       title: '7. Complaints Procedure (Reklamační řád) & Warranty',
       blocks: [
         { p: 'The Seller is liable for defects that the Goods exhibit upon receipt and that manifest within the statutory liability period, which for a Consumer is twenty-four (24) months from receipt of the Goods, pursuant to Sections 2165 et seq. of the Civil Code.' },
-        { p: 'In addition to this statutory liability, the Seller offers a commercial warranty of three (3) years on parts and labour for hand-assembled builds, as advertised on the website. [TODO: confirm exact scope/exclusions of the commercial warranty — e.g. whether it covers user-inflicted damage, overclocking, or third-party component failure — and the process/turnaround for warranty repairs.]' },
+        { p: 'In addition to this statutory liability, the Seller offers a commercial warranty of two (2) years on parts and labour for hand-assembled builds, as advertised on the website. [TODO: confirm exact scope/exclusions of the commercial warranty — e.g. whether it covers user-inflicted damage, overclocking, or third-party component failure — and the process/turnaround for warranty repairs.]' },
         { p: 'To make a complaint, the Buyer should contact the Seller at the contact e-mail in Section 2, describing the defect and providing proof of purchase. The Seller will confirm receipt of the complaint and decide on it, including any remedy, within thirty (30) days, unless the Seller and Buyer agree upon a longer period, in accordance with Section 19 of Act No. 634/1992 Coll., on Consumer Protection.' },
         { p: 'Depending on the nature of the defect, the Buyer is entitled to repair, replacement, a reasonable price reduction, or withdrawal from the contract, in accordance with Sections 2169 and 2106–2107 of the Civil Code.' },
       ],
@@ -230,7 +230,7 @@ const SECTIONS: Record<'en' | 'sk' | 'cz', Section[]> = {
       title: '7. Reklamačný poriadok a záruka',
       blocks: [
         { p: 'Predávajúci zodpovedá za vady, ktoré má Tovar pri prevzatí a ktoré sa prejavia v zákonnej lehote, ktorá je pre Spotrebiteľa dvadsaťštyri (24) mesiacov od prevzatia Tovaru, podľa § 2165 a nasl. občianskeho zákonníka.' },
-        { p: 'Nad rámec tejto zákonnej zodpovednosti poskytuje Predávajúci na ručne skladané zostavy obchodnú záruku tri (3) roky na diely a prácu, ako je uvedené na webovej stránke. [TODO: potvrdiť presný rozsah/výluky obchodnej záruky — napr. či sa vzťahuje na poškodenie spôsobené používateľom, pretaktovanie alebo poruchu komponentu tretej strany — a proces/dobu vybavenia reklamácie v rámci záruky.]' },
+        { p: 'Nad rámec tejto zákonnej zodpovednosti poskytuje Predávajúci na ručne skladané zostavy obchodnú záruku dva (2) roky na diely a prácu, ako je uvedené na webovej stránke. [TODO: potvrdiť presný rozsah/výluky obchodnej záruky — napr. či sa vzťahuje na poškodenie spôsobené používateľom, pretaktovanie alebo poruchu komponentu tretej strany — a proces/dobu vybavenia reklamácie v rámci záruky.]' },
         { p: 'Reklamáciu uplatňuje Kupujúci na kontaktnom e-maile z časti 2, s popisom vady a dokladom o kúpe. Predávajúci potvrdí prijatie reklamácie a rozhodne o nej vrátane prípadného nároku do tridsiatich (30) dní, ak sa s Kupujúcim nedohodne na dlhšej lehote, v súlade s § 19 zákona č. 634/1992 Sb., o ochrane spotrebiteľa.' },
         { p: 'Podľa povahy vady má Kupujúci nárok na opravu, výmenu, primeranú zľavu z ceny alebo odstúpenie od zmluvy, v súlade s § 2169 a § 2106 – 2107 občianskeho zákonníka.' },
       ],
@@ -329,7 +329,7 @@ const SECTIONS: Record<'en' | 'sk' | 'cz', Section[]> = {
       title: '7. Reklamační řád a záruka',
       blocks: [
         { p: 'Prodávající odpovídá za vady, které má Zboží při převzetí a které se projeví v zákonné lhůtě, jež pro Spotřebitele činí dvacet čtyři (24) měsíců od převzetí Zboží, podle § 2165 a násl. občanského zákoníku.' },
-        { p: 'Nad rámec této zákonné odpovědnosti poskytuje Prodávající na ručně skládané sestavy obchodní záruku tři (3) roky na díly a práci, jak je uvedeno na webových stránkách. [TODO: potvrdit přesný rozsah/výluky obchodní záruky — např. zda se vztahuje na poškození způsobené uživatelem, přetaktování nebo poruchu komponenty třetí strany — a proces/dobu vyřízení reklamace v rámci záruky.]' },
+        { p: 'Nad rámec této zákonné odpovědnosti poskytuje Prodávající na ručně skládané sestavy obchodní záruku dva (2) roky na díly a práci, jak je uvedeno na webových stránkách. [TODO: potvrdit přesný rozsah/výluky obchodní záruky — např. zda se vztahuje na poškození způsobené uživatelem, přetaktování nebo poruchu komponenty třetí strany — a proces/dobu vyřízení reklamace v rámci záruky.]' },
         { p: 'Reklamaci uplatňuje Kupující na kontaktním e-mailu z článku 2, s popisem vady a dokladem o koupi. Prodávající potvrdí přijetí reklamace a rozhodne o ní, včetně případného nároku, do třiceti (30) dnů, nedohodne-li se s Kupujícím na delší lhůtě, v souladu s § 19 zákona č. 634/1992 Sb., o ochraně spotřebitele.' },
         { p: 'Podle povahy vady má Kupující nárok na opravu, výměnu, přiměřenou slevu z ceny nebo odstoupení od smlouvy, v souladu s § 2169 a § 2106–2107 občanského zákoníku.' },
       ],

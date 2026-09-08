@@ -12,6 +12,7 @@ import { writeJSON } from '@/lib/gomp-storage';
 import { fetchComponentDb, subscribeComponents, getCachedComponentDb } from '@/lib/supabase/components';
 import { passmarkLookup, tierFromPassmark, ramTier, TIER_COLORS, type Tier } from '@/lib/passmark';
 import TierGlowOrb from '@/components/TierGlowOrb';
+import TierBadge from '@/components/TierBadge';
 import {
   defaultComponentDb,
   caseFitsFormFactor,
@@ -370,23 +371,6 @@ function defaultFanConfigForCase(caseComp: Component | undefined, fanDb: Compone
     out[m.position] = { count: m.preinstalledCount, sizeMm: fan?.fanSizeMm ?? m.sizesMm[0], fanName: m.preinstalledFanName };
   });
   return out;
-}
-
-function TierBadge({ tier, small }: { tier?: Tier; small?: boolean }) {
-  if (!tier) return null;
-  const c = TIER_COLORS[tier];
-  const sz = small ? 18 : 22;
-  return (
-    <div
-      style={{
-        width: sz, height: sz, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: c.bg, color: c.text, border: `1.5px solid ${c.border}`, borderRadius: 3,
-        fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: small ? 10 : 12,
-      }}
-    >
-      {tier}
-    </div>
-  );
 }
 
 // Small monospace tag for a CPU/motherboard's socket or a motherboard's form factor — shown

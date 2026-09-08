@@ -255,6 +255,17 @@ export type Database = {
           image_urls: string[] | null;
           is_live: boolean;
           sort_order: number;
+          // Optional structured component references, additive to `specs` — see
+          // supabase/schema.sql's customer_builds section for why these exist (computing a
+          // tier the same way prebuilt_pcs does) and why `specs` itself is untouched.
+          mobo: string | null;
+          cpu: string | null;
+          cooler: string | null;
+          ram: string | null;
+          gpu: string | null;
+          storage: string | null;
+          psu: string | null;
+          case: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -269,6 +280,14 @@ export type Database = {
           image_urls?: string[] | null;
           is_live?: boolean;
           sort_order?: number;
+          mobo?: string | null;
+          cpu?: string | null;
+          cooler?: string | null;
+          ram?: string | null;
+          gpu?: string | null;
+          storage?: string | null;
+          psu?: string | null;
+          case?: string | null;
         };
         Update: {
           title?: string;
@@ -280,6 +299,14 @@ export type Database = {
           image_urls?: string[] | null;
           is_live?: boolean;
           sort_order?: number;
+          mobo?: string | null;
+          cpu?: string | null;
+          cooler?: string | null;
+          ram?: string | null;
+          gpu?: string | null;
+          storage?: string | null;
+          psu?: string | null;
+          case?: string | null;
         };
         Relationships: [];
       };

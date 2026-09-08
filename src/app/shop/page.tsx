@@ -10,7 +10,8 @@ import { useIsMobile } from '@/lib/use-media-query';
 import { pick } from '@/lib/i18n';
 import { fetchPrebuilts, subscribePrebuilts } from '@/lib/supabase/prebuilts';
 import { fetchComponentDb, subscribeComponents, getCachedComponentDb } from '@/lib/supabase/components';
-import { computeBuildTotal, defaultComponentDb, gpuModelFor, type Build, type ComponentDb } from '@/lib/component-db-seed';
+import { computeBuildTotal, computeBuildTier, defaultComponentDb, gpuModelFor, type Build, type ComponentDb } from '@/lib/component-db-seed';
+import TierBadge from '@/components/TierBadge';
 
 type FilterId = 'all' | 'flagship' | 'performance' | 'midrange' | 'entry';
 
@@ -424,7 +425,10 @@ export default function Shop() {
                   >
                     {t[CAT_TIER_KEY[prod.cat]]}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469' }}>{prod.rating.toFixed(1)} / 5</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <TierBadge tier={computeBuildTier(prod, compDb)} small />
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469' }}>{prod.rating.toFixed(1)} / 5</div>
+                  </div>
                 </div>
                 <div
                   style={{

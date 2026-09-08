@@ -29,6 +29,7 @@ import {
   defaultMargin,
   computePrice,
   computeBuildTotal,
+  computeBuildTier,
   type Category,
   type Component,
   type ComponentDb,
@@ -55,16 +56,6 @@ const CAT_LABELS: Record<'en' | 'sk', Record<Category, string>> = {
 
 const CASE_CATS = ['Full Tower', 'Mid Tower', 'Mini Tower', 'SFF'];
 
-// Tier badge palette used ONLY on the Builds tab. The Components tab uses TIER_COLORS
-// imported from @/lib/passmark. This is a deliberate, preserved quirk of the original site,
-// which really does use two different tier-badge palettes across its two tabs.
-const BUILD_TIER_COLORS: Record<Tier, { bg: string; text: string; border: string }> = {
-  S: { bg: '#FFF5CC', text: '#876400', border: '#D4A017' },
-  A: { bg: '#FFE8E8', text: '#8B1A00', border: '#CC3333' },
-  B: { bg: '#E8F0FF', text: '#1A3080', border: '#3366CC' },
-  C: { bg: '#E8FFF0', text: '#1A5030', border: '#339966' },
-  D: { bg: '#F2F2F6', text: '#505060', border: '#9090A0' },
-};
 
 // Autocomplete suggestions per category, shown while adding/editing a component. Exact
 // PassMark scores/URLs ported verbatim from the original site's SUGGESTIONS table.
@@ -220,6 +211,7 @@ type Translations = {
   ram_generation: string; ram_speed_mhz: string; ram_generation_help: string;
   ram_family_label: string; ram_family_help: string;
   ram_tier_help: string; ram_tier_pending: string;
+  build_tier_pending: string; build_tier_help: string;
   fan_size_mm: string; preinstalled_fans: string; preinstalled_fans_help: string; fan_none: string;
   dimensions_mm: string;
   case_width_mm: string; case_height_mm: string; case_depth_mm: string;
@@ -257,6 +249,7 @@ type Translations = {
   cg_title_label: string; cg_customer_label: string; cg_customer_placeholder: string;
   cg_specs_label: string; cg_specs_help: string; cg_price_label: string; cg_built_on_label: string;
   cg_photos_label: string; cg_add_photo: string;
+  cg_components_label: string; cg_components_help: string;
   cg_listed: (n: number) => string;
 };
 
@@ -296,6 +289,8 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     ram_family_help: 'Format: Manufacturer|CapacityGB|Speed, e.g. "G.Skill|16GB|6400" — links this kit with other stick-count variants (1×/2×/4×) of the same real product on the Build page. Match an existing family exactly to add to it, or leave blank for a one-off kit.',
     ram_tier_help: 'Computed automatically from clock speed, CAS latency, and stick count — not manually editable.',
     ram_tier_pending: 'Set a speed above to see the computed tier.',
+    build_tier_pending: 'Pick components with a set tier to see this build’s computed tier.',
+    build_tier_help: 'Computed automatically from the average tier of this build’s own components — not manually editable.',
     fan_size_mm: 'Fan size (mm)',
     preinstalled_fans: 'Pre-installed fans',
     preinstalled_fans_help: 'Which fan (if any) ships in each mount out of the box — keeping it is free; swapping to another fan on Build charges that fan’s price.',
@@ -338,6 +333,8 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     cg_specs_label: 'Specs', cg_specs_help: 'Separate each spec with " · ", same as the Components tab.',
     cg_price_label: 'Price (EUR)', cg_built_on_label: 'Built on',
     cg_photos_label: 'Photos', cg_add_photo: 'Add photo',
+    cg_components_label: 'Components (for tier)',
+    cg_components_help: 'Optional — pick the real components this build uses so it gets a computed S/A/B/C/D tier badge on the public page. Leave any blank to skip it.',
     cg_listed: (n) => `${n} build${n === 1 ? '' : 's'}`,
     alignment_tab: 'Alignment', alignment_title: '3D Alignment',
   },
@@ -376,6 +373,8 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     ram_family_help: 'Formát: Výrobca|KapacitaGB|Rýchlosť, napr. "G.Skill|16GB|6400" — prepojí túto sadu s ostatnými variantmi počtu RAM (1×/2×/4×) toho istého reálneho produktu na stránke Zostaviť. Ak chcete pridať do existujúcej rodiny, zhodujte presne; inak nechajte prázdne pre samostatnú sadu.',
     ram_tier_help: 'Vypočítané automaticky z rýchlosti, časovania CAS a počtu RAM — nedá sa upraviť ručne.',
     ram_tier_pending: 'Zadajte rýchlosť vyššie pre zobrazenie vypočítanej triedy.',
+    build_tier_pending: 'Vyberte komponenty s nastavenou triedou pre zobrazenie vypočítanej triedy tejto zostavy.',
+    build_tier_help: 'Vypočítané automaticky z priemernej triedy komponentov tejto zostavy — nedá sa upraviť ručne.',
     fan_size_mm: 'Veľkosť ventilátora (mm)',
     preinstalled_fans: 'Predinštalované ventilátory',
     preinstalled_fans_help: 'Ktorý ventilátor (ak nejaký) je v danej pozícii od výroby — ponechanie je zadarmo, výmena za iný ventilátor na stránke Zostaviť účtuje jeho cenu.',
@@ -418,6 +417,8 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     cg_specs_label: 'Špecifikácie', cg_specs_help: 'Oddeľte jednotlivé položky pomocou " · ", rovnako ako v záložke Komponenty.',
     cg_price_label: 'Cena (EUR)', cg_built_on_label: 'Dátum dokončenia',
     cg_photos_label: 'Fotky', cg_add_photo: 'Pridať fotku',
+    cg_components_label: 'Komponenty (pre triedu)',
+    cg_components_help: 'Nepovinné — vyberte reálne komponenty tejto zostavy, aby na verejnej stránke získala vypočítanú S/A/B/C/D triedu. Ktorékoľvek pole môžete nechať prázdne.',
     cg_listed: (n) => `${n} ${n === 1 ? 'zostava' : n >= 2 && n <= 4 ? 'zostavy' : 'zostáv'}`,
     alignment_tab: 'Zarovnanie', alignment_title: '3D zarovnanie',
   },
@@ -549,10 +550,14 @@ function validateImageFile(file: File): string | null {
 // "Zákaznícke GOMPy" (customer_builds) add/edit form state.
 type CgFormState = {
   title: string; customerLabel: string; specs: string; priceEur: string; builtOn: string; imageUrls: string[];
+  mobo: string; cpu: string; cooler: string; ram: string; gpu: string; storage: string; psu: string; case: string;
 };
 
 function initialCgForm(): CgFormState {
-  return { title: '', customerLabel: '', specs: '', priceEur: '', builtOn: '', imageUrls: [] };
+  return {
+    title: '', customerLabel: '', specs: '', priceEur: '', builtOn: '', imageUrls: [],
+    mobo: '', cpu: '', cooler: '', ram: '', gpu: '', storage: '', psu: '', case: '',
+  };
 }
 
 // Width of the floating edit popup on desktop (see openEditComp) — wide enough that a case's
@@ -887,7 +892,7 @@ export default function AdminPage() {
     const build: Build = {
       id: editId ?? '', // placeholder — Supabase assigns the real id on insert
       name: form.name.trim(), taglineEn: form.taglineEn.trim(), taglineSk: form.taglineSk.trim(), taglineCz: form.taglineCz.trim(),
-      cat: form.cat, tier: form.tier,
+      cat: form.cat, tier: computeBuildTier(form, compDb) ?? 'D',
       gpu: form.gpu, cpu: form.cpu, ram: form.ram, storage: form.storage, mobo: form.mobo, cooler: form.cooler, psu: form.psu, case: form.case,
       price: parseFloat(form.price) || 0, rating: parseFloat(form.rating) || 0, isLive: true, sortOrder: 0,
     };
@@ -940,6 +945,8 @@ export default function AdminPage() {
       priceEur: b.priceEur != null ? String(b.priceEur) : '',
       builtOn: b.builtOn || '',
       imageUrls: [...b.imageUrls],
+      mobo: b.mobo ?? '', cpu: b.cpu ?? '', cooler: b.cooler ?? '', ram: b.ram ?? '',
+      gpu: b.gpu ?? '', storage: b.storage ?? '', psu: b.psu ?? '', case: b.case ?? '',
     });
     setCgImageStatus('idle');
     setCgImageError(null);
@@ -961,6 +968,14 @@ export default function AdminPage() {
       priceEur: cgForm.priceEur !== '' ? parseFloat(cgForm.priceEur) || 0 : null,
       builtOn: cgForm.builtOn || null,
       imageUrls: cgForm.imageUrls,
+      mobo: cgForm.mobo || null,
+      cpu: cgForm.cpu || null,
+      cooler: cgForm.cooler || null,
+      ram: cgForm.ram || null,
+      gpu: cgForm.gpu || null,
+      storage: cgForm.storage || null,
+      psu: cgForm.psu || null,
+      case: cgForm.case || null,
       isLive: true,
       sortOrder: 0,
       createdAt: '',
@@ -1964,11 +1979,21 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <div style={LABEL_STYLE}>{t.tier_label}</div>
-                      <select value={form.tier} onChange={(e) => setForm({ ...form, tier: e.target.value as Tier })} style={INPUT_STYLE}>
-                        {(['S', 'A', 'B', 'C', 'D'] as Tier[]).map((tk) => (
-                          <option key={tk} value={tk}>{t[`tier_${tk.toLowerCase()}` as keyof Translations] as string}</option>
-                        ))}
-                      </select>
+                      {(() => {
+                        const computed = computeBuildTier(form, compDb);
+                        return (
+                          <div style={{ ...INPUT_STYLE, display: 'flex', alignItems: 'center' }}>
+                            {computed ? (
+                              <span style={{ color: TIER_COLORS[computed].border, fontWeight: 700 }}>
+                                {t[`tier_${computed.toLowerCase()}` as keyof Translations] as string}
+                              </span>
+                            ) : (
+                              <span style={{ color: '#B0A898' }}>{t.build_tier_pending}</span>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#B0A898', marginTop: 4 }}>{t.build_tier_help}</div>
                     </div>
                     <div>
                       <div style={LABEL_STYLE}>{t.price_eur_label}</div>
@@ -2006,7 +2031,8 @@ export default function AdminPage() {
                       <div />
                     </div>
                     {builds.map((b) => {
-                      const tc = tierBadge(b.tier, BUILD_TIER_COLORS);
+                      const computedTier = computeBuildTier(b, compDb);
+                      const tc = tierBadge(computedTier, TIER_COLORS);
                       const visible = b.isLive !== false;
                       const visibleColor = visible ? '#1A7040' : '#9090A0';
                       return (
@@ -2024,7 +2050,7 @@ export default function AdminPage() {
                           <div style={{ fontFamily: 'var(--font-serif)', fontSize: 13, fontWeight: 500, color: '#1C1C1A' }}>{fmt(computeBuildTotal(b, compDb))}</div>
                           <div>
                             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: tc.bg, border: `1.5px solid ${tc.border}`, borderRadius: 4 }}>
-                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: tc.text }}>{b.tier}</span>
+                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: tc.text }}>{computedTier ?? '—'}</span>
                             </div>
                           </div>
                           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#1C1C1A' }}>{typeof b.rating === 'number' ? b.rating.toFixed(1) : b.rating} / 5</div>
@@ -2098,6 +2124,30 @@ export default function AdminPage() {
                       style={{ ...INPUT_STYLE, resize: 'vertical', fontFamily: 'var(--font-mono)' }}
                     />
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginTop: 5 }}>{t.cg_specs_help}</div>
+                  </div>
+                  <div style={{ marginBottom: 18 }}>
+                    <div style={LABEL_STYLE}>{t.cg_components_label}</div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginBottom: 10 }}>{t.cg_components_help}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+                      <CompSelect label="GPU" value={cgForm.gpu} options={compDb.gpu || []} placeholder="GPU" t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, gpu: v })} />
+                      <CompSelect label="CPU" value={cgForm.cpu} options={compDb.cpu || []} placeholder="CPU" t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, cpu: v })} />
+                      <CompSelect label="RAM" value={cgForm.ram} options={compDb.ram || []} placeholder="RAM" t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, ram: v })} />
+                      <CompSelect label={t.storage_label} value={cgForm.storage} options={compDb.storage || []} placeholder={catLabels.storage} t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, storage: v })} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: 14 }}>
+                      <CompSelect label={t.mobo_label} value={cgForm.mobo} options={compDb.mobo || []} placeholder={catLabels.mobo} t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, mobo: v })} />
+                      <CompSelect label={t.cooler_label} value={cgForm.cooler} options={compDb.cooler || []} placeholder={catLabels.cooler} t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, cooler: v })} />
+                      <CompSelect label="PSU" value={cgForm.psu} options={compDb.psu || []} placeholder="PSU" t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, psu: v })} />
+                      <CompSelect label={catLabels.case} value={cgForm.case} options={compDb.case || []} placeholder={catLabels.case} t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, case: v })} />
+                    </div>
+                    {(() => {
+                      const computed = computeBuildTier(cgForm, compDb);
+                      return computed ? (
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: TIER_COLORS[computed].border, fontWeight: 600, marginTop: 10 }}>
+                          {t.tier_label}: {t[`tier_${computed.toLowerCase()}` as keyof Translations] as string}
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr', gap: 14, marginBottom: 18 }}>
                     <div>

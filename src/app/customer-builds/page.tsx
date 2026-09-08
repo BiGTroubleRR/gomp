@@ -9,6 +9,9 @@ import Reveal from '@/components/Reveal';
 import { useIsMobile } from '@/lib/use-media-query';
 import { fetchCustomerBuilds, subscribeCustomerBuilds } from '@/lib/supabase/customer-builds';
 import type { CustomerBuild } from '@/lib/supabase/customer-build-mapping';
+import { fetchComponentDb, subscribeComponents, getCachedComponentDb } from '@/lib/supabase/components';
+import { defaultComponentDb, computeBuildTier, type ComponentDb } from '@/lib/component-db-seed';
+import TierBadge from '@/components/TierBadge';
 
 const INK = '#1C1C1A';
 const MUTED = '#7A7469';
@@ -384,6 +387,9 @@ export default function CustomerBuildsPage() {
   const t = T[lang] ?? T.en;
 
   const [builds, setBuilds] = useState<CustomerBuild[]>([]);
+  // Only needed to resolve each build's optional component picks (see Admin's "Components (for
+  // tier)" section) into a computeBuildTier badge — this page has no other use for the catalog.
+  const [compDb, setCompDb] = useState<ComponentDb>(() => getCachedComponentDb() ?? defaultComponentDb());
 
   useEffect(() => {
     let cancelled = false;
@@ -393,6 +399,22 @@ export default function CustomerBuildsPage() {
     const unsubscribe = subscribeCustomerBuilds(() => {
       fetchCustomerBuilds().then((data) => {
         if (!cancelled) setBuilds(data);
+      });
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchComponentDb().then((db) => {
+      if (!cancelled) setCompDb(db);
+    });
+    const unsubscribe = subscribeComponents(() => {
+      fetchComponentDb().then((db) => {
+        if (!cancelled) setCompDb(db);
       });
     });
     return () => {
@@ -483,7 +505,10 @@ export default function CustomerBuildsPage() {
                     onOpen={() => setGallery({ buildId: b.id, index: 0 })}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 18, fontWeight: 600, color: INK }}>{b.title}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 18, fontWeight: 600, color: INK }}>{b.title}</div>
+                      <TierBadge tier={computeBuildTier(b, compDb)} small />
+                    </div>
                     {b.customerLabel && (
                       <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: MUTED, marginTop: 3 }}>{b.customerLabel}</div>
                     )}

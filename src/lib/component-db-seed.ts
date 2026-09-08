@@ -542,6 +542,32 @@ export function computeBuildTotal(parts: Partial<Record<Category, string>>, comp
   }, 0);
 }
 
+const TIER_ORDER: Tier[] = ['D', 'C', 'B', 'A', 'S']; // ascending, index 0-4
+const TIER_VALUE: Record<Tier, number> = { D: 1, C: 2, B: 3, A: 4, S: 5 };
+
+// A build's own tier, averaged from its resolvable components' individual tiers instead of a
+// manually hand-picked value that can silently drift once a referenced component is swapped or
+// re-tiered later — same "resolve each slot against the live catalog" shape as computeBuildTotal
+// just above. Reads each component's own stored `tier` directly rather than re-deriving it live
+// from PassMark/RAM specs (every category that CAN auto-derive one already keeps `tier` fresh at
+// admin-save time, see tierFromPassmark/ramTier's call sites) — kept this simple on purpose, to
+// match computeBuildTotal's own directness. A slot with no resolvable component, or whose
+// component has no tier set yet (bulk-imported SKUs, see Component['tier']'s own comment), is
+// skipped rather than penalized; returns undefined only if nothing at all resolves, matching
+// TierBadge's existing "render nothing" behavior for an unset tier. Accepts `null` per slot too
+// (not just `undefined`) so a CustomerBuild's nullable component-reference columns pass straight
+// through without the caller needing to normalize them first.
+export function computeBuildTier(parts: Partial<Record<Category, string | null>>, compDb: ComponentDb): Tier | undefined {
+  const values = PREBUILT_SLOTS.map((slot) => {
+    const name = parts[slot];
+    const comp = name ? (compDb[slot] || []).find((c) => c.name === name) : undefined;
+    return comp?.tier ? TIER_VALUE[comp.tier] : undefined;
+  }).filter((v): v is number => v != null);
+  if (!values.length) return undefined;
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  return TIER_ORDER[Math.min(4, Math.max(0, Math.round(avg) - 1))];
+}
+
 export type Margin = { type: 'eur' | 'pct'; value: number };
 export function defaultMargin(): Margin {
   return { type: 'eur', value: 0 };

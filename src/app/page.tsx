@@ -12,7 +12,8 @@ import { useIsMobile } from '@/lib/use-media-query';
 import { pick } from '@/lib/i18n';
 import { fetchPrebuilts, subscribePrebuilts } from '@/lib/supabase/prebuilts';
 import { fetchComponentDb, subscribeComponents, getCachedComponentDb } from '@/lib/supabase/components';
-import { computeBuildTotal, defaultComponentDb, type Build, type ComponentDb } from '@/lib/component-db-seed';
+import { computeBuildTotal, computeBuildTier, defaultComponentDb, type Build, type ComponentDb } from '@/lib/component-db-seed';
+import TierBadge from '@/components/TierBadge';
 
 const CAT_LABEL: Record<Build['cat'], { en: string; sk: string; cz: string }> = {
   flagship: { en: 'Flagship', sk: 'Vlajková loď', cz: 'Vlajková loď' },
@@ -53,29 +54,29 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     builder_desc: 'Use our 3D PC builder to see every component appear in real time as you configure your machine.',
     open_builder: 'Open the 3D Builder →',
     build_from: 'Build from', entry_scales: 'Entry-level excellence. Scales to flagship.',
-    bullet1: '3-year parts & labor warranty', bullet2: 'Benchmark-tested before shipping', bullet3: 'Ships within 7 business days',
+    bullet1: '2-year parts & labor warranty', bullet2: 'Benchmark-tested before shipping', bullet3: 'Ships within 7 business days',
   },
   sk: {
     nav_home: 'Domov', nav_shop: 'Obchod', nav_build: 'Zostaviť', nav_about: 'O nás', nav_account: 'Účet',
     nav_startbuilding: 'Začať stavať →',
-    hero_eyebrow: 'Herné počítače na mieru',
+    hero_eyebrow: 'Herné PC na mieru',
     hero_title_line1: 'Postav si svoju', hero_title_em: 'Legendu.',
     hero_desc: 'Vysnený, ručne stavaný, testovaný, tvoj.',
-    hero_cta_build: 'Začať stavať →', hero_cta_browse: 'Prehliadať zostavy',
+    hero_cta_build: 'GOMP 3D CONFIG', hero_cta_browse: 'Prebuilt zostavy',
     undervolt_badge: 'Každý CPU & GPU Undervolted →',
     stress_tested: 'ZÁŤAŽOVO TESTOVANÉ',
-    featured_build: 'Odporúčaná zostava', apex_tagline: 'Špičkové 4K hranie a tvorba',
+    featured_build: 'Herné monštrum', apex_tagline: 'Špičkové 4K hranie a tvorba',
     spec_storage: 'SSD', spec_cooling: 'Chladenie',
     configure_this: 'Nakonfigurovať túto zostavu →', configure_arrow: 'Konfigurovať →',
     stat1: 'Expedovaných zostáv na mieru', stat2: 'Priemerné hodnotenie · 3200+ recenzií',
     stat3: 'Dní priemerná výroba a expedícia', stat4: 'Záruka na diely a prácu',
-    ready_to_ship: 'Pripravené na expedíciu', featured_builds: 'Odporúčané zostavy', view_all: 'Zobraziť všetky zostavy →',
+    ready_to_ship: 'Nakonfigurované pre Vás', featured_builds: 'Odporúčané zostavy', view_all: 'Všetky prebuilt GOMPy',
     why_gomp: 'Prečo GOMP', gomp_standard: 'Štandard GOMP',
     yourbuild_line1: 'Vaša zostava.', yourbuild_line2: 'Vaše pravidlá.',
     builder_desc: 'Použite náš 3D konfigurátor a sledujte, ako sa každý komponent objavuje v reálnom čase pri skladaní vášho počítača.',
     open_builder: 'Otvoriť 3D konfigurátor →',
     build_from: 'Ceny od', entry_scales: 'Špička v základnej triede. Rozšíriteľná až po vlajkovú loď.',
-    bullet1: '3-ročná záruka na diely a prácu', bullet2: 'Pred expedíciou testované benchmarkmi', bullet3: 'Expedícia do 7 pracovných dní',
+    bullet1: '2-ročná záruka na diely a prácu', bullet2: 'Pred expedíciou testované benchmarkmi', bullet3: 'Expedícia do 7 pracovných dní',
   },
   cz: {
     nav_home: 'Domů', nav_shop: 'Obchod', nav_build: 'Sestavit', nav_about: 'O nás', nav_account: 'Účet',
@@ -97,7 +98,7 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     builder_desc: 'Použijte náš 3D konfigurátor a sledujte, jak se každá součástka objevuje v reálném čase při skládání vašeho počítače.',
     open_builder: 'Otevřít 3D konfigurátor →',
     build_from: 'Ceny od', entry_scales: 'Špička v základní třídě. Rozšiřitelná až po vlajkovou loď.',
-    bullet1: '3letá záruka na díly a práci', bullet2: 'Před expedicí testováno benchmarky', bullet3: 'Expedice do 7 pracovních dnů',
+    bullet1: '2letá záruka na díly a práci', bullet2: 'Před expedicí testováno benchmarky', bullet3: 'Expedice do 7 pracovních dnů',
   },
 };
 
@@ -109,11 +110,10 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
 type FeatureRaw = { num: string; title_en: string; title_sk: string; title_cz: string; desc_en: string; desc_sk: string; desc_cz: string };
 
 const FEATURES_RAW: FeatureRaw[] = [
-  { num: '01', title_en: 'Hand-Assembled', title_sk: 'Ručná zostava', title_cz: 'Ruční sestavení', desc_en: 'Every build is crafted by expert technicians and stress-tested for 24 hours before it ships.', desc_sk: 'Každú zostavu vyrábajú skúsení technici a pred expedíciou ju 24 hodín záťažovo testujeme.', desc_cz: 'Každou sestavu vyrábějí zkušení technici a před expedicí ji 24 hodin zátěžově testujeme.' },
-  { num: '02', title_en: '3-Year Warranty', title_sk: '3-ročná záruka', title_cz: '3letá záruka', desc_en: 'Comprehensive coverage on all parts and labor. No questions, no runarounds, ever.', desc_sk: 'Kompletné krytie všetkých dielov a práce. Bez zbytočných otázok a prieťahov.', desc_cz: 'Kompletní krytí všech dílů a práce. Bez zbytečných otázek a průtahů.' },
+  { num: '01', title_en: 'Personal Approach', title_sk: 'Osobný prístup', title_cz: 'Osobní přístup', desc_en: 'Our goal is to sell every customer a GOMP they don’t just want — but truly need.', desc_sk: 'Naším cieľom je predať každému zákazníkovi GOMP, ktorý nielen chce, ale aj potrebuje.', desc_cz: 'Naším cílem je prodat každému zákazníkovi GOMP, který nejen chce, ale i potřebuje.' },
+  { num: '02', title_en: '2-Year Warranty', title_sk: '2-ročná záruka', title_cz: '2letá záruka', desc_en: 'Comprehensive coverage on all parts and labor. No questions, no runarounds, ever.', desc_sk: 'Kompletné krytie všetkých dielov a práce. Bez zbytočných otázok a prieťahov.', desc_cz: 'Kompletní krytí všech dílů a práce. Bez zbytečných otázek a průtahů.' },
   { num: '03', title_en: 'Benchmark Tested', title_sk: 'Otestované benchmarkmi', title_cz: 'Otestováno benchmarky', desc_en: 'Every machine ships with a printed performance validation sheet from our testing rig.', desc_sk: 'Každý počítač expedujeme s tlačeným protokolom o výkonnostných testoch.', desc_cz: 'Každý počítač expedujeme s tištěným protokolem o výkonnostních testech.' },
-  { num: '04', title_en: 'Ships in 7 Days', title_sk: 'Expedícia do 7 dní', title_cz: 'Expedice do 7 dnů', desc_en: 'From order confirmation to your door in under a week, guaranteed.', desc_sk: 'Od potvrdenia objednávky až k vašim dverám za menej než týždeň, garantovane.', desc_cz: 'Od potvrzení objednávky až k vašim dveřím za méně než týden, garantovaně.' },
-  { num: '05', title_en: 'Undervolted by Default', title_sk: 'Podvoltované ako štandard', title_cz: 'Podvoltováno jako standard', desc_en: 'Every CPU and GPU is undervolted wherever the platform allows it — lower temperatures, quieter fans, less power draw, with zero performance lost.', desc_sk: 'Každý CPU a GPU podvoltujeme všade, kde to platforma umožňuje — nižšie teploty, tichšie ventilátory, nižšia spotreba, bez straty výkonu.', desc_cz: 'Každý CPU a GPU podvoltujeme všude, kde to platforma umožňuje — nižší teploty, tišší ventilátory, nižší spotřeba, bez ztráty výkonu.' },
+  { num: '04', title_en: 'Undervolted by Default', title_sk: 'Undervolt ako štandard', title_cz: 'Undervolt jako standard', desc_en: 'Every CPU and GPU is undervolted wherever the platform allows it — lower temperatures, quieter fans, less power draw, with zero performance lost.', desc_sk: 'Každý CPU a GPU podvoltujeme všade, kde to platforma umožňuje — nižšie teploty, tichšie ventilátory, nižšia spotreba, bez straty výkonu.', desc_cz: 'Každý CPU a GPU podvoltujeme všude, kde to platforma umožňuje — nižší teploty, tišší ventilátory, nižší spotřeba, bez ztráty výkonu.' },
 ];
 
 // ---- Small presentational helpers ----
@@ -223,6 +223,7 @@ export default function Home() {
       livePrebuilts.slice(0, 3).map((b) => ({
         id: b.id,
         tier: pick(lang, CAT_LABEL[b.cat]),
+        computedTier: computeBuildTier(b, compDb),
         name: b.name,
         tagline: pick(lang, { en: b.taglineEn, sk: b.taglineSk, cz: b.taglineCz }),
         gpu: b.gpu,
@@ -245,10 +246,10 @@ export default function Home() {
   );
 
   const stats: [string, string][] = [
-    ['12,400', t.stat1],
+    ['20', t.stat1],
     ['4.9', t.stat2],
     ['7', t.stat3],
-    ['3yr', t.stat4],
+    ['2yr', t.stat4],
   ];
 
   function startBuilding() {
@@ -564,18 +565,20 @@ export default function Home() {
 
               <div style={{ background: PANEL, border: '0.5px solid rgba(28,28,26,0.18)', borderRadius: 2, padding: isMobile ? 28 : 40, position: 'relative' }}>
                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: MAROON, borderRadius: '2px 2px 0 0' }} />
-                <div
-                  style={{
-                    fontFamily: 'var(--font-sans)',
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: MUTED,
-                    letterSpacing: 2.5,
-                    textTransform: 'uppercase',
-                    marginBottom: 20,
-                  }}
-                >
-                  {t.featured_build}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-sans)',
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: MUTED,
+                      letterSpacing: 2.5,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {t.featured_build}
+                  </div>
+                  {hero && <TierBadge tier={computeBuildTier(hero, compDb)} />}
                 </div>
                 <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, fontWeight: 600, color: INK, letterSpacing: -0.5, marginBottom: 4, lineHeight: 1.1 }}>
                   {hero?.name ?? ''}
@@ -735,18 +738,20 @@ export default function Home() {
                     flexDirection: 'column',
                   }}
                 >
-                  <div
-                    style={{
-                      fontFamily: 'var(--font-sans)',
-                      fontSize: 10,
-                      fontWeight: 600,
-                      color: MUTED,
-                      letterSpacing: 2,
-                      textTransform: 'uppercase',
-                      marginBottom: 16,
-                    }}
-                  >
-                    {build.tier}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <div
+                      style={{
+                        fontFamily: 'var(--font-sans)',
+                        fontSize: 10,
+                        fontWeight: 600,
+                        color: MUTED,
+                        letterSpacing: 2,
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {build.tier}
+                    </div>
+                    <TierBadge tier={build.computedTier} small />
                   </div>
                   <div style={{ fontFamily: 'var(--font-serif)', fontSize: 26, fontWeight: 600, color: INK, letterSpacing: -0.4, marginBottom: 4, lineHeight: 1.1 }}>
                     {build.name}
@@ -821,7 +826,7 @@ export default function Home() {
                 {t.gomp_standard}
               </h2>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(5,1fr)', borderTop: '0.5px solid rgba(28,28,26,0.12)', position: 'relative' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4,1fr)', borderTop: '0.5px solid rgba(28,28,26,0.12)', position: 'relative' }}>
               {!isMobile && (
                 <>
                   <div style={{ position: 'absolute', top: -3, left: '50%', width: 5, height: 5, borderRadius: '50%', background: MAROON, pointerEvents: 'none', animation: 'gompPulseDot 4.8s ease-in-out infinite 0.4s' }} />

@@ -39,6 +39,8 @@ const T = {
     data_attribution_mid: ', made available under the ',
     data_attribution_license: 'ODC Attribution License',
     data_attribution_post: '.',
+    tier_explanation:
+      'Every GOMP is rated on a tier scale from S (top) down to D (entry-level), calculated as the average tier of its individual components.',
   },
   sk: {
     blurb: 'Ručne stavané herné počítače presne podľa vašich požiadaviek. Staviame ich hráči pre hráčov.',
@@ -65,6 +67,8 @@ const T = {
     data_attribution_mid: ', dostupnej pod licenciou ',
     data_attribution_license: 'ODC Attribution License',
     data_attribution_post: '.',
+    tier_explanation:
+      'Každý GOMP má hodnotenie na škále S (najvyššie) až D (základné), vypočítané ako priemer úrovní jeho jednotlivých komponentov.',
   },
   cz: {
     blurb: 'Ručně stavěné herní počítače přesně podle vašich požadavků. Stavíme je hráči pro hráče.',
@@ -91,6 +95,8 @@ const T = {
     data_attribution_mid: ', dostupné pod licencí ',
     data_attribution_license: 'ODC Attribution License',
     data_attribution_post: '.',
+    tier_explanation:
+      'Každý GOMP má hodnocení na škále S (nejvyšší) až D (základní), vypočítané jako průměr úrovní jeho jednotlivých komponentů.',
   },
 } as const;
 
@@ -183,6 +189,8 @@ export default function SiteFooter() {
             </a>
             {t.data_attribution_post}
           </span>
+          <br />
+          <span style={{ ...sans, fontSize: 11, color: 'rgba(245,240,230,0.28)', fontWeight: 300, lineHeight: 1.6 }}>{t.tier_explanation}</span>
         </div>
       </div>
     </footer>

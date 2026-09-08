@@ -442,6 +442,22 @@ create table if not exists public.customer_builds (
 -- for anything still reading the legacy single column; the app reads image_urls only.
 alter table public.customer_builds add column if not exists image_urls text[] not null default '{}';
 
+-- Optional structured component references, additive to the free-text `specs` column above
+-- (which stays the source of the public spec-line display — this isn't replacing it). Each
+-- holds an exact components.name, same convention as prebuilt_pcs's own mobo/cpu/.../case
+-- columns, so a customer build's tier can be computed the same way (average of its resolvable
+-- components' own tier) instead of staying untiered forever. Nullable/optional: an admin can
+-- leave any of these blank (existing rows start with all of them blank), in which case that slot
+-- is simply skipped by the averaging — never required, never blocking a save.
+alter table public.customer_builds add column if not exists mobo text;
+alter table public.customer_builds add column if not exists cpu text;
+alter table public.customer_builds add column if not exists cooler text;
+alter table public.customer_builds add column if not exists ram text;
+alter table public.customer_builds add column if not exists gpu text;
+alter table public.customer_builds add column if not exists storage text;
+alter table public.customer_builds add column if not exists psu text;
+alter table public.customer_builds add column if not exists "case" text;
+
 alter table public.customer_builds enable row level security;
 
 drop policy if exists "customer_builds_select_public" on public.customer_builds;
