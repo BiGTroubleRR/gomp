@@ -1593,6 +1593,9 @@ function BuildPageContent() {
                                     transition={{ duration: 0.2, ease: 'easeOut' }}
                                     onMouseEnter={() => setZoomImage(c.imageUrl!)}
                                     onMouseLeave={() => setZoomImage((cur) => (cur === c.imageUrl ? null : cur))}
+                                    // Hover-only preview — stop the click from bubbling to the card's own
+                                    // onClick (selectCard), which would otherwise also fire on a photo tap.
+                                    onClick={(e) => e.stopPropagation()}
                                     style={{
                                       width: 36, height: 36, borderRadius: 4, flexShrink: 0,
                                       display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
@@ -1911,6 +1914,9 @@ function BuildPageContent() {
                             transition={{ duration: 0.2, ease: 'easeOut' }}
                             onMouseEnter={() => setZoomImage(c.imageUrl!)}
                             onMouseLeave={() => setZoomImage((cur) => (cur === c.imageUrl ? null : cur))}
+                            // Hover-only preview — stop the click from bubbling to the card's own
+                            // onClick (selectCard), which would otherwise also fire on a photo tap.
+                            onClick={(e) => e.stopPropagation()}
                             style={{
                               width: 36, height: 36, borderRadius: 4, flexShrink: 0,
                               display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
@@ -2226,6 +2232,12 @@ function BuildPageContent() {
                   // recentlyPickedId, so expanded stayed true and the row didn't actually close
                   // until a second click.
                   const toggleExpanded = () => {
+                    // Defensive: collapsing this row can unmount a photo the pointer is still
+                    // hovering (its own onClick now stops propagation so this shouldn't fire from
+                    // a photo tap anymore, but this guards against any other future path that
+                    // hides a hovered photo out from under the mouse — otherwise onMouseLeave
+                    // never runs and the zoomed preview stays stuck rendered mid-screen).
+                    setZoomImage(null);
                     if (expanded) {
                       setRecentlyPickedId((cur) => (cur === id ? null : cur));
                       setExpandedId((cur) => (cur === id ? null : cur));
@@ -2267,6 +2279,12 @@ function BuildPageContent() {
                                   transition={{ duration: 0.2, ease: 'easeOut' }}
                                   onMouseEnter={() => setZoomImage(comp.imageUrl!)}
                                   onMouseLeave={() => setZoomImage((cur) => (cur === comp.imageUrl ? null : cur))}
+                                  // Hover-only preview — stop the click from bubbling to the row's own
+                                  // onClick (toggleExpanded). Without this, clicking the photo collapses
+                                  // the row and unmounts the image out from under the still-hovering
+                                  // pointer, so onMouseLeave never fires and the zoomed preview gets
+                                  // stuck rendered in the middle of the screen.
+                                  onClick={(e) => e.stopPropagation()}
                                   style={{
                                     width: 36, height: 36, borderRadius: 4, flexShrink: 0,
                                     display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
