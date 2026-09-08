@@ -39,7 +39,7 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     nav_startbuilding: 'Start Building →',
     hero_eyebrow: 'Custom Gaming PCs',
     hero_title_line1: 'Build your', hero_title_em: 'Legend.',
-    hero_desc: 'Configure your dream machine part by part. Every GOMP build is hand-assembled, benchmarked, and ships in seven days.',
+    hero_desc: 'Configure your dream machine part by part. Every GOMP build is hand-assembled and benchmarked before it ships.',
     hero_cta_build: 'Start Building →', hero_cta_browse: 'Browse builds',
     undervolt_badge: 'Every CPU & GPU Undervolted →',
     stress_tested: 'STRESS TESTED',
@@ -47,14 +47,14 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     spec_storage: 'SSD', spec_cooling: 'Cooling',
     configure_this: 'Configure this build →', configure_arrow: 'Configure →',
     stat1: 'Custom builds shipped', stat2: 'Average rating · 3,200+ reviews',
-    stat3: 'Day average build & ship', stat4: 'Parts & labor warranty',
+    stat4: 'Parts & labor warranty',
     ready_to_ship: 'Ready to Ship', featured_builds: 'Featured Builds', view_all: 'View all builds →',
     why_gomp: 'Why GOMP', gomp_standard: 'The GOMP Standard',
     yourbuild_line1: 'Your build.', yourbuild_line2: 'Your rules.',
     builder_desc: 'Use our 3D PC builder to see every component appear in real time as you configure your machine.',
     open_builder: 'Open the 3D Builder →',
     build_from: 'Build from', entry_scales: 'Entry-level excellence. Scales to flagship.',
-    bullet1: '2-year parts & labor warranty', bullet2: 'Benchmark-tested before shipping', bullet3: 'Ships within 7 business days',
+    bullet1: '2-year parts & labor warranty', bullet2: 'Benchmark-tested before shipping',
   },
   sk: {
     nav_home: 'Domov', nav_shop: 'Obchod', nav_build: 'Zostaviť', nav_about: 'O nás', nav_account: 'Účet',
@@ -69,21 +69,21 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     spec_storage: 'SSD', spec_cooling: 'Chladenie',
     configure_this: 'Nakonfigurovať túto zostavu →', configure_arrow: 'Konfigurovať →',
     stat1: 'Expedovaných zostáv na mieru', stat2: 'Priemerné hodnotenie · 3200+ recenzií',
-    stat3: 'Dní priemerná výroba a expedícia', stat4: 'Záruka na diely a prácu',
+    stat4: 'Záruka na diely a prácu',
     ready_to_ship: 'Nakonfigurované pre Vás', featured_builds: 'Odporúčané zostavy', view_all: 'Všetky prebuilt GOMPy',
     why_gomp: 'Prečo GOMP', gomp_standard: 'Štandard GOMP',
     yourbuild_line1: 'Vaša zostava.', yourbuild_line2: 'Vaše pravidlá.',
-    builder_desc: 'Použite náš 3D konfigurátor a sledujte, ako sa každý komponent objavuje v reálnom čase pri skladaní vášho počítača.',
+    builder_desc: 'Poskladajte si svoju legendu sami v našom 3D konfigurátore.',
     open_builder: 'Otvoriť 3D konfigurátor →',
-    build_from: 'Ceny od', entry_scales: 'Špička v základnej triede. Rozšíriteľná až po vlajkovú loď.',
-    bullet1: '2-ročná záruka na diely a prácu', bullet2: 'Pred expedíciou testované benchmarkmi', bullet3: 'Expedícia do 7 pracovných dní',
+    build_from: 'Ceny od', entry_scales: 'Špička vo svojej cenovej kategórií. Rozšíriteľná až po vlajkovú loď.',
+    bullet1: '2-ročná záruka na diely a prácu', bullet2: 'Pred expedíciou testované benchmarkmi',
   },
   cz: {
     nav_home: 'Domů', nav_shop: 'Obchod', nav_build: 'Sestavit', nav_about: 'O nás', nav_account: 'Účet',
     nav_startbuilding: 'Začít stavět →',
     hero_eyebrow: 'Herní počítače na míru',
     hero_title_line1: 'Postav si svou', hero_title_em: 'Legendu.',
-    hero_desc: 'Vysněný stroj po částech. Každá sestava GOMP je ručně sestavená, otestovaná a expedovaná do sedmi dnů.',
+    hero_desc: 'Vysněný stroj po částech. Každá sestava GOMP je ručně sestavená a otestovaná před expedicí.',
     hero_cta_build: 'Začít stavět →', hero_cta_browse: 'Prohlédnout sestavy',
     undervolt_badge: 'Každý CPU & GPU Undervolted →',
     stress_tested: 'ZÁTĚŽOVĚ OTESTOVÁNO',
@@ -91,14 +91,14 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     spec_storage: 'SSD', spec_cooling: 'Chlazení',
     configure_this: 'Nakonfigurovat tuto sestavu →', configure_arrow: 'Konfigurovat →',
     stat1: 'Expedovaných sestav na míru', stat2: 'Průměrné hodnocení · 3200+ recenzí',
-    stat3: 'Dní průměrná výroba a expedice', stat4: 'Záruka na díly a práci',
+    stat4: 'Záruka na díly a práci',
     ready_to_ship: 'Připraveno k expedici', featured_builds: 'Doporučené sestavy', view_all: 'Zobrazit všechny sestavy →',
     why_gomp: 'Proč GOMP', gomp_standard: 'Standard GOMP',
     yourbuild_line1: 'Vaše sestava.', yourbuild_line2: 'Vaše pravidla.',
     builder_desc: 'Použijte náš 3D konfigurátor a sledujte, jak se každá součástka objevuje v reálném čase při skládání vašeho počítače.',
     open_builder: 'Otevřít 3D konfigurátor →',
     build_from: 'Ceny od', entry_scales: 'Špička v základní třídě. Rozšiřitelná až po vlajkovou loď.',
-    bullet1: '2letá záruka na díly a práci', bullet2: 'Před expedicí testováno benchmarky', bullet3: 'Expedice do 7 pracovních dnů',
+    bullet1: '2letá záruka na díly a práci', bullet2: 'Před expedicí testováno benchmarky',
   },
 };
 
@@ -248,7 +248,6 @@ export default function Home() {
   const stats: [string, string][] = [
     ['20', t.stat1],
     ['4.9', t.stat2],
-    ['7', t.stat3],
     ['2yr', t.stat4],
   ];
 
@@ -648,7 +647,7 @@ export default function Home() {
               />
             </>
           )}
-          <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)' }}>
+          <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${stats.length},1fr)` }}>
             {stats.map(([value, label], i) => (
               <Reveal
                 key={label}
@@ -656,8 +655,7 @@ export default function Home() {
                 delay={i * 90}
                 style={{
                   padding: isMobile ? '28px 20px' : '44px 60px',
-                  borderRight: isMobile ? (i % 2 === 1 ? 'none' : '0.5px solid rgba(28,28,26,0.12)') : i === stats.length - 1 ? 'none' : '0.5px solid rgba(28,28,26,0.12)',
-                  borderBottom: isMobile ? (i < 2 ? '0.5px solid rgba(28,28,26,0.12)' : 'none') : 'none',
+                  borderRight: i === stats.length - 1 ? 'none' : '0.5px solid rgba(28,28,26,0.12)',
                 }}
               >
                 <div style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 36 : 52, fontWeight: 600, color: INK, letterSpacing: -1.5, lineHeight: 1 }}>
@@ -942,7 +940,6 @@ export default function Home() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED }}>— {t.bullet1}</div>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED }}>— {t.bullet2}</div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED }}>— {t.bullet3}</div>
               </div>
             </Reveal>
           </div>

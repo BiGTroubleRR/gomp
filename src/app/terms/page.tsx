@@ -110,7 +110,7 @@ const SECTIONS: Record<'en' | 'sk' | 'cz', Section[]> = {
       id: 'delivery',
       title: '5. Delivery Terms',
       blocks: [
-        { p: 'The Seller aims to hand-assemble, benchmark, and ship every build within seven (7) business days of order confirmation, as indicated on the website. This is a target lead time, not a guaranteed delivery date, and may be extended for custom configurations, component shortages, or during periods of high demand; the Buyer will be informed of any material delay.' },
+        { p: 'The Seller hand-assembles and benchmarks every build after order confirmation and dispatches it as soon as reasonably possible. No fixed lead time is guaranteed; assembly may take longer for custom configurations, component shortages, or during periods of high demand, and the Buyer will be informed of any material delay.' },
         { p: '[TODO: specify delivery methods/carriers offered, delivery costs or thresholds for free shipping, and the territories the Seller ships to.]' },
         { p: 'Risk of damage to the Goods passes to a Business Buyer upon handover to the carrier, and to a Consumer upon receipt of the Goods, in line with Section 2121 of the Civil Code.' },
       ],
@@ -209,7 +209,7 @@ const SECTIONS: Record<'en' | 'sk' | 'cz', Section[]> = {
       id: 'delivery',
       title: '5. Dodacie podmienky',
       blocks: [
-        { p: 'Predávajúci sa snaží každú zostavu ručne zložiť, otestovať a expedovať do siedmich (7) pracovných dní od potvrdenia objednávky, ako je uvedené na webovej stránke. Ide o orientačnú, nie garantovanú dobu dodania a pri vlastných konfiguráciách, nedostatku komponentov alebo vysokom dopyte sa môže predĺžiť; o podstatnom omeškaní bude Kupujúci informovaný.' },
+        { p: 'Predávajúci ručne zloží a otestuje každú zostavu po potvrdení objednávky a expeduje ju čo najskôr. Konkrétna doba dodania nie je garantovaná; pri vlastných konfiguráciách, nedostatku komponentov alebo vysokom dopyte sa môže predĺžiť, pričom o podstatnom omeškaní bude Kupujúci informovaný.' },
         { p: '[TODO: doplniť spôsoby a dopravcov doručenia, náklady na dopravu alebo hranicu pre dopravu zdarma, a územia, kam sa dodáva.]' },
         { p: 'Nebezpečenstvo škody na Tovare prechádza na Podnikateľského kupujúceho odovzdaním dopravcovi a na Spotrebiteľa prevzatím Tovaru, v súlade s § 2121 občianskeho zákonníka.' },
       ],
@@ -308,7 +308,7 @@ const SECTIONS: Record<'en' | 'sk' | 'cz', Section[]> = {
       id: 'delivery',
       title: '5. Dodací podmínky',
       blocks: [
-        { p: 'Prodávající usiluje o ruční sestavení, otestování a expedici každé sestavy do sedmi (7) pracovních dnů od potvrzení objednávky, jak je uvedeno na webových stránkách. Jde o orientační, nikoli garantovanou dobu dodání, která se může u vlastních konfigurací, při nedostatku komponent nebo v období vysoké poptávky prodloužit; o podstatném prodlení bude Kupující informován.' },
+        { p: 'Prodávající ručně sestaví a otestuje každou sestavu po potvrzení objednávky a expeduje ji co nejdříve. Konkrétní doba dodání není garantována; u vlastních konfigurací, při nedostatku komponent nebo v období vysoké poptávky se může prodloužit, přičemž o podstatném prodlení bude Kupující informován.' },
         { p: '[TODO: doplnit způsoby a dopravce doručení, náklady na dopravu nebo hranici pro dopravu zdarma a území, kam se dodává.]' },
         { p: 'Nebezpečí škody na Zboží přechází na Podnikatelského kupujícího předáním dopravci a na Spotřebitele převzetím Zboží, v souladu s § 2121 občanského zákoníku.' },
       ],

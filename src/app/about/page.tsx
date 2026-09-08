@@ -39,7 +39,7 @@ const translations = {
     the_team: 'The team',
     ready_title: 'Ready to build yours?',
     ready_desc:
-      'Configure your dream machine, part by part. Every GOMP build is hand-assembled, tested, and ships in seven days.',
+      'Configure your dream machine, part by part. Every GOMP build is hand-assembled and tested before it ships.',
     browse_builds: 'Browse builds',
     watermark_line1: 'Build',
     watermark_line2: 'your',
@@ -74,7 +74,7 @@ const translations = {
     the_team: 'Tím',
     ready_title: 'Pripravení postaviť si vlastný?',
     ready_desc:
-      'Zostavte si vysnívaný počítač po jednotlivých dieloch. Každý GOMP stroj je ručne zostavený, otestovaný a expedovaný do siedmich dní.',
+      'Zostavte si vysnívaný počítač po jednotlivých dieloch. Každý GOMP stroj je ručne zostavený a otestovaný pred expedíciou.',
     browse_builds: 'Prehliadať zostavy',
     watermark_line1: 'Postav si',
     watermark_line2: 'svoju',
@@ -109,7 +109,7 @@ const translations = {
     the_team: 'Tým',
     ready_title: 'Připraveni postavit si vlastní?',
     ready_desc:
-      'Sestavte si vysněný počítač po jednotlivých dílech. Každý stroj GOMP je ručně sestavený, otestovaný a expedovaný do sedmi dnů.',
+      'Sestavte si vysněný počítač po jednotlivých dílech. Každý stroj GOMP je ručně sestavený a otestovaný před expedicí.',
     browse_builds: 'Procházet sestavy',
     watermark_line1: 'Postav si',
     watermark_line2: 'svou',
