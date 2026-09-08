@@ -125,6 +125,17 @@ export function autoBuildForBudget(
     return emptyIds.includes(id);
   }
 
+  // Narrows a candidate pool to whatever fits an already-*locked* case (picks.case is only ever
+  // populated this early when the caller locked it — case is otherwise always decided last, in
+  // step 7). Falls back to the unfiltered pool if nothing fits, same graceful-degradation
+  // philosophy as every other filter in this function — a working PC with a size caveat beats an
+  // empty slot.
+  function narrowToLockedCase<T extends Component>(category: Category, pool: T[]): T[] {
+    if (!picks.case) return pool;
+    const fitting = pool.filter((c) => fitsInCase(category, c, picks.case));
+    return fitting.length ? fitting : pool;
+  }
+
   // 1. CPU — fixes the socket every other compatible part downstream keys off.
   if (need('cpu')) {
     const list = compDb.cpu || [];
@@ -138,7 +149,7 @@ export function autoBuildForBudget(
     const list = compDb.mobo || [];
     const socket = picks.cpu?.socket;
     const compatible = socket ? list.filter((c) => c.socket === socket) : list;
-    const pool = compatible.length ? compatible : list;
+    const pool = narrowToLockedCase('mobo', compatible.length ? compatible : list);
     if (!pool.length) notes.push({ code: 'category_empty', category: 'mobo' });
     const { pick } = pickBest('mobo', pool, budgetFor('mobo'));
     if (pick) picks.mobo = pick;
@@ -159,8 +170,9 @@ export function autoBuildForBudget(
   // rather than the other way round, so a size constraint never caps the GPU pick first.
   if (need('gpu')) {
     const list = compDb.gpu || [];
-    if (!list.length) notes.push({ code: 'category_empty', category: 'gpu' });
-    const { pick } = pickBest('gpu', list, budgetFor('gpu'));
+    const pool = narrowToLockedCase('gpu', list);
+    if (!pool.length) notes.push({ code: 'category_empty', category: 'gpu' });
+    const { pick } = pickBest('gpu', pool, budgetFor('gpu'));
     if (pick) picks.gpu = pick;
   }
 
@@ -171,7 +183,7 @@ export function autoBuildForBudget(
     const list = compDb.cooler || [];
     const socket = picks.cpu?.socket;
     const compatible = socket ? list.filter((c) => c.specs.includes(socket)) : [];
-    const pool = compatible.length ? compatible : list;
+    const pool = narrowToLockedCase('cooler', compatible.length ? compatible : list);
     if (!pool.length) notes.push({ code: 'category_empty', category: 'cooler' });
     const { pick } = pickBest('cooler', pool, budgetFor('cooler'));
     if (pick) picks.cooler = pick;
@@ -199,7 +211,8 @@ export function autoBuildForBudget(
       const highest = [...list].sort((a, b) => (extractWatts(b.specs) ?? 0) - (extractWatts(a.specs) ?? 0))[0];
       if (highest) picks.psu = highest;
     } else {
-      const { pick, wentOverBudget } = pickBest('psu', sufficient, budgetFor('psu'));
+      const pool = narrowToLockedCase('psu', sufficient);
+      const { pick, wentOverBudget } = pickBest('psu', pool, budgetFor('psu'));
       if (wentOverBudget) notes.push({ code: 'psu_over_budget' });
       if (pick) picks.psu = pick;
     }

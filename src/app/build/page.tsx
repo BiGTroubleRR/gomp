@@ -589,6 +589,9 @@ function BuildPageContent() {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<BuildScene | null>(null);
+  // Keyed by component id so a viewport click can scroll that row into view — the sidebar list
+  // is independently scrollable, so an expanded row picked in 3D might otherwise land off-screen.
+  const rowRefs = useRef<Partial<Record<CompId, HTMLDivElement | null>>>({});
 
   // Load the shared component catalog from Supabase (managed by /admin) on mount, and keep it
   // live: any Admin edit (insert/update/delete) broadcasts over Realtime and gets refetched
@@ -1103,16 +1106,50 @@ function BuildPageContent() {
     setHoverPos(null);
   }
 
+  // A plain onClick would also fire after every orbit-drag release (a native click fires on
+  // mouseup regardless of how far the pointer moved in between) — OrbitControls' own drag-to-
+  // rotate listeners are attached straight to the canvas, entirely separate from these React
+  // handlers, so nothing else here already distinguishes a drag from a tap. Recording the
+  // pointerdown position and comparing it on pointerup is the fix.
+  const viewportPointerDownRef = useRef<{ x: number; y: number } | null>(null);
+  const CLICK_DRAG_THRESHOLD_PX = 6;
+
+  function handleViewportPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    viewportPointerDownRef.current = { x: e.clientX, y: e.clientY };
+  }
+
+  function handleViewportPointerUp(e: ReactPointerEvent<HTMLDivElement>) {
+    const down = viewportPointerDownRef.current;
+    viewportPointerDownRef.current = null;
+    if (!down) return;
+    const dx = e.clientX - down.x;
+    const dy = e.clientY - down.y;
+    if (Math.hypot(dx, dy) > CLICK_DRAG_THRESHOLD_PX) return;
+    const id = sceneRef.current?.pickComponentAt(e.clientX, e.clientY) ?? null;
+    if (!id) return;
+    setExpandedId(id);
+    rowRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
   useEffect(() => {
     return () => {
       if (hoverRafRef.current != null) cancelAnimationFrame(hoverRafRef.current);
     };
   }, []);
 
-  // Builds a fresh, complete PC for the budget slider's current target — rather than the old
-  // "just take whatever's first in the catalog" fallback (see findComp's list[0] default).
+  // Builds a complete PC for the budget slider's current target — rather than the old "just take
+  // whatever's first in the catalog" fallback (see findComp's list[0] default). Keeps whatever's
+  // already picked (locked, so autoBuildForBudget treats it as fixed and spends only the
+  // remaining budget on the rest) rather than discarding it — a category autoBuildForBudget
+  // decided is locked simply doesn't come back in `picks` below, so this never re-touches it.
   function runFreshBuild() {
-    const { selections: picks, notes } = autoBuildForBudget(BUDGET_STEPS[budgetIdx], compDb, {});
+    const locked: Partial<Record<Category, Component>> = {};
+    SLOTS.forEach((id) => {
+      if (!selected[id]) return;
+      const comp = (compDb[id] || []).find((c) => c.name === selections[id]);
+      if (comp) locked[id] = comp;
+    });
+    const { selections: picks, notes } = autoBuildForBudget(BUDGET_STEPS[budgetIdx], compDb, locked);
     setAutoBuildNotes(notes);
     // Staggering these via setTimeout used to mean 8 separate macrotasks, each triggering its own
     // full page re-render (and a Framer layout pass on the growing sidebar list) — with all 8
@@ -1150,15 +1187,16 @@ function BuildPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rebuildPending, selected]);
 
-  // Always a full rebuild, never locked to whatever's already installed: if every slot happens
-  // to already be filled (a previous build, possibly for a since-changed budget), this used to
-  // have nothing left to do and silently no-op — dragging the slider to a new target and
-  // pressing the button again just sat there with the old build. Clearing first (with the same
-  // fly-out animation Clear All uses) and rebuilding from nothing makes the button's result
-  // always match the currently selected budget.
+  // A partial build (including empty) keeps whatever's already picked and just fills in what's
+  // missing within the remaining budget — see runFreshBuild's own `locked` set. Only when every
+  // slot is *already* full does this fall back to a full clear-and-rebuild: with nothing missing
+  // to fill, runFreshBuild would otherwise no-op, which used to mean dragging the budget slider to
+  // a new target and pressing the button again just sat there with the old build. Clearing first
+  // (with the same fly-out animation Clear All uses) and rebuilding from nothing makes the
+  // button's result always match the currently selected budget in that one case.
   function buildAll() {
     const currentlySelected = SLOTS.filter((id) => selected[id]);
-    if (currentlySelected.length === 0) {
+    if (currentlySelected.length < SLOTS.length) {
       runFreshBuild();
       return;
     }
@@ -1960,6 +1998,8 @@ function BuildPageContent() {
           ref={viewportRef}
           onPointerMove={handleViewportPointerMove}
           onPointerLeave={handleViewportPointerLeave}
+          onPointerDown={handleViewportPointerDown}
+          onPointerUp={handleViewportPointerUp}
           style={{
             flex: isMobile ? 'none' : 1,
             height: isMobile ? '46vh' : undefined,
@@ -2148,6 +2188,9 @@ function BuildPageContent() {
                   return (
                     <motion.div
                       key={id}
+                      ref={(el) => {
+                        rowRefs.current[id] = el;
+                      }}
                       // "position" (not the default full `layout`, which is `true`) tracks this
                       // row's shifting position as siblings resize, without also FLIP-animating
                       // this row's OWN size via a scale() transform — that scale trick is what

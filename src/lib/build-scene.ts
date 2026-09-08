@@ -1685,12 +1685,17 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
 
     const nonCaseIds = SLOTS.filter((id) => id !== 'case' && objects[id]?.selected && objects[id]?.mesh.visible);
     const nonCaseMeshes = nonCaseIds.map((id) => objects[id]!.mesh);
-    const hits = raycaster.intersectObjects(nonCaseMeshes, true).filter((hit) => isEffectivelyVisible(hit.object));
+    // The AIO radiator/tubes (see updateAioRadiator) live in their own scene-level group, not
+    // nested under objects.cooler.mesh — without this they'd be raycast-invisible, so hovering or
+    // clicking the radiator itself would silently hit nothing.
+    const extraMeshes = lastCoolerIsAio && objects.cooler?.selected ? [aioRadiatorGroup] : [];
+    const hits = raycaster.intersectObjects([...nonCaseMeshes, ...extraMeshes], true).filter((hit) => isEffectivelyVisible(hit.object));
     if (hits.length) {
       let obj: THREE.Object3D | null = hits[0].object;
       while (obj) {
         const found = nonCaseIds.find((id) => objects[id]?.mesh === obj);
         if (found) return found;
+        if (obj === aioRadiatorGroup) return 'cooler';
         obj = obj.parent;
       }
     }
@@ -1740,6 +1745,11 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       obj.children.forEach(walk);
     }
     walk(rec.mesh);
+    // The AIO radiator/tubes are a separate scene-level group (see updateAioRadiator), not nested
+    // under objects.cooler.mesh, so they need their own walk to glow alongside the pump/block as
+    // one unit. Harmless no-op for an air cooler — updateAioRadiator empties this group whenever
+    // the installed cooler isn't an AIO.
+    if (id === 'cooler' && lastCoolerIsAio) walk(aioRadiatorGroup);
   }
 
   let running = true;
