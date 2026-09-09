@@ -373,6 +373,16 @@ type ObjRecord = {
 // from a naive ascending-Z order, which actually put index 0 on the right.
 const RAM_SLOT_Z = [0.15, 0.05, -0.05, -0.15];
 
+// Local-Y position of the PCIe x16 slot on the mobo mesh (board spans roughly -1.4..1.4 on this
+// axis — see the board's own BoxGeometry(0.04, 2.8, 1.5) in buildComponentMesh). ATX/mATX/E-ATX
+// boards have room below the primary slot for a couple more, so the slot sits well above the
+// bottom edge; a real Mini-ITX board has only the one slot and it's mounted right at the board's
+// bottom edge, so setMoboRamSlots (which already knows the selected board's form factor via its
+// slot count) also moves the slot mesh here rather than leaving it at the ATX fraction for every
+// size, which previously kept it at the same proportionally-mid position regardless of board size.
+const MOBO_PCIE_Y_DEFAULT = -0.48;
+const MOBO_PCIE_Y_MINI_ITX = -1.3;
+
 // A single DIMM stick, styled after G.Skill Trident Z's signature silhouette: a dark anodized
 // heatsink shroud with a jagged "crown" of alternating-height teeth along the top ridge and a
 // gold diffuser strip running underneath them (standing in for Trident Z's RGB light bar, in
@@ -429,7 +439,8 @@ function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
       vrm.position.set(0.07, 1.1, -0.55);
       g.add(vrm);
       const pcie = new T.Mesh(new T.BoxGeometry(0.06, 0.06, 0.88), new T.MeshStandardMaterial({ color: 0x22223a }));
-      pcie.position.set(0.05, -0.48, 0.08);
+      pcie.name = 'pcieSlot';
+      pcie.position.set(0.05, MOBO_PCIE_Y_DEFAULT, 0.08);
       g.add(pcie);
 
       // Rear I/O shield: a backing plate plus a real-looking cluster of ports, modeled after a
@@ -1340,13 +1351,18 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   }
 
   // `count` is the selected motherboard's real DIMM slot count (0 hides every outline — no
-  // motherboard selected means there's no board to show slots on).
+  // motherboard selected means there's no board to show slots on). Doubles as the Mini-ITX
+  // signal for the PCIe slot's own position (moboRamSlotCount returns 2 only for Mini-ITX, 4 for
+  // every other form factor) — reusing it here means every existing call site automatically moves
+  // the slot too, with no separate form-factor plumbing needed.
   function setMoboRamSlots(count: number) {
     ramSlotOutlineGroup.visible = count > 0;
     const active = ramSlotIndices(count);
     ramSlotOutlines.forEach((line, i) => {
       line.visible = active.includes(i);
     });
+    const pcieSlot = objects.mobo?.mesh.getObjectByName('pcieSlot');
+    if (pcieSlot) pcieSlot.position.y = count === 2 ? MOBO_PCIE_Y_MINI_ITX : MOBO_PCIE_Y_DEFAULT;
   }
 
   // Short drop-in-place tween for a single newly-populated DIMM slot — local to the slot group,

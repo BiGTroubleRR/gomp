@@ -38,7 +38,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'GOMP · Bordeaux',
+  title: 'GOMP',
   description: 'Hand-built gaming PCs configured to your exact specifications.',
 };
 
