@@ -45,6 +45,9 @@ export function rowToComponent(row: ComponentRow): Component {
   if (row.fan_mounts != null) comp.fanMounts = row.fan_mounts as unknown as FanMountSpec[];
   if (row.image_url) comp.imageUrl = row.image_url;
   if (row.margin_override) comp.marginOverride = row.margin_override as unknown as Margin;
+  if (row.heureka_url) comp.heurekaUrl = row.heureka_url;
+  if (row.heureka_price != null) comp.heurekaPrice = Number(row.heureka_price);
+  if (row.heureka_checked_at) comp.heurekaCheckedAt = row.heureka_checked_at;
   return comp;
 }
 
@@ -86,6 +89,9 @@ export function componentToRow(category: Category, comp: Component, sortOrder: n
     fan_mounts: (comp.fanMounts as unknown as ComponentInsert['fan_mounts']) ?? null,
     image_url: comp.imageUrl ?? null,
     margin_override: (comp.marginOverride as unknown as ComponentInsert['margin_override']) ?? null,
+    heureka_url: comp.heurekaUrl ?? null,
+    heureka_price: comp.heurekaPrice ?? null,
+    heureka_checked_at: comp.heurekaCheckedAt ?? null,
     sort_order: sortOrder,
   };
 }

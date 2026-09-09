@@ -29,6 +29,7 @@ import {
   defaultComponentDb,
   defaultMargin,
   computePrice,
+  applyVat,
   computeBuildTotal,
   computeBuildTier,
   gpuModelFor,
@@ -211,6 +212,10 @@ type Translations = {
   original_price_label: string;
   price_excl_vat: string; price_incl_vat: (pct: number) => string; vat_incl_short: string;
   image_label: string; image_uploading: string; image_replace: string; image_remove: string; image_download: string;
+  heureka_url_label: string; heureka_url_placeholder: string; heureka_no_match: string;
+  heureka_price_label: string; heureka_price_placeholder: string;
+  heureka_view: string;
+  heureka_checked_ago: (s: string) => string; heureka_you_cheaper: (kc: string) => string; heureka_they_cheaper: (kc: string) => string;
   apply_margin: string; margin_override_badge: string; margin_override_label: string; margin_override_desc: string; margin_override_use_global: string;
   specs_notes: string; tier_rating: string; tower_category: string; tower_category_help: string;
   ram_generation: string; ram_speed_mhz: string; ram_generation_help: string;
@@ -286,6 +291,11 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     price_excl_vat: 'Excl. VAT', price_incl_vat: (pct) => `Incl. VAT (${pct}%)`, vat_incl_short: 'incl. VAT',
     image_label: 'Product Image', image_uploading: 'Uploading…',
     image_replace: 'Replace image', image_remove: 'Remove', image_download: 'Download',
+    heureka_url_label: 'Heureka URL', heureka_url_placeholder: 'https://…heureka.cz/…', heureka_no_match: 'No Heureka price on file — check heureka.cz and fill in above',
+    heureka_price_label: 'Heureka Price (Kč, incl. VAT)', heureka_price_placeholder: 'e.g. 133803',
+    heureka_view: 'View ↗',
+    heureka_checked_ago: (s) => `checked ${s} ago`,
+    heureka_you_cheaper: (kc) => `you're cheaper by ${kc}`, heureka_they_cheaper: (kc) => `Heureka is cheaper by ${kc}`,
     apply_margin: 'Apply margin →', margin_override_badge: 'Custom margin',
     margin_override_label: 'Margin Override', margin_override_desc: 'Give this one component its own margin instead of the site-wide one above.',
     margin_override_use_global: 'Use site-wide margin',
@@ -373,6 +383,11 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     original_price_label: 'Pôvodná',
     image_label: 'Fotka produktu', image_uploading: 'Nahrávam…',
     image_replace: 'Zmeniť fotku', image_remove: 'Odstrániť', image_download: 'Stiahnuť',
+    heureka_url_label: 'Heureka URL', heureka_url_placeholder: 'https://…heureka.cz/…', heureka_no_match: 'Žiadna cena z Heureky — pozrite na heureka.cz a vyplňte vyššie',
+    heureka_price_label: 'Cena na Heureke (Kč, s DPH)', heureka_price_placeholder: 'napr. 133803',
+    heureka_view: 'Zobraziť ↗',
+    heureka_checked_ago: (s) => `kontrolované pred ${s}`,
+    heureka_you_cheaper: (kc) => `ste lacnejší o ${kc}`, heureka_they_cheaper: (kc) => `Heureka je lacnejšia o ${kc}`,
     apply_margin: 'Aplikovať maržu →', margin_override_badge: 'Vlastná marža',
     margin_override_label: 'Vlastná marža', margin_override_desc: 'Nastavte tomuto komponentu vlastnú maržu namiesto tej celkovej vyššie.',
     margin_override_use_global: 'Použiť celkovú maržu',
@@ -451,7 +466,7 @@ function initialBuildForm(): BuildFormState {
 
 type CompFormState = {
   name: string; price: string; marketPrice: string; specs: string; category: string; tier: Tier;
-  passmark: number | null; passmarkUrl: string; imageUrl: string;
+  passmark: number | null; passmarkUrl: string; imageUrl: string; heurekaUrl: string; heurekaPrice: string;
   marginOverrideOn: boolean; marginOverrideType: 'eur' | 'pct'; marginOverrideValue: string;
   ramGeneration: '' | '4' | '5'; ramSpeedMhz: string; ramFamily: string;
   fanSizeMm: string; // fan only
@@ -472,7 +487,7 @@ type CompFormState = {
 
 function initialCompForm(): CompFormState {
   return {
-    name: '', price: '', marketPrice: '', specs: '', category: 'Mid Tower', tier: 'B', passmark: null, passmarkUrl: '', imageUrl: '',
+    name: '', price: '', marketPrice: '', specs: '', category: 'Mid Tower', tier: 'B', passmark: null, passmarkUrl: '', imageUrl: '', heurekaUrl: '', heurekaPrice: '',
     marginOverrideOn: false, marginOverrideType: 'pct', marginOverrideValue: '0',
     ramGeneration: '', ramSpeedMhz: '', ramFamily: '',
     fanSizeMm: '', fanPreinstalled: {},
@@ -490,6 +505,18 @@ function initialCompForm(): CompFormState {
 // to parse the chip model out of the name, then folds a Ti/Super suffix into the same number as a
 // sub-rank so e.g. "5070 Ti" (50701) outranks plain "5070" (50700) but never a real "5080" (50800).
 // Cards gpuModelFor can't parse (returns null) sort last rather than erroring.
+// Short "checked Xh ago"-style duration for a Heureka price's heurekaCheckedAt timestamp — coarse
+// on purpose (minutes/hours/days), this is just a freshness hint, not a precise clock.
+function heurekaCheckedLabel(isoString: string): string {
+  const ms = Date.now() - new Date(isoString).getTime();
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 1) return '<1m';
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
+}
+
 function gpuNumericSortKey(name: string): number {
   const model = gpuModelFor(name);
   if (!model) return -1;
@@ -1137,6 +1164,11 @@ export default function AdminPage() {
       ...(compCat === 'fan' && compForm.fanSizeMm ? { fanSizeMm: parseFloat(compForm.fanSizeMm) } : {}),
       ...dimensionFieldsFromForm(compCat, compForm),
       ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
+      ...(compForm.heurekaUrl.trim() ? { heurekaUrl: compForm.heurekaUrl.trim() } : {}),
+      // Manually typed/checked by the admin (Heureka's own bot protection blocks a server-side
+      // fetch, so there's no automated refresh here) — stamping heurekaCheckedAt to now whenever
+      // a price is entered keeps the "checked X ago" hint on the card meaningful.
+      ...(compForm.heurekaPrice ? { heurekaPrice: parseFloat(compForm.heurekaPrice), heurekaCheckedAt: new Date().toISOString() } : {}),
       ...(marginOverride ? { marginOverride } : {}),
     };
     const sortOrder = (compDb[compCat] || []).length;
@@ -1197,6 +1229,20 @@ export default function AdminPage() {
           }
         : {}),
       ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
+      ...(compForm.heurekaUrl.trim() ? { heurekaUrl: compForm.heurekaUrl.trim() } : {}),
+      // Manually typed/checked by the admin (Heureka's own bot protection blocks a server-side
+      // fetch, so there's no automated refresh here). Only re-stamps heurekaCheckedAt when the
+      // price actually changed from what's on file, so re-saving the form for an unrelated edit
+      // doesn't make a stale price look freshly checked.
+      ...(compForm.heurekaPrice
+        ? {
+            heurekaPrice: parseFloat(compForm.heurekaPrice),
+            heurekaCheckedAt:
+              existing?.heurekaPrice === parseFloat(compForm.heurekaPrice) && existing?.heurekaCheckedAt
+                ? existing.heurekaCheckedAt
+                : new Date().toISOString(),
+          }
+        : {}),
       ...(marginOverride ? { marginOverride } : {}),
     };
     const saved = await updateComponentRow(editCompId, compCat, updated);
@@ -1226,6 +1272,17 @@ export default function AdminPage() {
     const updated: Component = { ...comp, marketPrice: basePrice, price };
     const saved = await updateComponentRow(comp.id, cat, updated);
     setCompDb((db) => ({ ...db, [cat]: (db[cat] || []).map((c) => (c.id === comp.id ? saved : c)) }));
+  }
+
+  // The active category's catalog, filtered by compSearch and (GPU-only) sorted by gpuSortByNumber
+  // — the grid below renders this directly.
+  function visibleComponents(cat: Category): Component[] {
+    const q = compSearch.trim().toLowerCase();
+    let visible = (compDb[cat] || []).filter((c) => !q || c.name.toLowerCase().includes(q));
+    if (cat === 'gpu' && gpuSortByNumber) {
+      visible = [...visible].sort((a, b) => gpuNumericSortKey(b.name) - gpuNumericSortKey(a.name));
+    }
+    return visible;
   }
 
   async function deleteComponent(cat: Category, id: string) {
@@ -1263,6 +1320,8 @@ export default function AdminPage() {
       passmark: comp.passmark || null,
       passmarkUrl: comp.passmarkUrl || '',
       imageUrl: comp.imageUrl || '',
+      heurekaUrl: comp.heurekaUrl || '',
+      heurekaPrice: comp.heurekaPrice != null ? String(comp.heurekaPrice) : '',
       marginOverrideOn: comp.marginOverride != null,
       marginOverrideType: comp.marginOverride?.type ?? 'pct',
       marginOverrideValue: comp.marginOverride ? String(comp.marginOverride.value) : '0',
@@ -2457,14 +2516,7 @@ export default function AdminPage() {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
-                {(() => {
-                  const q = compSearch.trim().toLowerCase();
-                  let visible = (compDb[compCat] || []).filter((c) => !q || c.name.toLowerCase().includes(q));
-                  if (compCat === 'gpu' && gpuSortByNumber) {
-                    visible = [...visible].sort((a, b) => gpuNumericSortKey(b.name) - gpuNumericSortKey(a.name));
-                  }
-                  return visible;
-                })().map((comp) => {
+                {visibleComponents(compCat).map((comp) => {
                   const tc = tierBadge(comp.tier, TIER_COLORS);
                   const isEditing = comp.id === editCompId;
                   const isLive = comp.isLive !== false;
@@ -2549,6 +2601,37 @@ export default function AdminPage() {
                               Verify ↗
                             </a>
                           </div>
+                        )}
+                        {comp.heurekaUrl || comp.heurekaPrice != null ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                            {comp.heurekaPrice != null ? (
+                              (() => {
+                                const delta = applyVat(webPrice, vatRatePct) - comp.heurekaPrice;
+                                const cheaper = delta <= 0;
+                                const color = cheaper ? '#1A7040' : '#CC3333';
+                                return (
+                                  <>
+                                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600, color }}>Heureka: {fmt(comp.heurekaPrice)}</span>
+                                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color }}>
+                                      ({cheaper ? t.heureka_you_cheaper(fmt(-delta)) : t.heureka_they_cheaper(fmt(delta))})
+                                    </span>
+                                  </>
+                                );
+                              })()
+                            ) : (
+                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890' }}>Heureka: —</span>
+                            )}
+                            {comp.heurekaCheckedAt && (
+                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890' }}>{t.heureka_checked_ago(heurekaCheckedLabel(comp.heurekaCheckedAt))}</span>
+                            )}
+                            {comp.heurekaUrl && (
+                              <a href={comp.heurekaUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6E1423', textDecoration: 'none', fontWeight: 500 }}>
+                                {t.heureka_view}
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890', marginTop: 6 }}>{t.heureka_no_match}</div>
                         )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
@@ -2697,6 +2780,26 @@ export default function AdminPage() {
                       )}
                     </div>
                   </div>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={LABEL_STYLE}>{t.heureka_url_label}</div>
+                  <input
+                    type="text"
+                    value={compForm.heurekaUrl}
+                    onChange={(e) => setCompForm({ ...compForm, heurekaUrl: e.target.value })}
+                    placeholder={t.heureka_url_placeholder}
+                    style={INPUT_STYLE}
+                  />
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={LABEL_STYLE}>{t.heureka_price_label}</div>
+                  <input
+                    type="number"
+                    value={compForm.heurekaPrice}
+                    onChange={(e) => setCompForm({ ...compForm, heurekaPrice: e.target.value })}
+                    placeholder={t.heureka_price_placeholder}
+                    style={INPUT_STYLE}
+                  />
                 </div>
                 <div style={{ marginBottom: 12 }}>
                   <div style={LABEL_STYLE}>{t.market_price_label}</div>

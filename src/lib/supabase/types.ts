@@ -146,6 +146,9 @@ export type Database = {
           margin_override: { type: string; value: number } | null;
           is_live: boolean;
           fan_size_mm: number | null;
+          heureka_url: string | null;
+          heureka_price: number | null;
+          heureka_checked_at: string | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -185,6 +188,9 @@ export type Database = {
           margin_override?: { type: string; value: number } | null;
           is_live?: boolean;
           fan_size_mm?: number | null;
+          heureka_url?: string | null;
+          heureka_price?: number | null;
+          heureka_checked_at?: string | null;
           sort_order?: number;
         };
         Update: {
@@ -221,6 +227,9 @@ export type Database = {
           margin_override?: { type: string; value: number } | null;
           is_live?: boolean;
           fan_size_mm?: number | null;
+          heureka_url?: string | null;
+          heureka_price?: number | null;
+          heureka_checked_at?: string | null;
           sort_order?: number;
         };
         Relationships: [];

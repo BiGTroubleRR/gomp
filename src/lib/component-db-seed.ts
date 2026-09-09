@@ -89,6 +89,13 @@ export type Component = {
   // without deleting its row/history. Undefined is treated as live (matches the DB column's own
   // `not null default true`) so every pre-existing row/caller that never set this keeps working.
   isLive?: boolean;
+  // Live competitor pricing (Heureka.cz) — heurekaUrl is admin-set/corrected (auto-matched by
+  // scripts/find-heureka-urls.mjs), heurekaPrice/heurekaCheckedAt are written by
+  // /api/admin/refresh-heureka-price, never by hand. heurekaPrice is VAT-inclusive, same as every
+  // real Czech retail price Heureka itself shows — compare it against fmtGross(price), not price.
+  heurekaUrl?: string;
+  heurekaPrice?: number;
+  heurekaCheckedAt?: string;
 };
 
 export type ComponentDb = Record<Category, Component[]>;

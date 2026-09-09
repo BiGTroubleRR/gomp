@@ -172,6 +172,9 @@ create table if not exists public.components (
   margin_override jsonb, -- {type: 'eur'|'pct', value: number} — overrides the site-wide margin for this one component
   is_live boolean not null default true, -- Admin can pull a SKU out of the /build catalog (Live/Hidden toggle) without deleting its row
   fan_size_mm numeric(5, 1), -- fan only: the one size this SKU comes in, matched against a case's fan_mounts[].sizesMm
+  heureka_url text, -- matched Heureka.cz product page, admin-set/corrected (auto-matched by scripts/find-heureka-urls.mjs)
+  heureka_price numeric(10, 2), -- last-fetched "od X Kč" (VAT-inclusive) lowest price Heureka shows for heureka_url
+  heureka_checked_at timestamptz, -- when heureka_price was last fetched (see /api/admin/refresh-heureka-price)
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -229,6 +232,9 @@ alter table public.components add column if not exists margin_override jsonb;
 alter table public.components add column if not exists ram_family text;
 alter table public.components add column if not exists is_live boolean not null default true;
 alter table public.components add column if not exists fan_size_mm numeric(5, 1);
+alter table public.components add column if not exists heureka_url text;
+alter table public.components add column if not exists heureka_price numeric(10, 2);
+alter table public.components add column if not exists heureka_checked_at timestamptz;
 
 -- 'fan' added as its own catalog category (see Category in component-db-seed.ts) — the original
 -- check constraint predates it and would reject every fan row's insert otherwise.
