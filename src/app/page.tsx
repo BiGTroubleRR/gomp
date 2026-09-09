@@ -12,7 +12,7 @@ import { useIsMobile } from '@/lib/use-media-query';
 import { pick } from '@/lib/i18n';
 import { fetchPrebuilts, subscribePrebuilts } from '@/lib/supabase/prebuilts';
 import { fetchComponentDb, subscribeComponents, getCachedComponentDb } from '@/lib/supabase/components';
-import { computeBuildTotal, computeBuildTier, defaultComponentDb, type Build, type ComponentDb } from '@/lib/component-db-seed';
+import { computeBuildTotalGross, computeBuildTier, defaultComponentDb, type Build, type ComponentDb } from '@/lib/component-db-seed';
 import TierBadge from '@/components/TierBadge';
 
 const CAT_LABEL: Record<Build['cat'], { en: string; sk: string; cz: string }> = {
@@ -233,7 +233,7 @@ export default function Home() {
         cpu: b.cpu,
         ram: b.ram,
         storage: b.storage,
-        priceStr: fmtGross(computeBuildTotal(b, compDb)),
+        priceStr: fmt(computeBuildTotalGross(b, compDb, vatRatePct)),
       })),
     [livePrebuilts, lang, fmtGross, compDb],
   );
@@ -599,7 +599,7 @@ export default function Home() {
 
                 <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.18)', paddingTop: 24, marginTop: 8 }}>
                   <div style={{ fontFamily: 'var(--font-serif)', fontSize: 40, fontWeight: 500, color: INK, letterSpacing: -1, marginBottom: 4, lineHeight: 1 }}>
-                    {hero ? fmtGross(computeBuildTotal(hero, compDb)) : ''}
+                    {hero ? fmt(computeBuildTotalGross(hero, compDb, vatRatePct)) : ''}
                   </div>
                   <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: MUTED, marginBottom: 16, fontWeight: 300 }}>
                     {t.vat_included} ({vatRatePct}%)

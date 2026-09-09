@@ -96,51 +96,47 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No build items submitted.' }, { status: 400 });
   }
 
-  // Authoritative prices: look up each submitted item by name in the live
-  // catalog. A miss (discontinued component, or the /checkout page's static
-  // demo fallback shown when a visitor lands there without building first)
-  // falls back to the client-submitted price for that one line only — the
-  // items that matter (a real, currently-sold component) are always
-  // server-priced; there is no live catalog entry to be honest about otherwise.
-  const { data: catalogRows } = await supabase.from('components').select('name, price');
-  const priceByName = new Map((catalogRows ?? []).map((r) => [r.name, Number(r.price)]));
-
-  const buildItems = submittedItems.map((item) => {
-    const name = (item.name ?? '').trim();
-    const authoritativePrice = priceByName.get(name);
-    return {
-      category: (item.category ?? '').trim(),
-      name,
-      price_eur: authoritativePrice ?? (Number(item.priceEur) || 0),
-    };
-  });
-
-  // Every catalog/shipping/assembly price above is pre-tax (see applyVat's own comment in
-  // component-db-seed.ts) — VAT is added once here, on the authoritative server-computed totals,
-  // so what's persisted matches what a customer would actually be charged, not the internal net
-  // math. Reads the live shared rate; falls back to the standard default if the settings row is
+  // Reads the live shared VAT rate; falls back to the standard default if the settings row is
   // ever missing (never blocks a real order over a missing optional row).
   const { data: settingsRow } = await supabase.from('store_settings').select('data').eq('id', true).maybeSingle();
   const vatRatePct = typeof (settingsRow?.data as { vatRatePct?: number } | null)?.vatRatePct === 'number'
     ? (settingsRow!.data as { vatRatePct: number }).vatRatePct
     : DEFAULT_VAT_RATE_PCT;
 
-  const partsTotalNet = buildItems.reduce((sum, i) => sum + i.price_eur, 0);
-  const shippingNet = SHIPPING_COSTS_EUR[body.shippingMethod];
-  const assemblyNet = ASSEMBLY_FEE_EUR;
+  // Authoritative prices: look up each submitted item by name in the live catalog and resolve it
+  // to the same gross, customer-facing figure effectiveSitePriceCzk (component-db-seed.ts) always
+  // uses — a component's own manual site_price override when set, else its net price marked up by
+  // VAT. A miss (discontinued component, or the /checkout page's static demo fallback shown when a
+  // visitor lands there without building first) falls back to whatever gross price_eur the client
+  // already sent (it computes the same way) — the items that matter (a real, currently-sold
+  // component) are always server-priced; there is no live catalog entry to be honest about
+  // otherwise.
+  const { data: catalogRows } = await supabase.from('components').select('name, price, site_price');
+  const catalogByName = new Map(
+    (catalogRows ?? []).map((r) => [r.name, { price: Number(r.price), sitePrice: r.site_price != null ? Number(r.site_price) : null }]),
+  );
+
+  const buildItems = submittedItems.map((item) => {
+    const name = (item.name ?? '').trim();
+    const catalogEntry = catalogByName.get(name);
+    const priceEur = catalogEntry ? catalogEntry.sitePrice ?? applyVat(catalogEntry.price, vatRatePct) : Number(item.priceEur) || 0;
+    return {
+      category: (item.category ?? '').trim(),
+      name,
+      price_eur: priceEur,
+    };
+  });
+
+  // Every figure from here down is already gross (VAT-inclusive, per-item overrides respected) —
+  // summed directly rather than net-totaled-then-VAT-ed-once, since that would silently ignore any
+  // component's site_price override.
+  const partsTotalEur = buildItems.reduce((sum, i) => sum + i.price_eur, 0);
+  const shippingEur = applyVat(SHIPPING_COSTS_EUR[body.shippingMethod], vatRatePct);
+  const assemblyEur = applyVat(ASSEMBLY_FEE_EUR, vatRatePct);
   const promoCodeInput = (body.promoCode ?? '').trim();
   const promoApplied = promoCodeInput.toLowerCase() === PROMO_CODE;
-  const discountNet = promoApplied ? Math.round(partsTotalNet * PROMO_DISCOUNT_RATE) : 0;
-  const totalNet = partsTotalNet - discountNet + shippingNet + assemblyNet;
-
-  const partsTotalEur = applyVat(partsTotalNet, vatRatePct);
-  const shippingEur = applyVat(shippingNet, vatRatePct);
-  const assemblyEur = applyVat(assemblyNet, vatRatePct);
-  const discountEur = applyVat(discountNet, vatRatePct);
-  const totalEur = applyVat(totalNet, vatRatePct);
-  // Stored per-item breakdown matches the grossed-up aggregate totals above, not the internal
-  // net catalog prices used only to compute them.
-  const grossedBuildItems = buildItems.map((i) => ({ ...i, price_eur: applyVat(i.price_eur, vatRatePct) }));
+  const discountEur = promoApplied ? Math.round(partsTotalEur * PROMO_DISCOUNT_RATE) : 0;
+  const totalEur = partsTotalEur - discountEur + shippingEur + assemblyEur;
 
   const { error } = await supabase.from('checkout_intents').insert({
     user_id: body.userId ?? null,
@@ -160,7 +156,7 @@ export async function POST(request: Request) {
     discount_eur: discountEur,
     total_eur: totalEur,
     promo_code: promoApplied ? promoCodeInput : '',
-    build_items: grossedBuildItems,
+    build_items: buildItems,
     display_currency: (body.displayCurrency ?? 'CZK').trim(),
     lang: (body.lang ?? 'en').trim(),
     contact_consent: Boolean(body.contactConsent),

@@ -6,7 +6,6 @@ import { useIsMobile } from '@/lib/use-media-query';
 import TransitionLink from '@/components/TransitionLink';
 import DeviceViewToggle from '@/components/DeviceViewToggle';
 import { useUser, SignInButton, UserButton } from '@clerk/nextjs';
-import { readJSON, writeJSON } from '@/lib/gomp-storage';
 import { fetchIntents, updateIntentStatus, type CheckoutIntent, type IntentStatus } from '@/lib/admin-intents';
 import { fetchGbbRequests, updateGbbRequest, type GbbRequest, type GbbStatus } from '@/lib/admin-gbb';
 import { marketplaceSearchLinks } from '@/lib/gbb-links';
@@ -27,17 +26,16 @@ import TierGlowOrb from '@/components/TierGlowOrb';
 import AdminAlignmentPanel from '@/components/AdminAlignmentPanel';
 import {
   defaultComponentDb,
-  defaultMargin,
-  computePrice,
   applyVat,
+  effectiveSitePriceCzk,
   computeBuildTotal,
+  computeBuildTotalGross,
   computeBuildTier,
   gpuModelFor,
   type Category,
   type Component,
   type ComponentDb,
   type Build,
-  type Margin,
   type Tier,
   type FanMountPosition,
 } from '@/lib/component-db-seed';
@@ -205,18 +203,17 @@ type Translations = {
   components_db: string; components_db_desc: string;
   comp_search_placeholder: string; comp_sort_default: string; comp_sort_by_number: string;
   suggestions_search_placeholder: string; already_added: string; no_suggestions: string;
-  margin_title: string; margin_desc: string;
-  margin_eur: string; margin_pct: string;
   vat_rate_title: string; vat_rate_desc: string; vat_rate_suffix: string;
   market_price_label: string; market_price_placeholder: string;
   original_price_label: string;
   price_excl_vat: string; price_incl_vat: (pct: number) => string; vat_incl_short: string;
+  site_price_label: string; site_price_placeholder: string; site_price_help: string;
+  site_price_card_label: string; site_price_manual_badge: string; site_price_auto_badge: string;
   image_label: string; image_uploading: string; image_replace: string; image_remove: string; image_download: string;
   heureka_url_label: string; heureka_url_placeholder: string; heureka_no_match: string;
   heureka_price_label: string; heureka_price_placeholder: string;
   heureka_view: string;
   heureka_checked_ago: (s: string) => string; heureka_you_cheaper: (kc: string) => string; heureka_they_cheaper: (kc: string) => string;
-  apply_margin: string; margin_override_badge: string; margin_override_label: string; margin_override_desc: string; margin_override_use_global: string;
   specs_notes: string; tier_rating: string; tower_category: string; tower_category_help: string;
   ram_generation: string; ram_speed_mhz: string; ram_generation_help: string;
   ram_family_label: string; ram_family_help: string;
@@ -232,7 +229,6 @@ type Translations = {
   update_arrow: string; add_prefix: string; edit_prefix: string;
   select_prefix: string; select_suffix: string;
   listings: (n: number) => string;
-  price_auto_note: (mp: number, m: number) => string;
   // Clerk-based admin gate
   checking_access: string; sign_in_clerk_desc: string; not_admin_desc: string;
   not_admin_hint: string; switch_account: string;
@@ -282,13 +278,13 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     components_db: 'Components Database', components_db_desc: 'Parts available in the 3D PC Builder configurator',
     comp_search_placeholder: 'Search by name…', comp_sort_default: 'Default order', comp_sort_by_number: 'By number (5090 → 5060)',
     suggestions_search_placeholder: 'Search suggestions…', already_added: 'Added', no_suggestions: 'No matches — type a custom name.',
-    margin_title: 'Pricing Margin',
-    margin_desc: 'Paste in the cheapest current price you find on Alza / Heureka as "Market Price" below — the sell price is derived automatically from this margin and updates across the site.',
-    margin_eur: 'Kč Flat', margin_pct: '% Markup',
     vat_rate_title: 'VAT Rate', vat_rate_desc: 'Every stored price is pre-tax — this is added on top for what customers actually see. Czech standard rate is 21%.', vat_rate_suffix: '%',
     market_price_label: 'Market Price (Alza/Heureka)', market_price_placeholder: 'e.g. 1650',
     original_price_label: 'Original',
     price_excl_vat: 'Excl. VAT', price_incl_vat: (pct) => `Incl. VAT (${pct}%)`, vat_incl_short: 'incl. VAT',
+    site_price_label: 'Site Price (Kč, optional)', site_price_placeholder: 'e.g. 12990',
+    site_price_help: 'Leave blank to automatically show price + VAT. Fill in to override with your own number (e.g. rounded for marketing).',
+    site_price_card_label: 'Site Price', site_price_manual_badge: 'Manual', site_price_auto_badge: 'Auto',
     image_label: 'Product Image', image_uploading: 'Uploading…',
     image_replace: 'Replace image', image_remove: 'Remove', image_download: 'Download',
     heureka_url_label: 'Heureka URL', heureka_url_placeholder: 'https://…heureka.cz/…', heureka_no_match: 'No Heureka price on file — check heureka.cz and fill in above',
@@ -296,9 +292,6 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     heureka_view: 'View ↗',
     heureka_checked_ago: (s) => `checked ${s} ago`,
     heureka_you_cheaper: (kc) => `you're cheaper by ${kc}`, heureka_they_cheaper: (kc) => `Heureka is cheaper by ${kc}`,
-    apply_margin: 'Apply margin →', margin_override_badge: 'Custom margin',
-    margin_override_label: 'Margin Override', margin_override_desc: 'Give this one component its own margin instead of the site-wide one above.',
-    margin_override_use_global: 'Use site-wide margin',
     specs_notes: 'Specs / Notes', tier_rating: 'Tier Rating', tower_category: 'Tower Category',
     tower_category_help: 'Full Tower 55–75 cm · Mid Tower 35–55 cm · Mini Tower 30–45 cm · SFF <35 cm',
     ram_generation: 'DDR Generation', ram_speed_mhz: 'Speed (MHz)',
@@ -322,7 +315,6 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     update_arrow: 'Update →', add_prefix: 'Add ', edit_prefix: 'Edit ',
     select_prefix: '— Select ', select_suffix: ' —',
     listings: (n) => `${n} listings · changes save live to the homepage, Shop, and configurator`,
-    price_auto_note: (mp, m) => `Auto: €${mp} market + margin = €${m} sell price`,
     checking_access: 'Checking access…',
     sign_in_clerk_desc: 'Sign in with your GOMP account. Admin access is granted per account.',
     not_admin_desc: 'You are signed in, but this account does not have admin access.',
@@ -374,13 +366,13 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     components_db: 'Databáza komponentov', components_db_desc: 'Súčiastky dostupné v 3D konfigurátore PC',
     comp_search_placeholder: 'Hľadať podľa názvu…', comp_sort_default: 'Predvolené poradie', comp_sort_by_number: 'Podľa čísla (5090 → 5060)',
     suggestions_search_placeholder: 'Hľadať návrhy…', already_added: 'Pridané', no_suggestions: 'Nenájdené — zadajte vlastný názov.',
-    margin_title: 'Marketingová marža',
-    margin_desc: 'Vložte najlevnejšiu aktuálnu cenu z Alzy / Heureky ako „Tržnová cena" nižšie — predajná cena sa automaticky odvodí z tejto marže a aktualizuje sa v celom obchode.',
-    margin_eur: 'Kč Pevná', margin_pct: '% Prirážka',
     vat_rate_title: 'Sadzba DPH', vat_rate_desc: 'Každá uložená cena je bez dane — DPH sa pripočíta navrch pre to, čo skutočne vidí zákazník. Slovenská/česká základná sadzba je 21 %.', vat_rate_suffix: '%',
     market_price_label: 'Tržnová cena (Alza/Heureka)', market_price_placeholder: 'napr. 1650',
     price_excl_vat: 'Bez DPH', price_incl_vat: (pct) => `S DPH (${pct}%)`, vat_incl_short: 's DPH',
     original_price_label: 'Pôvodná',
+    site_price_label: 'Cena na webe (Kč, voliteľné)', site_price_placeholder: 'napr. 12990',
+    site_price_help: 'Nechajte prázdne pre automatický výpočet cena + DPH. Vyplňte pre vlastné číslo (napr. zaokrúhlené na marketingovú cenu).',
+    site_price_card_label: 'Cena na webe', site_price_manual_badge: 'Ručne', site_price_auto_badge: 'Auto',
     image_label: 'Fotka produktu', image_uploading: 'Nahrávam…',
     image_replace: 'Zmeniť fotku', image_remove: 'Odstrániť', image_download: 'Stiahnuť',
     heureka_url_label: 'Heureka URL', heureka_url_placeholder: 'https://…heureka.cz/…', heureka_no_match: 'Žiadna cena z Heureky — pozrite na heureka.cz a vyplňte vyššie',
@@ -388,9 +380,6 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     heureka_view: 'Zobraziť ↗',
     heureka_checked_ago: (s) => `kontrolované pred ${s}`,
     heureka_you_cheaper: (kc) => `ste lacnejší o ${kc}`, heureka_they_cheaper: (kc) => `Heureka je lacnejšia o ${kc}`,
-    apply_margin: 'Aplikovať maržu →', margin_override_badge: 'Vlastná marža',
-    margin_override_label: 'Vlastná marža', margin_override_desc: 'Nastavte tomuto komponentu vlastnú maržu namiesto tej celkovej vyššie.',
-    margin_override_use_global: 'Použiť celkovú maržu',
     specs_notes: 'Špecifikácie / Poznámky', tier_rating: 'Hodnotenie triedy', tower_category: 'Kategória skrine',
     tower_category_help: 'Veľká skriňa 55–75 cm · Stredná skriňa 35–55 cm · Malá skriňa 30–45 cm · SFF <35 cm',
     ram_generation: 'Generácia DDR', ram_speed_mhz: 'Rýchlosť (MHz)',
@@ -414,7 +403,6 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     update_arrow: 'Aktualizovať →', add_prefix: 'Pridať ', edit_prefix: 'Upraviť ',
     select_prefix: '— Vybrať ', select_suffix: ' —',
     listings: (n) => `${n} položiek · zmeny sa ukladajú naživo na hlavnú stránku, do obchodu a konfigurátora`,
-    price_auto_note: (mp, m) => `Auto: €${mp} trh + marža = €${m} predajná cena`,
     checking_access: 'Kontrolujeme prístup…',
     sign_in_clerk_desc: 'Prihláste sa svojím GOMP účtom. Prístup do administrácie sa udeľuje jednotlivým účtom.',
     not_admin_desc: 'Ste prihlásený, ale tento účet nemá prístup do administrácie.',
@@ -465,9 +453,8 @@ function initialBuildForm(): BuildFormState {
 }
 
 type CompFormState = {
-  name: string; price: string; marketPrice: string; specs: string; category: string; tier: Tier;
+  name: string; price: string; sitePrice: string; marketPrice: string; specs: string; category: string; tier: Tier;
   passmark: number | null; passmarkUrl: string; imageUrl: string; heurekaUrl: string; heurekaPrice: string;
-  marginOverrideOn: boolean; marginOverrideType: 'eur' | 'pct'; marginOverrideValue: string;
   ramGeneration: '' | '4' | '5'; ramSpeedMhz: string; ramFamily: string;
   fanSizeMm: string; // fan only
   // case only — which fan (by name, from the 'fan' catalog) and how many ship pre-installed at
@@ -487,8 +474,7 @@ type CompFormState = {
 
 function initialCompForm(): CompFormState {
   return {
-    name: '', price: '', marketPrice: '', specs: '', category: 'Mid Tower', tier: 'B', passmark: null, passmarkUrl: '', imageUrl: '', heurekaUrl: '', heurekaPrice: '',
-    marginOverrideOn: false, marginOverrideType: 'pct', marginOverrideValue: '0',
+    name: '', price: '', sitePrice: '', marketPrice: '', specs: '', category: 'Mid Tower', tier: 'B', passmark: null, passmarkUrl: '', imageUrl: '', heurekaUrl: '', heurekaPrice: '',
     ramGeneration: '', ramSpeedMhz: '', ramFamily: '',
     fanSizeMm: '', fanPreinstalled: {},
     caseWidthMm: '', caseHeightMm: '', caseDepthMm: '',
@@ -549,36 +535,15 @@ function dimensionFieldsFromForm(cat: Category, form: CompFormState): Partial<Co
   };
 }
 
-// Live-over-stored PassMark refresh + market-price-driven repricing, run once on every load.
-function migrateComponentDb(db: ComponentDb, margin: Margin): ComponentDb {
+// Live-over-stored PassMark refresh, run once on every load — price is a plain admin-typed field
+// now (see Component.price/sitePrice), no repricing happens here.
+function migrateComponentDb(db: ComponentDb): ComponentDb {
   const out = {} as ComponentDb;
   (Object.keys(db) as Category[]).forEach((cat) => {
     out[cat] = (db[cat] || []).map((c) => {
-      let next = c;
-      if (cat === 'gpu' || cat === 'cpu') {
-        const live = passmarkLookup(c.name);
-        if (live) next = { ...next, passmark: live.score, passmarkUrl: live.url, tier: tierFromPassmark(cat === 'gpu', live.score) };
-      }
-      if (next.marketPrice != null) {
-        const price = computePrice(next.marketPrice, next.marginOverride ?? margin);
-        if (price != null) next = { ...next, price };
-      }
-      return next;
-    });
-  });
-  return out;
-}
-
-function recomputeMarginPrices(db: ComponentDb, margin: Margin): ComponentDb {
-  const out = {} as ComponentDb;
-  (Object.keys(db) as Category[]).forEach((cat) => {
-    out[cat] = (db[cat] || []).map((c) => {
-      if (c.marketPrice == null) return c;
-      // A component with its own margin override doesn't move when the site-wide margin does
-      // — that's the entire point of the override.
-      if (c.marginOverride != null) return c;
-      const price = computePrice(c.marketPrice, margin);
-      return price != null ? { ...c, price } : c;
+      if (cat !== 'gpu' && cat !== 'cpu') return c;
+      const live = passmarkLookup(c.name);
+      return live ? { ...c, passmark: live.score, passmarkUrl: live.url, tier: tierFromPassmark(cat === 'gpu', live.score) } : c;
     });
   });
   return out;
@@ -746,12 +711,9 @@ export default function AdminPage() {
 
   const [saveMsg, setSaveMsg] = useState('');
 
-  const [margin, setMarginState] = useState<Margin>(defaultMargin());
-  const [marginValueInput, setMarginValueInput] = useState('0');
-
   // vatRatePct itself lives in SiteContext (shared store_settings row, live via Realtime) — this
   // is just the controlled text-input state, synced from it and pushed back on blur/Enter via
-  // saveStoreSettings, same shape as marginValueInput/updateMargin above.
+  // saveStoreSettings.
   const [vatRateInput, setVatRateInput] = useState(() => String(vatRatePct));
   useEffect(() => setVatRateInput(String(vatRatePct)), [vatRatePct]);
   async function updateVatRate(value: number) {
@@ -808,15 +770,11 @@ export default function AdminPage() {
   // explicit Save persists anything, so opening this page never silently mutates shared data.
   useEffect(() => {
     if (!authed) return;
-    const storedMargin = readJSON<Margin>('gomp_margin', defaultMargin());
-    setMarginState(storedMargin);
-    setMarginValueInput(String(storedMargin.value));
-
     let cancelled = false;
     async function loadCatalog() {
       const rawCompDb = await fetchComponentDb();
       if (cancelled) return;
-      setCompDb(migrateComponentDb(rawCompDb, storedMargin));
+      setCompDb(migrateComponentDb(rawCompDb));
     }
     loadCatalog();
     const unsubscribe = subscribeComponents(loadCatalog);
@@ -1110,49 +1068,17 @@ export default function AdminPage() {
     setCgForm((f) => ({ ...f, imageUrls: f.imageUrls.filter((u) => u !== url) }));
   }
 
-  // ---- margin ----
-
-  // Only components with a manual market price actually change on a margin edit — push just
-  // those back to Supabase (rather than the whole catalog) so everyone else's /build reflects
-  // the new pricing too, without a wasted write per unaffected row.
-  async function updateMargin(patch: Partial<Margin>) {
-    const newMargin = { ...margin, ...patch };
-    writeJSON('gomp_margin', newMargin);
-    const newCompDb = recomputeMarginPrices(compDb, newMargin);
-    setMarginState(newMargin);
-    setCompDb(newCompDb);
-    const updates: Promise<unknown>[] = [];
-    (Object.keys(newCompDb) as Category[]).forEach((cat) => {
-      newCompDb[cat].forEach((c, i) => {
-        const before = compDb[cat]?.[i];
-        if (before && before.id === c.id && before.price !== c.price) {
-          updates.push(updateComponentRow(c.id, cat, c));
-        }
-      });
-    });
-    await Promise.all(updates);
-  }
-
   // ---- components CRUD ----
-
-  // The margin this one component should actually be priced with — its own override if the
-  // form has one enabled, otherwise undefined so callers fall back to the site-wide margin.
-  function formMarginOverride(form: CompFormState): Margin | undefined {
-    if (!form.marginOverrideOn) return undefined;
-    return { type: form.marginOverrideType, value: parseFloat(form.marginOverrideValue) || 0 };
-  }
 
   async function addComponent() {
     if (!compForm.name.trim()) return;
     const marketPrice = compForm.marketPrice !== '' ? parseFloat(compForm.marketPrice) : null;
-    const marginOverride = formMarginOverride(compForm);
-    const derived = marketPrice != null ? computePrice(marketPrice, marginOverride ?? margin) : null;
     const computedRamTier = compCat === 'ram' ? ramTier(compForm.ramSpeedMhz ? parseInt(compForm.ramSpeedMhz, 10) : undefined, compForm.specs) : undefined;
     const tier: Tier = computedRamTier ?? (compForm.passmark ? tierFromPassmark(compCat === 'gpu', compForm.passmark) : compForm.tier);
     const comp: Component = {
       id: '', // placeholder — Supabase assigns the real id on insert
       name: compForm.name.trim(),
-      price: derived != null ? derived : parseFloat(compForm.price) || 0,
+      price: parseFloat(compForm.price) || 0,
       marketPrice,
       specs: compForm.specs.trim(),
       tier,
@@ -1164,12 +1090,12 @@ export default function AdminPage() {
       ...(compCat === 'fan' && compForm.fanSizeMm ? { fanSizeMm: parseFloat(compForm.fanSizeMm) } : {}),
       ...dimensionFieldsFromForm(compCat, compForm),
       ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
+      ...(compForm.sitePrice !== '' ? { sitePrice: parseFloat(compForm.sitePrice) } : {}),
       ...(compForm.heurekaUrl.trim() ? { heurekaUrl: compForm.heurekaUrl.trim() } : {}),
       // Manually typed/checked by the admin (Heureka's own bot protection blocks a server-side
       // fetch, so there's no automated refresh here) — stamping heurekaCheckedAt to now whenever
       // a price is entered keeps the "checked X ago" hint on the card meaningful.
       ...(compForm.heurekaPrice ? { heurekaPrice: parseFloat(compForm.heurekaPrice), heurekaCheckedAt: new Date().toISOString() } : {}),
-      ...(marginOverride ? { marginOverride } : {}),
     };
     const sortOrder = (compDb[compCat] || []).length;
     const saved = await insertComponent(compCat, comp, sortOrder);
@@ -1180,15 +1106,13 @@ export default function AdminPage() {
   async function updateComponent() {
     if (!editCompId || !compForm.name.trim()) return;
     const marketPrice = compForm.marketPrice !== '' ? parseFloat(compForm.marketPrice) : null;
-    const marginOverride = formMarginOverride(compForm);
-    const derived = marketPrice != null ? computePrice(marketPrice, marginOverride ?? margin) : null;
     const computedRamTier = compCat === 'ram' ? ramTier(compForm.ramSpeedMhz ? parseInt(compForm.ramSpeedMhz, 10) : undefined, compForm.specs) : undefined;
     const tier: Tier = computedRamTier ?? (compForm.passmark ? tierFromPassmark(compCat === 'gpu', compForm.passmark) : compForm.tier);
     const existing = (compDb[compCat] || []).find((c) => c.id === editCompId);
     const updated: Component = {
       id: editCompId,
       name: compForm.name.trim(),
-      price: derived != null ? derived : parseFloat(compForm.price) || 0,
+      price: parseFloat(compForm.price) || 0,
       marketPrice,
       specs: compForm.specs.trim(),
       tier,
@@ -1229,6 +1153,7 @@ export default function AdminPage() {
           }
         : {}),
       ...(compForm.imageUrl ? { imageUrl: compForm.imageUrl } : {}),
+      ...(compForm.sitePrice !== '' ? { sitePrice: parseFloat(compForm.sitePrice) } : {}),
       ...(compForm.heurekaUrl.trim() ? { heurekaUrl: compForm.heurekaUrl.trim() } : {}),
       // Manually typed/checked by the admin (Heureka's own bot protection blocks a server-side
       // fetch, so there's no automated refresh here). Only re-stamps heurekaCheckedAt when the
@@ -1243,7 +1168,6 @@ export default function AdminPage() {
                 : new Date().toISOString(),
           }
         : {}),
-      ...(marginOverride ? { marginOverride } : {}),
     };
     const saved = await updateComponentRow(editCompId, compCat, updated);
     setCompDb((db) => ({ ...db, [compCat]: (db[compCat] || []).map((c) => (c.id === editCompId ? saved : c)) }));
@@ -1257,19 +1181,6 @@ export default function AdminPage() {
   // does) so this never has to know about every other field that might need carrying forward.
   async function toggleComponentLive(cat: Category, comp: Component) {
     const updated: Component = { ...comp, isLive: !(comp.isLive ?? true) };
-    const saved = await updateComponentRow(comp.id, cat, updated);
-    setCompDb((db) => ({ ...db, [cat]: (db[cat] || []).map((c) => (c.id === comp.id ? saved : c)) }));
-  }
-
-  // One-click "apply the margin" for a component that's never had a market price recorded:
-  // treats its current sell price as the market/base price and saves the price the site-wide
-  // (or this component's own override) margin actually computes from it.
-  async function applyMarginTo(cat: Category, comp: Component) {
-    const basePrice = comp.marketPrice ?? comp.price;
-    const effective = comp.marginOverride ?? margin;
-    const price = computePrice(basePrice, effective);
-    if (price == null) return;
-    const updated: Component = { ...comp, marketPrice: basePrice, price };
     const saved = await updateComponentRow(comp.id, cat, updated);
     setCompDb((db) => ({ ...db, [cat]: (db[cat] || []).map((c) => (c.id === comp.id ? saved : c)) }));
   }
@@ -1310,10 +1221,8 @@ export default function AdminPage() {
     setCompForm({
       name: comp.name || '',
       price: String(comp.price ?? ''),
-      // No market price on file yet? Prefill it with the current sell price so the margin math
-      // (and the auto note below the field) kicks in immediately — hitting Update then applies
-      // the margin to this component instead of requiring the price to be re-typed from scratch.
-      marketPrice: comp.marketPrice != null ? String(comp.marketPrice) : String(comp.price ?? ''),
+      sitePrice: comp.sitePrice != null ? String(comp.sitePrice) : '',
+      marketPrice: comp.marketPrice != null ? String(comp.marketPrice) : '',
       specs: comp.specs || '',
       category: comp.category || 'Mid Tower',
       tier: comp.tier || 'B',
@@ -1322,9 +1231,6 @@ export default function AdminPage() {
       imageUrl: comp.imageUrl || '',
       heurekaUrl: comp.heurekaUrl || '',
       heurekaPrice: comp.heurekaPrice != null ? String(comp.heurekaPrice) : '',
-      marginOverrideOn: comp.marginOverride != null,
-      marginOverrideType: comp.marginOverride?.type ?? 'pct',
-      marginOverrideValue: comp.marginOverride ? String(comp.marginOverride.value) : '0',
       ramGeneration: comp.ramGeneration ? (String(comp.ramGeneration) as '4' | '5') : '',
       ramSpeedMhz: comp.ramSpeedMhz != null ? String(comp.ramSpeedMhz) : '',
       ramFamily: comp.ramFamily || '',
@@ -1450,10 +1356,7 @@ export default function AdminPage() {
     return { name: s.name, already: existingNames.has(s.name.toLowerCase()), effective };
   });
 
-  const mpParsed = parseFloat(compForm.marketPrice);
-  const hasManualMarketPrice = compForm.marketPrice !== '' && !isNaN(mpParsed);
-  const formMargin = formMarginOverride(compForm) ?? margin;
-  const priceAutoNote = hasManualMarketPrice ? t.price_auto_note(mpParsed, computePrice(mpParsed, formMargin) ?? 0) : '';
+  const priceParsed = compForm.price !== '' && !isNaN(parseFloat(compForm.price)) ? parseFloat(compForm.price) : null;
 
   const totalComps = (Object.values(compDb) as Component[][]).reduce((sum, arr) => sum + (arr ? arr.length : 0), 0);
   const newIntentCount = intents.filter((i) => i.status === 'new').length;
@@ -2102,7 +2005,7 @@ export default function AdminPage() {
                       <div style={LABEL_STYLE}>{t.price_eur_label}</div>
                       <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="4299" style={INPUT_STYLE} />
                       <div style={{ fontFamily: 'var(--font-serif)', fontSize: 10, color: '#9A9488', marginTop: 4 }}>
-                        {t.live_total_label} — {t.price_excl_vat}: {fmt(computeBuildTotal(form, compDb))} · {t.price_incl_vat(vatRatePct)}: {fmtGross(computeBuildTotal(form, compDb))}
+                        {t.live_total_label} — {t.price_excl_vat}: {fmt(computeBuildTotal(form, compDb))} · {t.price_incl_vat(vatRatePct)}: {fmt(computeBuildTotalGross(form, compDb, vatRatePct))}
                       </div>
                     </div>
                     <div>
@@ -2152,7 +2055,7 @@ export default function AdminPage() {
                           </div>
                           <div>
                             <div style={{ fontFamily: 'var(--font-serif)', fontSize: 13, fontWeight: 500, color: '#1C1C1A' }}>{fmt(computeBuildTotal(b, compDb))}</div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#9A9488' }} title={t.price_incl_vat(vatRatePct)}>{fmtGross(computeBuildTotal(b, compDb))} ({t.vat_incl_short})</div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#9A9488' }} title={t.price_incl_vat(vatRatePct)}>{fmt(computeBuildTotalGross(b, compDb, vatRatePct))} ({t.vat_incl_short})</div>
                           </div>
                           <div>
                             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: tc.bg, border: `1.5px solid ${tc.border}`, borderRadius: 4 }}>
@@ -2469,35 +2372,6 @@ export default function AdminPage() {
               </div>
 
               <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? '16px' : '20px 22px', marginBottom: 24 }}>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: '#1C1C1A', marginBottom: 5 }}>{t.margin_title}</div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', fontWeight: 300, lineHeight: 1.6, marginBottom: 14, maxWidth: 640 }}>{t.margin_desc}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, overflow: 'hidden' }}>
-                    <button
-                      onClick={() => updateMargin({ type: 'eur' })}
-                      style={{ padding: '8px 14px', background: margin.type === 'eur' ? '#6E1423' : 'transparent', color: margin.type === 'eur' ? '#FDFAF4' : '#7A7469', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
-                    >
-                      {t.margin_eur}
-                    </button>
-                    <button
-                      onClick={() => updateMargin({ type: 'pct' })}
-                      style={{ padding: '8px 14px', background: margin.type === 'pct' ? '#6E1423' : 'transparent', color: margin.type === 'pct' ? '#FDFAF4' : '#7A7469', border: 'none', borderLeft: '0.5px solid rgba(28,28,26,0.15)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
-                    >
-                      {t.margin_pct}
-                    </button>
-                  </div>
-                  <input
-                    type="number"
-                    value={marginValueInput}
-                    onChange={(e) => setMarginValueInput(e.target.value)}
-                    onBlur={() => updateMargin({ value: parseFloat(marginValueInput) || 0 })}
-                    onKeyDown={(e) => { if (e.key === 'Enter') updateMargin({ value: parseFloat(marginValueInput) || 0 }); }}
-                    style={{ width: 100, padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#F5F0E6', color: '#1C1C1A', fontFamily: 'var(--font-mono)' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? '16px' : '20px 22px', marginBottom: 24 }}>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: '#1C1C1A', marginBottom: 5 }}>{t.vat_rate_title}</div>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', fontWeight: 300, lineHeight: 1.6, marginBottom: 14, maxWidth: 640 }}>{t.vat_rate_desc}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2520,13 +2394,7 @@ export default function AdminPage() {
                   const tc = tierBadge(comp.tier, TIER_COLORS);
                   const isEditing = comp.id === editCompId;
                   const isLive = comp.isLive !== false;
-                  // Shown live for every component, not just ones with a market price already
-                  // on file — treating the current price as the base/cost when there's no
-                  // market price yet, so the markup is always visible instead of only appearing
-                  // once someone has manually typed a market price in.
-                  const basePrice = comp.marketPrice ?? comp.price;
-                  const effectiveMargin = comp.marginOverride ?? margin;
-                  const webPrice = computePrice(basePrice, effectiveMargin) ?? comp.price;
+                  const sitePriceCzk = effectiveSitePriceCzk(comp, vatRatePct);
                   return (
                     <div
                       key={comp.id}
@@ -2566,33 +2434,25 @@ export default function AdminPage() {
                         </div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', marginBottom: 9, lineHeight: 1.6 }}>{comp.specs}</div>
                         <div style={{ marginBottom: 4 }}>
+                          {comp.marketPrice != null && (
+                            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 10, color: '#A09890' }}>{t.original_price_label}: {fmt(comp.marketPrice)}</div>
+                          )}
+                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 14, fontWeight: 600, color: '#6E1423' }}>{t.price_excl_vat}: {fmt(comp.price)}</div>
+                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 12, color: '#7A7469' }}>{t.price_incl_vat(vatRatePct)}: {fmtGross(comp.price)}</div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 10, color: '#A09890' }}>{t.original_price_label}: €{basePrice}</span>
-                            {comp.marginOverride && (
-                              <span
-                                style={{
-                                  fontFamily: 'var(--font-sans)', fontSize: 8, fontWeight: 600, color: '#6E1423',
-                                  background: 'rgba(110,20,35,0.08)', border: '0.5px solid rgba(110,20,35,0.2)',
-                                  borderRadius: 2, padding: '1px 5px', textTransform: 'uppercase', letterSpacing: 0.4,
-                                }}
-                              >
-                                {t.margin_override_badge}
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 14, fontWeight: 600, color: '#6E1423' }}>{t.price_excl_vat}: {fmt(webPrice)}</div>
-                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 12, color: '#7A7469' }}>{t.price_incl_vat(vatRatePct)}: {fmtGross(webPrice)}</div>
-                          {comp.marketPrice == null && (
-                            <button
-                              onClick={() => applyMarginTo(compCat, comp)}
+                            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 12, fontWeight: 600, color: '#1C1C1A' }}>{t.site_price_card_label}: {fmt(sitePriceCzk)}</span>
+                            <span
                               style={{
-                                fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6E1423', background: 'transparent',
-                                border: 'none', textDecoration: 'underline', cursor: 'pointer', padding: 0, marginTop: 2,
+                                fontFamily: 'var(--font-sans)', fontSize: 8, fontWeight: 600,
+                                color: comp.sitePrice != null ? '#6E1423' : '#7A7469',
+                                background: comp.sitePrice != null ? 'rgba(110,20,35,0.08)' : 'rgba(122,116,105,0.1)',
+                                border: `0.5px solid ${comp.sitePrice != null ? 'rgba(110,20,35,0.2)' : 'rgba(122,116,105,0.25)'}`,
+                                borderRadius: 2, padding: '1px 5px', textTransform: 'uppercase', letterSpacing: 0.4,
                               }}
                             >
-                              {t.apply_margin}
-                            </button>
-                          )}
+                              {comp.sitePrice != null ? t.site_price_manual_badge : t.site_price_auto_badge}
+                            </span>
+                          </div>
                         </div>
                         {comp.passmark != null && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -2606,7 +2466,7 @@ export default function AdminPage() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
                             {comp.heurekaPrice != null ? (
                               (() => {
-                                const delta = applyVat(webPrice, vatRatePct) - comp.heurekaPrice;
+                                const delta = sitePriceCzk - comp.heurekaPrice;
                                 const cheaper = delta <= 0;
                                 const color = cheaper ? '#1A7040' : '#CC3333';
                                 return (
@@ -2711,11 +2571,21 @@ export default function AdminPage() {
                       type="number"
                       value={compForm.price}
                       onChange={(e) => setCompForm({ ...compForm, price: e.target.value })}
-                      disabled={hasManualMarketPrice}
                       placeholder="499"
                       style={INPUT_STYLE}
                     />
                   </div>
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={LABEL_STYLE}>{t.site_price_label}</div>
+                  <input
+                    type="number"
+                    value={compForm.sitePrice}
+                    onChange={(e) => setCompForm({ ...compForm, sitePrice: e.target.value })}
+                    placeholder={priceParsed != null ? String(applyVat(priceParsed, vatRatePct)) : t.site_price_placeholder}
+                    style={INPUT_STYLE}
+                  />
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', fontWeight: 300, lineHeight: 1.5, marginTop: 6 }}>{t.site_price_help}</div>
                 </div>
                 <div style={{ marginBottom: 12 }}>
                   <div style={LABEL_STYLE}>{t.image_label}</div>
@@ -2810,49 +2680,6 @@ export default function AdminPage() {
                     placeholder={t.market_price_placeholder}
                     style={INPUT_STYLE}
                   />
-                  {hasManualMarketPrice && (
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#6E1423', marginTop: 6 }}>{priceAutoNote}</div>
-                  )}
-                </div>
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <div style={LABEL_STYLE}>{t.margin_override_label}</div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={compForm.marginOverrideOn}
-                        onChange={(e) => setCompForm({ ...compForm, marginOverrideOn: e.target.checked })}
-                      />
-                      {compForm.marginOverrideOn ? t.margin_override_use_global : t.margin_override_label}
-                    </label>
-                  </div>
-                  {compForm.marginOverrideOn && (
-                    <>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', fontWeight: 300, lineHeight: 1.5, marginBottom: 8 }}>{t.margin_override_desc}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, overflow: 'hidden' }}>
-                          <button
-                            onClick={() => setCompForm({ ...compForm, marginOverrideType: 'eur' })}
-                            style={{ padding: '8px 14px', background: compForm.marginOverrideType === 'eur' ? '#6E1423' : 'transparent', color: compForm.marginOverrideType === 'eur' ? '#FDFAF4' : '#7A7469', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
-                          >
-                            {t.margin_eur}
-                          </button>
-                          <button
-                            onClick={() => setCompForm({ ...compForm, marginOverrideType: 'pct' })}
-                            style={{ padding: '8px 14px', background: compForm.marginOverrideType === 'pct' ? '#6E1423' : 'transparent', color: compForm.marginOverrideType === 'pct' ? '#FDFAF4' : '#7A7469', border: 'none', borderLeft: '0.5px solid rgba(28,28,26,0.15)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
-                          >
-                            {t.margin_pct}
-                          </button>
-                        </div>
-                        <input
-                          type="number"
-                          value={compForm.marginOverrideValue}
-                          onChange={(e) => setCompForm({ ...compForm, marginOverrideValue: e.target.value })}
-                          style={{ width: 100, padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#F5F0E6', color: '#1C1C1A', fontFamily: 'var(--font-mono)' }}
-                        />
-                      </div>
-                    </>
-                  )}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 140px', gap: 12, marginBottom: 12 }}>
                   <div>

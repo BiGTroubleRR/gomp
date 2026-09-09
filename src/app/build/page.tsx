@@ -28,6 +28,7 @@ import {
   PSU_ATX_SIZE_MM,
   moboPcieGeneration,
   storagePcieGeneration,
+  effectiveSitePriceCzk,
   type Category,
   type Component,
   type ComponentDb,
@@ -453,7 +454,7 @@ export default function BuildPage() {
 }
 
 function BuildPageContent() {
-  const { lang, fmt, fmtGross, vatRatePct } = useSite();
+  const { lang, fmt, vatRatePct } = useSite();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -750,6 +751,7 @@ function BuildPageContent() {
   // installed fan regardless of who's paying, since that's physical draw, not a billing question.
   const fanTotals = useMemo(() => {
     let price = 0;
+    let priceGross = 0;
     let watts = 0;
     const caseComp = selected.case ? (compDb.case || []).find((c) => c.name === selections.case) : undefined;
     (Object.keys(fanConfig) as FanMountPosition[]).forEach((position) => {
@@ -759,11 +761,13 @@ function BuildPageContent() {
       if (!fan) return;
       const mount = caseComp?.fanMounts?.find((m) => m.position === position);
       const freeCount = cfg.fanName === mount?.preinstalledFanName ? Math.min(cfg.count, mount?.preinstalledCount ?? 0) : 0;
-      price += fan.price * Math.max(0, cfg.count - freeCount);
+      const paidCount = Math.max(0, cfg.count - freeCount);
+      price += fan.price * paidCount;
+      priceGross += effectiveSitePriceCzk(fan, vatRatePct) * paidCount;
       watts += (extractWatts(fan.specs) ?? DEFAULT_FAN_WATTS) * cfg.count;
     });
-    return { price, watts };
-  }, [fanConfig, compDb.fan, compDb.case, selected.case, selections.case]);
+    return { price, priceGross, watts };
+  }, [fanConfig, compDb.fan, compDb.case, selected.case, selections.case, vatRatePct]);
 
   const totalPrice = useMemo(() => {
     let sum = fanTotals.price;
@@ -775,6 +779,22 @@ function BuildPageContent() {
     });
     return sum;
   }, [selected, selections, compDb, fanTotals.price]);
+
+  // Same resolution as totalPrice, but the actual customer-facing gross figure this page
+  // displays (effectiveSitePriceCzk per part, respecting any sitePrice override) — totalPrice
+  // itself stays a plain net sum since it's also what's persisted to gomp_build for
+  // checkout/benchmarks to read. Display this with plain `fmt`, not `fmtGross` — it's already
+  // gross, and VAT-ing it again would double-charge on screen.
+  const totalPriceGross = useMemo(() => {
+    let sum = fanTotals.priceGross;
+    SLOTS.forEach((id) => {
+      if (!selected[id]) return;
+      const list = compDb[id] || [];
+      const comp = list.find((c) => c.name === selections[id]) || list[0];
+      if (comp) sum += effectiveSitePriceCzk(comp, vatRatePct);
+    });
+    return sum;
+  }, [selected, selections, compDb, fanTotals.priceGross, vatRatePct]);
 
   // Estimated system draw vs. the selected PSU's rated wattage — a buildcores-style "will this
   // PSU handle it" gut-check, not a precise measurement (see BASE_WATTS/extractWatts above).
@@ -1526,7 +1546,7 @@ function BuildPageContent() {
                               <TierBadge tier={g.tier} small />
                             </div>
                             <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: MUTED, marginTop: 4 }}>
-                              {t.ram_from_price(fmtGross(g.cheapest.price))}
+                              {t.ram_from_price(fmt(effectiveSitePriceCzk(g.cheapest, vatRatePct)))}
                             </div>
                           </motion.div>
                         ))}
@@ -1607,7 +1627,7 @@ function BuildPageContent() {
                                     {c.specs}
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                                    <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmtGross(c.price)}</div>
+                                    <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmt(effectiveSitePriceCzk(c, vatRatePct))}</div>
                                     <div
                                       style={{
                                         width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1688,7 +1708,7 @@ function BuildPageContent() {
                                 </span>
                               </div>
                               <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: MUTED, marginTop: 4 }}>
-                                {t.ram_from_price(fmtGross(g.cheapest.price))}
+                                {t.ram_from_price(fmt(effectiveSitePriceCzk(g.cheapest, vatRatePct)))}
                               </div>
                             </motion.div>
                           ))}
@@ -1803,7 +1823,7 @@ function BuildPageContent() {
                                   <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: isThisSelected ? MAROON : INK }}>
                                     {capacity ? `${capacity}GB/RAM` : c.specs}
                                   </div>
-                                  <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmtGross(c.price)}</div>
+                                  <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmt(effectiveSitePriceCzk(c, vatRatePct))}</div>
                                 </motion.div>
                               );
                             })}
@@ -1952,7 +1972,7 @@ function BuildPageContent() {
                             </div>
                           )}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmtGross(c.price)}</div>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmt(effectiveSitePriceCzk(c, vatRatePct))}</div>
                             <div
                               style={{
                                 width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -2157,7 +2177,7 @@ function BuildPageContent() {
                   </div>
                 )}
                 <div style={{ borderTop: '0.5px solid rgba(245,240,230,0.14)', paddingTop: 8, fontFamily: 'var(--font-serif)', fontSize: 14, color: '#FDFAF4', fontWeight: 500 }}>
-                  {fmtGross(hoverComp.price)}
+                  {fmt(effectiveSitePriceCzk(hoverComp, vatRatePct))}
                 </div>
               </div>
             )}
@@ -2181,7 +2201,7 @@ function BuildPageContent() {
                   <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: isMobile ? 34 : 58, color: '#FDFAF4', margin: '10px 0' }}>
                     {prebuiltName ?? t.your_build}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 26 : 38, color: GOLD, fontWeight: 600, letterSpacing: 1 }}>{fmtGross(totalPrice)}</div>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 26 : 38, color: GOLD, fontWeight: 600, letterSpacing: 1 }}>{fmt(totalPriceGross)}</div>
                   <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.5)', marginTop: 6 }}>{t.vat_included} ({vatRatePct}%)</div>
                 </div>
               </div>
@@ -2313,7 +2333,7 @@ function BuildPageContent() {
                               <a href={passmark.url} target="_blank" rel="noopener noreferrer" style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MAROON }}>{t.verify_passmark}</a>
                             </div>
                           )}
-                          <div style={{ ...textPop, marginTop: 12, fontFamily: 'var(--font-serif)', fontSize: 15, color: INK }}>{fmtGross(comp.price)}</div>
+                          <div style={{ ...textPop, marginTop: 12, fontFamily: 'var(--font-serif)', fontSize: 15, color: INK }}>{fmt(effectiveSitePriceCzk(comp, vatRatePct))}</div>
                         </>
                       ) : (
                         <div onClick={toggleExpanded} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer' }}>
@@ -2323,7 +2343,7 @@ function BuildPageContent() {
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                             <TierBadge tier={tier} small />
-                            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 12, color: INK }}>{fmtGross(comp.price)}</div>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 12, color: INK }}>{fmt(effectiveSitePriceCzk(comp, vatRatePct))}</div>
                             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: MUTED, width: 14, textAlign: 'center', userSelect: 'none' }}>+</div>
                           </div>
                         </div>
@@ -2367,7 +2387,7 @@ function BuildPageContent() {
                                       <option value="">{t.fan_generic}</option>
                                       {matchingFans.map((f) => (
                                         <option key={f.id} value={f.name}>
-                                          {f.name} {f.name === mount.preinstalledFanName ? `(${t.fan_included})` : `(+${fmtGross(f.price)})`}
+                                          {f.name} {f.name === mount.preinstalledFanName ? `(${t.fan_included})` : `(+${fmt(effectiveSitePriceCzk(f, vatRatePct))})`}
                                         </option>
                                       ))}
                                     </select>
@@ -2440,7 +2460,7 @@ function BuildPageContent() {
           )}
           <div style={{ padding: 20, borderTop: estimatedWatts > 0 ? 'none' : '0.5px solid rgba(28,28,26,0.1)', marginTop: 'auto' }}>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.build_total}</div>
-            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 40, color: INK, fontWeight: 500, margin: '4px 0' }}>{fmtGross(totalPrice)}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 40, color: INK, fontWeight: 500, margin: '4px 0' }}>{fmt(totalPriceGross)}</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890' }}>{t.vat_included} ({vatRatePct}%)</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', marginBottom: 14 }}>{t.ofComponents(installedCount)}</div>
             <button onClick={handleOrder} style={{ width: '100%', padding: 13, background: MAROON, color: '#FDFAF4', border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>
@@ -2477,7 +2497,7 @@ function BuildPageContent() {
         >
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.build_total}</div>
-            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 18, color: INK, fontWeight: 600 }}>{fmtGross(totalPrice)}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 18, color: INK, fontWeight: 600 }}>{fmt(totalPriceGross)}</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 8, color: '#A09890' }}>{t.vat_included}</div>
           </div>
           <button

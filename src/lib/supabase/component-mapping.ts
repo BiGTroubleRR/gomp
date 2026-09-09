@@ -2,7 +2,7 @@
 // (src/lib/supabase/components.ts) and the admin-only write route
 // (src/app/api/admin/components/route.ts). No 'use client' here — this file
 // must be importable from server route handlers too.
-import { type Category, type Component, type Tier, type FormFactor, type FanMountSpec, type Margin } from '@/lib/component-db-seed';
+import { type Category, type Component, type Tier, type FormFactor, type FanMountSpec } from '@/lib/component-db-seed';
 import type { Database } from './types';
 
 export type ComponentRow = Database['public']['Tables']['components']['Row'];
@@ -17,6 +17,7 @@ export function rowToComponent(row: ComponentRow): Component {
     specs: row.specs,
     tier: row.tier as Tier,
   };
+  if (row.site_price != null) comp.sitePrice = Number(row.site_price);
   if (row.passmark != null) comp.passmark = row.passmark;
   if (row.passmark_url) comp.passmarkUrl = row.passmark_url;
   if (row.market_price != null) comp.marketPrice = Number(row.market_price);
@@ -44,7 +45,6 @@ export function rowToComponent(row: ComponentRow): Component {
   if (row.fan_size_mm != null) comp.fanSizeMm = Number(row.fan_size_mm);
   if (row.fan_mounts != null) comp.fanMounts = row.fan_mounts as unknown as FanMountSpec[];
   if (row.image_url) comp.imageUrl = row.image_url;
-  if (row.margin_override) comp.marginOverride = row.margin_override as unknown as Margin;
   if (row.heureka_url) comp.heurekaUrl = row.heureka_url;
   if (row.heureka_price != null) comp.heurekaPrice = Number(row.heureka_price);
   if (row.heureka_checked_at) comp.heurekaCheckedAt = row.heureka_checked_at;
@@ -56,6 +56,7 @@ export function componentToRow(category: Category, comp: Component, sortOrder: n
     category,
     name: comp.name,
     price: comp.price,
+    site_price: comp.sitePrice ?? null,
     specs: comp.specs,
     tier: comp.tier,
     passmark: comp.passmark ?? null,
@@ -88,7 +89,6 @@ export function componentToRow(category: Category, comp: Component, sortOrder: n
     fan_size_mm: comp.fanSizeMm ?? null,
     fan_mounts: (comp.fanMounts as unknown as ComponentInsert['fan_mounts']) ?? null,
     image_url: comp.imageUrl ?? null,
-    margin_override: (comp.marginOverride as unknown as ComponentInsert['margin_override']) ?? null,
     heureka_url: comp.heurekaUrl ?? null,
     heureka_price: comp.heurekaPrice ?? null,
     heureka_checked_at: comp.heurekaCheckedAt ?? null,

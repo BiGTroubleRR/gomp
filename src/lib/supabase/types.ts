@@ -116,6 +116,7 @@ export type Database = {
           category: string;
           name: string;
           price: number;
+          site_price: number | null;
           specs: string;
           tier: string;
           passmark: number | null;
@@ -158,6 +159,7 @@ export type Database = {
           category: string;
           name: string;
           price?: number;
+          site_price?: number | null;
           specs?: string;
           tier?: string;
           passmark?: number | null;
@@ -197,6 +199,7 @@ export type Database = {
           category?: string;
           name?: string;
           price?: number;
+          site_price?: number | null;
           specs?: string;
           tier?: string;
           passmark?: number | null;

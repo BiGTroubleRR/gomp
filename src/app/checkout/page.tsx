@@ -11,6 +11,7 @@ import { readJSON, type Currency, type Lang } from '@/lib/gomp-storage';
 import { useIsMobile } from '@/lib/use-media-query';
 import { submitCheckoutIntent, type PaymentMethod } from '@/lib/supabase/checkout-intents';
 import { pick } from '@/lib/i18n';
+import { applyVat, effectiveSitePriceCzk } from '@/lib/component-db-seed';
 
 type ShippingId = 'standard' | 'express' | 'overnight';
 
@@ -405,7 +406,7 @@ function EntryOverlay() {
 }
 
 export default function CheckoutPage() {
-  const { lang, currency, setLang, setCurrency, fmt, fmtGross, vatRatePct } = useSite();
+  const { lang, currency, setLang, setCurrency, fmt, vatRatePct } = useSite();
   const t = TRANSLATIONS[lang];
   const isMobile = useIsMobile();
   const { user } = useAuth();
@@ -439,8 +440,12 @@ export default function CheckoutPage() {
     [],
   );
 
+  // priceEur here is always the gross, override-aware "what the customer sees" figure (see
+  // effectiveSitePriceCzk) — display it with plain `fmt`, never `fmtGross`, or VAT gets applied
+  // twice. The no-real-build fallback path grosses its own static net constants the same way, so
+  // every consumer of `buildItems` can treat priceEur uniformly regardless of source.
   const buildItems = useMemo(() => {
-    if (!build) return FALLBACK_ITEMS;
+    if (!build) return FALLBACK_ITEMS.map((i) => ({ ...i, priceEur: applyVat(i.priceEur, vatRatePct) }));
     const selected = build.selected || {};
     const selections = build.selections || {};
     const compDb = build.compDb || {};
@@ -449,14 +454,15 @@ export default function CheckoutPage() {
       .map((id) => {
         const list = compDb[id as keyof CompDb] || [];
         const comp = list.find((c) => c.name === selections[id]) || list[0];
-        return { category: CAT[id] || id, name: comp?.name || '', priceEur: comp?.price || 0 };
+        return { category: CAT[id] || id, name: comp?.name || '', priceEur: comp ? effectiveSitePriceCzk(comp, vatRatePct) : 0 };
       });
-  }, [build]);
+  }, [build, vatRatePct]);
 
-  const partsTotal = build ? build.totalPrice : FALLBACK_ITEMS.reduce((sum, i) => sum + i.priceEur, 0);
-  const shippingCostEur = SHIPPING_OPTIONS.find((o) => o.id === shipping)?.priceEur ?? 0;
+  const partsTotal = buildItems.reduce((sum, i) => sum + i.priceEur, 0);
+  const shippingCostEur = applyVat(SHIPPING_OPTIONS.find((o) => o.id === shipping)?.priceEur ?? 0, vatRatePct);
+  const assemblyFeeEur = applyVat(ASSEMBLY_FEE_EUR, vatRatePct);
   const discount = promoApplied ? Math.round(partsTotal * 0.05) : 0;
-  const grandTotalEur = partsTotal - discount + shippingCostEur + ASSEMBLY_FEE_EUR;
+  const grandTotalEur = partsTotal - discount + shippingCostEur + assemblyFeeEur;
   const showCaseViewport = !!(build?.selected?.case);
 
   const deliveryDate = useMemo(() => {
@@ -519,11 +525,12 @@ export default function CheckoutPage() {
       shippingMethod: shipping,
       // These dollar amounts are advisory only — /api/checkout authoritatively recomputes every
       // price server-side from the live catalog (see that route's own comment) and ignores
-      // whatever's sent here, so there's no need (and no safe way, without duplicating the VAT
-      // rate fetch client-side redundantly) to gross these up before sending.
+      // whatever's sent here. They're already the same gross, VAT-inclusive figures shown on
+      // screen (partsTotal/shippingCostEur/grandTotalEur above), which is fine either way since
+      // nothing here is actually charged from these values.
       partsTotalEur: partsTotal,
       shippingEur: shippingCostEur,
-      assemblyEur: ASSEMBLY_FEE_EUR,
+      assemblyEur: assemblyFeeEur,
       discountEur: discount,
       totalEur: grandTotalEur,
       promoCode: promoApplied ? form.promo : '',
@@ -586,7 +593,7 @@ export default function CheckoutPage() {
                     {item.name}
                   </div>
                 </div>
-                <div style={{ ...serif, fontSize: 13, color: INK, flexShrink: 0, paddingTop: 14 }}>{fmtGross(item.priceEur)}</div>
+                <div style={{ ...serif, fontSize: 13, color: INK, flexShrink: 0, paddingTop: 14 }}>{fmt(item.priceEur)}</div>
               </div>
             ))}
           </div>
@@ -594,16 +601,16 @@ export default function CheckoutPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ ...sans, fontSize: 12, color: MUTED }}>{t.shipping}</span>
             <span style={{ ...serif, fontSize: 12, color: MUTED }}>
-              {shippingCostEur === 0 ? pick(lang, { en: 'Free', sk: 'Zadarmo', cz: 'Zdarma' }) : fmtGross(shippingCostEur)}
+              {shippingCostEur === 0 ? pick(lang, { en: 'Free', sk: 'Zadarmo', cz: 'Zdarma' }) : fmt(shippingCostEur)}
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <span style={{ ...sans, fontSize: 12, color: MUTED }}>{t.assembly_testing}</span>
-            <span style={{ ...serif, fontSize: 12, color: MUTED }}>{fmtGross(ASSEMBLY_FEE_EUR)}</span>
+            <span style={{ ...serif, fontSize: 12, color: MUTED }}>{fmt(assemblyFeeEur)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <span style={{ ...sans, fontSize: 13, fontWeight: 500, color: INK }}>{t.total}</span>
-            <span style={{ ...serif, fontSize: 26, fontWeight: 500, color: INK, letterSpacing: -0.5 }}>{fmtGross(grandTotalEur)}</span>
+            <span style={{ ...serif, fontSize: 26, fontWeight: 500, color: INK, letterSpacing: -0.5 }}>{fmt(grandTotalEur)}</span>
           </div>
           <div style={{ ...sans, fontSize: 11, color: MUTED, textAlign: 'right', marginBottom: 24 }}>{t.vat_included} ({vatRatePct}%)</div>
           <div style={{ background: 'rgba(110,20,35,0.06)', border: '0.5px solid rgba(110,20,35,0.14)', borderRadius: 2, padding: '14px 16px', marginBottom: 14 }}>
@@ -744,7 +751,7 @@ export default function CheckoutPage() {
                   const selected = opt.id === shipping;
                   const name = pick(lang, { en: opt.name_en, sk: opt.name_sk, cz: opt.name_cz });
                   const eta = pick(lang, { en: opt.eta_en, sk: opt.eta_sk, cz: opt.eta_cz });
-                  const priceStr = opt.priceEur === 0 ? pick(lang, { en: 'Free', sk: 'Zadarmo', cz: 'Zdarma' }) : fmtGross(opt.priceEur);
+                  const priceStr = opt.priceEur === 0 ? pick(lang, { en: 'Free', sk: 'Zadarmo', cz: 'Zdarma' }) : fmt(applyVat(opt.priceEur, vatRatePct));
                   return (
                     <div
                       key={opt.id}
@@ -934,7 +941,7 @@ export default function CheckoutPage() {
                     opacity: placing ? 0.6 : 1,
                   }}
                 >
-                  {placing ? t.processing : `${t.submit_request}${fmtGross(grandTotalEur)}`}
+                  {placing ? t.processing : `${t.submit_request}${fmt(grandTotalEur)}`}
                 </button>
               </div>
 

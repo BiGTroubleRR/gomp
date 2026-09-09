@@ -36,16 +36,18 @@ export type Component = {
   id: string;
   name: string;
   price: number;
+  // Manual override for the VAT-inclusive price actually shown to (and charged) customers —
+  // admin-typed, e.g. to round to a marketing-friendly number. Unset (the common case) means
+  // "no override" — every customer-facing price falls back to applyVat(price, vatRatePct)
+  // instead. Always read this through effectiveSitePriceCzk rather than checking it directly, so
+  // every call site falls back the same way.
+  sitePrice?: number;
   specs: string;
   // Optional rather than required: SKUs mined in bulk from buildcores-open-db (see the
   // manufacturer-coverage import) have no PassMark score to derive a tier from, unlike the
   // original hand-curated catalog — TierBadge/passmark UI already render nothing when unset.
   tier?: Tier;
   passmark?: number;
-  // Per-component margin, used instead of the site-wide margin (see Margin/computePrice below)
-  // when this component needs a different markup than everything else — e.g. a low-margin
-  // loss-leader GPU, or a part with unusually high shipping/handling cost baked in.
-  marginOverride?: Margin;
   passmarkUrl?: string;
   marketPrice?: number | null;
   category?: string; // case only: Full Tower | Mid Tower | Mini Tower | SFF
@@ -89,10 +91,10 @@ export type Component = {
   // without deleting its row/history. Undefined is treated as live (matches the DB column's own
   // `not null default true`) so every pre-existing row/caller that never set this keeps working.
   isLive?: boolean;
-  // Live competitor pricing (Heureka.cz) — heurekaUrl is admin-set/corrected (auto-matched by
-  // scripts/find-heureka-urls.mjs), heurekaPrice/heurekaCheckedAt are written by
-  // /api/admin/refresh-heureka-price, never by hand. heurekaPrice is VAT-inclusive, same as every
-  // real Czech retail price Heureka itself shows — compare it against fmtGross(price), not price.
+  // Live competitor pricing (Heureka.cz) — all three fields are manually typed in Admin (Heureka's
+  // bot protection blocks a server-side fetch, so there's no auto-refresh). heurekaPrice is
+  // VAT-inclusive, same as every real Czech retail price Heureka itself shows — compare it against
+  // fmtGross(price), not price.
   heurekaUrl?: string;
   heurekaPrice?: number;
   heurekaCheckedAt?: string;
@@ -549,6 +551,21 @@ export function computeBuildTotal(parts: Partial<Record<Category, string>>, comp
   }, 0);
 }
 
+// Same resolution as computeBuildTotal, but sums each part's actual customer-facing gross price
+// (effectiveSitePriceCzk — a component's own sitePrice override when set, else price marked up by
+// the current VAT rate) instead of summing net price and VAT-ing the total afterward. Those two
+// give the same answer only when no resolved part has a sitePrice override — as soon as one does,
+// VAT-ing the net sum would silently ignore it. Use this (with plain `fmt`, not `fmtGross` — the
+// result is already gross) for any customer-facing prebuilt/build total; computeBuildTotal itself
+// stays net-only, for Admin's "Bez DPH" figure.
+export function computeBuildTotalGross(parts: Partial<Record<Category, string>>, compDb: ComponentDb, vatRatePct: number): number {
+  return PREBUILT_SLOTS.reduce((sum, slot) => {
+    const name = parts[slot];
+    const comp = name ? (compDb[slot] || []).find((c) => c.name === name) : undefined;
+    return comp ? sum + effectiveSitePriceCzk(comp, vatRatePct) : sum;
+  }, 0);
+}
+
 const TIER_ORDER: Tier[] = ['D', 'C', 'B', 'A', 'S']; // ascending, index 0-4
 const TIER_VALUE: Record<Tier, number> = { D: 1, C: 2, B: 3, A: 4, S: 5 };
 
@@ -575,18 +592,6 @@ export function computeBuildTier(parts: Partial<Record<Category, string | null>>
   return TIER_ORDER[Math.min(4, Math.max(0, Math.round(avg) - 1))];
 }
 
-export type Margin = { type: 'eur' | 'pct'; value: number };
-export function defaultMargin(): Margin {
-  return { type: 'eur', value: 0 };
-}
-
-export function computePrice(marketPrice: number | null, margin: Margin): number | null {
-  if (marketPrice == null || isNaN(marketPrice)) return null;
-  const v = Number(margin.value) || 0;
-  const raw = margin.type === 'pct' ? marketPrice * (1 + v / 100) : marketPrice + v;
-  return Math.round(raw);
-}
-
 // Every price computed above (Component.price, computeBuildTotal, a customer build's priceEur)
 // is the pre-tax base — VAT is added on top of it for what a customer actually sees/pays, never
 // baked into the stored number itself, so Admin can always show both figures for the same value.
@@ -594,4 +599,12 @@ export function computePrice(marketPrice: number | null, margin: Margin): number
 // and the checkout API route.
 export function applyVat(netCzk: number, vatRatePct: number): number {
   return Math.round(netCzk * (1 + vatRatePct / 100));
+}
+
+// The one function every customer-facing price display should call for a single component: its
+// own manual sitePrice override when set, else the plain VAT computation. Keeps "what the customer
+// actually sees" consistent everywhere instead of some call sites checking sitePrice and others
+// forgetting to.
+export function effectiveSitePriceCzk(comp: Component, vatRatePct: number): number {
+  return comp.sitePrice ?? applyVat(comp.price, vatRatePct);
 }

@@ -10,7 +10,7 @@ import { useIsMobile } from '@/lib/use-media-query';
 import { pick } from '@/lib/i18n';
 import { fetchPrebuilts, subscribePrebuilts } from '@/lib/supabase/prebuilts';
 import { fetchComponentDb, subscribeComponents, getCachedComponentDb } from '@/lib/supabase/components';
-import { computeBuildTotal, computeBuildTier, defaultComponentDb, gpuModelFor, type Build, type ComponentDb } from '@/lib/component-db-seed';
+import { computeBuildTotalGross, computeBuildTier, defaultComponentDb, gpuModelFor, type Build, type ComponentDb } from '@/lib/component-db-seed';
 import TierBadge from '@/components/TierBadge';
 
 type FilterId = 'all' | 'flagship' | 'performance' | 'midrange' | 'entry';
@@ -251,7 +251,7 @@ function SpecRow({
 }
 
 export default function Shop() {
-  const { lang, currency, setLang, setCurrency, fmt, fmtGross } = useSite();
+  const { lang, currency, setLang, setCurrency, fmt, vatRatePct } = useSite();
   const [filter, setFilter] = useState<FilterId>('all');
   const isMobile = useIsMobile();
 
@@ -473,7 +473,7 @@ export default function Shop() {
                         lineHeight: 1,
                       }}
                     >
-                      {fmtGross(computeBuildTotal(prod, compDb))}
+                      {fmt(computeBuildTotalGross(prod, compDb, vatRatePct))}
                     </div>
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginTop: 3, fontWeight: 300 }}>
                       {t.vat_included}
