@@ -7,11 +7,11 @@
 // verbatim below, not imported, so this script never executes that file's insert logic) to find
 // each live catalog GPU's original eD product URL by name.
 //
-// Schema has no dedicated "width" column for GPUs (only gpu_length_mm + gpu_slot_width, a
-// slot-count figure) — the length goes to gpu_length_mm, the thickness converts to a slot-count
-// via the same ~0.8in (20.32mm) PCIe slot pitch already used catalog-wide (see
-// SLOT_PITCH_MM in src/lib/build-scene.ts), and the full real "LxWxDmm" triplet is appended to the
-// specs text (matching the pattern already used for cases) so the width isn't silently dropped.
+// The length goes to gpu_length_mm, the real card height/width goes to gpu_width_mm (drives the
+// 3D box's height axis — see build-scene.ts's dimensionSpecsFor('gpu', ...)), the thickness
+// converts to a slot-count via the same ~0.8in (20.32mm) PCIe slot pitch already used catalog-wide
+// (see SLOT_PITCH_MM in src/lib/build-scene.ts), and the full real "LxWxDmm" triplet is also
+// appended to the specs text (matching the pattern already used for cases) for a human-readable copy.
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'fs';
 
@@ -64,7 +64,7 @@ for (const row of rows) {
     if (apply) {
       const { error: updErr } = await supabase
         .from('components')
-        .update({ gpu_length_mm: length, gpu_slot_width: slotWidth, specs: newSpecs })
+        .update({ gpu_length_mm: length, gpu_slot_width: slotWidth, gpu_width_mm: width, specs: newSpecs })
         .eq('id', row.id);
       if (updErr) console.error(`UPDATE failed for ${row.name}:`, updErr.message);
     }

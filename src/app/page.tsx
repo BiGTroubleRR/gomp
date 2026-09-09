@@ -45,6 +45,7 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     stress_tested: 'STRESS TESTED',
     featured_build: 'Featured Build', apex_tagline: 'Ultimate 4K gaming & creation',
     spec_storage: 'SSD', spec_cooling: 'Cooling',
+    vat_included: 'Price includes VAT',
     configure_this: 'Configure this build →', configure_arrow: 'Configure →',
     stat1: 'Custom builds shipped', stat2: 'Average rating · 3,200+ reviews',
     stat4: 'Parts & labor warranty',
@@ -67,6 +68,7 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     stress_tested: 'ZÁŤAŽOVO TESTOVANÉ',
     featured_build: 'Herné monštrum', apex_tagline: 'Špičkové 4K hranie a tvorba',
     spec_storage: 'SSD', spec_cooling: 'Chladenie',
+    vat_included: 'Cena vrátane DPH',
     configure_this: 'Nakonfigurovať túto zostavu →', configure_arrow: 'Konfigurovať →',
     stat1: 'Expedovaných zostáv na mieru', stat2: 'Priemerné hodnotenie · 3200+ recenzií',
     stat4: 'Záruka na diely a prácu',
@@ -89,6 +91,7 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     stress_tested: 'ZÁTĚŽOVĚ OTESTOVÁNO',
     featured_build: 'Doporučená sestava', apex_tagline: 'Špičkové 4K hraní a tvorba',
     spec_storage: 'SSD', spec_cooling: 'Chlazení',
+    vat_included: 'Cena včetně DPH',
     configure_this: 'Nakonfigurovat tuto sestavu →', configure_arrow: 'Konfigurovat →',
     stat1: 'Expedovaných sestav na míru', stat2: 'Průměrné hodnocení · 3200+ recenzí',
     stat4: 'Záruka na díly a práci',
@@ -174,7 +177,7 @@ function CornerTicks({ color = GOLD, size = 18, inset = -1 }: { color?: string; 
 }
 
 export default function Home() {
-  const { lang, fmt } = useSite();
+  const { lang, fmt, fmtGross, vatRatePct } = useSite();
   const router = useRouter();
   const pathname = usePathname();
   const isMobile = useIsMobile();
@@ -230,9 +233,9 @@ export default function Home() {
         cpu: b.cpu,
         ram: b.ram,
         storage: b.storage,
-        priceStr: fmt(computeBuildTotal(b, compDb)),
+        priceStr: fmtGross(computeBuildTotal(b, compDb)),
       })),
-    [livePrebuilts, lang, fmt, compDb],
+    [livePrebuilts, lang, fmtGross, compDb],
   );
 
   const features = useMemo(
@@ -595,8 +598,11 @@ export default function Home() {
                 </div>
 
                 <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.18)', paddingTop: 24, marginTop: 8 }}>
-                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: 40, fontWeight: 500, color: INK, letterSpacing: -1, marginBottom: 16, lineHeight: 1 }}>
-                    {hero ? fmt(computeBuildTotal(hero, compDb)) : ''}
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: 40, fontWeight: 500, color: INK, letterSpacing: -1, marginBottom: 4, lineHeight: 1 }}>
+                    {hero ? fmtGross(computeBuildTotal(hero, compDb)) : ''}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: MUTED, marginBottom: 16, fontWeight: 300 }}>
+                    {t.vat_included} ({vatRatePct}%)
                   </div>
                   <TransitionLink
                     href={hero ? `/build?prebuilt=${hero.id}` : '/build'}
@@ -933,9 +939,10 @@ export default function Home() {
               >
                 {t.build_from}
               </div>
-              <div style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 40 : 56, fontWeight: 500, color: INK, letterSpacing: -2, lineHeight: 1, marginBottom: 8 }}>
-                {fmt(25248)}
+              <div style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 40 : 56, fontWeight: 500, color: INK, letterSpacing: -2, lineHeight: 1, marginBottom: 4 }}>
+                {fmtGross(25248)}
               </div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: MUTED, marginBottom: 12, fontWeight: 300 }}>{t.vat_included} ({vatRatePct}%)</div>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, marginBottom: 32, fontWeight: 300 }}>{t.entry_scales}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED }}>— {t.bullet1}</div>

@@ -427,7 +427,7 @@ function ExitOverlay({ label }: { label: string }) {
 // ---------------------------------------------------------------------------
 
 export default function BenchmarksPage() {
-  const { lang, currency, setLang, setCurrency, fmt } = useSite();
+  const { lang, currency, setLang, setCurrency, fmtGross } = useSite();
   const router = useRouter();
   const pathname = usePathname();
   const t = translations[lang];
@@ -506,7 +506,7 @@ export default function BenchmarksPage() {
   const buildComponentCount = build ? Object.values(build.selected || {}).filter(Boolean).length : 0;
   const buildLabel = build ? t.custom_pc_build : t.no_build_found;
   const buildSubline = build
-    ? `${buildComponentCount} ${t.components_word} · ${fmt(build.totalPrice || 0)}`
+    ? `${buildComponentCount} ${t.components_word} · ${fmtGross(build.totalPrice || 0)}`
     : t.configure_first;
 
   const flowSteps = [

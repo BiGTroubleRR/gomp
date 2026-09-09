@@ -69,6 +69,7 @@ export type Component = {
   maxPsuLengthMm?: number; // case only
   gpuLengthMm?: number; // gpu only
   gpuSlotWidth?: number; // gpu only
+  gpuWidthMm?: number; // gpu only — top-to-bottom card height, falls back to GPU_HEIGHT_MM when unset
   coolerHeightMm?: number; // cooler only, air towers
   coolerRadiatorMm?: number; // cooler only, AIO — the radiator that mounts on the case, not the pump block
   psuLengthMm?: number; // psu only
@@ -163,9 +164,9 @@ export const STORAGE_M2_SIZE_MM = { length: 80, width: 22 };
 // width x height regardless of wattage/length; only length varies per model (Component.psuLengthMm).
 export const PSU_ATX_SIZE_MM = { width: 150, height: 86 };
 
-// A GPU's top-to-bottom height barely varies by model or length — e.g. the RTX 5090 FE (2-slot,
-// 304mm) and RTX 5080 (3-slot, 304mm) are both exactly 137mm tall — so this is a flat constant
-// rather than a per-SKU field, unlike gpuLengthMm/gpuSlotWidth which do vary meaningfully.
+// Fallback height for a GPU with no confirmed real gpuWidthMm on file — real card height varies
+// a fair amount by model (confirmed range across the catalog: 69mm–172mm), so this is only a
+// placeholder default, not a universal truth; 137mm is the NVIDIA RTX 5090 FE's own real height.
 export const GPU_HEIGHT_MM = 137;
 // Standard PCIe expansion-slot pitch (0.8in) — multiplied by Component.gpuSlotWidth to get a
 // real thickness in mm (e.g. 2-slot ~= 41mm, 3.5-slot ~= 71mm).
@@ -577,4 +578,13 @@ export function computePrice(marketPrice: number | null, margin: Margin): number
   const v = Number(margin.value) || 0;
   const raw = margin.type === 'pct' ? marketPrice * (1 + v / 100) : marketPrice + v;
   return Math.round(raw);
+}
+
+// Every price computed above (Component.price, computeBuildTotal, a customer build's priceEur)
+// is the pre-tax base — VAT is added on top of it for what a customer actually sees/pays, never
+// baked into the stored number itself, so Admin can always show both figures for the same value.
+// Single source of truth for that conversion, shared by src/contexts/SiteContext.tsx's fmtGross
+// and the checkout API route.
+export function applyVat(netCzk: number, vatRatePct: number): number {
+  return Math.round(netCzk * (1 + vatRatePct / 100));
 }

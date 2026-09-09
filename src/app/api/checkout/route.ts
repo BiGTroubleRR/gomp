@@ -16,6 +16,12 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient, MissingServiceRoleKeyError } from '@/lib/supabase/admin-server';
 import { checkRateLimit, clientIpFromHeaders } from '@/lib/rate-limit';
+import { applyVat } from '@/lib/component-db-seed';
+
+// Mirrors DEFAULT_VAT_RATE_PCT in src/lib/supabase/store-settings.ts — not imported from there
+// directly since that module is 'use client' (browser-only data-access layer); this route reads
+// the same store_settings row itself via the admin client it already holds.
+const DEFAULT_VAT_RATE_PCT = 21;
 
 type PaymentMethod = 'card' | 'google_pay' | 'apple_pay';
 type ShippingMethod = 'standard' | 'express' | 'overnight';
@@ -109,13 +115,32 @@ export async function POST(request: Request) {
     };
   });
 
-  const partsTotalEur = buildItems.reduce((sum, i) => sum + i.price_eur, 0);
-  const shippingEur = SHIPPING_COSTS_EUR[body.shippingMethod];
-  const assemblyEur = ASSEMBLY_FEE_EUR;
+  // Every catalog/shipping/assembly price above is pre-tax (see applyVat's own comment in
+  // component-db-seed.ts) — VAT is added once here, on the authoritative server-computed totals,
+  // so what's persisted matches what a customer would actually be charged, not the internal net
+  // math. Reads the live shared rate; falls back to the standard default if the settings row is
+  // ever missing (never blocks a real order over a missing optional row).
+  const { data: settingsRow } = await supabase.from('store_settings').select('data').eq('id', true).maybeSingle();
+  const vatRatePct = typeof (settingsRow?.data as { vatRatePct?: number } | null)?.vatRatePct === 'number'
+    ? (settingsRow!.data as { vatRatePct: number }).vatRatePct
+    : DEFAULT_VAT_RATE_PCT;
+
+  const partsTotalNet = buildItems.reduce((sum, i) => sum + i.price_eur, 0);
+  const shippingNet = SHIPPING_COSTS_EUR[body.shippingMethod];
+  const assemblyNet = ASSEMBLY_FEE_EUR;
   const promoCodeInput = (body.promoCode ?? '').trim();
   const promoApplied = promoCodeInput.toLowerCase() === PROMO_CODE;
-  const discountEur = promoApplied ? Math.round(partsTotalEur * PROMO_DISCOUNT_RATE) : 0;
-  const totalEur = partsTotalEur - discountEur + shippingEur + assemblyEur;
+  const discountNet = promoApplied ? Math.round(partsTotalNet * PROMO_DISCOUNT_RATE) : 0;
+  const totalNet = partsTotalNet - discountNet + shippingNet + assemblyNet;
+
+  const partsTotalEur = applyVat(partsTotalNet, vatRatePct);
+  const shippingEur = applyVat(shippingNet, vatRatePct);
+  const assemblyEur = applyVat(assemblyNet, vatRatePct);
+  const discountEur = applyVat(discountNet, vatRatePct);
+  const totalEur = applyVat(totalNet, vatRatePct);
+  // Stored per-item breakdown matches the grossed-up aggregate totals above, not the internal
+  // net catalog prices used only to compute them.
+  const grossedBuildItems = buildItems.map((i) => ({ ...i, price_eur: applyVat(i.price_eur, vatRatePct) }));
 
   const { error } = await supabase.from('checkout_intents').insert({
     user_id: body.userId ?? null,
@@ -135,7 +160,7 @@ export async function POST(request: Request) {
     discount_eur: discountEur,
     total_eur: totalEur,
     promo_code: promoApplied ? promoCodeInput : '',
-    build_items: buildItems,
+    build_items: grossedBuildItems,
     display_currency: (body.displayCurrency ?? 'CZK').trim(),
     lang: (body.lang ?? 'en').trim(),
     contact_consent: Boolean(body.contactConsent),

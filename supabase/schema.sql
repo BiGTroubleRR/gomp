@@ -159,6 +159,7 @@ create table if not exists public.components (
   max_psu_length_mm numeric(6, 1), -- case only: longest PSU it can fit
   gpu_length_mm numeric(6, 1), -- gpu only
   gpu_slot_width numeric(3, 1), -- gpu only: how many expansion slots it occupies
+  gpu_width_mm numeric(6, 1), -- gpu only: top-to-bottom card height — drives the 3D box's height axis (falls back to GPU_HEIGHT_MM when unset, see component-db-seed.ts)
   cooler_height_mm numeric(6, 1), -- cooler only: air towers
   cooler_radiator_mm numeric(6, 1), -- cooler only: AIO radiator size
   psu_length_mm numeric(6, 1), -- psu only
@@ -215,6 +216,7 @@ alter table public.components add column if not exists max_radiator_mm numeric(6
 alter table public.components add column if not exists max_psu_length_mm numeric(6, 1);
 alter table public.components add column if not exists gpu_length_mm numeric(6, 1);
 alter table public.components add column if not exists gpu_slot_width numeric(3, 1);
+alter table public.components add column if not exists gpu_width_mm numeric(6, 1);
 alter table public.components add column if not exists cooler_height_mm numeric(6, 1);
 alter table public.components add column if not exists cooler_radiator_mm numeric(6, 1);
 alter table public.components add column if not exists psu_length_mm numeric(6, 1);
@@ -593,5 +595,50 @@ begin
     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'alignment_tuning'
   ) then
     alter publication supabase_realtime add table public.alignment_tuning;
+  end if;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- store_settings: single shared source of truth for small site-wide business
+-- settings that must be the same for every visitor/device (unlike the
+-- "Marketingová marža" markup, which is intentionally per-browser localStorage
+-- today) — starting with the VAT rate (vatRatePct, a percentage number, e.g.
+-- 21 for the Czech standard rate). Same singleton-row/RLS/Realtime shape as
+-- alignment_tuning above: `id` fixed to `true` so there's only ever one row,
+-- `data` a jsonb bag so more settings can be added later without a migration.
+-- ---------------------------------------------------------------------------
+create table if not exists public.store_settings (
+  id boolean primary key default true check (id),
+  data jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.store_settings (id, data)
+values (true, '{"vatRatePct": 21}'::jsonb)
+on conflict (id) do nothing;
+
+alter table public.store_settings enable row level security;
+
+drop policy if exists "store_settings_select_public" on public.store_settings;
+create policy "store_settings_select_public" on public.store_settings
+  for select using (true);
+
+-- No write policy for anon/authenticated. Only the service-role key (used
+-- exclusively by /api/admin/store-settings, after a Clerk admin check) can
+-- write; it bypasses RLS entirely, so it needs no policy of its own.
+drop policy if exists "store_settings_write_public" on public.store_settings;
+
+drop trigger if exists store_settings_set_updated_at on public.store_settings;
+create trigger store_settings_set_updated_at
+  before update on public.store_settings
+  for each row execute procedure public.set_updated_at();
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'store_settings'
+  ) then
+    alter publication supabase_realtime add table public.store_settings;
   end if;
 end $$;

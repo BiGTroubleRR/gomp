@@ -198,7 +198,7 @@ export function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVe
     const thicknessAxis = gpuVertical ? 'z' : 'y';
     return [
       { axis: lengthAxis, mm: comp.gpuLengthMm },
-      { axis: 'x', mm: GPU_HEIGHT_MM, annotate: false },
+      { axis: 'x', mm: comp.gpuWidthMm ?? GPU_HEIGHT_MM, annotate: false },
       ...(comp.gpuSlotWidth ? [{ axis: thicknessAxis, mm: comp.gpuSlotWidth * PCIE_SLOT_PITCH_MM, annotate: false } as DimensionSpec] : []),
     ];
   }

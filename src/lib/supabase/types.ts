@@ -133,6 +133,7 @@ export type Database = {
           max_psu_length_mm: number | null;
           gpu_length_mm: number | null;
           gpu_slot_width: number | null;
+          gpu_width_mm: number | null;
           cooler_height_mm: number | null;
           cooler_radiator_mm: number | null;
           psu_length_mm: number | null;
@@ -171,6 +172,7 @@ export type Database = {
           max_psu_length_mm?: number | null;
           gpu_length_mm?: number | null;
           gpu_slot_width?: number | null;
+          gpu_width_mm?: number | null;
           cooler_height_mm?: number | null;
           cooler_radiator_mm?: number | null;
           psu_length_mm?: number | null;
@@ -206,6 +208,7 @@ export type Database = {
           max_psu_length_mm?: number | null;
           gpu_length_mm?: number | null;
           gpu_slot_width?: number | null;
+          gpu_width_mm?: number | null;
           cooler_height_mm?: number | null;
           cooler_radiator_mm?: number | null;
           psu_length_mm?: number | null;
@@ -227,6 +230,23 @@ export type Database = {
       // there is exactly one row. `data` is a partial AlignmentTuning (src/lib/build-scene.ts):
       // only the fields Admin has actually changed, merged over the scene's own defaults.
       alignment_tuning: {
+        Row: {
+          id: boolean;
+          data: Record<string, unknown>;
+          updated_at: string;
+        };
+        Insert: {
+          id?: boolean;
+          data?: Record<string, unknown>;
+        };
+        Update: {
+          data?: Record<string, unknown>;
+        };
+        Relationships: [];
+      };
+      // Single shared source of truth for small site-wide settings (currently just
+      // vatRatePct) — same singleton-row shape as alignment_tuning above.
+      store_settings: {
         Row: {
           id: boolean;
           data: Record<string, unknown>;

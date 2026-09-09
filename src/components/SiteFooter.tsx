@@ -34,6 +34,7 @@ const T = {
     madein: 'Hand-built in Prague, CZ',
     disclaimer:
       'Prices are shown in CZK (Kč); the € figure is an approximate conversion (1 € ≈ 24.30 Kč, reference Jul 2026). Final price confirmed at checkout.',
+    vatNote: (pct: number) => `All prices include VAT (${pct}%).`,
     tier_explanation:
       'Every GOMP is rated on a tier scale from S (top) down to D (entry-level), calculated as the average tier of its individual components.',
   },
@@ -57,6 +58,7 @@ const T = {
     madein: 'Ručne vyrábané v Prahe, ČR',
     disclaimer:
       'Ceny sú uvedené v Kč; suma v € je približný prepočet (1 € ≈ 24,30 Kč, referenčný júl 2026). Konečná cena bude potvrdená pri objednávke.',
+    vatNote: (pct: number) => `Všetky ceny obsahujú DPH (${pct}%).`,
     tier_explanation:
       'Každý GOMP má hodnotenie na škále S (najvyššie) až D (základné), vypočítané ako priemer úrovní jeho jednotlivých komponentov.',
   },
@@ -80,6 +82,7 @@ const T = {
     madein: 'Ručně vyrobeno v Praze, ČR',
     disclaimer:
       'Ceny jsou uvedeny v Kč; částka v € je přibližný přepočet (1 € ≈ 24,30 Kč, referenční červenec 2026). Konečná cena bude potvrzena při objednávce.',
+    vatNote: (pct: number) => `Všechny ceny zahrnují DPH (${pct}%).`,
     tier_explanation:
       'Každý GOMP má hodnocení na škále S (nejvyšší) až D (základní), vypočítané jako průměr úrovní jeho jednotlivých komponentů.',
   },
@@ -100,7 +103,7 @@ function Col({ title, children }: { title: string; children: ReactNode }) {
 // deliberately keeps its own slimmer single-row footer rather than this 4-column one, so it
 // isn't duplicated here.
 export default function SiteFooter() {
-  const { lang } = useSite();
+  const { lang, vatRatePct } = useSite();
   const t = T[lang];
   const isMobile = useIsMobile();
 
@@ -161,7 +164,7 @@ export default function SiteFooter() {
           </span>
         </div>
         <div style={{ borderTop: '0.5px solid rgba(245,240,230,0.08)', marginTop: 20, paddingTop: 20 }}>
-          <span style={{ ...sans, fontSize: 11, color: 'rgba(245,240,230,0.28)', fontWeight: 300, lineHeight: 1.6 }}>{t.disclaimer}</span>
+          <span style={{ ...sans, fontSize: 11, color: 'rgba(245,240,230,0.28)', fontWeight: 300, lineHeight: 1.6 }}>{t.vatNote(vatRatePct)} {t.disclaimer}</span>
           <br />
           <span style={{ ...sans, fontSize: 11, color: 'rgba(245,240,230,0.28)', fontWeight: 300, lineHeight: 1.6 }}>{t.tier_explanation}</span>
         </div>

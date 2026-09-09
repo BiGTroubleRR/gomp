@@ -106,9 +106,10 @@ const TRANSLATIONS = {
     shipping: 'Shipping',
     assembly_testing: 'Assembly & testing',
     total: 'Total',
+    vat_included: 'Price includes VAT',
     estimated_delivery: 'Estimated Delivery',
     price_disclaimer:
-      'Prices shown in CZK, converted to EUR at an approximate market rate (1 € ≈ 24.30 Kč, reference Jul 2026). Informative only — final price is confirmed at checkout.',
+      'Prices include statutory VAT. Shown in CZK, converted to EUR at an approximate market rate (1 € ≈ 24.30 Kč, reference Jul 2026). Informative only — final price is confirmed at checkout.',
     shipping_details: 'Shipping Details',
     shipping_details_desc: 'Where should we deliver your build?',
     saved_addresses: 'Saved Addresses',
@@ -172,9 +173,10 @@ const TRANSLATIONS = {
     shipping: 'Doprava',
     assembly_testing: 'Montáž a testovanie',
     total: 'Spolu',
+    vat_included: 'Cena vrátane DPH',
     estimated_delivery: 'Predpokladané doručenie',
     price_disclaimer:
-      'Ceny sú uvedené v CZK, prepočet na EUR približným trhovým kurzom (1 € ≈ 24,30 Kč, referenčný júl 2026). Slúži len na orientáciu — konečná cena je potvrdená pri pokladni.',
+      'Ceny obsahujú zákonnú DPH. Uvedené v CZK, prepočet na EUR približným trhovým kurzom (1 € ≈ 24,30 Kč, referenčný júl 2026). Slúži len na orientáciu — konečná cena je potvrdená pri pokladni.',
     shipping_details: 'Údaje o doručení',
     shipping_details_desc: 'Kam máme doručiť vašu zostavu?',
     saved_addresses: 'Uložené adresy',
@@ -235,9 +237,10 @@ const TRANSLATIONS = {
     shipping: 'Doprava',
     assembly_testing: 'Montáž a testování',
     total: 'Celkem',
+    vat_included: 'Cena včetně DPH',
     estimated_delivery: 'Předpokládané doručení',
     price_disclaimer:
-      'Ceny jsou uvedeny v CZK, přepočet na EUR přibližným tržním kurzem (1 € ≈ 24,30 Kč, referenční červenec 2026). Slouží pouze pro orientaci — konečná cena je potvrzena při pokladně.',
+      'Ceny obsahují zákonnou DPH. Uvedeny v CZK, přepočet na EUR přibližným tržním kurzem (1 € ≈ 24,30 Kč, referenční červenec 2026). Slouží pouze pro orientaci — konečná cena je potvrzena při pokladně.',
     shipping_details: 'Údaje o doručení',
     shipping_details_desc: 'Kam máme doručit vaši sestavu?',
     saved_addresses: 'Uložené adresy',
@@ -402,7 +405,7 @@ function EntryOverlay() {
 }
 
 export default function CheckoutPage() {
-  const { lang, currency, setLang, setCurrency, fmt } = useSite();
+  const { lang, currency, setLang, setCurrency, fmt, fmtGross, vatRatePct } = useSite();
   const t = TRANSLATIONS[lang];
   const isMobile = useIsMobile();
   const { user } = useAuth();
@@ -514,6 +517,10 @@ export default function CheckoutPage() {
       zip: form.zip,
       paymentMethod,
       shippingMethod: shipping,
+      // These dollar amounts are advisory only — /api/checkout authoritatively recomputes every
+      // price server-side from the live catalog (see that route's own comment) and ignores
+      // whatever's sent here, so there's no need (and no safe way, without duplicating the VAT
+      // rate fetch client-side redundantly) to gross these up before sending.
       partsTotalEur: partsTotal,
       shippingEur: shippingCostEur,
       assemblyEur: ASSEMBLY_FEE_EUR,
@@ -579,7 +586,7 @@ export default function CheckoutPage() {
                     {item.name}
                   </div>
                 </div>
-                <div style={{ ...serif, fontSize: 13, color: INK, flexShrink: 0, paddingTop: 14 }}>{fmt(item.priceEur)}</div>
+                <div style={{ ...serif, fontSize: 13, color: INK, flexShrink: 0, paddingTop: 14 }}>{fmtGross(item.priceEur)}</div>
               </div>
             ))}
           </div>
@@ -587,17 +594,18 @@ export default function CheckoutPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ ...sans, fontSize: 12, color: MUTED }}>{t.shipping}</span>
             <span style={{ ...serif, fontSize: 12, color: MUTED }}>
-              {shippingCostEur === 0 ? pick(lang, { en: 'Free', sk: 'Zadarmo', cz: 'Zdarma' }) : fmt(shippingCostEur)}
+              {shippingCostEur === 0 ? pick(lang, { en: 'Free', sk: 'Zadarmo', cz: 'Zdarma' }) : fmtGross(shippingCostEur)}
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <span style={{ ...sans, fontSize: 12, color: MUTED }}>{t.assembly_testing}</span>
-            <span style={{ ...serif, fontSize: 12, color: MUTED }}>{fmt(ASSEMBLY_FEE_EUR)}</span>
+            <span style={{ ...serif, fontSize: 12, color: MUTED }}>{fmtGross(ASSEMBLY_FEE_EUR)}</span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <span style={{ ...sans, fontSize: 13, fontWeight: 500, color: INK }}>{t.total}</span>
-            <span style={{ ...serif, fontSize: 26, fontWeight: 500, color: INK, letterSpacing: -0.5 }}>{fmt(grandTotalEur)}</span>
+            <span style={{ ...serif, fontSize: 26, fontWeight: 500, color: INK, letterSpacing: -0.5 }}>{fmtGross(grandTotalEur)}</span>
           </div>
+          <div style={{ ...sans, fontSize: 11, color: MUTED, textAlign: 'right', marginBottom: 24 }}>{t.vat_included} ({vatRatePct}%)</div>
           <div style={{ background: 'rgba(110,20,35,0.06)', border: '0.5px solid rgba(110,20,35,0.14)', borderRadius: 2, padding: '14px 16px', marginBottom: 14 }}>
             <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MAROON, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
               {t.estimated_delivery}
@@ -736,7 +744,7 @@ export default function CheckoutPage() {
                   const selected = opt.id === shipping;
                   const name = pick(lang, { en: opt.name_en, sk: opt.name_sk, cz: opt.name_cz });
                   const eta = pick(lang, { en: opt.eta_en, sk: opt.eta_sk, cz: opt.eta_cz });
-                  const priceStr = opt.priceEur === 0 ? pick(lang, { en: 'Free', sk: 'Zadarmo', cz: 'Zdarma' }) : fmt(opt.priceEur);
+                  const priceStr = opt.priceEur === 0 ? pick(lang, { en: 'Free', sk: 'Zadarmo', cz: 'Zdarma' }) : fmtGross(opt.priceEur);
                   return (
                     <div
                       key={opt.id}
@@ -926,7 +934,7 @@ export default function CheckoutPage() {
                     opacity: placing ? 0.6 : 1,
                   }}
                 >
-                  {placing ? t.processing : `${t.submit_request}${fmt(grandTotalEur)}`}
+                  {placing ? t.processing : `${t.submit_request}${fmtGross(grandTotalEur)}`}
                 </button>
               </div>
 

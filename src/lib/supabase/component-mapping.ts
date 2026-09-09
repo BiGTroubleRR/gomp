@@ -32,6 +32,7 @@ export function rowToComponent(row: ComponentRow): Component {
   if (row.max_psu_length_mm != null) comp.maxPsuLengthMm = Number(row.max_psu_length_mm);
   if (row.gpu_length_mm != null) comp.gpuLengthMm = Number(row.gpu_length_mm);
   if (row.gpu_slot_width != null) comp.gpuSlotWidth = Number(row.gpu_slot_width);
+  if (row.gpu_width_mm != null) comp.gpuWidthMm = Number(row.gpu_width_mm);
   if (row.cooler_height_mm != null) comp.coolerHeightMm = Number(row.cooler_height_mm);
   if (row.cooler_radiator_mm != null) comp.coolerRadiatorMm = Number(row.cooler_radiator_mm);
   if (row.psu_length_mm != null) comp.psuLengthMm = Number(row.psu_length_mm);
@@ -69,6 +70,7 @@ export function componentToRow(category: Category, comp: Component, sortOrder: n
     max_psu_length_mm: comp.maxPsuLengthMm ?? null,
     gpu_length_mm: comp.gpuLengthMm ?? null,
     gpu_slot_width: comp.gpuSlotWidth ?? null,
+    gpu_width_mm: comp.gpuWidthMm ?? null,
     cooler_height_mm: comp.coolerHeightMm ?? null,
     cooler_radiator_mm: comp.coolerRadiatorMm ?? null,
     psu_length_mm: comp.psuLengthMm ?? null,

@@ -21,6 +21,7 @@ import {
 } from '@/lib/supabase/customer-builds';
 import type { CustomerBuild } from '@/lib/supabase/customer-build-mapping';
 import { fetchPrebuilts, subscribePrebuilts, insertPrebuilt, updatePrebuilt, deletePrebuilt } from '@/lib/supabase/prebuilts';
+import { saveStoreSettings } from '@/lib/supabase/store-settings';
 import { passmarkLookup, tierFromPassmark, ramTier, TIER_COLORS } from '@/lib/passmark';
 import TierGlowOrb from '@/components/TierGlowOrb';
 import AdminAlignmentPanel from '@/components/AdminAlignmentPanel';
@@ -30,6 +31,7 @@ import {
   computePrice,
   computeBuildTotal,
   computeBuildTier,
+  gpuModelFor,
   type Category,
   type Component,
   type ComponentDb,
@@ -200,11 +202,14 @@ type Translations = {
   live: string; hidden: string;
   edit_build: string; new_build: string; saved_ok: string;
   components_db: string; components_db_desc: string;
+  comp_search_placeholder: string; comp_sort_default: string; comp_sort_by_number: string;
   suggestions_search_placeholder: string; already_added: string; no_suggestions: string;
   margin_title: string; margin_desc: string;
   margin_eur: string; margin_pct: string;
+  vat_rate_title: string; vat_rate_desc: string; vat_rate_suffix: string;
   market_price_label: string; market_price_placeholder: string;
-  original_price_label: string; web_price_label: string;
+  original_price_label: string;
+  price_excl_vat: string; price_incl_vat: (pct: number) => string; vat_incl_short: string;
   image_label: string; image_uploading: string; image_replace: string; image_remove: string; image_download: string;
   apply_margin: string; margin_override_badge: string; margin_override_label: string; margin_override_desc: string; margin_override_use_global: string;
   specs_notes: string; tier_rating: string; tower_category: string; tower_category_help: string;
@@ -216,7 +221,7 @@ type Translations = {
   dimensions_mm: string;
   case_width_mm: string; case_height_mm: string; case_depth_mm: string;
   max_gpu_length_mm: string; max_cooler_height_mm: string; max_radiator_mm: string; max_psu_length_mm: string;
-  gpu_length_mm: string; gpu_slot_width: string;
+  gpu_length_mm: string; gpu_slot_width: string; gpu_width_mm: string;
   cooler_height_mm: string; cooler_radiator_mm: string;
   psu_length_mm: string;
   update_arrow: string; add_prefix: string; edit_prefix: string;
@@ -270,12 +275,15 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     live: 'Live', hidden: 'Hidden',
     edit_build: 'Edit Build', new_build: 'New Build', saved_ok: '✓ Saved successfully',
     components_db: 'Components Database', components_db_desc: 'Parts available in the 3D PC Builder configurator',
+    comp_search_placeholder: 'Search by name…', comp_sort_default: 'Default order', comp_sort_by_number: 'By number (5090 → 5060)',
     suggestions_search_placeholder: 'Search suggestions…', already_added: 'Added', no_suggestions: 'No matches — type a custom name.',
     margin_title: 'Pricing Margin',
     margin_desc: 'Paste in the cheapest current price you find on Alza / Heureka as "Market Price" below — the sell price is derived automatically from this margin and updates across the site.',
     margin_eur: 'Kč Flat', margin_pct: '% Markup',
+    vat_rate_title: 'VAT Rate', vat_rate_desc: 'Every stored price is pre-tax — this is added on top for what customers actually see. Czech standard rate is 21%.', vat_rate_suffix: '%',
     market_price_label: 'Market Price (Alza/Heureka)', market_price_placeholder: 'e.g. 1650',
-    original_price_label: 'Original', web_price_label: 'Web price',
+    original_price_label: 'Original',
+    price_excl_vat: 'Excl. VAT', price_incl_vat: (pct) => `Incl. VAT (${pct}%)`, vat_incl_short: 'incl. VAT',
     image_label: 'Product Image', image_uploading: 'Uploading…',
     image_replace: 'Replace image', image_remove: 'Remove', image_download: 'Download',
     apply_margin: 'Apply margin →', margin_override_badge: 'Custom margin',
@@ -298,7 +306,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     dimensions_mm: 'Dimensions (mm)',
     case_width_mm: 'Width', case_height_mm: 'Height', case_depth_mm: 'Depth',
     max_gpu_length_mm: 'Max GPU length', max_cooler_height_mm: 'Max cooler height', max_radiator_mm: 'Max radiator size', max_psu_length_mm: 'Max PSU length',
-    gpu_length_mm: 'Length', gpu_slot_width: 'Slot width',
+    gpu_length_mm: 'Length', gpu_slot_width: 'Slot width', gpu_width_mm: 'Width (height)',
     cooler_height_mm: 'Height (air)', cooler_radiator_mm: 'Radiator size (AIO)',
     psu_length_mm: 'Length',
     update_arrow: 'Update →', add_prefix: 'Add ', edit_prefix: 'Edit ',
@@ -354,12 +362,15 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     live: 'Aktívna', hidden: 'Skrytá',
     edit_build: 'Upraviť zostavu', new_build: 'Nová zostava', saved_ok: '✓ Úspešne uložené',
     components_db: 'Databáza komponentov', components_db_desc: 'Súčiastky dostupné v 3D konfigurátore PC',
+    comp_search_placeholder: 'Hľadať podľa názvu…', comp_sort_default: 'Predvolené poradie', comp_sort_by_number: 'Podľa čísla (5090 → 5060)',
     suggestions_search_placeholder: 'Hľadať návrhy…', already_added: 'Pridané', no_suggestions: 'Nenájdené — zadajte vlastný názov.',
     margin_title: 'Marketingová marža',
     margin_desc: 'Vložte najlevnejšiu aktuálnu cenu z Alzy / Heureky ako „Tržnová cena" nižšie — predajná cena sa automaticky odvodí z tejto marže a aktualizuje sa v celom obchode.',
     margin_eur: 'Kč Pevná', margin_pct: '% Prirážka',
+    vat_rate_title: 'Sadzba DPH', vat_rate_desc: 'Každá uložená cena je bez dane — DPH sa pripočíta navrch pre to, čo skutočne vidí zákazník. Slovenská/česká základná sadzba je 21 %.', vat_rate_suffix: '%',
     market_price_label: 'Tržnová cena (Alza/Heureka)', market_price_placeholder: 'napr. 1650',
-    original_price_label: 'Pôvodná', web_price_label: 'Cena na webe',
+    price_excl_vat: 'Bez DPH', price_incl_vat: (pct) => `S DPH (${pct}%)`, vat_incl_short: 's DPH',
+    original_price_label: 'Pôvodná',
     image_label: 'Fotka produktu', image_uploading: 'Nahrávam…',
     image_replace: 'Zmeniť fotku', image_remove: 'Odstrániť', image_download: 'Stiahnuť',
     apply_margin: 'Aplikovať maržu →', margin_override_badge: 'Vlastná marža',
@@ -382,7 +393,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     dimensions_mm: 'Rozmery (mm)',
     case_width_mm: 'Šírka', case_height_mm: 'Výška', case_depth_mm: 'Hĺbka',
     max_gpu_length_mm: 'Max. dĺžka GPU', max_cooler_height_mm: 'Max. výška chladiča', max_radiator_mm: 'Max. veľkosť radiátora', max_psu_length_mm: 'Max. dĺžka zdroja',
-    gpu_length_mm: 'Dĺžka', gpu_slot_width: 'Šírka (sloty)',
+    gpu_length_mm: 'Dĺžka', gpu_slot_width: 'Šírka (sloty)', gpu_width_mm: 'Šírka (výška karty)',
     cooler_height_mm: 'Výška (vzduchový)', cooler_radiator_mm: 'Veľkosť radiátora (AIO)',
     psu_length_mm: 'Dĺžka',
     update_arrow: 'Aktualizovať →', add_prefix: 'Pridať ', edit_prefix: 'Upraviť ',
@@ -454,7 +465,7 @@ type CompFormState = {
   // so this data was invisible in the admin form and only ever silently carried forward untouched.
   caseWidthMm: string; caseHeightMm: string; caseDepthMm: string;
   maxGpuLengthMm: string; maxCoolerHeightMm: string; maxRadiatorMm: string; maxPsuLengthMm: string;
-  gpuLengthMm: string; gpuSlotWidth: string; // gpu only
+  gpuLengthMm: string; gpuSlotWidth: string; gpuWidthMm: string; // gpu only
   coolerHeightMm: string; coolerRadiatorMm: string; // cooler only
   psuLengthMm: string; // psu only
 };
@@ -467,10 +478,24 @@ function initialCompForm(): CompFormState {
     fanSizeMm: '', fanPreinstalled: {},
     caseWidthMm: '', caseHeightMm: '', caseDepthMm: '',
     maxGpuLengthMm: '', maxCoolerHeightMm: '', maxRadiatorMm: '', maxPsuLengthMm: '',
-    gpuLengthMm: '', gpuSlotWidth: '',
+    gpuLengthMm: '', gpuSlotWidth: '', gpuWidthMm: '',
     coolerHeightMm: '', coolerRadiatorMm: '',
     psuLengthMm: '',
   };
+}
+
+// Admin-only ordering for the GPU grid's "Podľa výkonu" sort toggle: a plain numeric-descending
+// ranking (5090 -> 5080 -> 5070 Ti -> 5070 -> 5060 Ti -> 5060), unlike /build's own GPU picker
+// which groups by tier (see gpuModelFor's other call site in build/page.tsx). Reuses gpuModelFor
+// to parse the chip model out of the name, then folds a Ti/Super suffix into the same number as a
+// sub-rank so e.g. "5070 Ti" (50701) outranks plain "5070" (50700) but never a real "5080" (50800).
+// Cards gpuModelFor can't parse (returns null) sort last rather than erroring.
+function gpuNumericSortKey(name: string): number {
+  const model = gpuModelFor(name);
+  if (!model) return -1;
+  const num = parseInt(model.match(/(\d{3,4})/)?.[1] ?? '0', 10);
+  const suffixRank = /Ti\s*Super/i.test(model) ? 3 : /Super/i.test(model) ? 2 : /\bTi\b/i.test(model) ? 1 : 0;
+  return num * 10 + suffixRank;
 }
 
 // Shared by addComponent/updateComponent so the same category-scoped set of dimension fields
@@ -490,6 +515,7 @@ function dimensionFieldsFromForm(cat: Category, form: CompFormState): Partial<Co
     ...(cat === 'case' && form.maxPsuLengthMm ? { maxPsuLengthMm: num(form.maxPsuLengthMm) } : {}),
     ...(cat === 'gpu' && form.gpuLengthMm ? { gpuLengthMm: num(form.gpuLengthMm) } : {}),
     ...(cat === 'gpu' && form.gpuSlotWidth ? { gpuSlotWidth: num(form.gpuSlotWidth) } : {}),
+    ...(cat === 'gpu' && form.gpuWidthMm ? { gpuWidthMm: num(form.gpuWidthMm) } : {}),
     ...(cat === 'cooler' && form.coolerHeightMm ? { coolerHeightMm: num(form.coolerHeightMm) } : {}),
     ...(cat === 'cooler' && form.coolerRadiatorMm ? { coolerRadiatorMm: num(form.coolerRadiatorMm) } : {}),
     ...(cat === 'psu' && form.psuLengthMm ? { psuLengthMm: num(form.psuLengthMm) } : {}),
@@ -632,7 +658,7 @@ function CompSelect({
 // ---------------------------------------------------------------------------
 
 export default function AdminPage() {
-  const { lang, currency, setLang, setCurrency, fmt } = useSite();
+  const { lang, currency, setLang, setCurrency, fmt, vatRatePct, fmtGross } = useSite();
   const isMobile = useIsMobile();
 
   // Admin access is decided server-side (Clerk identity + role) via
@@ -670,6 +696,14 @@ export default function AdminPage() {
   const [form, setForm] = useState<BuildFormState>(initialBuildForm());
 
   const [compCat, setCompCat] = useState<Category>('gpu');
+  // Filters the active category's grid by a case-insensitive substring match against the
+  // component's own name — e.g. typing "50" on the GPU tab narrows to every RTX 50-series card.
+  // Reset on every tab switch (see setCompCat calls below) so a stale filter never silently hides
+  // a whole category after switching to it.
+  const [compSearch, setCompSearch] = useState('');
+  // GPU-only: sorts the grid by parsed chip number descending (5090 -> 5080 -> ... -> 5060)
+  // instead of today's sort_order — see gpuNumericSortKey below.
+  const [gpuSortByNumber, setGpuSortByNumber] = useState(false);
   const [compForm, setCompForm] = useState<CompFormState>(initialCompForm());
   const [editCompId, setEditCompId] = useState<string | null>(null);
   // Drives the tier glow's hover-brightened state on the grid card below — separate from
@@ -687,6 +721,15 @@ export default function AdminPage() {
 
   const [margin, setMarginState] = useState<Margin>(defaultMargin());
   const [marginValueInput, setMarginValueInput] = useState('0');
+
+  // vatRatePct itself lives in SiteContext (shared store_settings row, live via Realtime) — this
+  // is just the controlled text-input state, synced from it and pushed back on blur/Enter via
+  // saveStoreSettings, same shape as marginValueInput/updateMargin above.
+  const [vatRateInput, setVatRateInput] = useState(() => String(vatRatePct));
+  useEffect(() => setVatRateInput(String(vatRatePct)), [vatRatePct]);
+  async function updateVatRate(value: number) {
+    await saveStoreSettings({ vatRatePct: value });
+  }
 
   const [nameDropdownOpen, setNameDropdownOpen] = useState(false);
 
@@ -1242,6 +1285,7 @@ export default function AdminPage() {
       maxPsuLengthMm: comp.maxPsuLengthMm != null ? String(comp.maxPsuLengthMm) : '',
       gpuLengthMm: comp.gpuLengthMm != null ? String(comp.gpuLengthMm) : '',
       gpuSlotWidth: comp.gpuSlotWidth != null ? String(comp.gpuSlotWidth) : '',
+      gpuWidthMm: comp.gpuWidthMm != null ? String(comp.gpuWidthMm) : '',
       coolerHeightMm: comp.coolerHeightMm != null ? String(comp.coolerHeightMm) : '',
       coolerRadiatorMm: comp.coolerRadiatorMm != null ? String(comp.coolerRadiatorMm) : '',
       psuLengthMm: comp.psuLengthMm != null ? String(comp.psuLengthMm) : '',
@@ -1999,7 +2043,7 @@ export default function AdminPage() {
                       <div style={LABEL_STYLE}>{t.price_eur_label}</div>
                       <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="4299" style={INPUT_STYLE} />
                       <div style={{ fontFamily: 'var(--font-serif)', fontSize: 10, color: '#9A9488', marginTop: 4 }}>
-                        {t.live_total_label}: {fmt(computeBuildTotal(form, compDb))}
+                        {t.live_total_label} — {t.price_excl_vat}: {fmt(computeBuildTotal(form, compDb))} · {t.price_incl_vat(vatRatePct)}: {fmtGross(computeBuildTotal(form, compDb))}
                       </div>
                     </div>
                     <div>
@@ -2047,7 +2091,10 @@ export default function AdminPage() {
                           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', lineHeight: 1.8 }}>
                             {b.gpu}<br />{b.cpu}
                           </div>
-                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 13, fontWeight: 500, color: '#1C1C1A' }}>{fmt(computeBuildTotal(b, compDb))}</div>
+                          <div>
+                            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 13, fontWeight: 500, color: '#1C1C1A' }}>{fmt(computeBuildTotal(b, compDb))}</div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#9A9488' }} title={t.price_incl_vat(vatRatePct)}>{fmtGross(computeBuildTotal(b, compDb))} ({t.vat_incl_short})</div>
+                          </div>
                           <div>
                             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: tc.bg, border: `1.5px solid ${tc.border}`, borderRadius: 4 }}>
                               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: tc.text }}>{computedTier ?? '—'}</span>
@@ -2153,6 +2200,11 @@ export default function AdminPage() {
                     <div>
                       <div style={LABEL_STYLE}>{t.cg_price_label}</div>
                       <input type="number" value={cgForm.priceEur} onChange={(e) => setCgForm({ ...cgForm, priceEur: e.target.value })} placeholder="1999" style={INPUT_STYLE} />
+                      {cgForm.priceEur !== '' && (
+                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 10, color: '#9A9488', marginTop: 4 }}>
+                          {t.price_incl_vat(vatRatePct)}: {fmtGross(parseFloat(cgForm.priceEur) || 0)}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <div style={LABEL_STYLE}>{t.cg_built_on_label}</div>
@@ -2319,7 +2371,7 @@ export default function AdminPage() {
                   {CATEGORY_TAB_ORDER.map((cat) => (
                     <button
                       key={cat}
-                      onClick={() => setCompCat(cat)}
+                      onClick={() => { setCompCat(cat); setCompSearch(''); }}
                       style={{
                         padding: '9px 16px', background: cat === compCat ? '#6E1423' : 'transparent', color: cat === compCat ? '#F5F0E6' : '#7A7469',
                         border: 'none', borderRight: '0.5px solid rgba(28,28,26,0.1)', fontSize: 12, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3, whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'var(--font-sans)',
@@ -2329,6 +2381,32 @@ export default function AdminPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+                <input
+                  type="text"
+                  value={compSearch}
+                  onChange={(e) => setCompSearch(e.target.value)}
+                  placeholder={t.comp_search_placeholder}
+                  style={{ flex: '1 1 220px', maxWidth: 320, padding: '9px 12px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 12, background: '#FDFAF4', color: '#1C1C1A', fontFamily: 'var(--font-sans)' }}
+                />
+                {compCat === 'gpu' && (
+                  <div style={{ display: 'flex', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, overflow: 'hidden' }}>
+                    <button
+                      onClick={() => setGpuSortByNumber(false)}
+                      style={{ padding: '8px 14px', background: !gpuSortByNumber ? '#6E1423' : 'transparent', color: !gpuSortByNumber ? '#FDFAF4' : '#7A7469', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                    >
+                      {t.comp_sort_default}
+                    </button>
+                    <button
+                      onClick={() => setGpuSortByNumber(true)}
+                      style={{ padding: '8px 14px', background: gpuSortByNumber ? '#6E1423' : 'transparent', color: gpuSortByNumber ? '#FDFAF4' : '#7A7469', border: 'none', borderLeft: '0.5px solid rgba(28,28,26,0.15)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                    >
+                      {t.comp_sort_by_number}
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? '16px' : '20px 22px', marginBottom: 24 }}>
@@ -2360,8 +2438,33 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? '16px' : '20px 22px', marginBottom: 24 }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: '#1C1C1A', marginBottom: 5 }}>{t.vat_rate_title}</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', fontWeight: 300, lineHeight: 1.6, marginBottom: 14, maxWidth: 640 }}>{t.vat_rate_desc}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={vatRateInput}
+                    onChange={(e) => setVatRateInput(e.target.value)}
+                    onBlur={() => updateVatRate(parseFloat(vatRateInput) || 0)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') updateVatRate(parseFloat(vatRateInput) || 0); }}
+                    style={{ width: 100, padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#F5F0E6', color: '#1C1C1A', fontFamily: 'var(--font-mono)' }}
+                  />
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469' }}>{t.vat_rate_suffix}</span>
+                </div>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 12, marginBottom: 20 }}>
-                {(compDb[compCat] || []).map((comp) => {
+                {(() => {
+                  const q = compSearch.trim().toLowerCase();
+                  let visible = (compDb[compCat] || []).filter((c) => !q || c.name.toLowerCase().includes(q));
+                  if (compCat === 'gpu' && gpuSortByNumber) {
+                    visible = [...visible].sort((a, b) => gpuNumericSortKey(b.name) - gpuNumericSortKey(a.name));
+                  }
+                  return visible;
+                })().map((comp) => {
                   const tc = tierBadge(comp.tier, TIER_COLORS);
                   const isEditing = comp.id === editCompId;
                   const isLive = comp.isLive !== false;
@@ -2425,7 +2528,8 @@ export default function AdminPage() {
                               </span>
                             )}
                           </div>
-                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 14, fontWeight: 600, color: '#6E1423' }}>{t.web_price_label}: {fmt(webPrice)}</div>
+                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 14, fontWeight: 600, color: '#6E1423' }}>{t.price_excl_vat}: {fmt(webPrice)}</div>
+                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 12, color: '#7A7469' }}>{t.price_incl_vat(vatRatePct)}: {fmtGross(webPrice)}</div>
                           {comp.marketPrice == null && (
                             <button
                               onClick={() => applyMarginTo(compCat, comp)}
@@ -2801,7 +2905,7 @@ export default function AdminPage() {
                   </div>
                 )}
                 {compCat === 'gpu' && (
-                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
                     <div>
                       <div style={LABEL_STYLE}>{t.gpu_length_mm}</div>
                       <input
@@ -2817,6 +2921,15 @@ export default function AdminPage() {
                         type="number" min={0} step={0.5}
                         value={compForm.gpuSlotWidth}
                         onChange={(e) => setCompForm({ ...compForm, gpuSlotWidth: e.target.value })}
+                        style={INPUT_STYLE}
+                      />
+                    </div>
+                    <div>
+                      <div style={LABEL_STYLE}>{t.gpu_width_mm}</div>
+                      <input
+                        type="number" min={0} step={1}
+                        value={compForm.gpuWidthMm}
+                        onChange={(e) => setCompForm({ ...compForm, gpuWidthMm: e.target.value })}
                         style={INPUT_STYLE}
                       />
                     </div>

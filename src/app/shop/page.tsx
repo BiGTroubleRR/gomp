@@ -251,7 +251,7 @@ function SpecRow({
 }
 
 export default function Shop() {
-  const { lang, currency, setLang, setCurrency, fmt } = useSite();
+  const { lang, currency, setLang, setCurrency, fmt, fmtGross } = useSite();
   const [filter, setFilter] = useState<FilterId>('all');
   const isMobile = useIsMobile();
 
@@ -473,7 +473,7 @@ export default function Shop() {
                         lineHeight: 1,
                       }}
                     >
-                      {fmt(computeBuildTotal(prod, compDb))}
+                      {fmtGross(computeBuildTotal(prod, compDb))}
                     </div>
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginTop: 3, fontWeight: 300 }}>
                       {t.vat_included}

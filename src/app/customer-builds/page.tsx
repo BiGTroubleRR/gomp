@@ -38,6 +38,7 @@ const T = {
     intro: 'A look at PCs we’ve already put together for real customers — the exact parts, the exact specs.',
     empty: 'No builds to show yet — check back soon.',
     close: 'Close',
+    vatIncluded: 'Price includes VAT',
   },
   sk: {
     eyebrow: 'ZÁKAZNÍCKE GOMPY',
@@ -45,6 +46,7 @@ const T = {
     intro: 'Pohľad na počítače, ktoré sme už poskladali pre skutočných zákazníkov — presné súčiastky, presné parametre.',
     empty: 'Zatiaľ tu nie sú žiadne zostavy — pozrite sa neskôr.',
     close: 'Zavrieť',
+    vatIncluded: 'Cena vrátane DPH',
   },
   cz: {
     eyebrow: 'ZÁKAZNICKÉ GOMPY',
@@ -52,6 +54,7 @@ const T = {
     intro: 'Pohled na počítače, které jsme už poskládali pro skutečné zákazníky — přesné součástky, přesné parametry.',
     empty: 'Zatím tu nejsou žádné sestavy — zkuste to prosím později.',
     close: 'Zavřít',
+    vatIncluded: 'Cena včetně DPH',
   },
 } as const;
 
@@ -382,7 +385,7 @@ function PhotoGallery({
 }
 
 export default function CustomerBuildsPage() {
-  const { lang, fmt } = useSite();
+  const { lang, fmtGross, vatRatePct } = useSite();
   const isMobile = useIsMobile();
   const t = T[lang] ?? T.en;
 
@@ -556,8 +559,13 @@ export default function CustomerBuildsPage() {
                       </div>
                     )}
                     {b.priceEur != null && (
-                      <div style={{ marginTop: 12, fontFamily: 'var(--font-serif)', fontSize: 15, color: MAROON, fontWeight: 600 }}>
-                        {fmt(b.priceEur)}
+                      <div style={{ marginTop: 12 }}>
+                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, color: MAROON, fontWeight: 600 }}>
+                          {fmtGross(b.priceEur)}
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890', marginTop: 2 }}>
+                          {t.vatIncluded} ({vatRatePct}%)
+                        </div>
                       </div>
                     )}
                   </div>

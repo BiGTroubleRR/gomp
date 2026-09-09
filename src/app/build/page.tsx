@@ -62,6 +62,7 @@ const T = {
     clear_all: 'Clear All', drag_to_orbit: 'Drag to orbit  ·  Scroll to zoom', hide_panel: 'Hide Side Panel',
     show_panel: 'Show Side Panel', complete: 'Complete', your_build: 'Your Build', selected_part: 'Selected Part',
     build_total: 'Build Total', passmark_score: 'PassMark Score', verify_passmark: 'Verify on PassMark ↗', dimensions: 'Dimensions',
+    vat_included: 'Price includes VAT',
     passmark_title: (score: number) => `PassMark: ${score.toLocaleString()}`,
     fans: 'Case Fans',
     fan_positions: { front: 'Front', top: 'Top', rear: 'Rear', bottom: 'Bottom', side: 'Side' },
@@ -130,6 +131,7 @@ const T = {
     clear_all: 'Vymazať všetko', drag_to_orbit: 'Ťahaním otáčať  ·  Kolieskom priblížiť', hide_panel: 'Skryť bočný panel',
     show_panel: 'Zobraziť bočný panel', complete: 'Dokončené', your_build: 'Vaša zostava', selected_part: 'Vybraný diel',
     build_total: 'Celková cena', passmark_score: 'Skóre PassMark', verify_passmark: 'Overiť na PassMark ↗', dimensions: 'Rozmery',
+    vat_included: 'Cena vrátane DPH',
     passmark_title: (score: number) => `PassMark: ${score.toLocaleString()}`,
     fans: 'Ventilátory skrine',
     fan_positions: { front: 'Predné', top: 'Horné', rear: 'Zadné', bottom: 'Spodné', side: 'Bočné' },
@@ -198,6 +200,7 @@ const T = {
     clear_all: 'Vymazat vše', drag_to_orbit: 'Tažením otáčet  ·  Kolečkem přiblížit', hide_panel: 'Skrýt boční panel',
     show_panel: 'Zobrazit boční panel', complete: 'Dokončeno', your_build: 'Vaše sestava', selected_part: 'Vybraný díl',
     build_total: 'Celková cena', passmark_score: 'Skóre PassMark', verify_passmark: 'Ověřit na PassMark ↗', dimensions: 'Rozměry',
+    vat_included: 'Cena včetně DPH',
     passmark_title: (score: number) => `PassMark: ${score.toLocaleString()}`,
     fans: 'Ventilátory skříně',
     fan_positions: { front: 'Přední', top: 'Horní', rear: 'Zadní', bottom: 'Spodní', side: 'Boční' },
@@ -450,7 +453,7 @@ export default function BuildPage() {
 }
 
 function BuildPageContent() {
-  const { lang, fmt } = useSite();
+  const { lang, fmt, fmtGross, vatRatePct } = useSite();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -1181,7 +1184,12 @@ function BuildPageContent() {
       const comp = (compDb[id] || []).find((c) => c.name === selections[id]);
       if (comp) locked[id] = comp;
     });
-    const { selections: picks, notes } = autoBuildForBudget(BUDGET_STEPS[budgetIdx], compDb, locked);
+    // The slider's own number is always what the customer wants to actually pay (gross) — convert
+    // it down to an equivalent pre-tax ceiling before matching, since every stored component price
+    // (and this matcher's own math) is pre-tax; otherwise the resulting build's real, VAT-inclusive
+    // cost would land above the budget the customer thought they were setting.
+    const netBudget = BUDGET_STEPS[budgetIdx] / (1 + vatRatePct / 100);
+    const { selections: picks, notes } = autoBuildForBudget(netBudget, compDb, locked);
     setAutoBuildNotes(notes);
     // Staggering these via setTimeout used to mean 8 separate macrotasks, each triggering its own
     // full page re-render (and a Framer layout pass on the growing sidebar list) — with all 8
@@ -1518,7 +1526,7 @@ function BuildPageContent() {
                               <TierBadge tier={g.tier} small />
                             </div>
                             <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: MUTED, marginTop: 4 }}>
-                              {t.ram_from_price(fmt(g.cheapest.price))}
+                              {t.ram_from_price(fmtGross(g.cheapest.price))}
                             </div>
                           </motion.div>
                         ))}
@@ -1599,7 +1607,7 @@ function BuildPageContent() {
                                     {c.specs}
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                                    <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
+                                    <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmtGross(c.price)}</div>
                                     <div
                                       style={{
                                         width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1680,7 +1688,7 @@ function BuildPageContent() {
                                 </span>
                               </div>
                               <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: MUTED, marginTop: 4 }}>
-                                {t.ram_from_price(fmt(g.cheapest.price))}
+                                {t.ram_from_price(fmtGross(g.cheapest.price))}
                               </div>
                             </motion.div>
                           ))}
@@ -1795,7 +1803,7 @@ function BuildPageContent() {
                                   <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: isThisSelected ? MAROON : INK }}>
                                     {capacity ? `${capacity}GB/RAM` : c.specs}
                                   </div>
-                                  <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
+                                  <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmtGross(c.price)}</div>
                                 </motion.div>
                               );
                             })}
@@ -1944,7 +1952,7 @@ function BuildPageContent() {
                             </div>
                           )}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmt(c.price)}</div>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmtGross(c.price)}</div>
                             <div
                               style={{
                                 width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -2149,7 +2157,7 @@ function BuildPageContent() {
                   </div>
                 )}
                 <div style={{ borderTop: '0.5px solid rgba(245,240,230,0.14)', paddingTop: 8, fontFamily: 'var(--font-serif)', fontSize: 14, color: '#FDFAF4', fontWeight: 500 }}>
-                  {fmt(hoverComp.price)}
+                  {fmtGross(hoverComp.price)}
                 </div>
               </div>
             )}
@@ -2173,7 +2181,8 @@ function BuildPageContent() {
                   <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: isMobile ? 34 : 58, color: '#FDFAF4', margin: '10px 0' }}>
                     {prebuiltName ?? t.your_build}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 26 : 38, color: GOLD, fontWeight: 600, letterSpacing: 1 }}>{fmt(totalPrice)}</div>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 26 : 38, color: GOLD, fontWeight: 600, letterSpacing: 1 }}>{fmtGross(totalPrice)}</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.5)', marginTop: 6 }}>{t.vat_included} ({vatRatePct}%)</div>
                 </div>
               </div>
             )}
@@ -2304,7 +2313,7 @@ function BuildPageContent() {
                               <a href={passmark.url} target="_blank" rel="noopener noreferrer" style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MAROON }}>{t.verify_passmark}</a>
                             </div>
                           )}
-                          <div style={{ ...textPop, marginTop: 12, fontFamily: 'var(--font-serif)', fontSize: 15, color: INK }}>{fmt(comp.price)}</div>
+                          <div style={{ ...textPop, marginTop: 12, fontFamily: 'var(--font-serif)', fontSize: 15, color: INK }}>{fmtGross(comp.price)}</div>
                         </>
                       ) : (
                         <div onClick={toggleExpanded} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer' }}>
@@ -2314,7 +2323,7 @@ function BuildPageContent() {
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                             <TierBadge tier={tier} small />
-                            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 12, color: INK }}>{fmt(comp.price)}</div>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 12, color: INK }}>{fmtGross(comp.price)}</div>
                             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: MUTED, width: 14, textAlign: 'center', userSelect: 'none' }}>+</div>
                           </div>
                         </div>
@@ -2358,7 +2367,7 @@ function BuildPageContent() {
                                       <option value="">{t.fan_generic}</option>
                                       {matchingFans.map((f) => (
                                         <option key={f.id} value={f.name}>
-                                          {f.name} {f.name === mount.preinstalledFanName ? `(${t.fan_included})` : `(+${fmt(f.price)})`}
+                                          {f.name} {f.name === mount.preinstalledFanName ? `(${t.fan_included})` : `(+${fmtGross(f.price)})`}
                                         </option>
                                       ))}
                                     </select>
@@ -2431,7 +2440,8 @@ function BuildPageContent() {
           )}
           <div style={{ padding: 20, borderTop: estimatedWatts > 0 ? 'none' : '0.5px solid rgba(28,28,26,0.1)', marginTop: 'auto' }}>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.build_total}</div>
-            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 40, color: INK, fontWeight: 500, margin: '4px 0' }}>{fmt(totalPrice)}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 40, color: INK, fontWeight: 500, margin: '4px 0' }}>{fmtGross(totalPrice)}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890' }}>{t.vat_included} ({vatRatePct}%)</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', marginBottom: 14 }}>{t.ofComponents(installedCount)}</div>
             <button onClick={handleOrder} style={{ width: '100%', padding: 13, background: MAROON, color: '#FDFAF4', border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>
               {t.continue_benchmarks}
@@ -2467,7 +2477,8 @@ function BuildPageContent() {
         >
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.build_total}</div>
-            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 18, color: INK, fontWeight: 600 }}>{fmt(totalPrice)}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 18, color: INK, fontWeight: 600 }}>{fmtGross(totalPrice)}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 8, color: '#A09890' }}>{t.vat_included}</div>
           </div>
           <button
             onClick={handleOrder}
