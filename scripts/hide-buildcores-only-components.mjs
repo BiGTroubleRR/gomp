@@ -5,8 +5,14 @@
 // scraped from eD system at all, and roughly half of `case` wasn't either. The exact name lists
 // below were pulled directly from the live `components` table by clustering `created_at` into one
 // batch date per import run and, for `case`, excluding the 13 real eD system cases from
-// scripts/import-edsystem-cases.mjs by name. None of these rows are referenced by any live
-// prebuilt_pcs/customer_builds row (checked directly against the live DB before writing this).
+// scripts/import-edsystem-cases.mjs by name.
+//
+// CORRECTED after the first run: 20 of the originally-listed rows (18 distinct names, a few
+// duplicated across builds) turned out to be actively referenced by a live prebuilt_pcs or
+// customer_builds row — the "none of these are referenced" claim in the first version of this
+// comment was based on a check that didn't carry through into the actual list below. Those 18
+// names have been removed from TO_HIDE and their live rows restored (is_live = true) directly;
+// if you ever re-run this script, it will correctly leave them alone.
 //
 // This hides rather than deletes: src/app/build/page.tsx already filters `isLive !== false` out
 // of the customer-facing configurator, and Admin's Komponenty tab already has a Live/Hidden toggle
@@ -18,31 +24,19 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.
 
 const TO_HIDE = {
   storage: [
-    'PNY CS2140 2TB SSD M.2-2280 PCIe 4.0 x4 NVMe',
-    'ADATA LEGEND 970 2TB SSD M.2-2280 PCIe 5.0 X4 NVMe',
-    'TEAMGROUP Cardea A440 2TB M.2-2280 SSD PCIe 4.0 X4 NVMe',
-    'Mushkin Vortex Redline 2TB SSD M.2 PCIe 4.0 NVMe',
-    'FFF Smart Life Connected G-Storategy NV470 w/Heatsink 2TB SSD M.2-2280 PCIe 4.0 X4 NVMe',
   ],
   psu: [
-    'PowerSpec PSX Black 850W Fully Modular 80+ Gold Certified',
     'Rosewill SMG850 Black ATX 850W Fully Modular 80+ Gold Certified',
-    'NZXT C850 (2024) Black 850W Fully Modular 80+ Gold Certified',
-    'be quiet! Straight Power 11 Black 850W Fully Modular 80+ Platinum Certified',
     'Zalman TeraMax II ATX 1200W Fully Modular 80+ Gold Certified',
-    'EVGA SuperNOVA 1200 P3 1200W 80+ Platinum Certified Fully Modular',
     'Seasonic PRIME Gold 1200W Fully Modular 80+ Gold',
     'FSP Group Hydro White 1200W 80+ Platinum Fully Modular',
     'Rosewill PHOTON-1200 1200W Fully Modular 80+ Gold Certified ATX',
     'SeaSonic ATX3-FOCUS-GX White 850W Fully Modular 80+ Gold',
   ],
   cooler: [
-    'Deepcool ICE BLADE PRO V2.0 Air 161mm 60.29 CFM',
     'Jonsbo CR-3000 Standard 59.48 CFM Air 160mm Black / Silver',
     'Alpenföhn Brocken 2 Air 165mm 64.15 CFM',
-    'Cooler Master Hyper 212 LED Air 160mm 66.3 CFM Rifle Bearing',
     'Iceberg Thermal IceSLEET G6 Stealth 85 CFM Air 160mm Black / Blue',
-    'Thermalright Frozen Warframe PRO Water 360mm Black',
     'Lian Li Hydroshift II LCD-C CL 72 CFM Water 360mm Black',
     'Antec Skeleton 360 ARGB White',
     'ASUS ROG RYUO IV 360 ARGB White',
@@ -52,7 +46,6 @@ const TO_HIDE = {
     'Gelid Solutions Liquid 240 Water 240mm Black',
     'MSI MAG CORELIQUID C240 Water 240mm EVA e-PROJECT Black',
     'Deepcool CAPTAIN Water 240mm 91.12 CFM',
-    'Thermaltake TH240 V2 ARGB Black',
     'Deepcool LE320 Water 120mm 85.85 CFM White',
     'Cooler Master MasterLiquid ML120L RGB Water 120mm 66.7 CFM',
     'Corsair H60 (2018) Water 120mm 57.2 CFM Black',
@@ -73,10 +66,7 @@ const TO_HIDE = {
     'Crucial CT32G56C46U5 Black DDR5-5600 CL46 32GB (1x32GB)',
     'Kingston FURY Beast RGB DDR5-5600 CL36 32GB (1x32GB)',
     'Adata DDR5-5600 U-DIMM 8GB (1x8 GB) CL46 Black',
-    'Corsair Vengeance Black DDR5-5200 CL40 16GB (1x16GB)',
-    'Kingston FURY Beast RGB Black DDR5-5200 CL36 16GB (1x16GB)',
     'ADATA XPG Lancer Blade RGB Black DDR5-6000 CL30 16GB (1x16GB)',
-    'G.Skill Trident Z5 RGB Metallic Silver DDR5-5200 CL40 32GB (2x16GB)',
     'Corsair Vengeance Black DDR5-5600 CL40 32GB (1x32GB)',
     'G.SKILL Aegis 5 DDR5-5600 32GB (1x32GB) CL36',
     'Patriot Viper Venom Black / Silver DDR5-6000 CL36 16GB (2x8GB)',
@@ -138,14 +128,12 @@ const TO_HIDE = {
     'Corsair Dominator Platinum RGB Gray / Black DDR5-6000 CL30 32GB (2x16GB)',
     'Kingston FURY Beast RGB Black DDR5-6000 CL30 32GB (2x16GB)',
     'TEAMGROUP T-Force Vulcan Eco Silver DDR5-6000 CL30 32GB (2x16GB)',
-    'Crucial Pro Overclocking 32GB (2x16GB) DDR5 6000 CL36 Black',
     'G.Skill Trident Z Black DDR5-6400 CL32 32GB (2x16GB)',
     'Corsair Vengeance Grey DDR5-6400 CL32 32GB (2x16GB)',
     'Kingston FURY Beast RGB White DDR5-6400 CL32 32GB (2x16GB)',
     'TEAMGROUP T-Force Delta RGB White DDR5-6400 CL32 32GB (2x16GB)',
     'Crucial Pro 32GB (2x16GB) DDR5 6400 CL38 Black',
     'Patriot Viper Venom RGB Black / White DDR5-6400 CL40 32GB (2x16GB)',
-    'ADATA XPG LANCER RGB DDR5-6400 32GB (2x16GB) CL32 White',
     'G.Skill Trident Z5 RGB Matte Black DDR5-6800 CL34 32GB (2x16GB)',
     'Corsair Vengeance Black DDR5-6800 CL40 32GB (2x16GB)',
     'Kingston FURY Renegade White / Silver DDR5-6800 CL36 32GB (2x16GB)',
