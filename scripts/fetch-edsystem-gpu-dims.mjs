@@ -59,7 +59,11 @@ for (const row of rows) {
     const width = parseFloat(m[2].replace(',', '.'));
     const thickness = parseFloat(m[3].replace(',', '.'));
     const slotWidth = Math.round((thickness / SLOT_PITCH_MM) * 2) / 2; // nearest 0.5 slot
-    const newSpecs = row.specs.replace(/ · [\d.]+×[\d.]+×[\d.]+mm$/, '') + ` · ${length}×${width}×${thickness}mm`;
+    // Strips ANY existing dims segment wherever it sits (earlier enrichment already embeds it
+    // mid-string, right after the PCIe generation, not at the end — a $-anchored strip here
+    // previously missed that and silently duplicated the segment) before appending the freshly
+    // fetched one at the end.
+    const newSpecs = row.specs.replace(/ · [\d.]+×[\d.]+×[\d.]+mm/g, '') + ` · ${length}×${width}×${thickness}mm`;
     results.push({ name: row.name, status: 'OK', length, width, thickness, slotWidth, newSpecs });
     if (apply) {
       const { error: updErr } = await supabase
