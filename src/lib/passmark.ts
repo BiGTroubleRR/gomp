@@ -88,29 +88,27 @@ export function passmarkLookup(name: string): { score: number; url: string } | n
   return GPU_INDEX[name] || CPU_INDEX[name] || null;
 }
 
-export type Tier = 'S' | 'A' | 'B' | 'C' | 'D';
+// Three tiers rather than the original five (S/A/B/C/D) — too many distinct labels nudges toward
+// FOMO-driven buying instead of a calm comparison. S and A keep their exact old meaning/cutoffs;
+// old B, C, and D all collapse into the new floor tier B — see scripts/collapse-tier-scale.mjs for
+// the one-time data relabel this required.
+export type Tier = 'S' | 'A' | 'B';
 
 export function tierFromPassmark(isGpu: boolean, score: number): Tier {
   if (isGpu) {
     if (score >= 36000) return 'S';
     if (score >= 30000) return 'A';
-    if (score >= 27000) return 'B';
-    if (score >= 24000) return 'C';
-    return 'D';
+    return 'B';
   }
   if (score >= 63000) return 'S';
   if (score >= 55000) return 'A';
-  if (score >= 45000) return 'B';
-  if (score >= 30000) return 'C';
-  return 'D';
+  return 'B';
 }
 
 export const TIER_COLORS: Record<Tier, { bg: string; text: string; border: string }> = {
   S: { bg: '#FFF8CC', text: '#7A5500', border: '#D4A017' },
   A: { bg: '#F2E6FF', text: '#5B1A8B', border: '#9B59B6' },
   B: { bg: '#E6FAF0', text: '#1A6B3A', border: '#27AE60' },
-  C: { bg: '#E6F4FF', text: '#1A5A80', border: '#3498DB' },
-  D: { bg: '#F2F2F6', text: '#505060', border: '#9090A0' },
 };
 
 export function hexToRgba(hex: string, alpha: number): string {
@@ -151,7 +149,5 @@ export function ramTier(speedMhz: number | undefined, specs: string): Tier | und
   const score = ratio + (RAM_STICK_BONUS[ramModuleCountFromSpecs(specs)] ?? 0);
   if (score >= 200) return 'S';
   if (score >= 170) return 'A';
-  if (score >= 140) return 'B';
-  if (score >= 110) return 'C';
-  return 'D';
+  return 'B';
 }

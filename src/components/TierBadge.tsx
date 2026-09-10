@@ -1,4 +1,4 @@
-// Small square S/A/B/C/D badge, shared across /build (per-component tier chips), the prebuilt
+// Small square S/A/B badge, shared across /build (per-component tier chips), the prebuilt
 // GOMP listings (home page, /shop, /customer-builds), and Admin's Builds tab — previously defined
 // privately inside src/app/build/page.tsx, extracted here so those other pages don't duplicate it.
 import { TIER_COLORS, type Tier } from '@/lib/passmark';

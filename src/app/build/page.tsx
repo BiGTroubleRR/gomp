@@ -277,7 +277,7 @@ const POSH_GREEN = '#5C7A5C'; // muted sage, so the wattage bar's "safe" end sti
 // Best-to-worst tier order for the sort-by-tier toggle; an unset tier (bulk-imported SKUs with
 // no PassMark score — see the Component.tier comment in component-db-seed.ts) sorts last rather
 // than throwing off indexOf('') === -1 landing before 'S'.
-const TIER_ORDER = ['S', 'A', 'B', 'C', 'D', ''];
+const TIER_ORDER = ['S', 'A', 'B', ''];
 // mobo/cpu/ram get their own dedicated filters (socket+form-factor, manufacturer, DDR+speed)
 // instead — sort-by-tier is for the categories that only have a plain tier to go on.
 const SORT_BY_TIER_STEPS: CompId[] = ['cooler', 'storage', 'psu', 'case'];

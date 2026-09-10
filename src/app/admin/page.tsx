@@ -194,7 +194,7 @@ type Translations = {
   name_label: string; tagline_label: string; storage_label: string;
   mobo_label: string; cooler_label: string;
   category_label: string; cat_flagship: string; cat_performance: string; cat_midrange: string; cat_entry: string;
-  tier_label: string; tier_s: string; tier_a: string; tier_b: string; tier_c: string; tier_d: string;
+  tier_label: string; tier_s: string; tier_a: string; tier_b: string;
   price_eur_label: string; price_eur_short: string; rating_label: string; live_total_label: string;
   cancel: string; save_build: string; edit: string; del: string;
   col_build: string; col_price: string; col_rating: string; col_status: string;
@@ -269,7 +269,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     name_label: 'Name *', tagline_label: 'Tagline', storage_label: 'SSD',
     mobo_label: 'Motherboard', cooler_label: 'Cooler',
     category_label: 'Category', cat_flagship: 'Flagship', cat_performance: 'Performance', cat_midrange: 'Mid-Range', cat_entry: 'Entry',
-    tier_label: 'Tier', tier_s: 'S — Legendary', tier_a: 'A — Excellent', tier_b: 'B — Great', tier_c: 'C — Good', tier_d: 'D — Decent',
+    tier_label: 'Tier', tier_s: 'S — Legendary', tier_a: 'A — Excellent', tier_b: 'B — Great',
     price_eur_label: 'Price (Kč)', price_eur_short: 'Price (Kč)', rating_label: 'Rating (0–5)', live_total_label: 'Live total from components',
     cancel: 'Cancel', save_build: 'Save Build →', edit: 'Edit', del: 'Del',
     col_build: 'Build', col_price: 'Price', col_rating: 'Rating', col_status: 'Status',
@@ -344,7 +344,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     cg_price_label: 'Price (EUR)', cg_built_on_label: 'Built on',
     cg_photos_label: 'Photos', cg_add_photo: 'Add photo',
     cg_components_label: 'Components (for tier)',
-    cg_components_help: 'Optional — pick the real components this build uses so it gets a computed S/A/B/C/D tier badge on the public page. Leave any blank to skip it.',
+    cg_components_help: 'Optional — pick the real components this build uses so it gets a computed S/A/B tier badge on the public page. Leave any blank to skip it.',
     cg_listed: (n) => `${n} build${n === 1 ? '' : 's'}`,
     alignment_tab: 'Alignment', alignment_title: '3D Alignment',
   },
@@ -357,7 +357,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     name_label: 'Názov *', tagline_label: 'Slogan', storage_label: 'SSD',
     mobo_label: 'Základná doska', cooler_label: 'Chladič',
     category_label: 'Kategória', cat_flagship: 'Vlajková loď', cat_performance: 'Výkonnostná', cat_midrange: 'Stredná trieda', cat_entry: 'Základná',
-    tier_label: 'Trieda', tier_s: 'S — Legendárna', tier_a: 'A — Výborná', tier_b: 'B — Skvelá', tier_c: 'C — Dobrá', tier_d: 'D — Slušná',
+    tier_label: 'Trieda', tier_s: 'S — Legendárna', tier_a: 'A — Výborná', tier_b: 'B — Skvelá',
     price_eur_label: 'Cena (Kč)', price_eur_short: 'Cena (Kč)', rating_label: 'Hodnotenie (0–5)', live_total_label: 'Živý súčet z komponentov',
     cancel: 'Zrušiť', save_build: 'Uložiť zostavu →', edit: 'Upraviť', del: 'Zmazať',
     col_build: 'Zostava', col_price: 'Cena', col_rating: 'Hodnotenie', col_status: 'Stav',
@@ -432,7 +432,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     cg_price_label: 'Cena (EUR)', cg_built_on_label: 'Dátum dokončenia',
     cg_photos_label: 'Fotky', cg_add_photo: 'Pridať fotku',
     cg_components_label: 'Komponenty (pre triedu)',
-    cg_components_help: 'Nepovinné — vyberte reálne komponenty tejto zostavy, aby na verejnej stránke získala vypočítanú S/A/B/C/D triedu. Ktorékoľvek pole môžete nechať prázdne.',
+    cg_components_help: 'Nepovinné — vyberte reálne komponenty tejto zostavy, aby na verejnej stránke získala vypočítanú S/A/B triedu. Ktorékoľvek pole môžete nechať prázdne.',
     cg_listed: (n) => `${n} ${n === 1 ? 'zostava' : n >= 2 && n <= 4 ? 'zostavy' : 'zostáv'}`,
     alignment_tab: 'Zarovnanie', alignment_title: '3D zarovnanie',
   },
@@ -619,7 +619,7 @@ const GBB_STATUS_COLORS: Record<GbbStatus, { bg: string; text: string; border: s
 };
 
 function tierBadge(tier: Tier | undefined, palette: Record<Tier, { bg: string; text: string; border: string }>) {
-  return palette[tier || 'D'] || palette.D;
+  return palette[tier || 'B'] || palette.B;
 }
 
 // ---------------------------------------------------------------------------
@@ -920,7 +920,7 @@ export default function AdminPage() {
     const build: Build = {
       id: editId ?? '', // placeholder — Supabase assigns the real id on insert
       name: form.name.trim(), taglineEn: form.taglineEn.trim(), taglineSk: form.taglineSk.trim(), taglineCz: form.taglineCz.trim(),
-      cat: form.cat, tier: computeBuildTier(form, compDb) ?? 'D',
+      cat: form.cat, tier: computeBuildTier(form, compDb) ?? 'B',
       gpu: form.gpu, cpu: form.cpu, ram: form.ram, storage: form.storage, mobo: form.mobo, cooler: form.cooler, psu: form.psu, case: form.case,
       price: parseFloat(form.price) || 0, rating: parseFloat(form.rating) || 0, isLive: true, sortOrder: 0,
     };
@@ -2710,7 +2710,7 @@ export default function AdminPage() {
                       })()
                     ) : (
                       <select value={compForm.tier} onChange={(e) => setCompForm({ ...compForm, tier: e.target.value as Tier })} style={INPUT_STYLE}>
-                        {(['S', 'A', 'B', 'C', 'D'] as Tier[]).map((tk) => (
+                        {(['S', 'A', 'B'] as Tier[]).map((tk) => (
                           <option key={tk} value={tk}>{t[`tier_${tk.toLowerCase()}` as keyof Translations] as string}</option>
                         ))}
                       </select>

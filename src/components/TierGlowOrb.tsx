@@ -8,7 +8,7 @@ import { TIER_COLORS, hexToRgba, type Tier } from '@/lib/passmark';
 // (not leaking out to affect siblings or the page underneath) if the card itself sets
 // `position: relative; zIndex: 0`, which establishes its own local stacking context.
 export default function TierGlowOrb({ tier, width = 200, intense = false }: { tier?: Tier; width?: number; intense?: boolean }) {
-  const color = TIER_COLORS[tier ?? 'D'].border;
+  const color = TIER_COLORS[tier ?? 'B'].border;
   // Hovering a card makes the glow both reach further in and burn brighter — the combination is
   // what reads as "glowing more" rather than just a flat color swap. Width/transform/background
   // all animate via the transition below even though their target values are computed in JS per

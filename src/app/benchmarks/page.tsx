@@ -15,7 +15,7 @@ import { useIsMobile } from '@/lib/use-media-query';
 // ---------------------------------------------------------------------------
 
 type Group = 'fps' | 'aaa' | 'synthetic';
-type BenchTier = 'S' | 'A' | 'B' | 'C';
+type BenchTier = 'S' | 'A' | 'B';
 
 type Benchmark = {
   id: string;
@@ -52,7 +52,7 @@ type BuildPayload = {
 
 const BENCHMARKS: Benchmark[] = [
   { id: 'cs2', group: 'fps', monogram: 'CS2', name: 'Counter-Strike 2', subtitleEn: 'Competitive Shooter', tier: 'B', duration: 5, recommended: true },
-  { id: 'val', group: 'fps', monogram: 'VAL', name: 'Valorant', subtitleEn: 'Tactical Shooter', tier: 'C', duration: 5 },
+  { id: 'val', group: 'fps', monogram: 'VAL', name: 'Valorant', subtitleEn: 'Tactical Shooter', tier: 'B', duration: 5 },
   { id: 'wz', group: 'fps', monogram: 'WZ', name: 'Call of Duty: Warzone', subtitleEn: 'Battle Royale', tier: 'A', duration: 5 },
   { id: 'apex', group: 'fps', monogram: 'APEX', name: 'Apex Legends', subtitleEn: 'Battle Royale', tier: 'B', duration: 5 },
   { id: 'ow2', group: 'fps', monogram: 'OW2', name: 'Overwatch 2', subtitleEn: 'Hero Shooter', tier: 'B', duration: 5 },
@@ -68,7 +68,7 @@ const BENCHMARKS: Benchmark[] = [
   { id: 'sn', group: 'synthetic', monogram: 'SN', name: '3DMark Steel Nightmare', subtitleEn: 'Extreme RT Stress Test', tier: 'S', duration: 6 },
   { id: 'cb24', group: 'synthetic', monogram: 'CB24', name: 'Cinebench 2024', subtitleEn: 'CPU + GPU Render', tier: 'A', duration: 10, recommended: true },
   { id: 'bmk', group: 'synthetic', monogram: 'BMK', name: 'Blender Benchmark', subtitleEn: 'Render Engine Suite', tier: 'A', duration: 15 },
-  { id: 'pm10', group: 'synthetic', monogram: 'PM10', name: 'PCMark 10', subtitleEn: 'System Productivity', tier: 'C', duration: 20 },
+  { id: 'pm10', group: 'synthetic', monogram: 'PM10', name: 'PCMark 10', subtitleEn: 'System Productivity', tier: 'B', duration: 20 },
 ];
 
 const GPU_PARTS = [

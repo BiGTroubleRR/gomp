@@ -136,7 +136,7 @@ create table if not exists public.components (
   price numeric(10, 2) not null default 0,
   site_price numeric(10, 2), -- manual override for the VAT-inclusive price shown/charged on the site — null means "no override, fall back to price marked up by the current VAT rate" (see effectiveSitePriceCzk in component-db-seed.ts)
   specs text not null default '',
-  tier text check (tier is null or tier in ('S', 'A', 'B', 'C', 'D')), -- null for bulk-imported SKUs with no PassMark score to derive a tier from
+  tier text check (tier is null or tier in ('S', 'A', 'B')), -- null for bulk-imported SKUs with no PassMark score to derive a tier from
   passmark integer,
   passmark_url text,
   market_price numeric(10, 2),
@@ -249,7 +249,13 @@ alter table public.components add constraint components_category_check
 alter table public.components alter column tier drop not null;
 alter table public.components alter column tier drop default;
 alter table public.components drop constraint if exists components_tier_check;
-alter table public.components add constraint components_tier_check check (tier is null or tier in ('S', 'A', 'B', 'C', 'D'));
+alter table public.components add constraint components_tier_check check (tier is null or tier in ('S', 'A', 'B'));
+
+-- Tier scale shrunk from S/A/B/C/D to S/A/B (too many distinct labels nudges toward FOMO-driven
+-- buying) — run scripts/collapse-tier-scale.mjs --apply BEFORE this, or any row still sitting on
+-- the old C/D values will fail this constraint.
+alter table public.prebuilt_pcs drop constraint if exists prebuilt_pcs_tier_check;
+alter table public.prebuilt_pcs add constraint prebuilt_pcs_tier_check check (tier is null or tier in ('S', 'A', 'B'));
 
 -- Required for Supabase Realtime to broadcast INSERT/UPDATE/DELETE on this
 -- table — without this, postgres_changes subscriptions silently receive
@@ -520,7 +526,7 @@ create table if not exists public.prebuilt_pcs (
   tagline_sk text not null default '',
   tagline_cz text not null default '',
   cat text not null default 'flagship' check (cat in ('flagship', 'performance', 'midrange', 'entry')),
-  tier text check (tier is null or tier in ('S', 'A', 'B', 'C', 'D')),
+  tier text check (tier is null or tier in ('S', 'A', 'B')),
   price_eur numeric(10, 2) not null default 0,
   rating numeric(2, 1) not null default 4.5,
   mobo text not null default '',

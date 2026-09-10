@@ -8,7 +8,10 @@
 export type Category = 'mobo' | 'cpu' | 'cooler' | 'ram' | 'gpu' | 'storage' | 'psu' | 'case' | 'fan';
 export const CATEGORIES: Category[] = ['mobo', 'cpu', 'cooler', 'ram', 'gpu', 'storage', 'psu', 'case', 'fan'];
 
-export type Tier = 'S' | 'A' | 'B' | 'C' | 'D';
+// Three tiers (S/A/B) rather than the original five (S/A/B/C/D) — too many distinct labels nudges
+// toward FOMO-driven buying instead of a calm comparison. S and A kept their exact old meaning;
+// old B, C, and D all collapsed into the new floor tier B (see scripts/collapse-tier-scale.mjs).
+export type Tier = 'S' | 'A' | 'B';
 
 export type FormFactor = 'E-ATX' | 'ATX' | 'mATX' | 'Mini-ITX';
 
@@ -323,18 +326,18 @@ export function defaultComponentDb(): ComponentDb {
       { id: 'g11', name: 'AMD Radeon RX 7900 XT', price: 749, specs: '20GB GDDR6 · 315W · PCIe 4.0', tier: 'B', passmark: 29083, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7900+XT&id=4646', gpuLengthMm: 317, gpuSlotWidth: 2.8 },
       { id: 'g12', name: 'NVIDIA RTX 4070 Super', price: 599, specs: '12GB GDDR6X · 220W · PCIe 4.0', tier: 'B', passmark: 29946, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+SUPER&id=4973', gpuLengthMm: 244, gpuSlotWidth: 2 },
       { id: 'g13', name: 'NVIDIA RTX 5070', price: 599, specs: '12GB GDDR7 · 250W · PCIe 5.0', tier: 'B', passmark: 28648, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5070&id=5940', gpuLengthMm: 242, gpuSlotWidth: 2 },
-      { id: 'g14', name: 'AMD Radeon RX 9070 XT', price: 599, specs: '16GB GDDR6 · 304W · PCIe 5.0', tier: 'C', passmark: 26922, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9070+XT&id=5956', gpuLengthMm: 338, gpuSlotWidth: 3.5 },
-      { id: 'g15', name: 'NVIDIA RTX 3080 Ti', price: 549, specs: '12GB GDDR6X · 350W · PCIe 4.0', tier: 'C', passmark: 26754, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3080+Ti&id=4409', gpuLengthMm: 285, gpuSlotWidth: 2 },
-      { id: 'g16', name: 'NVIDIA RTX 4070', price: 549, specs: '12GB GDDR6X · 200W · PCIe 4.0', tier: 'C', passmark: 26874, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070&id=4795', gpuLengthMm: 244, gpuSlotWidth: 2 },
-      { id: 'g17', name: 'AMD Radeon RX 9070', price: 549, specs: '16GB GDDR6 · 220W · PCIe 5.0', tier: 'C', passmark: 25371, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9070&id=5958', gpuLengthMm: 343, gpuSlotWidth: 3.5 },
-      { id: 'g18', name: 'AMD Radeon RX 6800 XT', price: 449, specs: '16GB GDDR6 · 300W · PCIe 4.0', tier: 'C', passmark: 25068, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+6800+XT&id=4312', gpuLengthMm: 325, gpuSlotWidth: 3 },
-      { id: 'g19', name: 'AMD Radeon RX 7800 XT', price: 499, specs: '16GB GDDR6 · 263W · PCIe 4.0', tier: 'C', passmark: 24433, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7800+XT&id=4917', gpuLengthMm: 274, gpuSlotWidth: 2.5 },
-      { id: 'g20', name: 'NVIDIA RTX 5060 Ti 16GB', price: 499, specs: '16GB GDDR7 · 180W · PCIe 5.0', tier: 'D', passmark: 22614, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5060+Ti+16GB&id=6160', gpuLengthMm: 232, gpuSlotWidth: 2 },
-      { id: 'g21', name: 'NVIDIA RTX 4060 Ti', price: 399, specs: '8GB GDDR6 · 160W · PCIe 4.0', tier: 'D', passmark: 22596, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4060+Ti&id=4827', gpuLengthMm: 244, gpuSlotWidth: 2 },
-      { id: 'g22', name: 'NVIDIA RTX 3070 Ti', price: 379, specs: '8GB GDDR6X · 290W · PCIe 4.0', tier: 'D', passmark: 23181, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3070+Ti&id=4413', gpuLengthMm: 267, gpuSlotWidth: 2 },
-      { id: 'g23', name: 'NVIDIA RTX 5060', price: 329, specs: '8GB GDDR7 · 145W · PCIe 5.0', tier: 'D', passmark: 20663, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5060&id=5602', gpuLengthMm: 247, gpuSlotWidth: 2 },
-      { id: 'g24', name: 'NVIDIA RTX 3060 Ti', price: 299, specs: '8GB GDDR6 · 200W · PCIe 4.0', tier: 'D', passmark: 20236, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3060+Ti&id=4318', gpuLengthMm: 242, gpuSlotWidth: 2 },
-      { id: 'g25', name: 'NVIDIA RTX 4060', price: 299, specs: '8GB GDDR6 · 115W · PCIe 4.0', tier: 'D', passmark: 19491, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4060&id=4850', gpuLengthMm: 244, gpuSlotWidth: 2 },
+      { id: 'g14', name: 'AMD Radeon RX 9070 XT', price: 599, specs: '16GB GDDR6 · 304W · PCIe 5.0', tier: 'B', passmark: 26922, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9070+XT&id=5956', gpuLengthMm: 338, gpuSlotWidth: 3.5 },
+      { id: 'g15', name: 'NVIDIA RTX 3080 Ti', price: 549, specs: '12GB GDDR6X · 350W · PCIe 4.0', tier: 'B', passmark: 26754, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3080+Ti&id=4409', gpuLengthMm: 285, gpuSlotWidth: 2 },
+      { id: 'g16', name: 'NVIDIA RTX 4070', price: 549, specs: '12GB GDDR6X · 200W · PCIe 4.0', tier: 'B', passmark: 26874, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070&id=4795', gpuLengthMm: 244, gpuSlotWidth: 2 },
+      { id: 'g17', name: 'AMD Radeon RX 9070', price: 549, specs: '16GB GDDR6 · 220W · PCIe 5.0', tier: 'B', passmark: 25371, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9070&id=5958', gpuLengthMm: 343, gpuSlotWidth: 3.5 },
+      { id: 'g18', name: 'AMD Radeon RX 6800 XT', price: 449, specs: '16GB GDDR6 · 300W · PCIe 4.0', tier: 'B', passmark: 25068, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+6800+XT&id=4312', gpuLengthMm: 325, gpuSlotWidth: 3 },
+      { id: 'g19', name: 'AMD Radeon RX 7800 XT', price: 499, specs: '16GB GDDR6 · 263W · PCIe 4.0', tier: 'B', passmark: 24433, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7800+XT&id=4917', gpuLengthMm: 274, gpuSlotWidth: 2.5 },
+      { id: 'g20', name: 'NVIDIA RTX 5060 Ti 16GB', price: 499, specs: '16GB GDDR7 · 180W · PCIe 5.0', tier: 'B', passmark: 22614, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5060+Ti+16GB&id=6160', gpuLengthMm: 232, gpuSlotWidth: 2 },
+      { id: 'g21', name: 'NVIDIA RTX 4060 Ti', price: 399, specs: '8GB GDDR6 · 160W · PCIe 4.0', tier: 'B', passmark: 22596, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4060+Ti&id=4827', gpuLengthMm: 244, gpuSlotWidth: 2 },
+      { id: 'g22', name: 'NVIDIA RTX 3070 Ti', price: 379, specs: '8GB GDDR6X · 290W · PCIe 4.0', tier: 'B', passmark: 23181, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3070+Ti&id=4413', gpuLengthMm: 267, gpuSlotWidth: 2 },
+      { id: 'g23', name: 'NVIDIA RTX 5060', price: 329, specs: '8GB GDDR7 · 145W · PCIe 5.0', tier: 'B', passmark: 20663, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5060&id=5602', gpuLengthMm: 247, gpuSlotWidth: 2 },
+      { id: 'g24', name: 'NVIDIA RTX 3060 Ti', price: 299, specs: '8GB GDDR6 · 200W · PCIe 4.0', tier: 'B', passmark: 20236, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3060+Ti&id=4318', gpuLengthMm: 242, gpuSlotWidth: 2 },
+      { id: 'g25', name: 'NVIDIA RTX 4060', price: 299, specs: '8GB GDDR6 · 115W · PCIe 4.0', tier: 'B', passmark: 19491, passmarkUrl: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4060&id=4850', gpuLengthMm: 244, gpuSlotWidth: 2 },
     ],
     cpu: [
       { id: 'c1', name: 'AMD Ryzen 9 9950X3D', price: 650, specs: '16C/32T · 5.7GHz · 170W · 3D V-Cache', tier: 'S', socket: 'AM5', passmark: 70109, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+9+9950X3D&id=6549' },
@@ -350,18 +353,18 @@ export function defaultComponentDb(): ComponentDb {
       { id: 'c11', name: 'AMD Ryzen 9 5950X', price: 418, specs: '16C/32T · 4.9GHz · 105W', tier: 'B', socket: 'AM4', passmark: 45270, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+9+5950X&id=3862' },
       { id: 'c12', name: 'Intel Core i7-14700K', price: 371, specs: '20C/28T · 5.6GHz · 125W', tier: 'B', socket: 'LGA1700', passmark: 51958, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i7-14700K&id=5719' },
       { id: 'c13', name: 'Intel Core i7-13700K', price: 450, specs: '16C/24T · 5.4GHz · 125W', tier: 'B', socket: 'LGA1700', passmark: 45647, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i7-13700K&id=5060' },
-      { id: 'c14', name: 'AMD Ryzen 7 9800X3D', price: 415, specs: '8C/16T · 5.2GHz · 120W · 3D V-Cache', tier: 'C', socket: 'AM5', passmark: 39941, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+9800X3D&id=6344' },
-      { id: 'c15', name: 'AMD Ryzen 7 9700X', price: 280, specs: '8C/16T · 5.5GHz · 65W', tier: 'C', socket: 'AM5', passmark: 36970, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+9700X&id=6205' },
-      { id: 'c16', name: 'AMD Ryzen 7 7700X', price: 218, specs: '8C/16T · 5.4GHz · 105W', tier: 'C', socket: 'AM5', passmark: 35496, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+7700X&id=5036' },
-      { id: 'c17', name: 'AMD Ryzen 7 7800X3D', price: 272, specs: '8C/16T · 5.0GHz · 120W · 3D V-Cache', tier: 'C', socket: 'AM5', passmark: 34277, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+7800X3D&id=5299' },
-      { id: 'c18', name: 'AMD Ryzen 7 7700', price: 299, specs: '8C/16T · 5.3GHz · 65W', tier: 'C', socket: 'AM5', passmark: 34337, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+7700&id=5169' },
-      { id: 'c19', name: 'AMD Ryzen 7 8700G', price: 264, specs: '8C/16T · 5.1GHz · 65W · Radeon 780M iGPU', tier: 'C', socket: 'AM5', passmark: 31496, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+8700G&id=5836' },
-      { id: 'c20', name: 'AMD Ryzen 9 5900X', price: 222, specs: '12C/24T · 4.8GHz · 105W', tier: 'C', socket: 'AM4', passmark: 38892, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+9+5900X&id=3870' },
-      { id: 'c21', name: 'AMD Ryzen 9 3900X', price: 134, specs: '12C/24T · 4.6GHz · 105W', tier: 'C', socket: 'AM4', passmark: 32479, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+9+3900X&id=3493' },
-      { id: 'c22', name: 'Intel Core Ultra 5 245K', price: 190, specs: '14C/14T · 5.2GHz · 125W', tier: 'C', socket: 'LGA1851', passmark: 43053, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+Ultra+5+245K&id=6324' },
-      { id: 'c23', name: 'Intel Core Ultra 5 245KF', price: 182, specs: '14C/14T · 5.2GHz · 125W', tier: 'C', socket: 'LGA1851', passmark: 43114, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+Ultra+5+245KF&id=6336' },
-      { id: 'c24', name: 'Intel Core i5-14600K', price: 259, specs: '14C/20T · 5.3GHz · 125W', tier: 'C', socket: 'LGA1700', passmark: 38412, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i5-14600K&id=5720' },
-      { id: 'c25', name: 'Intel Core i5-13600K', price: 319, specs: '14C/20T · 5.1GHz · 125W', tier: 'C', socket: 'LGA1700', passmark: 37462, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i5-13600K&id=5008' },
+      { id: 'c14', name: 'AMD Ryzen 7 9800X3D', price: 415, specs: '8C/16T · 5.2GHz · 120W · 3D V-Cache', tier: 'B', socket: 'AM5', passmark: 39941, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+9800X3D&id=6344' },
+      { id: 'c15', name: 'AMD Ryzen 7 9700X', price: 280, specs: '8C/16T · 5.5GHz · 65W', tier: 'B', socket: 'AM5', passmark: 36970, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+9700X&id=6205' },
+      { id: 'c16', name: 'AMD Ryzen 7 7700X', price: 218, specs: '8C/16T · 5.4GHz · 105W', tier: 'B', socket: 'AM5', passmark: 35496, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+7700X&id=5036' },
+      { id: 'c17', name: 'AMD Ryzen 7 7800X3D', price: 272, specs: '8C/16T · 5.0GHz · 120W · 3D V-Cache', tier: 'B', socket: 'AM5', passmark: 34277, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+7800X3D&id=5299' },
+      { id: 'c18', name: 'AMD Ryzen 7 7700', price: 299, specs: '8C/16T · 5.3GHz · 65W', tier: 'B', socket: 'AM5', passmark: 34337, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+7700&id=5169' },
+      { id: 'c19', name: 'AMD Ryzen 7 8700G', price: 264, specs: '8C/16T · 5.1GHz · 65W · Radeon 780M iGPU', tier: 'B', socket: 'AM5', passmark: 31496, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+7+8700G&id=5836' },
+      { id: 'c20', name: 'AMD Ryzen 9 5900X', price: 222, specs: '12C/24T · 4.8GHz · 105W', tier: 'B', socket: 'AM4', passmark: 38892, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+9+5900X&id=3870' },
+      { id: 'c21', name: 'AMD Ryzen 9 3900X', price: 134, specs: '12C/24T · 4.6GHz · 105W', tier: 'B', socket: 'AM4', passmark: 32479, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=AMD+Ryzen+9+3900X&id=3493' },
+      { id: 'c22', name: 'Intel Core Ultra 5 245K', price: 190, specs: '14C/14T · 5.2GHz · 125W', tier: 'B', socket: 'LGA1851', passmark: 43053, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+Ultra+5+245K&id=6324' },
+      { id: 'c23', name: 'Intel Core Ultra 5 245KF', price: 182, specs: '14C/14T · 5.2GHz · 125W', tier: 'B', socket: 'LGA1851', passmark: 43114, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+Ultra+5+245KF&id=6336' },
+      { id: 'c24', name: 'Intel Core i5-14600K', price: 259, specs: '14C/20T · 5.3GHz · 125W', tier: 'B', socket: 'LGA1700', passmark: 38412, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i5-14600K&id=5720' },
+      { id: 'c25', name: 'Intel Core i5-13600K', price: 319, specs: '14C/20T · 5.1GHz · 125W', tier: 'B', socket: 'LGA1700', passmark: 37462, passmarkUrl: 'https://www.cpubenchmark.net/cpu.php?cpu=Intel+Core+i5-13600K&id=5008' },
     ],
     ram: [
       { id: 'r1', name: 'G.Skill Trident Z5 32GB DDR5 6400', price: 130, specs: '2×16GB · CL32 · EXPO/XMP3', tier: 'S', ramHeightMm: 44, ramGeneration: 5, ramSpeedMhz: 6400 },
@@ -379,24 +382,24 @@ export function defaultComponentDb(): ComponentDb {
       { id: 'm5', name: 'Gigabyte B650 AORUS ELITE AX', price: 180, specs: 'B650 · DDR5 · PCIe 4.0 · 3×M.2 · WiFi 6E', tier: 'B', socket: 'AM5', formFactor: 'ATX' },
       { id: 'm6', name: 'ASRock B650M PG Lightning', price: 140, specs: 'B650 · DDR5 · PCIe 4.0 · 2×M.2', tier: 'B', socket: 'AM5', formFactor: 'mATX' },
       { id: 'm7', name: 'ASUS ROG STRIX B650E-I GAMING WIFI', price: 300, specs: 'B650E · DDR5 · PCIe 5.0 · 2×M.2 · WiFi 6E', tier: 'B', socket: 'AM5', formFactor: 'Mini-ITX' },
-      { id: 'm8', name: 'Gigabyte A620M S2H', price: 90, specs: 'A620 · DDR5 · PCIe 4.0 · 1×M.2', tier: 'C', socket: 'AM5', formFactor: 'mATX' },
+      { id: 'm8', name: 'Gigabyte A620M S2H', price: 90, specs: 'A620 · DDR5 · PCIe 4.0 · 1×M.2', tier: 'B', socket: 'AM5', formFactor: 'mATX' },
       { id: 'm9', name: 'ASUS ROG STRIX X570-E GAMING', price: 280, specs: 'X570 · DDR4 · PCIe 4.0 · 2×M.2', tier: 'B', socket: 'AM4', formFactor: 'ATX' },
-      { id: 'm10', name: 'MSI B550 TOMAHAWK', price: 150, specs: 'B550 · DDR4 · PCIe 4.0 · 2×M.2', tier: 'C', socket: 'AM4', formFactor: 'ATX' },
-      { id: 'm11', name: 'ASRock X570M Pro4', price: 150, specs: 'X570 · DDR4 · PCIe 4.0 · 2×M.2', tier: 'C', socket: 'AM4', formFactor: 'mATX' },
-      { id: 'm12', name: 'Gigabyte B450M DS3H', price: 70, specs: 'B450 · DDR4 · PCIe 3.0 · 1×M.2', tier: 'D', socket: 'AM4', formFactor: 'mATX' },
+      { id: 'm10', name: 'MSI B550 TOMAHAWK', price: 150, specs: 'B550 · DDR4 · PCIe 4.0 · 2×M.2', tier: 'B', socket: 'AM4', formFactor: 'ATX' },
+      { id: 'm11', name: 'ASRock X570M Pro4', price: 150, specs: 'X570 · DDR4 · PCIe 4.0 · 2×M.2', tier: 'B', socket: 'AM4', formFactor: 'mATX' },
+      { id: 'm12', name: 'Gigabyte B450M DS3H', price: 70, specs: 'B450 · DDR4 · PCIe 3.0 · 1×M.2', tier: 'B', socket: 'AM4', formFactor: 'mATX' },
       { id: 'm13', name: 'ASUS ROG MAXIMUS Z790 HERO', price: 630, specs: 'Z790 · DDR5 · PCIe 5.0 · 4×M.2 · WiFi 7', tier: 'S', socket: 'LGA1700', formFactor: 'ATX' },
       { id: 'm14', name: 'MSI MPG Z790 CARBON WIFI', price: 380, specs: 'Z790 · DDR5 · PCIe 5.0 · 5×M.2 · WiFi 6E', tier: 'A', socket: 'LGA1700', formFactor: 'ATX' },
       { id: 'm15', name: 'ASUS ROG STRIX Z790-I GAMING WIFI', price: 470, specs: 'Z790 · DDR5 · PCIe 5.0 · 2×M.2 · WiFi 6E', tier: 'A', socket: 'LGA1700', formFactor: 'Mini-ITX' },
       { id: 'm16', name: 'Gigabyte Z790 AORUS ELITE AX', price: 260, specs: 'Z790 · DDR5 · PCIe 5.0 · 4×M.2 · WiFi 6E', tier: 'B', socket: 'LGA1700', formFactor: 'ATX' },
       { id: 'm17', name: 'ASRock Z790 Pro RS', price: 190, specs: 'Z790 · DDR5 · PCIe 5.0 · 4×M.2', tier: 'B', socket: 'LGA1700', formFactor: 'ATX' },
-      { id: 'm18', name: 'ASUS TUF GAMING B760M-PLUS WIFI', price: 160, specs: 'B760 · DDR5 · PCIe 4.0 · 2×M.2 · WiFi 6', tier: 'C', socket: 'LGA1700', formFactor: 'mATX' },
-      { id: 'm19', name: 'MSI PRO B760M-A WIFI', price: 140, specs: 'B760 · DDR5 · PCIe 4.0 · 2×M.2 · WiFi 6', tier: 'C', socket: 'LGA1700', formFactor: 'mATX' },
+      { id: 'm18', name: 'ASUS TUF GAMING B760M-PLUS WIFI', price: 160, specs: 'B760 · DDR5 · PCIe 4.0 · 2×M.2 · WiFi 6', tier: 'B', socket: 'LGA1700', formFactor: 'mATX' },
+      { id: 'm19', name: 'MSI PRO B760M-A WIFI', price: 140, specs: 'B760 · DDR5 · PCIe 4.0 · 2×M.2 · WiFi 6', tier: 'B', socket: 'LGA1700', formFactor: 'mATX' },
       { id: 'm20', name: 'MSI MEG Z890 ACE', price: 700, specs: 'Z890 · DDR5 · PCIe 5.0 · 5×M.2 · 10GbE', tier: 'S', socket: 'LGA1851', formFactor: 'E-ATX' },
       { id: 'm21', name: 'ASUS ROG MAXIMUS Z890 HERO', price: 630, specs: 'Z890 · DDR5 · PCIe 5.0 · 5×M.2 · WiFi 7', tier: 'S', socket: 'LGA1851', formFactor: 'ATX' },
       { id: 'm22', name: 'MSI MPG Z890 CARBON WIFI', price: 400, specs: 'Z890 · DDR5 · PCIe 5.0 · 5×M.2 · WiFi 7', tier: 'A', socket: 'LGA1851', formFactor: 'ATX' },
       { id: 'm23', name: 'Gigabyte Z890 AORUS ELITE WIFI7', price: 280, specs: 'Z890 · DDR5 · PCIe 5.0 · 4×M.2 · WiFi 7', tier: 'B', socket: 'LGA1851', formFactor: 'ATX' },
       { id: 'm24', name: 'ASRock Z890 Pro RS WiFi', price: 230, specs: 'Z890 · DDR5 · PCIe 5.0 · 3×M.2 · WiFi 6E', tier: 'B', socket: 'LGA1851', formFactor: 'ATX' },
-      { id: 'm25', name: 'ASUS PRIME B860M-A WIFI', price: 180, specs: 'B860 · DDR5 · PCIe 4.0 · 3×M.2 · WiFi 6E', tier: 'C', socket: 'LGA1851', formFactor: 'mATX' },
+      { id: 'm25', name: 'ASUS PRIME B860M-A WIFI', price: 180, specs: 'B860 · DDR5 · PCIe 4.0 · 3×M.2 · WiFi 6E', tier: 'B', socket: 'LGA1851', formFactor: 'mATX' },
     ],
     cooler: [
       { id: 'co1', name: 'NZXT Kraken 360 RGB', price: 156, specs: '360mm AIO · LCD head · AM5/LGA1700', tier: 'S', coolerRadiatorMm: 360 },
@@ -530,7 +533,7 @@ export function defaultBuilds(): Build[] {
     { id: 'marauder', name: 'The Marauder', taglineEn: 'Dominant 1440p performer', taglineSk: 'Dominantný výkon v 1440p', taglineCz: 'Dominantní výkon v 1440p', cat: 'performance', tier: 'A', gpu: 'NVIDIA RTX 4080 Super', cpu: 'Intel Core i9-14900K', mobo: 'Gigabyte Z790 AORUS ELITE AX', ram: 'G.Skill Trident Z5 RGB Metallic Silver DDR5-5200 CL40 32GB (2x16GB)', storage: 'TEAMGROUP Cardea A440 2TB M.2-2280 SSD PCIe 4.0 X4 NVMe', cooler: 'Thermalright Frozen Warframe PRO Water 360mm Black', psu: 'be quiet! Straight Power 11 Black 850W Fully Modular 80+ Platinum Certified', case: 'Fractal Design Meshify 2', price: 2169, rating: 4.7, isLive: true, sortOrder: 2 },
     { id: 'ranger', name: 'The Ranger', taglineEn: 'Smooth 1440p at great value', taglineSk: 'Plynulé 1440p za skvelú cenu', taglineCz: 'Plynulé 1440p za skvělou cenu', cat: 'midrange', tier: 'B', gpu: 'NVIDIA RTX 4070 Ti Super', cpu: 'Intel Core i7-14700K', mobo: 'Gigabyte B760M GAMING WIFI DDR5 Micro ATX', ram: 'Crucial Pro Overclocking 32GB (2x16GB) DDR5 6000 CL36 Black', storage: 'PNY CS2140 2TB SSD M.2-2280 PCIe 4.0 x4 NVMe', cooler: 'Thermaltake TH240 V2 ARGB Black', psu: 'NZXT C850 (2024) Black 850W Fully Modular 80+ Gold Certified', case: 'Cooler Master MasterBox MB520 ARGB', price: 1569, rating: 4.6, isLive: true, sortOrder: 3 },
     { id: 'scout-pro', name: 'The Scout Pro', taglineEn: '1080p powerhouse, real value', taglineSk: 'Silák na 1080p za rozumnú cenu', taglineCz: 'Silák na 1080p za rozumnou cenu', cat: 'midrange', tier: 'B', gpu: 'NVIDIA RTX 4070 Super', cpu: 'Intel Core i5-14600K', mobo: 'MAXSUN B760 iCraft B760M CROSS LGA1700 DDR5 Micro ATX', ram: 'Corsair Vengeance Black DDR5-5200 CL40 16GB (1x16GB)', storage: 'FFF Smart Life Connected G-Storategy NV470 w/Heatsink 2TB SSD M.2-2280 PCIe 4.0 X4 NVMe', cooler: 'Deepcool ICE BLADE PRO V2.0 Air 161mm 60.29 CFM', psu: 'Seasonic FOCUS GX-850', case: 'Fractal Design Core 2300', price: 1299, rating: 4.7, isLive: true, sortOrder: 4 },
-    { id: 'scout', name: 'The Scout', taglineEn: 'Entry-level gaming excellence', taglineSk: 'Špička v základnej triede', taglineCz: 'Špička v základní třídě', cat: 'entry', tier: 'C', gpu: 'NVIDIA RTX 4070', cpu: 'Intel Core i5-14600K', mobo: 'ASRock B760M-H2/M.2 DDR5 Micro ATX', ram: 'Kingston FURY Beast RGB Black DDR5-5200 CL36 16GB (1x16GB)', storage: 'Mushkin Vortex Redline 2TB SSD M.2 PCIe 4.0 NVMe', cooler: 'Cooler Master Hyper 212 LED Air 160mm 66.3 CFM Rifle Bearing', psu: 'PowerSpec PSX Black 850W Fully Modular 80+ Gold Certified', case: 'Fractal Design Pop Air', price: 1039, rating: 4.5, isLive: true, sortOrder: 5 },
+    { id: 'scout', name: 'The Scout', taglineEn: 'Entry-level gaming excellence', taglineSk: 'Špička v základnej triede', taglineCz: 'Špička v základní třídě', cat: 'entry', tier: 'B', gpu: 'NVIDIA RTX 4070', cpu: 'Intel Core i5-14600K', mobo: 'ASRock B760M-H2/M.2 DDR5 Micro ATX', ram: 'Kingston FURY Beast RGB Black DDR5-5200 CL36 16GB (1x16GB)', storage: 'Mushkin Vortex Redline 2TB SSD M.2 PCIe 4.0 NVMe', cooler: 'Cooler Master Hyper 212 LED Air 160mm 66.3 CFM Rifle Bearing', psu: 'PowerSpec PSX Black 850W Fully Modular 80+ Gold Certified', case: 'Fractal Design Pop Air', price: 1039, rating: 4.5, isLive: true, sortOrder: 5 },
   ];
 }
 
@@ -566,8 +569,8 @@ export function computeBuildTotalGross(parts: Partial<Record<Category, string>>,
   }, 0);
 }
 
-const TIER_ORDER: Tier[] = ['D', 'C', 'B', 'A', 'S']; // ascending, index 0-4
-const TIER_VALUE: Record<Tier, number> = { D: 1, C: 2, B: 3, A: 4, S: 5 };
+const TIER_ORDER: Tier[] = ['B', 'A', 'S']; // ascending, index 0-2
+const TIER_VALUE: Record<Tier, number> = { B: 1, A: 2, S: 3 };
 
 // A build's own tier, averaged from its resolvable components' individual tiers instead of a
 // manually hand-picked value that can silently drift once a referenced component is swapped or
@@ -589,7 +592,7 @@ export function computeBuildTier(parts: Partial<Record<Category, string | null>>
   }).filter((v): v is number => v != null);
   if (!values.length) return undefined;
   const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  return TIER_ORDER[Math.min(4, Math.max(0, Math.round(avg) - 1))];
+  return TIER_ORDER[Math.min(2, Math.max(0, Math.round(avg) - 1))];
 }
 
 // Every price computed above (Component.price, computeBuildTotal, a customer build's priceEur)

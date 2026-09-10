@@ -352,7 +352,7 @@ export type Database = {
           tagline_sk: string;
           tagline_cz: string;
           cat: 'flagship' | 'performance' | 'midrange' | 'entry';
-          tier: 'S' | 'A' | 'B' | 'C' | 'D' | null;
+          tier: 'S' | 'A' | 'B' | null;
           price_eur: number;
           rating: number;
           mobo: string;
@@ -375,7 +375,7 @@ export type Database = {
           tagline_sk?: string;
           tagline_cz?: string;
           cat?: 'flagship' | 'performance' | 'midrange' | 'entry';
-          tier?: 'S' | 'A' | 'B' | 'C' | 'D' | null;
+          tier?: 'S' | 'A' | 'B' | null;
           price_eur?: number;
           rating?: number;
           mobo?: string;
@@ -395,7 +395,7 @@ export type Database = {
           tagline_sk?: string;
           tagline_cz?: string;
           cat?: 'flagship' | 'performance' | 'midrange' | 'entry';
-          tier?: 'S' | 'A' | 'B' | 'C' | 'D' | null;
+          tier?: 'S' | 'A' | 'B' | null;
           price_eur?: number;
           rating?: number;
           mobo?: string;
