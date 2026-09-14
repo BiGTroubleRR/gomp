@@ -243,6 +243,7 @@ type Translations = {
   // Order requests tab
   requests_tab: string; order_requests: string; refresh: string; loading: string;
   no_requests: string; setup_needed: string; error_word: string; no_name: string;
+  reference_word: string;
   contact_word: string; deliver_to_word: string; totals_word: string; meta_word: string;
   parts_word: string; shipping_word: string; assembly_word: string; discount_word: string;
   total_word: string; consent_word: string; signed_in_word: string; build_word: string;
@@ -337,6 +338,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     requests_tab: 'Requests', order_requests: 'Order Requests', refresh: 'Refresh', loading: 'Loading…',
     no_requests: 'No order requests yet. They appear here as soon as someone submits one at checkout.',
     setup_needed: 'Setup needed', error_word: 'Error', no_name: '(no name given)',
+    reference_word: 'Reference',
     contact_word: 'Contact', deliver_to_word: 'Deliver to', totals_word: 'Totals', meta_word: 'Details',
     parts_word: 'Parts', shipping_word: 'Shipping', assembly_word: 'Assembly', discount_word: 'Discount',
     total_word: 'Total', consent_word: 'Contact consent', signed_in_word: 'Submitted while signed in',
@@ -430,6 +432,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     requests_tab: 'Žiadosti', order_requests: 'Žiadosti o objednávku', refresh: 'Obnoviť', loading: 'Načítava sa…',
     no_requests: 'Zatiaľ žiadne žiadosti. Zobrazia sa tu hneď, ako niekto odošle objednávku v pokladni.',
     setup_needed: 'Potrebné nastavenie', error_word: 'Chyba', no_name: '(bez mena)',
+    reference_word: 'Referencia',
     contact_word: 'Kontakt', deliver_to_word: 'Doručiť na', totals_word: 'Sumy', meta_word: 'Podrobnosti',
     parts_word: 'Komponenty', shipping_word: 'Doprava', assembly_word: 'Montáž', discount_word: 'Zľava',
     total_word: 'Spolu', consent_word: 'Súhlas s kontaktom', signed_in_word: 'Odoslané prihláseným používateľom',
@@ -1762,6 +1765,9 @@ export default function AdminPage() {
                           )}
                         </div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', marginTop: 3 }}>{it.email}</div>
+                        {it.reference_code && (
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', marginTop: 2 }}>{it.reference_code}</div>
+                        )}
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, color: '#1C1C1A' }}>{fmt(Number(it.total_eur))}</div>
@@ -1776,6 +1782,8 @@ export default function AdminPage() {
                       <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.08)', padding: isMobile ? '14px' : '18px 20px', background: '#F8F4EA' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 18, marginBottom: 18 }}>
                           <div>
+                            <div style={ADMIN_LABEL}>{t.reference_word}</div>
+                            <div style={{ ...ADMIN_VALUE, fontFamily: 'var(--font-mono)', marginBottom: 14 }}>{it.reference_code || '—'}</div>
                             <div style={ADMIN_LABEL}>{t.contact_word}</div>
                             <div style={ADMIN_VALUE}>
                               {it.email}
