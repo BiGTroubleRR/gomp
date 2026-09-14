@@ -780,49 +780,109 @@ function buildFanMesh(sizeMm: number): THREE.Group {
   return group;
 }
 
-// A plain air-tower cooler: a stack of thin heatsink fins threaded by two copper heatpipes, with
-// a single intake fan mounted on the side blowing through the stack. Visually distinct from the
-// AIO's pump/radiator look below — reusing that mesh (just resized) for an air tower, as the
-// placeholder used to, was never actually correct for what an air cooler looks like. Built along
-// local Y as the "height" axis, matching dimensionSpecsFor's existing `{axis:'y', mm:
-// coolerHeightMm}` — the fin stack (not the fixed-size fan) is what should read as "this is the
-// dimension that grows with a taller cooler".
+// A real dual-tower air cooler (e.g. the Noctua NH-D15 seed SKU, literally labeled "Dual tower ·
+// 165mm" in its own specs string) — two fin-stack towers connected by heatpipes bending up from a
+// shared base, with a single fan sandwiched between them. Every dimension below is a real mm value
+// run through mmToUnits, matching the same accurate scale buildFanMesh and the rest of the scene
+// (case, motherboard, BASE_POS coordinates) already use — the previous single-tower version used
+// small hand-picked numbers unrelated to real mm (fin box 0.32x0.018x0.34), which made a 120mm fan
+// (an accurate 1.14-unit diameter) look roughly 3.5x oversized next to it. Fixing that scale
+// mismatch matters as much here as adding the second tower.
+// Built along local Y as the "height" axis, matching dimensionSpecsFor's existing `{axis:'y', mm:
+// coolerHeightMm}` — the fin stacks (not the fixed-size fan) are what read as "this is the
+// dimension that grows with a taller cooler". Local X is the shared airflow axis (intake through
+// one tower, through the fan, through the other tower, matching the outward-facing +X convention
+// the old side-mounted fan and the AIO's pump/LCD both already use); local Z is lateral width.
 function buildAirCoolerMesh(): THREE.Group {
   const T = THREE;
   const g = new T.Group();
   const finMat = new T.MeshStandardMaterial({ color: 0x8a8a90, roughness: 0.3, metalness: 0.75 });
   const pipeMat = new T.MeshStandardMaterial({ color: 0xc4823a, roughness: 0.25, metalness: 0.85 });
   const baseMat = new T.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.35, metalness: 0.6 });
+  const rodMat = new T.MeshStandardMaterial({ color: 0xb9b9be, roughness: 0.3, metalness: 0.8 });
 
-  // Contact base plate, sitting directly on the CPU.
-  const base = new T.Mesh(new T.BoxGeometry(0.06, 0.22, 0.22), baseMat);
-  base.position.x = -0.03;
+  // Loosely modeled on the Noctua NH-D15: ~135mm-wide fin towers, ~45mm deep each, spread 80mm
+  // apart center-to-center — which, after each tower's own 45mm depth and the fan's real ~25mm
+  // thickness (120mm x buildFanMesh's own 0.21 depth ratio), leaves a realistic ~5mm clearance
+  // between the fan's face and each tower rather than either gapping or clipping.
+  const TOWER_WIDTH_MM = 135;
+  const TOWER_DEPTH_MM = 45;
+  const TOWER_GAP_MM = 80;
+  const FIN_COUNT = 11;
+  const FIN_SPAN_MM = 148;
+  const FIN_THICKNESS_MM = 1.2;
+  const BASE_WIDTH_MM = 52;
+  const BASE_THICKNESS_MM = 8;
+  const PIPE_DIAMETER_MM = 8;
+  const PIPE_SPREAD_MM = 100;
+
+  const towerOffsetX = mmToUnits(TOWER_GAP_MM) / 2;
+  const finDepth = mmToUnits(TOWER_DEPTH_MM);
+  const finWidth = mmToUnits(TOWER_WIDTH_MM);
+  const finThickness = mmToUnits(FIN_THICKNESS_MM);
+  const finSpan = mmToUnits(FIN_SPAN_MM);
+  const pipeRadius = mmToUnits(PIPE_DIAMETER_MM) / 2;
+
+  // Shared contact base plate, spanning the full footprint under both towers — the copper/nickel
+  // block heatpipes visibly emerge from and bend outward from in a real dual-tower cooler.
+  const base = new T.Mesh(
+    new T.BoxGeometry(mmToUnits(TOWER_GAP_MM + TOWER_DEPTH_MM), mmToUnits(BASE_THICKNESS_MM), mmToUnits(BASE_WIDTH_MM)),
+    baseMat,
+  );
+  base.position.y = -finSpan / 2 - mmToUnits(BASE_THICKNESS_MM) / 2;
   g.add(base);
 
-  // Fin stack, spread along Y — each fin a thin, wide plate.
-  const finCount = 8;
-  const finSpan = 0.52;
-  for (let i = 0; i < finCount; i++) {
-    const fin = new T.Mesh(new T.BoxGeometry(0.32, 0.018, 0.34), finMat);
-    fin.position.y = -finSpan / 2 + (finSpan / (finCount - 1)) * i;
-    g.add(fin);
-  }
-
-  // Two heatpipes running vertically through the fin stack.
-  [-0.09, 0.09].forEach((z) => {
-    const pipe = new T.Mesh(new T.CylinderGeometry(0.018, 0.018, finSpan + 0.08, 12), pipeMat);
-    pipe.position.z = z;
-    g.add(pipe);
+  // Two fin towers, spread along X, each a stack of thin plates spread along Y.
+  [-towerOffsetX, towerOffsetX].forEach((towerX) => {
+    for (let i = 0; i < FIN_COUNT; i++) {
+      const fin = new T.Mesh(new T.BoxGeometry(finDepth, finThickness, finWidth), finMat);
+      fin.position.set(towerX, -finSpan / 2 + (finSpan / (FIN_COUNT - 1)) * i, 0);
+      g.add(fin);
+    }
   });
 
-  // Single intake fan on the side, facing into the fin stack (local +Z default rotated to face
-  // +X, the same outward-facing axis the AIO's pump/LCD below uses).
+  // Heatpipes: each bends from the shared base out into one of the two towers, then runs straight
+  // up through that tower's fin stack — a short horizontal segment + a long vertical segment, the
+  // same two-segment bend technique buildAioTubes uses for the AIO's own tubing below (no
+  // curve/TubeGeometry precedent exists anywhere in this file). 2 pipes feed each tower.
+  const pipeSpread = mmToUnits(PIPE_SPREAD_MM);
+  const pipeZs = [-pipeSpread / 2, -pipeSpread / 6, pipeSpread / 6, pipeSpread / 2];
+  const pipeBaseY = -finSpan / 2;
+  pipeZs.forEach((z, idx) => {
+    const towerX = idx % 2 === 0 ? -towerOffsetX : towerOffsetX;
+    const hLen = Math.abs(towerX);
+    if (hLen > 0.001) {
+      const hSeg = new T.Mesh(new T.CylinderGeometry(pipeRadius, pipeRadius, hLen, 10), pipeMat);
+      hSeg.rotation.z = Math.PI / 2;
+      hSeg.position.set(towerX / 2, pipeBaseY, z);
+      g.add(hSeg);
+    }
+    const vLen = finSpan + mmToUnits(10);
+    const vSeg = new T.Mesh(new T.CylinderGeometry(pipeRadius, pipeRadius, vLen, 10), pipeMat);
+    vSeg.position.set(towerX, pipeBaseY + vLen / 2, z);
+    g.add(vSeg);
+  });
+
+  // Thin top corner rods connecting the two towers — a cheap detail matching the reference photo's
+  // visible corner bracket, at the same "a few extra cylinders" cost as the fan's own corner screws.
+  [-mmToUnits(60), mmToUnits(60)].forEach((z) => {
+    const rod = new T.Mesh(new T.CylinderGeometry(mmToUnits(2), mmToUnits(2), towerOffsetX * 2, 8), rodMat);
+    rod.rotation.z = Math.PI / 2;
+    rod.position.set(0, finSpan / 2 + mmToUnits(4), z);
+    g.add(rod);
+  });
+
+  // Single fan sandwiched between the two towers, facing along the shared airflow (+X) axis —
+  // recentered at local X origin instead of mounted beside a single tower.
   const fan = buildFanMesh(120);
   fan.rotation.y = Math.PI / 2;
-  fan.position.x = 0.19;
   g.add(fan);
 
-  g.scale.setScalar(0.85);
+  // No extra uniform scale here (the old version's g.scale.setScalar(0.85) fudge factor is gone
+  // deliberately) — every dimension above is already accurately mm-derived, so an unexplained 15%
+  // shrink would just reintroduce a small scale error on top of an otherwise correctly-proportioned
+  // model. dimensionSpecsFor's Y-rescaling (against the real selected cooler's coolerHeightMm)
+  // still applies on top of this regardless, exactly as before.
   return g;
 }
 
