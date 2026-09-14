@@ -33,6 +33,8 @@ export type CheckoutIntent = {
   contact_consent: boolean;
   status: IntentStatus;
   created_at: string;
+  email_status: 'sent' | 'failed' | 'skipped' | null;
+  email_error: string | null;
 };
 
 export type FetchIntentsResult =

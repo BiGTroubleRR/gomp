@@ -440,6 +440,8 @@ export type Database = {
           status: 'new' | 'contacted' | 'converted' | 'archived';
           created_at: string;
           reference_code: string | null;
+          email_status: 'sent' | 'failed' | 'skipped' | null;
+          email_error: string | null;
         };
         Insert: {
           id?: string;
@@ -466,10 +468,14 @@ export type Database = {
           contact_consent?: boolean;
           status?: 'new' | 'contacted' | 'converted' | 'archived';
           reference_code?: string | null;
+          email_status?: 'sent' | 'failed' | 'skipped' | null;
+          email_error?: string | null;
         };
         Update: {
           status?: 'new' | 'contacted' | 'converted' | 'archived';
           reference_code?: string | null;
+          email_status?: 'sent' | 'failed' | 'skipped' | null;
+          email_error?: string | null;
         };
         Relationships: [];
       };

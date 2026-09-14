@@ -161,42 +161,55 @@ export async function POST(request: Request) {
 
   const referenceCode = generateReferenceCode();
 
-  const { error } = await supabase.from('checkout_intents').insert({
-    user_id: sessionUser?.id ?? null,
-    first_name: (body.firstName ?? '').trim(),
-    last_name: (body.lastName ?? '').trim(),
-    email,
-    phone: (body.phone ?? '').trim(),
-    address: (body.address ?? '').trim(),
-    city: (body.city ?? '').trim(),
-    region: (body.region ?? '').trim(),
-    zip: (body.zip ?? '').trim(),
-    payment_method: body.paymentMethod as PaymentMethod,
-    shipping_method: body.shippingMethod,
-    parts_total_eur: partsTotalEur,
-    shipping_eur: shippingEur,
-    assembly_eur: assemblyEur,
-    discount_eur: discountEur,
-    total_eur: totalEur,
-    promo_code: promoApplied ? promoCodeInput : '',
-    build_items: buildItems,
-    display_currency: (body.displayCurrency ?? 'CZK').trim(),
-    lang: (body.lang ?? 'en').trim(),
-    contact_consent: Boolean(body.contactConsent),
-    reference_code: referenceCode,
-  });
+  const { data: inserted, error } = await supabase
+    .from('checkout_intents')
+    .insert({
+      user_id: sessionUser?.id ?? null,
+      first_name: (body.firstName ?? '').trim(),
+      last_name: (body.lastName ?? '').trim(),
+      email,
+      phone: (body.phone ?? '').trim(),
+      address: (body.address ?? '').trim(),
+      city: (body.city ?? '').trim(),
+      region: (body.region ?? '').trim(),
+      zip: (body.zip ?? '').trim(),
+      payment_method: body.paymentMethod as PaymentMethod,
+      shipping_method: body.shippingMethod,
+      parts_total_eur: partsTotalEur,
+      shipping_eur: shippingEur,
+      assembly_eur: assemblyEur,
+      discount_eur: discountEur,
+      total_eur: totalEur,
+      promo_code: promoApplied ? promoCodeInput : '',
+      build_items: buildItems,
+      display_currency: (body.displayCurrency ?? 'CZK').trim(),
+      lang: (body.lang ?? 'en').trim(),
+      contact_consent: Boolean(body.contactConsent),
+      reference_code: referenceCode,
+    })
+    .select('id')
+    .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error || !inserted) return NextResponse.json({ error: error?.message ?? 'Insert failed.' }, { status: 500 });
 
   // Best-effort: a failed send is logged (inside sendOrderConfirmationEmail) but never fails the
-  // checkout response — the intent is already safely recorded either way.
-  await sendOrderConfirmationEmail({
+  // checkout response — the intent is already safely recorded either way. The outcome is written
+  // back onto the row so Admin's Žiadosti tab can show whether the customer actually got their
+  // confirmation, instead of that only ever showing up in a server log.
+  const emailResult = await sendOrderConfirmationEmail({
     to: email,
     referenceCode,
     buildItems,
     totalEur,
     lang: (body.lang ?? 'en').trim(),
   });
+  await supabase
+    .from('checkout_intents')
+    .update({
+      email_status: emailResult.status,
+      email_error: emailResult.status === 'failed' ? emailResult.error : null,
+    })
+    .eq('id', inserted.id);
 
   return NextResponse.json({ ok: true, referenceCode });
 }

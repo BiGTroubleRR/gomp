@@ -247,6 +247,7 @@ type Translations = {
   parts_word: string; shipping_word: string; assembly_word: string; discount_word: string;
   total_word: string; consent_word: string; signed_in_word: string; build_word: string;
   set_status: string;
+  email_word: string; email_sent: string; email_failed: (err: string) => string; email_skipped: string;
   status_labels: Record<IntentStatus, string>;
   method_labels: Record<'card' | 'google_pay' | 'apple_pay', string>;
   requests_count: (total: number, fresh: number) => string;
@@ -340,6 +341,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     parts_word: 'Parts', shipping_word: 'Shipping', assembly_word: 'Assembly', discount_word: 'Discount',
     total_word: 'Total', consent_word: 'Contact consent', signed_in_word: 'Submitted while signed in',
     build_word: 'Configured build', set_status: 'Set status',
+    email_word: 'Confirmation email', email_sent: 'Sent', email_failed: (err) => `Failed — ${err}`, email_skipped: 'Not sent (Resend not configured)',
     status_labels: { new: 'New', contacted: 'Contacted', converted: 'Converted', archived: 'Archived' },
     method_labels: { card: 'Card', google_pay: 'Google Pay', apple_pay: 'Apple Pay' },
     requests_count: (total, fresh) => `${total} total · ${fresh} new`,
@@ -432,6 +434,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     parts_word: 'Komponenty', shipping_word: 'Doprava', assembly_word: 'Montáž', discount_word: 'Zľava',
     total_word: 'Spolu', consent_word: 'Súhlas s kontaktom', signed_in_word: 'Odoslané prihláseným používateľom',
     build_word: 'Zostava', set_status: 'Nastaviť stav',
+    email_word: 'Potvrdzujúci e-mail', email_sent: 'Odoslaný', email_failed: (err) => `Zlyhal — ${err}`, email_skipped: 'Neodoslaný (Resend nie je nastavený)',
     status_labels: { new: 'Nová', contacted: 'Kontaktovaný', converted: 'Premenená', archived: 'Archivovaná' },
     method_labels: { card: 'Karta', google_pay: 'Google Pay', apple_pay: 'Apple Pay' },
     requests_count: (total, fresh) => `${total} celkovo · ${fresh} nových`,
@@ -1747,6 +1750,16 @@ export default function AdminPage() {
                           <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', background: badge.bg, color: badge.text, border: `0.5px solid ${badge.border}`, borderRadius: 2, padding: '2px 6px' }}>
                             {t.status_labels[it.status]}
                           </span>
+                          {it.email_status === 'sent' && (
+                            <span title={t.email_word} style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', background: '#E8FFF0', color: '#1A5030', border: '0.5px solid rgba(51,153,102,0.35)', borderRadius: 2, padding: '2px 6px' }}>
+                              ✓ {t.email_word}
+                            </span>
+                          )}
+                          {(it.email_status === 'failed' || it.email_status === 'skipped') && (
+                            <span title={t.email_word} style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', background: '#FFF0EE', color: '#8B2020', border: '0.5px solid rgba(204,51,51,0.3)', borderRadius: 2, padding: '2px 6px' }}>
+                              ✕ {t.email_word}
+                            </span>
+                          )}
                         </div>
                         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', marginTop: 3 }}>{it.email}</div>
                       </div>
@@ -1791,6 +1804,13 @@ export default function AdminPage() {
                               <br />
                               {t.consent_word}: {it.contact_consent ? '✓' : '—'}
                               {it.user_id ? <><br />{t.signed_in_word}</> : null}
+                              <br />
+                              {t.email_word}: {
+                                it.email_status === 'sent' ? t.email_sent
+                                : it.email_status === 'failed' ? t.email_failed(it.email_error ?? '')
+                                : it.email_status === 'skipped' ? t.email_skipped
+                                : '—'
+                              }
                             </div>
                           </div>
                         </div>

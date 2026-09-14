@@ -344,6 +344,13 @@ alter table public.checkout_intents enable row level security;
 -- scripts/backfill-checkout-reference-codes.mjs.
 alter table public.checkout_intents add column if not exists reference_code text;
 
+-- Outcome of the confirmation-email send (src/lib/email/resend.ts), written by
+-- src/app/api/checkout/route.ts right after the insert — lets Admin's Žiadosti tab show whether
+-- a customer actually got their confirmation instead of that only ever showing up in a server log.
+-- 'skipped' means RESEND_API_KEY wasn't set at all, a distinct case from a real send failure.
+alter table public.checkout_intents add column if not exists email_status text check (email_status in ('sent', 'failed', 'skipped'));
+alter table public.checkout_intents add column if not exists email_error text;
+
 -- Submission goes through src/app/api/checkout/route.ts, NOT a direct anon
 -- insert: the anon key has no insert policy on this table. That route rate
 -- limits by IP and recomputes parts_total_eur/shipping_eur/assembly_eur/
