@@ -338,14 +338,6 @@ const monoInputStyle: CSSProperties = {
   letterSpacing: 2,
 };
 
-// Owns its own randomness so callers stay pure — the reference is cosmetic (a
-// human-friendly handle for the thank-you screen and support emails), not an
-// identifier anything looks up by.
-function generateRefNum() {
-  const seed = Math.floor(Math.random() * 1e9);
-  return `GOMP-${seed.toString(36).toUpperCase().slice(0, 4)}-${String(seed).slice(-4)}`;
-}
-
 function Field({
   label,
   value,
@@ -511,7 +503,7 @@ export default function CheckoutPage() {
     setPlacing(true);
     setOrderError(null);
 
-    const { error } = await submitCheckoutIntent({
+    const { error, referenceCode } = await submitCheckoutIntent({
       userId: user?.id ?? null,
       firstName: form.firstName,
       lastName: form.lastName,
@@ -546,9 +538,8 @@ export default function CheckoutPage() {
       return;
     }
 
-    const ref = generateRefNum();
     placeOrderTimeout.current = setTimeout(() => {
-      setRefNumber(ref);
+      setRefNumber(referenceCode ?? '');
       setStep(3);
       setPlacing(false);
     }, 700);

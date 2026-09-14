@@ -64,13 +64,13 @@ export type CheckoutIntentInput = {
 // totalEur below are sent along only so the route can fall back to them for
 // line items it can't find in the live catalog (e.g. the /checkout page's
 // static demo fallback); they are not trusted as the final price.
-export async function submitCheckoutIntent(input: CheckoutIntentInput): Promise<{ error: string | null }> {
+export async function submitCheckoutIntent(input: CheckoutIntentInput): Promise<{ error: string | null; referenceCode?: string }> {
   const res = await fetch('/api/checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
-  const body = await res.json().catch(() => ({}) as { error?: string });
+  const body = await res.json().catch(() => ({}) as { error?: string; referenceCode?: string });
   if (!res.ok) return { error: body.error ?? `Request failed (${res.status}).` };
-  return { error: null };
+  return { error: null, referenceCode: body.referenceCode };
 }

@@ -15,8 +15,19 @@
 // Still no payment happens here — see checkout-intents.ts for that seam.
 import { NextResponse } from 'next/server';
 import { createAdminClient, MissingServiceRoleKeyError } from '@/lib/supabase/admin-server';
+import { createClient as createSessionClient } from '@/lib/supabase/server';
 import { checkRateLimit, clientIpFromHeaders } from '@/lib/rate-limit';
 import { applyVat } from '@/lib/component-db-seed';
+import { sendOrderConfirmationEmail } from '@/lib/email/resend';
+
+// Cosmetic, human-friendly handle for the thank-you screen, the confirmation email, and the
+// customer's own "My Orders" tab — moved here (from the old client-only checkout/page.tsx
+// version) so all three always show the exact same value, because it's now generated once,
+// server-side, and persisted.
+function generateReferenceCode(): string {
+  const seed = Math.floor(Math.random() * 1e9);
+  return `GOMP-${seed.toString(36).toUpperCase().slice(0, 4)}-${String(seed).slice(-4)}`;
+}
 
 // Mirrors DEFAULT_VAT_RATE_PCT in src/lib/supabase/store-settings.ts — not imported from there
 // directly since that module is 'use client' (browser-only data-access layer); this route reads
@@ -138,8 +149,20 @@ export async function POST(request: Request) {
   const discountEur = promoApplied ? Math.round(partsTotalEur * PROMO_DISCOUNT_RATE) : 0;
   const totalEur = partsTotalEur - discountEur + shippingEur + assemblyEur;
 
+  // Derived server-side from the request's own session cookie rather than trusted from
+  // body.userId — a client could otherwise claim any UUID as the submitting user. This matters
+  // once a signed-in customer's "My Orders" tab starts trusting user_id-linked rows as their own
+  // (see src/app/account/page.tsx). Guest checkouts (no session) still work the same as before —
+  // sessionUser is simply null.
+  const sessionSupabase = await createSessionClient();
+  const {
+    data: { user: sessionUser },
+  } = await sessionSupabase.auth.getUser();
+
+  const referenceCode = generateReferenceCode();
+
   const { error } = await supabase.from('checkout_intents').insert({
-    user_id: body.userId ?? null,
+    user_id: sessionUser?.id ?? null,
     first_name: (body.firstName ?? '').trim(),
     last_name: (body.lastName ?? '').trim(),
     email,
@@ -160,8 +183,20 @@ export async function POST(request: Request) {
     display_currency: (body.displayCurrency ?? 'CZK').trim(),
     lang: (body.lang ?? 'en').trim(),
     contact_consent: Boolean(body.contactConsent),
+    reference_code: referenceCode,
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+
+  // Best-effort: a failed send is logged (inside sendOrderConfirmationEmail) but never fails the
+  // checkout response — the intent is already safely recorded either way.
+  await sendOrderConfirmationEmail({
+    to: email,
+    referenceCode,
+    buildItems,
+    totalEur,
+    lang: (body.lang ?? 'en').trim(),
+  });
+
+  return NextResponse.json({ ok: true, referenceCode });
 }

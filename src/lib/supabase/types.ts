@@ -439,6 +439,7 @@ export type Database = {
           contact_consent: boolean;
           status: 'new' | 'contacted' | 'converted' | 'archived';
           created_at: string;
+          reference_code: string | null;
         };
         Insert: {
           id?: string;
@@ -464,9 +465,38 @@ export type Database = {
           lang?: string;
           contact_consent?: boolean;
           status?: 'new' | 'contacted' | 'converted' | 'archived';
+          reference_code?: string | null;
         };
         Update: {
           status?: 'new' | 'contacted' | 'converted' | 'archived';
+          reference_code?: string | null;
+        };
+        Relationships: [];
+      };
+      // The site's "Contact us" form — admin-only inbox, no select-own policy (see
+      // supabase/schema.sql for the reasoning).
+      contact_messages: {
+        Row: {
+          id: string;
+          first_name: string;
+          last_name: string;
+          email: string;
+          phone: string;
+          message: string;
+          status: 'new' | 'read' | 'archived';
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          first_name?: string;
+          last_name?: string;
+          email: string;
+          phone?: string;
+          message: string;
+          status?: 'new' | 'read' | 'archived';
+        };
+        Update: {
+          status?: 'new' | 'read' | 'archived';
         };
         Relationships: [];
       };

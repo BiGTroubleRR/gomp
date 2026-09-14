@@ -337,6 +337,13 @@ create table if not exists public.checkout_intents (
 
 alter table public.checkout_intents enable row level security;
 
+-- Human-friendly "GOMP-XXXX-XXXX" handle generated server-side at insert time (see
+-- src/app/api/checkout/route.ts) — shown to the customer once at checkout, reused in the
+-- confirmation email, and in their Account "My Orders" tab, so all three always agree.
+-- Nullable: existing rows predate this column and are backfilled once via
+-- scripts/backfill-checkout-reference-codes.mjs.
+alter table public.checkout_intents add column if not exists reference_code text;
+
 -- Submission goes through src/app/api/checkout/route.ts, NOT a direct anon
 -- insert: the anon key has no insert policy on this table. That route rate
 -- limits by IP and recomputes parts_total_eur/shipping_eur/assembly_eur/
@@ -415,6 +422,38 @@ drop trigger if exists gbb_requests_set_updated_at on public.gbb_requests;
 create trigger gbb_requests_set_updated_at
   before update on public.gbb_requests
   for each row execute procedure public.set_gbb_requests_updated_at();
+
+-- ---------------------------------------------------------------------------
+-- contact_messages — the site's "Contact us" form. Deliberately simpler than
+-- checkout_intents/gbb_requests: no per-row proposal fields, and (for now, by
+-- request) no select-own policy either — this is an admin-only inbox, not a
+-- customer-visible "my messages" list. Submission goes through
+-- src/app/api/contact/route.ts (rate-limited, service-role insert); reads are
+-- admin-only via src/app/api/admin/contact/route.ts.
+-- ---------------------------------------------------------------------------
+create table if not exists public.contact_messages (
+  id uuid primary key default gen_random_uuid(),
+
+  first_name text not null default '',
+  last_name text not null default '',
+  email text not null,
+  phone text not null default '',
+  message text not null,
+
+  status text not null default 'new' check (status in ('new', 'read', 'archived')),
+  created_at timestamptz not null default now()
+);
+
+alter table public.contact_messages enable row level security;
+
+-- No anon insert or select policy at all — writes go through the service-role key in the API
+-- route (same as gbb_requests/checkout_intents above), and there is no select-own policy since
+-- this inbox isn't customer-visible.
+drop policy if exists "contact_messages_insert_public" on public.contact_messages;
+drop policy if exists "contact_messages_select_own" on public.contact_messages;
+
+create index if not exists contact_messages_created_at_idx
+  on public.contact_messages (created_at desc);
 
 -- ---------------------------------------------------------------------------
 -- rate_limit_hits — generic per-key request counter for public endpoints.

@@ -137,7 +137,7 @@ export default function SiteFooter() {
           <Col title={t.support}>
             <a href="#" style={linkStyle}>{t.faq}</a>
             <a href="#" style={linkStyle}>{t.warranty}</a>
-            <a href="#" style={linkStyle}>{t.contact}</a>
+            <TransitionLink href="/contact" style={linkStyle}>{t.contact}</TransitionLink>
           </Col>
           <Col title={t.legal}>
             <TransitionLink href="/terms" style={linkStyle}>{t.terms}</TransitionLink>

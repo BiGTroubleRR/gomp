@@ -8,6 +8,7 @@ import DeviceViewToggle from '@/components/DeviceViewToggle';
 import { useUser, SignInButton, UserButton } from '@clerk/nextjs';
 import { fetchIntents, updateIntentStatus, type CheckoutIntent, type IntentStatus } from '@/lib/admin-intents';
 import { fetchGbbRequests, updateGbbRequest, type GbbRequest, type GbbStatus } from '@/lib/admin-gbb';
+import { fetchContactMessages, updateContactMessageStatus, type ContactMessage, type ContactStatus } from '@/lib/admin-contact';
 import { marketplaceSearchLinks } from '@/lib/gbb-links';
 import { GBB_GREEN, GBB_GREEN_TINT } from '@/lib/gbb-theme';
 import { fetchComponentDb, subscribeComponents, insertComponent, updateComponentRow, deleteComponentRow } from '@/lib/supabase/components';
@@ -250,6 +251,11 @@ type Translations = {
   gbb_search_helper: string; gbb_search_placeholder: string; gbb_add_search: string;
   gbb_proposal_price: string; gbb_proposal_notes: string; gbb_save_proposal: string;
   gbb_count: (total: number, fresh: number) => string;
+  // Contact form messages tab
+  contact_tab: string; contact_title: string; contact_no_messages: string;
+  contact_status_labels: Record<ContactStatus, string>;
+  contact_message_word: string;
+  contact_count: (total: number, fresh: number) => string;
   // Zákaznícke GOMPy (customer_builds) tab
   customer_gomps_tab: string; customer_gomps_title: string; add_customer_gomp: string;
   cg_title_label: string; cg_customer_label: string; cg_customer_placeholder: string;
@@ -338,6 +344,10 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     gbb_search_placeholder: 'e.g. RTX 3070', gbb_add_search: 'Search',
     gbb_proposal_price: 'Price proposal (EUR)', gbb_proposal_notes: 'Proposal notes (parts, condition, etc.)', gbb_save_proposal: 'Save & mark quoted →',
     gbb_count: (total, fresh) => `${total} total · ${fresh} new`,
+    contact_tab: 'Messages', contact_title: 'Contact Messages', contact_no_messages: 'No messages yet. They appear here as soon as someone submits the contact form.',
+    contact_status_labels: { new: 'New', read: 'Read', archived: 'Archived' },
+    contact_message_word: 'Message',
+    contact_count: (total, fresh) => `${total} total · ${fresh} new`,
     customer_gomps_tab: 'Customer GOMPs', customer_gomps_title: 'Zákaznícke GOMPy', add_customer_gomp: '+ Add build',
     cg_title_label: 'Title', cg_customer_label: 'Customer', cg_customer_placeholder: 'First name/initial only — e.g. "Built for Martin K."',
     cg_specs_label: 'Specs', cg_specs_help: 'Separate each spec with " · ", same as the Components tab.',
@@ -426,6 +436,10 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     gbb_search_placeholder: 'napr. RTX 3070', gbb_add_search: 'Hľadať',
     gbb_proposal_price: 'Cenový návrh (EUR)', gbb_proposal_notes: 'Poznámky k návrhu (súčiastky, stav...)', gbb_save_proposal: 'Uložiť a označiť ako ponúknuté →',
     gbb_count: (total, fresh) => `${total} celkovo · ${fresh} nových`,
+    contact_tab: 'Správy', contact_title: 'Kontaktné správy', contact_no_messages: 'Zatiaľ žiadne správy. Zobrazia sa tu hneď, ako niekto odošle kontaktný formulár.',
+    contact_status_labels: { new: 'Nová', read: 'Prečítaná', archived: 'Archivovaná' },
+    contact_message_word: 'Správa',
+    contact_count: (total, fresh) => `${total} celkovo · ${fresh} nových`,
     customer_gomps_tab: 'Zákaznícke GOMPy', customer_gomps_title: 'Zákaznícke GOMPy', add_customer_gomp: '+ Pridať zostavu',
     cg_title_label: 'Názov', cg_customer_label: 'Zákazník', cg_customer_placeholder: 'Len meno/iniciálka — napr. "Postavené pre Martina K."',
     cg_specs_label: 'Špecifikácie', cg_specs_help: 'Oddeľte jednotlivé položky pomocou " · ", rovnako ako v záložke Komponenty.',
@@ -618,6 +632,12 @@ const GBB_STATUS_COLORS: Record<GbbStatus, { bg: string; text: string; border: s
   archived: { bg: '#F2F2F6', text: '#505060', border: 'rgba(144,144,160,0.35)' },
 };
 
+const CONTACT_STATUS_COLORS: Record<ContactStatus, { bg: string; text: string; border: string }> = {
+  new: { bg: '#FFF0EE', text: '#8B2020', border: 'rgba(204,51,51,0.3)' },
+  read: { bg: '#E8F0FF', text: '#1A3080', border: 'rgba(51,102,204,0.3)' },
+  archived: { bg: '#F2F2F6', text: '#505060', border: 'rgba(144,144,160,0.35)' },
+};
+
 function tierBadge(tier: Tier | undefined, palette: Record<Tier, { bg: string; text: string; border: string }>) {
   return palette[tier || 'B'] || palette.B;
 }
@@ -672,7 +692,7 @@ export default function AdminPage() {
           : 'no';
   const authed = adminState === 'yes';
 
-  const [tab, setTab] = useState<'builds' | 'components' | 'requests' | 'gbb' | 'customerGomps' | 'alignment'>('requests');
+  const [tab, setTab] = useState<'builds' | 'components' | 'requests' | 'gbb' | 'contact' | 'customerGomps' | 'alignment'>('requests');
   const [builds, setBuilds] = useState<Build[]>([]);
   const [compDb, setCompDb] = useState<ComponentDb>(defaultComponentDb());
 
@@ -735,6 +755,12 @@ export default function AdminPage() {
   const [expandedGbb, setExpandedGbb] = useState<string | null>(null);
   const [gbbSearchTerm, setGbbSearchTerm] = useState<Record<string, string>>({});
   const [gbbProposalDraft, setGbbProposalDraft] = useState<Record<string, { price: string; notes: string }>>({});
+
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
+  const [contactLoading, setContactLoading] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
+  const [contactNeedsServiceKey, setContactNeedsServiceKey] = useState(false);
+  const [expandedContact, setExpandedContact] = useState<string | null>(null);
 
   // Admin stays SK/EN only (internal tool, not customer-facing) — a shared lang state of
   // 'cz' picked up from browsing the public site falls back to Slovak here rather than
@@ -892,6 +918,36 @@ export default function AdminPage() {
       setGbbRequests((list) => list.map((r) => (r.id === id ? result.request : r)));
     } else {
       setGbbError(result.error);
+    }
+  }
+
+  // ---- Contact form messages (contact_messages) ----
+
+  const loadContactMessages = useCallback(async () => {
+    setContactLoading(true);
+    const res = await fetchContactMessages();
+    if (res.ok) {
+      setContactMessages(res.messages);
+      setContactError(null);
+      setContactNeedsServiceKey(false);
+    } else {
+      setContactError(res.error);
+      setContactNeedsServiceKey(!!res.needsServiceRoleKey);
+    }
+    setContactLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (authed) loadContactMessages();
+  }, [authed, loadContactMessages]);
+
+  async function changeContactStatus(id: string, status: ContactStatus) {
+    const previous = contactMessages;
+    setContactMessages((list) => list.map((m) => (m.id === id ? { ...m, status } : m)));
+    const { error } = await updateContactMessageStatus(id, status);
+    if (error) {
+      setContactMessages(previous);
+      setContactError(error);
     }
   }
 
@@ -1361,6 +1417,7 @@ export default function AdminPage() {
   const totalComps = (Object.values(compDb) as Component[][]).reduce((sum, arr) => sum + (arr ? arr.length : 0), 0);
   const newIntentCount = intents.filter((i) => i.status === 'new').length;
   const newGbbCount = gbbRequests.filter((r) => r.status === 'new').length;
+  const newContactCount = contactMessages.filter((m) => m.status === 'new').length;
 
   // ---------------------------------------------------------------------------
   // Login screen
@@ -1565,6 +1622,30 @@ export default function AdminPage() {
               )}
             </button>
             <button
+              onClick={() => setTab('contact')}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'space-between', gap: 10,
+                width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
+                background: tab === 'contact' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                border: 'none',
+                borderLeft: isMobile ? 'none' : `2px solid ${tab === 'contact' ? '#4A90D9' : 'transparent'}`,
+                borderBottom: isMobile ? `2px solid ${tab === 'contact' ? '#4A90D9' : 'transparent'}` : 'none',
+                color: tab === 'contact' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'contact' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+              }}
+            >
+              <span>{t.contact_tab}</span>
+              {newContactCount > 0 && (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, background: '#6E1423', color: '#FDFAF4',
+                    borderRadius: 10, padding: '2px 7px', lineHeight: 1.4,
+                  }}
+                >
+                  {newContactCount}
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => setTab('customerGomps')}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 10,
@@ -1733,6 +1814,104 @@ export default function AdminPage() {
                                 }}
                               >
                                 {t.status_labels[s]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {tab === 'contact' && (
+            <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.contact_title}</h1>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300 }}>{t.contact_count(contactMessages.length, newContactCount)}</div>
+                </div>
+                <button
+                  onClick={loadContactMessages}
+                  disabled={contactLoading}
+                  style={{ background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, padding: '8px 16px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', cursor: contactLoading ? 'default' : 'pointer' }}
+                >
+                  {contactLoading ? t.loading : t.refresh}
+                </button>
+              </div>
+
+              {contactError && (
+                <div style={{ background: contactNeedsServiceKey ? 'rgba(196,163,90,0.12)' : '#FFF0EE', border: `0.5px solid ${contactNeedsServiceKey ? 'rgba(196,163,90,0.5)' : 'rgba(204,51,51,0.25)'}`, borderRadius: 2, padding: '14px 16px', marginBottom: 20 }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: contactNeedsServiceKey ? '#8A6D2F' : '#CC3333', marginBottom: 4 }}>
+                    {contactNeedsServiceKey ? t.setup_needed : t.error_word}
+                  </div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: contactNeedsServiceKey ? '#6B5526' : '#8B2020', lineHeight: 1.6 }}>{contactError}</div>
+                </div>
+              )}
+
+              {!contactError && contactMessages.length === 0 && !contactLoading && (
+                <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 2, padding: '40px 24px', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#7A7469', fontWeight: 300 }}>{t.contact_no_messages}</div>
+                </div>
+              )}
+
+              {contactMessages.map((m) => {
+                const open = expandedContact === m.id;
+                const badge = CONTACT_STATUS_COLORS[m.status];
+                return (
+                  <div key={m.id} style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 2, marginBottom: 10, overflow: 'hidden' }}>
+                    <div
+                      onClick={() => setExpandedContact(open ? null : m.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isMobile ? '14px 14px' : '16px 20px', cursor: 'pointer', flexWrap: 'wrap' }}
+                    >
+                      <div style={{ flex: 1, minWidth: 180 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: '#1C1C1A' }}>
+                            {[m.first_name, m.last_name].filter(Boolean).join(' ') || t.no_name}
+                          </span>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', background: badge.bg, color: badge.text, border: `0.5px solid ${badge.border}`, borderRadius: 2, padding: '2px 6px' }}>
+                            {t.contact_status_labels[m.status]}
+                          </span>
+                        </div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', marginTop: 3 }}>{m.email}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890' }}>
+                          {new Date(m.created_at).toLocaleDateString(lang === 'sk' ? 'sk-SK' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                      </div>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#A09890', width: 12, textAlign: 'center' }}>{open ? '−' : '+'}</span>
+                    </div>
+
+                    {open && (
+                      <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.08)', padding: isMobile ? '14px' : '18px 20px', background: '#F8F4EA' }}>
+                        <div style={ADMIN_LABEL}>{t.contact_word}</div>
+                        <div style={{ ...ADMIN_VALUE, marginBottom: 14 }}>
+                          {m.email}
+                          {m.phone ? <><br />{m.phone}</> : null}
+                        </div>
+                        <div style={ADMIN_LABEL}>{t.contact_message_word}</div>
+                        <div style={{ ...ADMIN_VALUE, marginBottom: 18, whiteSpace: 'pre-wrap' }}>{m.message}</div>
+
+                        <div style={ADMIN_LABEL}>{t.set_status}</div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {(['new', 'read', 'archived'] as ContactStatus[]).map((s) => {
+                            const active = m.status === s;
+                            return (
+                              <button
+                                key={s}
+                                onClick={() => changeContactStatus(m.id, s)}
+                                style={{
+                                  background: active ? '#6E1423' : 'transparent',
+                                  color: active ? '#FDFAF4' : '#7A7469',
+                                  border: `0.5px solid ${active ? '#6E1423' : 'rgba(28,28,26,0.2)'}`,
+                                  borderRadius: 2, padding: '6px 12px', fontFamily: 'var(--font-sans)', fontSize: 11,
+                                  cursor: active ? 'default' : 'pointer',
+                                }}
+                              >
+                                {t.contact_status_labels[s]}
                               </button>
                             );
                           })}

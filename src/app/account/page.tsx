@@ -37,7 +37,7 @@ type PwdForm = {
   confirm: string;
 };
 
-type OrderStatus = 'Building' | 'Shipped' | 'Delivered';
+type OrderStatus = 'new' | 'contacted' | 'converted' | 'archived';
 
 type Order = {
   id: string;
@@ -57,27 +57,30 @@ type Order = {
   items: string[];
 };
 
-// Real orders are fetched from Supabase per signed-in user (see the `orders` state below) —
-// each DB row is mapped into this same bilingual shape so the rendering further down needed
-// no changes at all.
+// Real orders are fetched from Supabase per signed-in user, from the same `checkout_intents`
+// table /api/checkout writes to (see the `orders` state below) — each row is mapped into this
+// same bilingual shape so the rendering further down needed no changes at all. Status values
+// match checkout_intents.status exactly (see src/lib/admin-intents.ts's IntentStatus).
 const STATUS_SK: Record<OrderStatus, string> = {
-  Building: 'Vo výrobe',
-  Shipped: 'Expedované',
-  Delivered: 'Doručené',
+  new: 'Prijatá',
+  contacted: 'Sme v kontakte',
+  converted: 'Potvrdená',
+  archived: 'Uzavretá',
 };
 
 const STATUS_CZ: Record<OrderStatus, string> = {
-  Building: 'Ve výrobě',
-  Shipped: 'Expedováno',
-  Delivered: 'Doručeno',
+  new: 'Přijata',
+  contacted: 'Jsme v kontaktu',
+  converted: 'Potvrzena',
+  archived: 'Uzavřena',
 };
 
-// Amber/gold for in-progress, muted maroon for shipped (unused by current seed data,
-// kept for completeness), muted green for delivered — consistent with the site palette.
+// Matches the color language already used for the same statuses in Admin's order-requests tab.
 const STATUS_COLORS: Record<OrderStatus, { color: string; bg: string; border: string }> = {
-  Building: { color: '#92400E', bg: 'rgba(146,64,14,0.08)', border: 'rgba(146,64,14,0.2)' },
-  Shipped: { color: '#6E1423', bg: 'rgba(110,20,35,0.08)', border: 'rgba(110,20,35,0.2)' },
-  Delivered: { color: '#14532D', bg: 'rgba(20,83,45,0.08)', border: 'rgba(20,83,45,0.2)' },
+  new: { color: '#8B2020', bg: '#FFF0EE', border: 'rgba(204,51,51,0.3)' },
+  contacted: { color: '#1A3080', bg: '#E8F0FF', border: 'rgba(51,102,204,0.3)' },
+  converted: { color: '#1A5030', bg: '#E8FFF0', border: 'rgba(51,153,102,0.35)' },
+  archived: { color: '#505060', bg: '#F2F2F6', border: 'rgba(144,144,160,0.35)' },
 };
 
 const DEFAULT_ADDRESSES: Address[] = [
@@ -386,17 +389,19 @@ function TabHeader({ t, title, action, isMobile }: { t: T; title: string; action
   );
 }
 
-// Maps a Supabase `orders` row (joined with its `order_items`) into the bilingual Order
-// shape the Orders tab already renders, so that JSX needed no changes at all.
-function mapOrderRow(
+// Maps a Supabase `checkout_intents` row (the same table /api/checkout writes to — see that
+// route and its `checkout_intents_select_own` RLS policy) into the bilingual Order shape the
+// Orders tab already renders, so that JSX needed no changes at all. There's no separate
+// "build name" or confirmed ETA at this stage — it's a submitted request, not a shipped order —
+// so those fields fall back to a generic label / stay blank.
+function mapCheckoutIntentRow(
   row: {
-    order_number: string;
-    name: string;
+    id: string;
+    reference_code: string | null;
     status: OrderStatus;
     total_eur: number;
-    eta: string | null;
+    build_items: { category: string; name: string; price_eur: number }[];
     created_at: string;
-    order_items: { name: string }[];
   },
 ): Order {
   const created = new Date(row.created_at);
@@ -404,17 +409,15 @@ function mapOrderRow(
   const date_sk = created.toLocaleDateString('sk-SK', { year: 'numeric', month: 'long', day: 'numeric' });
   const date_cz = created.toLocaleDateString('cs-CZ', { year: 'numeric', month: 'long', day: 'numeric' });
 
-  const etaDate = row.eta ? new Date(row.eta) : null;
-  const etaStr_en = etaDate ? etaDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
-  const etaStr_sk = etaDate ? etaDate.toLocaleDateString('sk-SK', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
-  const etaStr_cz = etaDate ? etaDate.toLocaleDateString('cs-CZ', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
-  const delivered = row.status === 'Delivered';
+  const buildName_en = 'Custom PC Build';
+  const buildName_sk = 'Vlastná zostava PC';
+  const buildName_cz = 'Vlastní sestava PC';
 
   return {
-    id: row.order_number,
-    name_en: row.name,
-    name_sk: row.name,
-    name_cz: row.name,
+    id: row.reference_code ?? row.id.slice(0, 8).toUpperCase(),
+    name_en: buildName_en,
+    name_sk: buildName_sk,
+    name_cz: buildName_cz,
     date_en,
     date_sk,
     date_cz,
@@ -422,10 +425,10 @@ function mapOrderRow(
     status_en: row.status,
     status_sk: STATUS_SK[row.status],
     status_cz: STATUS_CZ[row.status],
-    eta_en: etaDate ? `${delivered ? 'Delivered' : 'Est. delivery'} ${etaStr_en}` : '',
-    eta_sk: etaDate ? `${delivered ? 'Doručené' : 'Predpokladané doručenie'} ${etaStr_sk}` : '',
-    eta_cz: etaDate ? `${delivered ? 'Doručeno' : 'Předpokládané doručení'} ${etaStr_cz}` : '',
-    items: row.order_items.map((it) => it.name),
+    eta_en: '',
+    eta_sk: '',
+    eta_cz: '',
+    items: row.build_items.map((it) => it.name),
   };
 }
 
@@ -657,7 +660,7 @@ export default function Account() {
     setAddresses(readJSON('gomp_addresses', DEFAULT_ADDRESSES));
   }, []);
 
-  // Order line items only store a component's name (see mapOrderRow) — no id, since the
+  // Order line items only store a component's name (see mapCheckoutIntentRow) — no id, since the
   // catalog row it once pointed to may since have been edited or deleted. Building a name ->
   // imageUrl lookup from the live catalog is a best-effort match: it renders nothing for a part
   // that's been renamed or removed since the order was placed, rather than erroring.
@@ -690,7 +693,11 @@ export default function Account() {
     setProfileDraft(next);
   }, [authProfile, user]);
 
-  // Fetch this user's real orders (+ their component line items) from Supabase.
+  // Fetch this user's own checkout_intents rows from Supabase — the same table /api/checkout
+  // writes to, readable here via the checkout_intents_select_own RLS policy
+  // (auth.uid() = user_id). Not the old `orders`/`order_items` tables: nothing in the app has
+  // ever written to those, so that tab would always render empty regardless of what a customer
+  // actually submitted at checkout.
   useEffect(() => {
     if (!user) {
       setOrders([]);
@@ -700,13 +707,13 @@ export default function Account() {
     let cancelled = false;
     setOrdersLoading(true);
     supabase
-      .from('orders')
-      .select('order_number, name, status, total_eur, eta, created_at, order_items(name)')
+      .from('checkout_intents')
+      .select('id, reference_code, status, total_eur, build_items, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (cancelled) return;
-        setOrders((data ?? []).map((row) => mapOrderRow(row as never)));
+        setOrders((data ?? []).map((row) => mapCheckoutIntentRow(row as never)));
         setOrdersLoading(false);
       });
     return () => {
