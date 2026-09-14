@@ -47,12 +47,13 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     spec_storage: 'SSD', spec_cooling: 'Cooling',
     vat_included: 'Price includes VAT',
     configure_this: 'Configure this build →', configure_arrow: 'Configure →',
-    stat1: 'Custom builds shipped', stat2: 'Average rating · 3,200+ reviews',
+    stat1: 'Custom builds shipped', stat2: 'Customer satisfaction',
     stat4: 'Parts & labor warranty',
     ready_to_ship: 'Ready to Ship', featured_builds: 'Featured Builds', view_all: 'View all builds →',
     why_gomp: 'Why GOMP', gomp_standard: 'The GOMP Standard',
     yourbuild_line1: 'Your build.', yourbuild_line2: 'Your rules.',
-    builder_desc: 'Use our 3D PC builder to see every component appear in real time as you configure your machine.',
+    builder_desc_pre: 'Use our 3D PC builder to see every component appear in real time as you configure your machine.',
+    builder_desc_em: '', builder_desc_post: '',
     open_builder: 'Open the 3D Builder →',
     build_from: 'Build from', entry_scales: 'Entry-level excellence. Scales to flagship.',
     bullet1: '2-year parts & labor warranty', bullet2: 'Benchmark-tested before shipping',
@@ -70,12 +71,12 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     spec_storage: 'SSD', spec_cooling: 'Chladenie',
     vat_included: 'Cena vrátane DPH',
     configure_this: 'Nakonfigurovať túto zostavu →', configure_arrow: 'Konfigurovať →',
-    stat1: 'Expedovaných zostáv na mieru', stat2: 'Priemerné hodnotenie · 3200+ recenzií',
+    stat1: 'Expedovaných zostáv na mieru', stat2: 'Spokojnosť zákazníkov',
     stat4: 'Záruka na diely a prácu',
     ready_to_ship: 'Nakonfigurované pre Vás', featured_builds: 'Odporúčané zostavy', view_all: 'Všetky prebuilt GOMPy',
-    why_gomp: 'Prečo GOMP', gomp_standard: 'Štandard GOMP',
+    why_gomp: 'Prečo GOMP', gomp_standard: 'Hodnoty GOMP',
     yourbuild_line1: 'Vaša zostava.', yourbuild_line2: 'Vaše pravidlá.',
-    builder_desc: 'Poskladajte si svoju legendu sami v našom 3D konfigurátore.',
+    builder_desc_pre: 'Poskladajte si svoju ', builder_desc_em: 'legendu', builder_desc_post: ' sami v našom 3D konfigurátore.',
     open_builder: 'Otvoriť 3D konfigurátor →',
     build_from: 'Ceny od', entry_scales: 'Špička vo svojej cenovej kategórií. Rozšíriteľná až po vlajkovú loď.',
     bullet1: '2-ročná záruka na diely a prácu', bullet2: 'Pred expedíciou testované benchmarkmi',
@@ -93,12 +94,13 @@ const TRANSLATIONS: Record<'en' | 'sk' | 'cz', Dict> = {
     spec_storage: 'SSD', spec_cooling: 'Chlazení',
     vat_included: 'Cena včetně DPH',
     configure_this: 'Nakonfigurovat tuto sestavu →', configure_arrow: 'Konfigurovat →',
-    stat1: 'Expedovaných sestav na míru', stat2: 'Průměrné hodnocení · 3200+ recenzí',
+    stat1: 'Expedovaných sestav na míru', stat2: 'Spokojenost zákazníků',
     stat4: 'Záruka na díly a práci',
     ready_to_ship: 'Připraveno k expedici', featured_builds: 'Doporučené sestavy', view_all: 'Zobrazit všechny sestavy →',
     why_gomp: 'Proč GOMP', gomp_standard: 'Standard GOMP',
     yourbuild_line1: 'Vaše sestava.', yourbuild_line2: 'Vaše pravidla.',
-    builder_desc: 'Použijte náš 3D konfigurátor a sledujte, jak se každá součástka objevuje v reálném čase při skládání vašeho počítače.',
+    builder_desc_pre: 'Použijte náš 3D konfigurátor a sledujte, jak se každá součástka objevuje v reálném čase při skládání vašeho počítače.',
+    builder_desc_em: '', builder_desc_post: '',
     open_builder: 'Otevřít 3D konfigurátor →',
     build_from: 'Ceny od', entry_scales: 'Špička v základní třídě. Rozšiřitelná až po vlajkovou loď.',
     bullet1: '2letá záruka na díly a práci', bullet2: 'Před expedicí testováno benchmarky',
@@ -249,8 +251,8 @@ export default function Home() {
   );
 
   const stats: [string, string][] = [
-    ['20', t.stat1],
-    ['4.9', t.stat2],
+    ['20+', t.stat1],
+    ['100%', t.stat2],
     ['2yr', t.stat4],
   ];
 
@@ -898,7 +900,9 @@ export default function Home() {
                 <span style={{ color: MAROON, fontWeight: 600 }}>{t.yourbuild_line2}</span>
               </h2>
               <p style={{ fontFamily: 'var(--font-sans)', fontSize: 16, color: MUTED, margin: '0 0 40px', lineHeight: 1.75, maxWidth: 400, fontWeight: 300 }}>
-                {t.builder_desc}
+                {t.builder_desc_pre}
+                {t.builder_desc_em && <strong style={{ color: MAROON, fontWeight: 700 }}>{t.builder_desc_em}</strong>}
+                {t.builder_desc_post}
               </p>
               <TransitionLink
                 href="/build"

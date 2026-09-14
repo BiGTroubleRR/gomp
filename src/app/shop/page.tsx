@@ -70,9 +70,9 @@ const TRANSLATIONS = {
     eyebrow: 'Hotové zostavy',
     title: 'Vyberte si zostavu.',
     configure_arrow: 'Konfigurovať →',
-    need_specific: 'Potrebujete niečo špecifické?',
+    need_specific: 'Nie sú PREBUILT podľa Vašej chuti?',
     need_specific_desc:
-      'Použite 3D konfigurátor a nastavte každý komponent presne podľa vašich požiadaviek. Sledujte, ako sa zostava skladá v reálnom čase.',
+      'Použite 3D konfigurátor a sledujte ako sa každý komponent objaví v reálnom čase.',
     open_3d: 'Otvoriť 3D konfigurátor →',
     footer_terms: 'Obchodné podmienky',
     footer_privacy: 'Ochrana osobných údajov',
