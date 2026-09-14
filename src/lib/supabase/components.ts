@@ -27,6 +27,14 @@ async function parseJsonOrThrow(res: Response, fallbackMessage: string): Promise
 // single visit, not just the first. Read via getCachedComponentDb for a synchronous initial
 // state; still refreshed by a real fetch (and kept live by subscribeComponents) on every mount.
 let cachedDb: ComponentDb | null = null;
+let cachedAt = 0;
+
+// Short freshness window so home -> shop -> build -> account navigated in quick succession share
+// one fetch of the ~800-row/39-column catalog instead of each independently re-querying it —
+// confirmed as one of the biggest repeated-request costs across the site. Admin always passes
+// `force: true` (it keeps its own Realtime subscription and needs to see its own writes
+// immediately, not a stale window), so this only ever softens repeat traffic on public pages.
+const CACHE_TTL_MS = 30_000;
 
 export function getCachedComponentDb(): ComponentDb | null {
   return cachedDb;
@@ -35,7 +43,10 @@ export function getCachedComponentDb(): ComponentDb | null {
 // Reads the whole catalog, grouped back into the same ComponentDb shape Build/Admin already
 // work with. Falls back to the static seed on any error (offline, RLS misconfigured, table
 // not migrated yet) so a Supabase hiccup degrades to "last known good" instead of a blank page.
-export async function fetchComponentDb(): Promise<ComponentDb> {
+export async function fetchComponentDb(opts?: { force?: boolean }): Promise<ComponentDb> {
+  if (!opts?.force && cachedDb && Date.now() - cachedAt < CACHE_TTL_MS) {
+    return cachedDb;
+  }
   const supabase = createClient();
   const { data, error } = await supabase.from('components').select('*').order('sort_order', { ascending: true });
   if (error || !data) {
@@ -49,6 +60,7 @@ export async function fetchComponentDb(): Promise<ComponentDb> {
     db[cat].push(rowToComponent(row));
   });
   cachedDb = db;
+  cachedAt = Date.now();
   return db;
 }
 

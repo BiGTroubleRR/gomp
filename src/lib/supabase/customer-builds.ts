@@ -15,16 +15,29 @@ async function parseJsonOrThrow(res: Response, fallbackMessage: string): Promise
   return body;
 }
 
+// Short freshness window, same reasoning and TTL as fetchComponentDb in components.ts — admin
+// always passes `force: true` since it keeps its own Realtime subscription and needs to see its
+// own writes immediately.
+const CACHE_TTL_MS = 30_000;
+let cachedBuilds: CustomerBuild[] | null = null;
+let cachedAt = 0;
+
 // Falls back to an empty list on any error (offline, RLS misconfigured, table not
 // migrated yet) so a Supabase hiccup degrades to "nothing shown" rather than a crash.
-export async function fetchCustomerBuilds(): Promise<CustomerBuild[]> {
+export async function fetchCustomerBuilds(opts?: { force?: boolean }): Promise<CustomerBuild[]> {
+  if (!opts?.force && cachedBuilds && Date.now() - cachedAt < CACHE_TTL_MS) {
+    return cachedBuilds;
+  }
   const supabase = createClient();
   const { data, error } = await supabase.from('customer_builds').select('*').order('sort_order', { ascending: true });
   if (error || !data) {
     if (error) console.error('fetchCustomerBuilds: falling back to empty list —', error.message);
     return [];
   }
-  return data.map(rowToCustomerBuild);
+  const builds = data.map(rowToCustomerBuild);
+  cachedBuilds = builds;
+  cachedAt = Date.now();
+  return builds;
 }
 
 // Subscribes to every change on the customer_builds table and calls `onChange` (no

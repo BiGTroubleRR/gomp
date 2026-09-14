@@ -49,7 +49,15 @@ const nextConfig: NextConfig = {
   // this by hand; this setting gets the same effect automatically for three's and Clerk's own
   // barrel-style exports) so a route that only uses part of a package doesn't pull in the rest.
   experimental: {
-    optimizePackageImports: ['three', '@clerk/nextjs', 'motion'],
+    optimizePackageImports: ['three', '@clerk/nextjs', 'motion', '@supabase/supabase-js', '@supabase/ssr'],
+  },
+  // Lets next/image serve admin-uploaded product photos straight from Supabase Storage's public
+  // URL (see src/app/api/admin/upload-image/route.ts's getPublicUrl call) with real resizing/
+  // format negotiation, instead of every page shipping the original uploaded file untouched.
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: 'ojosovibspcbmwveoled.supabase.co', pathname: '/storage/v1/object/public/**' },
+    ],
   },
   async headers() {
     return [

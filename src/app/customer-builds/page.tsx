@@ -2,14 +2,15 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import Image from 'next/image';
 import { useSite } from '@/contexts/SiteContext';
 import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import Reveal from '@/components/Reveal';
 import { useIsMobile } from '@/lib/use-media-query';
-import { fetchCustomerBuilds, subscribeCustomerBuilds } from '@/lib/supabase/customer-builds';
+import { fetchCustomerBuilds } from '@/lib/supabase/customer-builds';
 import type { CustomerBuild } from '@/lib/supabase/customer-build-mapping';
-import { fetchComponentDb, subscribeComponents, getCachedComponentDb } from '@/lib/supabase/components';
+import { fetchComponentDb, getCachedComponentDb } from '@/lib/supabase/components';
 import { defaultComponentDb, computeBuildTier, type ComponentDb } from '@/lib/component-db-seed';
 import TierBadge from '@/components/TierBadge';
 
@@ -169,12 +170,13 @@ function PhotoStack({
   if (imageUrls.length === 1) {
     return (
       <div style={{ flexShrink: 0, width: isMobile ? '100%' : 220, display: 'flex', justifyContent: 'center' }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={imageUrls[0]}
           alt={title}
+          width={220}
+          height={200}
           className="gomp-float-photo"
-          style={{ maxWidth: '100%', maxHeight: 200, objectFit: 'contain' }}
+          style={{ maxWidth: '100%', maxHeight: 200, width: 'auto', height: 'auto', objectFit: 'contain' }}
         />
       </div>
     );
@@ -394,19 +396,15 @@ export default function CustomerBuildsPage() {
   // tier)" section) into a computeBuildTier badge — this page has no other use for the catalog.
   const [compDb, setCompDb] = useState<ComponentDb>(() => getCachedComponentDb() ?? defaultComponentDb());
 
+  // One-time fetch, backed by fetchCustomerBuilds' own short-TTL cache — no Realtime
+  // subscription on this public page (see the same reasoning in src/app/page.tsx).
   useEffect(() => {
     let cancelled = false;
     fetchCustomerBuilds().then((data) => {
       if (!cancelled) setBuilds(data);
     });
-    const unsubscribe = subscribeCustomerBuilds(() => {
-      fetchCustomerBuilds().then((data) => {
-        if (!cancelled) setBuilds(data);
-      });
-    });
     return () => {
       cancelled = true;
-      unsubscribe();
     };
   }, []);
 
@@ -415,14 +413,8 @@ export default function CustomerBuildsPage() {
     fetchComponentDb().then((db) => {
       if (!cancelled) setCompDb(db);
     });
-    const unsubscribe = subscribeComponents(() => {
-      fetchComponentDb().then((db) => {
-        if (!cancelled) setCompDb(db);
-      });
-    });
     return () => {
       cancelled = true;
-      unsubscribe();
     };
   }, []);
 

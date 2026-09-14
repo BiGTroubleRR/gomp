@@ -10,8 +10,8 @@ import SiteFooter from '@/components/SiteFooter';
 import { navigateWithTransition } from '@/lib/gomp-nav';
 import { useIsMobile } from '@/lib/use-media-query';
 import { pick } from '@/lib/i18n';
-import { fetchPrebuilts, subscribePrebuilts } from '@/lib/supabase/prebuilts';
-import { fetchComponentDb, subscribeComponents, getCachedComponentDb } from '@/lib/supabase/components';
+import { fetchPrebuilts } from '@/lib/supabase/prebuilts';
+import { fetchComponentDb, getCachedComponentDb } from '@/lib/supabase/components';
 import { computeBuildTotalGross, computeBuildTier, defaultComponentDb, type Build, type ComponentDb } from '@/lib/component-db-seed';
 import TierBadge from '@/components/TierBadge';
 
@@ -189,35 +189,32 @@ export default function Home() {
 
   const t = TRANSLATIONS[lang];
 
+  // One-time fetch, backed by fetchPrebuilts' own short-TTL cache (src/lib/supabase/
+  // prebuilts.ts) — no Realtime subscription here. This is a public, anonymous-visitor page with
+  // no need for instant cross-tab admin-edit propagation; holding a websocket open for every
+  // homepage visit was pure overhead. Admin keeps its own subscription for that purpose.
   const [prebuilts, setPrebuilts] = useState<Build[]>([]);
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      const data = await fetchPrebuilts();
+    fetchPrebuilts().then((data) => {
       if (!cancelled) setPrebuilts(data);
-    }
-    load();
-    const unsubscribe = subscribePrebuilts(load);
+    });
     return () => {
       cancelled = true;
-      unsubscribe();
     };
   }, []);
 
   // Live component catalog, used to compute each listing's price from its actual parts instead
   // of trusting the prebuilt's own stored (and easily stale) price field — see computeBuildTotal.
+  // Same one-time-fetch/no-subscription reasoning as prebuilts above.
   const [compDb, setCompDb] = useState<ComponentDb>(() => getCachedComponentDb() ?? defaultComponentDb());
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      const db = await fetchComponentDb();
+    fetchComponentDb().then((db) => {
       if (!cancelled) setCompDb(db);
-    }
-    load();
-    const unsubscribe = subscribeComponents(load);
+    });
     return () => {
       cancelled = true;
-      unsubscribe();
     };
   }, []);
   const livePrebuilts = useMemo(() => prebuilts.filter((p) => p.isLive), [prebuilts]);

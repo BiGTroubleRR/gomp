@@ -2,14 +2,15 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState, useCallback, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import Image from 'next/image';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { fetchPrebuilts, subscribePrebuilts } from '@/lib/supabase/prebuilts';
+import { fetchPrebuilts } from '@/lib/supabase/prebuilts';
 import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
 import { navigateWithTransition } from '@/lib/gomp-nav';
 import { writeJSON } from '@/lib/gomp-storage';
-import { fetchComponentDb, subscribeComponents, getCachedComponentDb } from '@/lib/supabase/components';
+import { fetchComponentDb, getCachedComponentDb } from '@/lib/supabase/components';
 import { passmarkLookup, tierFromPassmark, ramTier, TIER_COLORS, type Tier } from '@/lib/passmark';
 import TierGlowOrb from '@/components/TierGlowOrb';
 import TierBadge from '@/components/TierBadge';
@@ -465,15 +466,11 @@ function BuildPageContent() {
   const [prebuiltPcs, setPrebuiltPcs] = useState<Build[]>([]);
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      const data = await fetchPrebuilts();
+    fetchPrebuilts().then((data) => {
       if (!cancelled) setPrebuiltPcs(data);
-    }
-    load();
-    const unsubscribe = subscribePrebuilts(load);
+    });
     return () => {
       cancelled = true;
-      unsubscribe();
     };
   }, []);
   const t = T[lang];
@@ -583,16 +580,15 @@ function BuildPageContent() {
   // is independently scrollable, so an expanded row picked in 3D might otherwise land off-screen.
   const rowRefs = useRef<Partial<Record<CompId, HTMLDivElement | null>>>({});
 
-  // Load the shared component catalog from Supabase (managed by /admin) on mount, and keep it
-  // live: any Admin edit (insert/update/delete) broadcasts over Realtime and gets refetched
-  // here, so an already-open /build tab picks up new prices/stock without a reload. Per-slot
-  // selections are only seeded once, from that very first load — later catalog refreshes must
-  // not silently reset whatever the visitor has already picked.
+  // Load the shared component catalog from Supabase (managed by /admin) on mount — a one-time
+  // fetch backed by fetchComponentDb's own short-TTL cache, no Realtime subscription (this is a
+  // public, anonymous-visitor page; Admin keeps its own subscription for live cross-tab updates).
+  // Per-slot selections are only seeded once, from that very first load — a later refetch (e.g.
+  // on remount) must not silently reset whatever the visitor has already picked.
   const catalogInitializedRef = useRef(false);
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      const raw = await fetchComponentDb();
+    fetchComponentDb().then((raw) => {
       if (cancelled) return;
       const db = normalizeComponentDb(raw);
       setCompDb(db);
@@ -609,12 +605,9 @@ function BuildPageContent() {
         });
         setSelections(initSelections);
       }
-    }
-    load();
-    const unsubscribe = subscribeComponents(load);
+    });
     return () => {
       cancelled = true;
-      unsubscribe();
     };
   }, []);
 
@@ -1614,8 +1607,7 @@ function BuildPageContent() {
                                       transformOrigin: 'right center', position: 'relative', zIndex: 2,
                                     }}
                                   >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={c.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                    <Image src={c.imageUrl} alt={c.name} fill sizes="36px" style={{ objectFit: 'contain' }} />
                                   </motion.div>
                                 )}
                                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1935,8 +1927,7 @@ function BuildPageContent() {
                               transformOrigin: 'right center', position: 'relative', zIndex: 2,
                             }}
                           >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={c.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            <Image src={c.imageUrl} alt={c.name} fill sizes="36px" style={{ objectFit: 'contain' }} />
                           </motion.div>
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -2149,10 +2140,10 @@ function BuildPageContent() {
                       style={{
                         width: 44, height: 44, borderRadius: 4, flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                        position: 'relative',
                       }}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={hoverComp.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      <Image src={hoverComp.imageUrl} alt={hoverComp.name} fill sizes="44px" style={{ objectFit: 'contain' }} />
                     </div>
                   )}
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: GOLD, fontWeight: 600, lineHeight: 1.3 }}>{hoverComp.name}</div>
@@ -2304,8 +2295,7 @@ function BuildPageContent() {
                                     position: 'relative', zIndex: 2,
                                   }}
                                 >
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={comp.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                  <Image src={comp.imageUrl} alt={comp.name} fill sizes="36px" style={{ objectFit: 'contain' }} />
                                 </motion.div>
                               )}
                               <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: MAROON, fontWeight: 600 }}>{comp.name}</div>
@@ -2541,11 +2531,12 @@ function BuildPageContent() {
           >
             {/* No card behind the photo — the source PNGs already carry their own alpha
                 background, so the product just floats over the dimmed backdrop. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={zoomImage}
-              alt=""
-              style={{ width: 420, height: 420, objectFit: 'contain', filter: 'drop-shadow(0 20px 44px rgba(0,0,0,0.35))' }}
+              alt="Zoomed component photo"
+              width={420}
+              height={420}
+              style={{ objectFit: 'contain', filter: 'drop-shadow(0 20px 44px rgba(0,0,0,0.35))' }}
             />
           </motion.div>
         )}

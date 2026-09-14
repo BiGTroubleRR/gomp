@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import Image from 'next/image';
 import { useSite } from '@/contexts/SiteContext';
 import { useAuth } from '@/contexts/AuthContext';
 import TransitionLink from '@/components/TransitionLink';
@@ -1095,10 +1096,10 @@ export default function Account() {
                                                 width: 22, height: 22, borderRadius: 3, flexShrink: 0,
                                                 background: 'repeating-conic-gradient(rgba(28,28,26,0.06) 0% 25%, transparent 0% 50%) 0 0 / 8px 8px',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                                                position: 'relative',
                                               }}
                                             >
-                                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                                              <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                              <Image src={img} alt={part} fill sizes="22px" style={{ objectFit: 'contain' }} />
                                             </div>
                                           ) : (
                                             <span style={{ color: 'rgba(28,28,26,0.28)', flexShrink: 0 }}>—</span>

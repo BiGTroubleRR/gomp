@@ -1,6 +1,7 @@
 'use client';
 
 import { CSSProperties, useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { useSite } from '@/contexts/SiteContext';
 import { useIsMobile } from '@/lib/use-media-query';
 import TransitionLink from '@/components/TransitionLink';
@@ -24,7 +25,13 @@ import { fetchPrebuilts, subscribePrebuilts, insertPrebuilt, updatePrebuilt, del
 import { saveStoreSettings } from '@/lib/supabase/store-settings';
 import { passmarkLookup, tierFromPassmark, ramTier, TIER_COLORS } from '@/lib/passmark';
 import TierGlowOrb from '@/components/TierGlowOrb';
-import AdminAlignmentPanel from '@/components/AdminAlignmentPanel';
+import dynamic from 'next/dynamic';
+// Dynamically imported: AdminAlignmentPanel pulls in three.js (via src/lib/build-scene.ts, for
+// DEFAULT_ALIGNMENT_TUNING) purely for its own tab's 3D preview, but a plain static import here
+// would put all of three.js + OrbitControls into every /admin page load regardless of which tab
+// is open — confirmed as one of the site's real bundle-bloat sources. Deferred until the
+// alignment tab is actually opened, same pattern as Case3DViewer in checkout/page.tsx.
+const AdminAlignmentPanel = dynamic(() => import('@/components/AdminAlignmentPanel'), { ssr: false });
 import {
   defaultComponentDb,
   applyVat,
@@ -798,7 +805,10 @@ export default function AdminPage() {
     if (!authed) return;
     let cancelled = false;
     async function loadCatalog() {
-      const rawCompDb = await fetchComponentDb();
+      // force: true — Admin keeps its own Realtime subscription specifically so it can see its
+      // own (and other admins') writes immediately, not a stale cached window (see
+      // src/lib/supabase/components.ts's CACHE_TTL_MS).
+      const rawCompDb = await fetchComponentDb({ force: true });
       if (cancelled) return;
       setCompDb(migrateComponentDb(rawCompDb));
     }
@@ -815,7 +825,7 @@ export default function AdminPage() {
     if (!authed) return;
     let cancelled = false;
     async function loadCustomerGomps() {
-      const data = await fetchCustomerBuilds();
+      const data = await fetchCustomerBuilds({ force: true });
       if (!cancelled) setCustomerGomps(data);
     }
     loadCustomerGomps();
@@ -833,7 +843,7 @@ export default function AdminPage() {
     if (!authed) return;
     let cancelled = false;
     async function loadPrebuilts() {
-      const data = await fetchPrebuilts();
+      const data = await fetchPrebuilts({ force: true });
       if (!cancelled) setBuilds(data);
     }
     loadPrebuilts();
@@ -2363,10 +2373,10 @@ export default function AdminPage() {
                               border: '0.5px solid rgba(28,28,26,0.15)',
                               background: 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 12px 12px',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                              position: 'relative',
                             }}
                           >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            <Image src={url} alt={cgForm.title || 'Customer build photo'} fill sizes="64px" style={{ objectFit: 'contain' }} />
                           </div>
                           <button
                             onClick={() => removeCgImage(url)}
@@ -2442,11 +2452,11 @@ export default function AdminPage() {
                           border: '0.5px solid rgba(28,28,26,0.12)',
                           background: b.imageUrls[0] ? 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 12px 12px' : '#F5F0E6',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                          position: 'relative',
                         }}
                       >
                         {b.imageUrls[0] ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={b.imageUrls[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                          <Image src={b.imageUrls[0]} alt={b.title} fill sizes="72px" style={{ objectFit: 'contain' }} />
                         ) : (
                           <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890' }}>—</span>
                         )}
@@ -2593,10 +2603,10 @@ export default function AdminPage() {
                             width: 40, height: 40, borderRadius: 2, flexShrink: 0,
                             background: 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 10px 10px',
                             border: '0.5px solid rgba(28,28,26,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                            position: 'relative',
                           }}
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={comp.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                          <Image src={comp.imageUrl} alt={comp.name} fill sizes="40px" style={{ objectFit: 'contain' }} />
                         </div>
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -2777,11 +2787,11 @@ export default function AdminPage() {
                           ? 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 12px 12px'
                           : '#FDFAF4',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                        position: 'relative',
                       }}
                     >
                       {compForm.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={compForm.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        <Image src={compForm.imageUrl} alt={compForm.name || 'Component photo'} fill sizes="64px" style={{ objectFit: 'contain' }} />
                       ) : (
                         <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890' }}>—</span>
                       )}

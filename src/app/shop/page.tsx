@@ -8,8 +8,8 @@ import SiteNav from '@/components/SiteNav';
 import { passmarkLookup, tierFromPassmark, TIER_COLORS, type Tier } from '@/lib/passmark';
 import { useIsMobile } from '@/lib/use-media-query';
 import { pick } from '@/lib/i18n';
-import { fetchPrebuilts, subscribePrebuilts } from '@/lib/supabase/prebuilts';
-import { fetchComponentDb, subscribeComponents, getCachedComponentDb } from '@/lib/supabase/components';
+import { fetchPrebuilts } from '@/lib/supabase/prebuilts';
+import { fetchComponentDb, getCachedComponentDb } from '@/lib/supabase/components';
 import { computeBuildTotalGross, computeBuildTier, defaultComponentDb, gpuModelFor, type Build, type ComponentDb } from '@/lib/component-db-seed';
 import TierBadge from '@/components/TierBadge';
 
@@ -255,18 +255,16 @@ export default function Shop() {
   const [filter, setFilter] = useState<FilterId>('all');
   const isMobile = useIsMobile();
 
+  // One-time fetch, backed by fetchPrebuilts' own short-TTL cache — no Realtime subscription on
+  // this public page (see the same reasoning in src/app/page.tsx). Admin keeps its subscription.
   const [products, setProducts] = useState<Build[]>([]);
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      const data = await fetchPrebuilts();
+    fetchPrebuilts().then((data) => {
       if (!cancelled) setProducts(data);
-    }
-    load();
-    const unsubscribe = subscribePrebuilts(load);
+    });
     return () => {
       cancelled = true;
-      unsubscribe();
     };
   }, []);
 
@@ -275,15 +273,11 @@ export default function Shop() {
   const [compDb, setCompDb] = useState<ComponentDb>(() => getCachedComponentDb() ?? defaultComponentDb());
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      const db = await fetchComponentDb();
+    fetchComponentDb().then((db) => {
       if (!cancelled) setCompDb(db);
-    }
-    load();
-    const unsubscribe = subscribeComponents(load);
+    });
     return () => {
       cancelled = true;
-      unsubscribe();
     };
   }, []);
 

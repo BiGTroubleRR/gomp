@@ -1,11 +1,11 @@
 // Admin-only upload of a component product shot into the public `component-images` Storage
-// bucket. This route just persists and publishes whatever image file the admin picked in the
-// form (see handleImageUpload in src/app/admin/page.tsx) — no server-side processing, using the
-// service-role key the same way /api/admin/components does. If the admin wants a transparent
-// background, they pre-cut it themselves before uploading; this route and every place the
-// resulting URL is rendered treat the file's alpha channel as opaque data, passing it through
-// untouched.
+// bucket. Resizes/re-encodes to WebP server-side (see resizeForStorage below) before persisting —
+// admin-picked files were previously stored completely untouched, at whatever resolution the
+// admin's camera/screenshot produced (up to MAX_BYTES), which was the single biggest contributor
+// to slow page loads across the site. If the admin wants a transparent background, they pre-cut
+// it themselves before uploading; alpha channels survive the WebP re-encode unchanged.
 import { NextResponse } from 'next/server';
+import sharp from 'sharp';
 import { getAdminIdentity } from '@/lib/admin-auth';
 import { createAdminClient, MissingServiceRoleKeyError } from '@/lib/supabase/admin-server';
 
@@ -15,6 +15,26 @@ const MAX_BYTES = 5 * 1024 * 1024;
 // scripts/widen-image-bucket-mime-types.mjs) — checked here too so a mismatch surfaces as this
 // route's own clear error message instead of Supabase Storage's less specific rejection.
 const ACCEPTED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml'];
+
+// Plenty for any product-shot use on this site — picker thumbnails, the sidebar summary, and the
+// largest on-screen use (the /build hover-zoom overlay) are all well under this on the long edge.
+const MAX_DIMENSION = 1600;
+const WEBP_QUALITY = 82;
+
+// SVG is already tiny vector data with no "resolution" to shrink — pass it through untouched, same
+// as before. GIF is passed through too (sharp would flatten an animated GIF to one frame, which
+// would silently break an admin's animated upload); everything else gets resized-to-fit and
+// re-encoded to WebP, which is where the real size win comes from.
+async function resizeForStorage(bytes: ArrayBuffer, mimeType: string): Promise<{ bytes: Buffer; mimeType: string; ext: string }> {
+  if (mimeType === 'image/svg+xml' || mimeType === 'image/gif') {
+    return { bytes: Buffer.from(bytes), mimeType, ext: mimeType.split('/')[1].split('+')[0] };
+  }
+  const resized = await sharp(Buffer.from(bytes))
+    .resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: WEBP_QUALITY })
+    .toBuffer();
+  return { bytes: resized, mimeType: 'image/webp', ext: 'webp' };
+}
 
 function slugify(s: string): string {
   return s
@@ -51,13 +71,17 @@ export async function POST(request: Request) {
     throw e;
   }
 
-  // file.type is one of ACCEPTED_MIME_TYPES here (checked above), so this always resolves to a
-  // real image extension — 'image/svg+xml' -> 'svg', 'image/png' -> 'png', etc.
-  const ext = file.type.split('/')[1].split('+')[0];
-  const path = `${slugify(nameHint) || 'upload'}-${Date.now()}.${ext}`;
-  const bytes = await file.arrayBuffer();
-  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, bytes, {
-    contentType: file.type,
+  const rawBytes = await file.arrayBuffer();
+  let processed;
+  try {
+    processed = await resizeForStorage(rawBytes, file.type);
+  } catch (e) {
+    return NextResponse.json({ error: `Could not process image: ${e instanceof Error ? e.message : String(e)}` }, { status: 500 });
+  }
+
+  const path = `${slugify(nameHint) || 'upload'}-${Date.now()}.${processed.ext}`;
+  const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, processed.bytes, {
+    contentType: processed.mimeType,
     upsert: false,
   });
   if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 });

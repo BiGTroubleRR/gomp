@@ -16,17 +16,30 @@ async function parseJsonOrThrow(res: Response, fallbackMessage: string): Promise
   return body;
 }
 
+// Short freshness window, same reasoning and TTL as fetchComponentDb in components.ts — admin
+// always passes `force: true` since it keeps its own Realtime subscription and needs to see its
+// own writes immediately.
+const CACHE_TTL_MS = 30_000;
+let cachedBuilds: Build[] | null = null;
+let cachedAt = 0;
+
 // Falls back to the static defaultBuilds() seed on any error (offline, RLS misconfigured, table
 // not migrated yet) so a Supabase hiccup degrades to the last-known lineup rather than an empty
 // homepage/shop.
-export async function fetchPrebuilts(): Promise<Build[]> {
+export async function fetchPrebuilts(opts?: { force?: boolean }): Promise<Build[]> {
+  if (!opts?.force && cachedBuilds && Date.now() - cachedAt < CACHE_TTL_MS) {
+    return cachedBuilds;
+  }
   const supabase = createClient();
   const { data, error } = await supabase.from('prebuilt_pcs').select('*').order('sort_order', { ascending: true });
   if (error || !data || data.length === 0) {
     if (error) console.error('fetchPrebuilts: falling back to defaultBuilds() —', error.message);
     return defaultBuilds();
   }
-  return (data as PrebuiltRow[]).map(rowToBuild);
+  const builds = (data as PrebuiltRow[]).map(rowToBuild);
+  cachedBuilds = builds;
+  cachedAt = Date.now();
+  return builds;
 }
 
 // Subscribes to every change on the prebuilt_pcs table and calls `onChange` (no payload — the
