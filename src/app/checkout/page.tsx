@@ -450,6 +450,17 @@ export default function CheckoutPage() {
       });
   }, [build, vatRatePct]);
 
+  // Memoized so its object identity only changes when `build` itself actually changes (once, on
+  // load) — Case3DViewer's own effect depends on this object by reference and tears down/rebuilds
+  // the whole 3D scene (replaying its fly-in animation) whenever it sees a new reference. Without
+  // this, passing a fresh object literal inline at the call site meant every re-render of this page
+  // — including one caused by typing a single character into any delivery-form field below —
+  // rebuilt the scene from scratch.
+  const case3DConfig = useMemo(
+    () => (build ? { selected: build.selected, selections: build.selections, compDb: build.compDb } : null),
+    [build],
+  );
+
   const partsTotal = buildItems.reduce((sum, i) => sum + i.priceEur, 0);
   const shippingCostEur = applyVat(SHIPPING_OPTIONS.find((o) => o.id === shipping)?.priceEur ?? 0, vatRatePct);
   const assemblyFeeEur = applyVat(ASSEMBLY_FEE_EUR, vatRatePct);
@@ -1060,7 +1071,7 @@ export default function CheckoutPage() {
                 : { flex: 1, minWidth: 120, position: 'relative', pointerEvents: 'none', overflow: 'hidden' }
             }
           >
-            <Case3DViewer config={{ selected: build.selected, selections: build.selections, compDb: build.compDb }} />
+            <Case3DViewer config={case3DConfig} />
           </div>
         )}
       </div>

@@ -981,6 +981,12 @@ function fanTransform(
 export type SceneCallbacks = {
   onCompletionStart?: () => void;
   onCompletionEnd?: () => void;
+  // When true, replaces the default continuous OrbitControls.autoRotate spin with a bounded
+  // back-and-forth sway (see the oscillate branch in tick() below) — used by the read-only
+  // checkout preview (Case3DViewer.tsx), which wants to show every side of the build without a
+  // never-ending one-direction rotation. /build never sets this, so its own continuous auto-rotate
+  // is completely unchanged.
+  oscillate?: boolean;
 };
 
 export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks = {}) {
@@ -1028,8 +1034,20 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   controls.enablePan = false;
   controls.minDistance = 3;
   controls.maxDistance = 12;
-  controls.autoRotate = true;
+  controls.autoRotate = !cb.oscillate;
   controls.autoRotateSpeed = 0.4;
+
+  // Oscillate mode (checkout's read-only preview): instead of OrbitControls' own unbounded
+  // continuous spin, sway the camera's azimuthal angle back and forth in a fixed, slow arc — wide
+  // enough to show the front and both angled sides of the build each cycle, without ever
+  // completing (or needing to track) a full rotation. baseTheta is captured once, from the
+  // camera's actual starting position, so the sway is centered on the same "front-on" framing
+  // every other view of this scene starts from.
+  const OSCILLATE_AMPLITUDE_RAD = 0.7; // ~40 degrees each direction from center
+  const OSCILLATE_PERIOD_S = 20;
+  const oscillateBaseTheta = cb.oscillate
+    ? new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target)).theta
+    : 0;
 
   scene.add(new THREE.AmbientLight(0xf5ecd8, 1.8));
   const sun = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -1912,6 +1930,13 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       }
     });
 
+    if (cb.oscillate) {
+      const offset = camera.position.clone().sub(controls.target);
+      const spherical = new THREE.Spherical().setFromVector3(offset);
+      spherical.theta = oscillateBaseTheta + OSCILLATE_AMPLITUDE_RAD * Math.sin((2 * Math.PI * t) / OSCILLATE_PERIOD_S);
+      camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(spherical));
+    }
+
     controls.update();
     renderer.render(scene, camera);
   }
@@ -2164,7 +2189,10 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       }
       toggleComponent(id, !!selected[id] && !!comp);
     });
-    controls.autoRotate = true;
+    // Restores the idle spin after a snapshot load — but not for an oscillating instance
+    // (checkout), which must stay on its own bounded sway rather than being switched back to
+    // OrbitControls' continuous autoRotate.
+    if (!cb.oscillate) controls.autoRotate = true;
   }
 
   return {
