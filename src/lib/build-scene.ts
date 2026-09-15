@@ -48,12 +48,16 @@ export type AlignmentTuning = {
 // undersized length, but once the RAM slot outline fix (see ramSlotOutlineGroup below) made an
 // installed stick's real mm-accurate length correct, that same Y put it past the board's own
 // top edge, AND still directly above the CPU instead of beside it, as a real board has it.
+// gpu's Z is no longer a raw offset from mobo like the others — it's the rear-wall clearance
+// gpuAnchoredZ() reads directly (see below), matching moboRearClearance/PSU_REAR_CLEARANCE's own
+// ~0.04 scale. X/Y stay genuine mobo-relative offsets (the card still has to line up with the
+// PCIe slot's actual position on the board).
 const BASE_POS: Record<Exclude<CompId, 'case'>, [number, number, number]> = {
   mobo: [-0.88, 0.2, -0.35],
   cpu: [-0.78, 0.55, -0.25],
   cooler: [-0.42, 0.65, -0.25],
   ram: [-0.8, 0.55, -0.88],
-  gpu: [-0.45, -0.5, 0.1],
+  gpu: [-0.45, -0.5, 0.04],
   storage: [-0.8, 0.08, 0.37],
   psu: [0.1, -1.88, 0.0],
 };
@@ -88,7 +92,9 @@ const GPU_VERTICAL_POS: [number, number, number] = [0.55, 0, 0];
 // Category-bucket fallback, used only when a specific case has no real dimensions on file yet
 // (e.g. a newly admin-added case). Calibrated against real mid-tower dimensions (~105mm/unit —
 // see MM_PER_UNIT) so the fallback and real-dimension paths produce comparably-sized cases.
-const SIZES: Record<string, { w: number; h: number; d: number }> = {
+// Exported so Admin's alignment panel can show real depth-mm reference numbers next to the GPU's
+// rear-clearance control, instead of duplicating these figures.
+export const SIZES: Record<string, { w: number; h: number; d: number }> = {
   'Full Tower': { w: 2.3, h: 5.5, d: 4.6 },
   'Mid Tower': { w: 2.0, h: 4.5, d: 4.2 },
   'Mini Tower': { w: 1.7, h: 3.9, d: 3.8 },
@@ -1652,6 +1658,21 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     return -lastCaseSize.h / 2 + PSU_BOTTOM_CLEARANCE + halfHeight;
   }
 
+  // GPU (horizontal mount) is anchored the same rear-wall way as the motherboard and PSU, using
+  // its own real length — the card's rear bracket/PCIe connector mounts at the case's back
+  // regardless of case depth or the card's own length. Before this, GPU's Z was just a delta from
+  // BASE_POS.mobo's Z, pinning the card's *center*; since setSizeScale stretches the card's length
+  // uniformly about that center to match its real gpuLengthMm, a longer or shorter card's rear
+  // bracket drifted toward or away from the wall with no correction. alignmentTuning.basePos.gpu[2]
+  // is reinterpreted as this clearance (see BASE_POS.gpu's comment) rather than adding a new field,
+  // so Admin's existing GPU Z control becomes this value directly.
+  function gpuAnchoredZ(): number {
+    const gpu = objects.gpu;
+    const nat = naturalSize.gpu;
+    const halfLength = gpu && nat ? (nat.z * gpu.sizeScale.z) / 2 : 0.5;
+    return lastCaseSize.d / 2 - alignmentTuning.basePos.gpu[2] - halfLength;
+  }
+
   function resetComponentPositions() {
     const moboZ = moboAnchoredZ();
     const moboX = moboAnchoredX();
@@ -1678,7 +1699,11 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       const inMoboGroup = id === 'mobo' || id === 'cpu' || id === 'cooler' || id === 'ram' || id === 'storage' || id === 'gpu';
       const x = inMoboGroup ? moboX + (base[0] - BASE_POS.mobo[0]) : base[0];
       const y = inMoboGroup ? BASE_POS.mobo[1] + (base[1] - BASE_POS.mobo[1]) * moboWidthScale : id === 'psu' ? psuY : base[1];
-      const z = inMoboGroup ? moboZ + (base[2] - BASE_POS.mobo[2]) * moboDepthScale : id === 'psu' ? psuZ : base[2];
+      // gpu's Z is its own direct case-wall anchor (see gpuAnchoredZ), not a mobo-relative offset
+      // like the rest of this group — computed here too (not just in applyGpuPosition) so this
+      // function stays correct on its own for horizontal mount, e.g. right after updateCase, which
+      // doesn't call applyGpuPosition itself (see setGpuOrientation for the vertical-mount case).
+      const z = id === 'gpu' ? gpuAnchoredZ() : inMoboGroup ? moboZ + (base[2] - BASE_POS.mobo[2]) * moboDepthScale : id === 'psu' ? psuZ : base[2];
       obj.finalPos.set(x, y, z);
       if (obj.selected) {
         obj.targetPos.copy(obj.finalPos);
@@ -1696,9 +1721,10 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
       BASE_POS.mobo[1] + (alignmentTuning.basePos.ram[1] - BASE_POS.mobo[1]) * moboWidthScale,
       moboZ + (alignmentTuning.basePos.ram[2] - BASE_POS.mobo[2]) * moboDepthScale,
     );
-    // GPU isn't looped above (its position also depends on vertical/horizontal orientation,
-    // which this function doesn't track) — see applyGpuPosition, called separately wherever
-    // this is (setSizeScale('gpu', ...), setGpuOrientation).
+    // The loop above does set gpu's horizontal-mount position correctly (including its Z, via
+    // gpuAnchoredZ), but this function has no idea whether gpu is actually in vertical/riser mode
+    // right now — see applyGpuPosition, always called separately wherever that can matter
+    // (setSizeScale('gpu', ...), setGpuOrientation), which is the one that knows and branches on it.
   }
 
   function updateCase(w: number, h: number, d: number) {
@@ -2152,17 +2178,20 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     if (gpuVerticalMode) {
       pos = new THREE.Vector3(gpuVerticalAnchoredX(), gpuVerticalAnchoredY(), GPU_VERTICAL_POS[2]);
     } else {
-      // Horizontal mount: moves with the mobo/cpu/cooler/ram/storage group instead of its own
-      // case-wall anchor, same BASE_POS-offset-from-mobo pattern as every other component (see
-      // resetComponentPositions, which already computes this identically for gpu — this just
-      // needs its own copy since it also has to run from setGpuOrientation/setSizeScale, which
-      // don't call that function).
+      // Horizontal mount: X/Y still move with the mobo/cpu/cooler/ram/storage group (the card has
+      // to line up with the PCIe slot's actual position on the board), same BASE_POS-offset-from-
+      // mobo pattern as every other component in that group (see resetComponentPositions, which
+      // computes X/Y identically for gpu — this just needs its own copy since it also has to run
+      // from setGpuOrientation/setSizeScale, which don't call that function). Z is its own direct
+      // case-wall anchor instead (see gpuAnchoredZ) — it doesn't ride with the mobo group's Z at
+      // all now, so a longer/shorter card's rear bracket always lands the same distance from the
+      // case's actual back wall.
       const base = alignmentTuning.basePos.gpu;
-      const { width: moboWidthScale, depth: moboDepthScale } = moboScales();
+      const { width: moboWidthScale } = moboScales();
       pos = new THREE.Vector3(
         moboAnchoredX() + (base[0] - BASE_POS.mobo[0]),
         BASE_POS.mobo[1] + (base[1] - BASE_POS.mobo[1]) * moboWidthScale,
-        moboAnchoredZ() + (base[2] - BASE_POS.mobo[2]) * moboDepthScale,
+        gpuAnchoredZ(),
       );
     }
     obj.finalPos.copy(pos);

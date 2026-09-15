@@ -12,7 +12,7 @@
 // strip below) — a linear real-mm scale isn't enough to make an ATX-tuned offset land right on a
 // much smaller board, since form factors don't just shrink the same layout, they rearrange it.
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { DEFAULT_ALIGNMENT_TUNING, type AlignmentTunableId, type AlignmentTuning } from '@/lib/build-scene';
+import { DEFAULT_ALIGNMENT_TUNING, MM_PER_UNIT, SIZES, type AlignmentTunableId, type AlignmentTuning } from '@/lib/build-scene';
 import type { FormFactor } from '@/lib/component-db-seed';
 import { fetchAlignmentTuningConfig, saveAlignmentTuningConfig, type AlignmentTuningConfig } from '@/lib/supabase/alignment-tuning';
 
@@ -273,9 +273,29 @@ export default function AdminAlignmentPanel() {
         {TUNABLE_IDS.map(({ id, label }, i) => (
           <div key={id} style={{ borderTop: i === 0 ? 'none' : `1px solid ${BORDER}`, paddingTop: i === 0 ? 0 : 10, marginTop: i === 0 ? 0 : 10 }}>
             <div style={{ ...sans, fontSize: 13, fontWeight: 600, color: INK, marginBottom: 2 }}>{label}</div>
-            {activeSlice.basePos[id].map((v, axis) => (
-              <NumberField key={axis} label={AXIS_LABEL[axis]} value={v} min={-2} max={2} step={0.005} onChange={(val) => updateBasePos(id, axis as 0 | 1 | 2, val)} />
-            ))}
+            {activeSlice.basePos[id].map((v, axis) =>
+              id === 'gpu' && axis === 2 ? (
+                <div key={axis}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <NumberField label="Rear clearance" value={v} min={0} max={0.5} step={0.005} onChange={(val) => updateBasePos(id, 2, val)} />
+                    </div>
+                    <span style={{ ...mono, fontSize: 11.5, color: SUBTEXT, width: 60, textAlign: 'right' }}>
+                      ≈ {Math.round(v * MM_PER_UNIT)} mm
+                    </span>
+                  </div>
+                  <p style={{ ...sans, fontSize: 11.5, color: SUBTEXT, margin: '2px 0 0', lineHeight: 1.5 }}>
+                    Measured from the GPU&apos;s rear bracket to the case&apos;s actual back panel —
+                    stays correct automatically for every case size and every card length, so one
+                    value works everywhere.{' '}
+                    Reference — case depth (varies by exact model):{' '}
+                    {Object.entries(SIZES).map(([sizeLabel, { d }]) => `${sizeLabel} ~${Math.round(d * MM_PER_UNIT)}mm`).join(' · ')}.
+                  </p>
+                </div>
+              ) : (
+                <NumberField key={axis} label={AXIS_LABEL[axis]} value={v} min={-2} max={2} step={0.005} onChange={(val) => updateBasePos(id, axis as 0 | 1 | 2, val)} />
+              ),
+            )}
           </div>
         ))}
       </Card>
