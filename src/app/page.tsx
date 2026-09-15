@@ -321,7 +321,14 @@ export default function Home() {
               width: '100%',
               margin: '0 auto',
               display: 'grid',
-              gridTemplateColumns: isMobile ? '1fr' : '55fr 45fr',
+              // minmax(0, ...) rather than a bare 1fr/Nfr — a plain 1fr track is really
+              // minmax(auto, 1fr), so a long, unbreakable-looking run of text deep inside one cell
+              // (e.g. a long GPU name in the prebuilt-preview card) can force the whole track wider
+              // than the viewport instead of wrapping, blowing the hero out past the screen edge on
+              // narrow phones. minmax(0, ...) lets the track actually shrink to the available
+              // width, so flex:1/minWidth:0 further down the tree (see SpecRow/BuildSpecRow) can do
+              // its job.
+              gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'minmax(0, 55fr) minmax(0, 45fr)',
               gap: isMobile ? 56 : 80,
               alignItems: 'center',
               position: 'relative',
@@ -581,7 +588,23 @@ export default function Home() {
                   </div>
                   {hero && <TierBadge tier={computeBuildTier(hero, compDb)} />}
                 </div>
-                <div style={{ fontFamily: 'var(--font-serif)', fontSize: 32, fontWeight: 600, color: INK, letterSpacing: -0.5, marginBottom: 4, lineHeight: 1.1 }}>
+                <div
+                  style={{
+                    fontFamily: 'var(--font-serif)',
+                    fontSize: isMobile ? 24 : 32,
+                    fontWeight: 600,
+                    color: INK,
+                    letterSpacing: -0.5,
+                    marginBottom: 4,
+                    lineHeight: 1.1,
+                    // Prebuilt names are underscore-joined identifiers (e.g. "GOMP_FLGSHP_5090")
+                    // with no spaces to wrap at — without this, a long one just pushes the whole
+                    // hero card (and the grid track it sits in) past the edge of a narrow phone
+                    // instead of breaking onto a second line.
+                    overflowWrap: 'break-word',
+                    wordBreak: 'break-word',
+                  }}
+                >
                   {hero?.name ?? ''}
                 </div>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, marginBottom: 32 }}>
@@ -718,7 +741,10 @@ export default function Home() {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)',
+                // minmax(0, ...) — see the hero grid's own comment above for why a bare 1fr can
+                // let a long build name/spec value force this wider than the viewport instead of
+                // wrapping.
+                gridTemplateColumns: isMobile ? 'minmax(0, 1fr)' : 'repeat(3, minmax(0, 1fr))',
                 gap: 0,
                 border: '0.5px solid rgba(28,28,26,0.14)',
                 borderRadius: 2,
@@ -756,7 +782,7 @@ export default function Home() {
                     </div>
                     <TierBadge tier={build.computedTier} small />
                   </div>
-                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: 26, fontWeight: 600, color: INK, letterSpacing: -0.4, marginBottom: 4, lineHeight: 1.1 }}>
+                  <div style={{ fontFamily: 'var(--font-serif)', fontSize: 26, fontWeight: 600, color: INK, letterSpacing: -0.4, marginBottom: 4, lineHeight: 1.1, overflowWrap: 'break-word', wordBreak: 'break-word' }}>
                     {build.name}
                   </div>
                   <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, marginBottom: 28, fontWeight: 300 }}>{build.tagline}</div>

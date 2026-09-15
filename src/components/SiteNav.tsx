@@ -231,7 +231,15 @@ export default function SiteNav({ cta }: { cta?: ReactNode }) {
             <button
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
               onClick={() => setMenuOpen((v) => !v)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end' }}
+              // minWidth/minHeight (rather than more padding, which would push the icon off-center
+              // within the nav bar's own layout) bring the tap target up to the standard ~44px
+              // guideline — the icon itself stays the same visual size, just centered in a bigger
+              // invisible hit area.
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer', padding: 8,
+                minWidth: 44, minHeight: 44,
+                display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'flex-end', justifyContent: 'center',
+              }}
             >
               <span style={{ display: 'block', width: 22, height: 2, background: INK, transition: 'transform 0.25s ease', transform: menuOpen ? 'translateY(7px) rotate(45deg)' : 'none' }} />
               <span style={{ display: 'block', width: 22, height: 2, background: INK, opacity: menuOpen ? 0 : 1, transition: 'opacity 0.2s ease' }} />

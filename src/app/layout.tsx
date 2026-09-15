@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { DM_Sans, JetBrains_Mono, Nova_Square } from 'next/font/google';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from '@vercel/analytics/next';
@@ -41,6 +41,18 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: 'GOMP',
   description: 'Hand-built gaming PCs configured to your exact specifications.',
+};
+
+// Explicit rather than relying on the App Router's implicit default (which is the same
+// width=device-width, initial-scale=1 this produces) — makes the mobile viewport a deliberate,
+// visible decision instead of an unverified assumption, and viewportFit: 'cover' is the one-line
+// prerequisite for any future fixed element (e.g. /build's own sticky mobile CTA bar) that needs
+// to respect a notched phone's safe area via env(safe-area-inset-*), at zero cost today since
+// nothing currently reads that.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
