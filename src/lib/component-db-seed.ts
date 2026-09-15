@@ -516,6 +516,20 @@ export type Build = {
   cooler: string;
   psu: string;
   case: string;
+  // Stable component-id counterparts to the name fields above — the actual reference /build's
+  // "Configure" flow resolves against, so a hide or rename of the underlying component can't
+  // silently swap in an unrelated part (see findComp/the prebuilt-hydration effect in
+  // src/app/build/page.tsx). The name fields stay as the cached display label shown on the
+  // storefront card. Optional/undefined for offline seed data and any pre-migration row —
+  // resolution falls back to a name match against the full catalog in that case.
+  gpuId?: string;
+  cpuId?: string;
+  ramId?: string;
+  storageId?: string;
+  moboId?: string;
+  coolerId?: string;
+  psuId?: string;
+  caseId?: string;
   price: number;
   rating: number;
   isLive: boolean;

@@ -522,6 +522,21 @@ alter table public.customer_builds add column if not exists storage text;
 alter table public.customer_builds add column if not exists psu text;
 alter table public.customer_builds add column if not exists "case" text;
 
+-- Stable id counterparts to the free-text columns above — added after a real bug where a
+-- component referenced by name (prebuilt_pcs.gpu, same pattern) silently stopped resolving once
+-- that component was hidden/renamed, and the page fell back to an unrelated part with no warning.
+-- The text columns stay as the cached display label (still what /customer-builds prints directly);
+-- these `_id` columns are the actual reference going forward — `on delete set null` so deleting a
+-- component clears just that one slot's link rather than blocking the delete or orphaning the row.
+alter table public.customer_builds add column if not exists mobo_id uuid references public.components(id) on delete set null;
+alter table public.customer_builds add column if not exists cpu_id uuid references public.components(id) on delete set null;
+alter table public.customer_builds add column if not exists cooler_id uuid references public.components(id) on delete set null;
+alter table public.customer_builds add column if not exists ram_id uuid references public.components(id) on delete set null;
+alter table public.customer_builds add column if not exists gpu_id uuid references public.components(id) on delete set null;
+alter table public.customer_builds add column if not exists storage_id uuid references public.components(id) on delete set null;
+alter table public.customer_builds add column if not exists psu_id uuid references public.components(id) on delete set null;
+alter table public.customer_builds add column if not exists case_id uuid references public.components(id) on delete set null;
+
 alter table public.customer_builds enable row level security;
 
 drop policy if exists "customer_builds_select_public" on public.customer_builds;
@@ -588,6 +603,20 @@ create table if not exists public.prebuilt_pcs (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Stable id counterparts to the 8 free-text component columns above — see the identical note on
+-- customer_builds' own *_id columns just above. The text columns stay as the cached display label
+-- (still what the homepage/shop cards print directly); these are the actual reference /build's
+-- "Configure" flow resolves against going forward, so a hide or rename in the live catalog can no
+-- longer silently swap in an unrelated part.
+alter table public.prebuilt_pcs add column if not exists mobo_id uuid references public.components(id) on delete set null;
+alter table public.prebuilt_pcs add column if not exists cpu_id uuid references public.components(id) on delete set null;
+alter table public.prebuilt_pcs add column if not exists cooler_id uuid references public.components(id) on delete set null;
+alter table public.prebuilt_pcs add column if not exists ram_id uuid references public.components(id) on delete set null;
+alter table public.prebuilt_pcs add column if not exists gpu_id uuid references public.components(id) on delete set null;
+alter table public.prebuilt_pcs add column if not exists storage_id uuid references public.components(id) on delete set null;
+alter table public.prebuilt_pcs add column if not exists psu_id uuid references public.components(id) on delete set null;
+alter table public.prebuilt_pcs add column if not exists case_id uuid references public.components(id) on delete set null;
 
 alter table public.prebuilt_pcs enable row level security;
 

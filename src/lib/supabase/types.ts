@@ -298,6 +298,17 @@ export type Database = {
           storage: string | null;
           psu: string | null;
           case: string | null;
+          // Stable id counterparts to the name fields above — see supabase/schema.sql's note on
+          // these columns for why they exist (a name-only reference can silently stop resolving
+          // once the underlying component is hidden or renamed).
+          mobo_id: string | null;
+          cpu_id: string | null;
+          cooler_id: string | null;
+          ram_id: string | null;
+          gpu_id: string | null;
+          storage_id: string | null;
+          psu_id: string | null;
+          case_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -320,6 +331,14 @@ export type Database = {
           storage?: string | null;
           psu?: string | null;
           case?: string | null;
+          mobo_id?: string | null;
+          cpu_id?: string | null;
+          cooler_id?: string | null;
+          ram_id?: string | null;
+          gpu_id?: string | null;
+          storage_id?: string | null;
+          psu_id?: string | null;
+          case_id?: string | null;
         };
         Update: {
           title?: string;
@@ -339,6 +358,14 @@ export type Database = {
           storage?: string | null;
           psu?: string | null;
           case?: string | null;
+          mobo_id?: string | null;
+          cpu_id?: string | null;
+          cooler_id?: string | null;
+          ram_id?: string | null;
+          gpu_id?: string | null;
+          storage_id?: string | null;
+          psu_id?: string | null;
+          case_id?: string | null;
         };
         Relationships: [];
       };
@@ -363,6 +390,16 @@ export type Database = {
           storage: string;
           psu: string;
           case: string;
+          // Stable id counterparts to the name fields above — see supabase/schema.sql's note on
+          // these columns (and prebuilt-mapping.ts) for why they exist.
+          mobo_id: string | null;
+          cpu_id: string | null;
+          cooler_id: string | null;
+          ram_id: string | null;
+          gpu_id: string | null;
+          storage_id: string | null;
+          psu_id: string | null;
+          case_id: string | null;
           is_live: boolean;
           sort_order: number;
           created_at: string;
@@ -386,6 +423,14 @@ export type Database = {
           storage?: string;
           psu?: string;
           case?: string;
+          mobo_id?: string | null;
+          cpu_id?: string | null;
+          cooler_id?: string | null;
+          ram_id?: string | null;
+          gpu_id?: string | null;
+          storage_id?: string | null;
+          psu_id?: string | null;
+          case_id?: string | null;
           is_live?: boolean;
           sort_order?: number;
         };
@@ -406,6 +451,14 @@ export type Database = {
           storage?: string;
           psu?: string;
           case?: string;
+          mobo_id?: string | null;
+          cpu_id?: string | null;
+          cooler_id?: string | null;
+          ram_id?: string | null;
+          gpu_id?: string | null;
+          storage_id?: string | null;
+          psu_id?: string | null;
+          case_id?: string | null;
           is_live?: boolean;
           sort_order?: number;
         };

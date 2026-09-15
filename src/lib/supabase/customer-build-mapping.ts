@@ -28,6 +28,16 @@ export type CustomerBuild = {
   storage: string | null;
   psu: string | null;
   case: string | null;
+  // Stable id counterparts to the name fields above — see supabase/schema.sql's note on these
+  // columns (added alongside the identical prebuilt_pcs fix) for why they exist.
+  moboId: string | null;
+  cpuId: string | null;
+  coolerId: string | null;
+  ramId: string | null;
+  gpuId: string | null;
+  storageId: string | null;
+  psuId: string | null;
+  caseId: string | null;
   isLive: boolean;
   sortOrder: number;
   createdAt: string;
@@ -54,6 +64,14 @@ export function rowToCustomerBuild(row: CustomerBuildRow): CustomerBuild {
     storage: row.storage,
     psu: row.psu,
     case: row.case,
+    moboId: row.mobo_id,
+    cpuId: row.cpu_id,
+    coolerId: row.cooler_id,
+    ramId: row.ram_id,
+    gpuId: row.gpu_id,
+    storageId: row.storage_id,
+    psuId: row.psu_id,
+    caseId: row.case_id,
     isLive: row.is_live,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
@@ -79,6 +97,14 @@ export function customerBuildToRow(build: CustomerBuild, sortOrder: number): Cus
     storage: build.storage,
     psu: build.psu,
     case: build.case,
+    mobo_id: build.moboId,
+    cpu_id: build.cpuId,
+    cooler_id: build.coolerId,
+    ram_id: build.ramId,
+    gpu_id: build.gpuId,
+    storage_id: build.storageId,
+    psu_id: build.psuId,
+    case_id: build.caseId,
     is_live: build.isLive ?? true,
     sort_order: sortOrder,
   };

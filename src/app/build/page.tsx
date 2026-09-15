@@ -65,6 +65,7 @@ const T = {
     show_panel: 'Show Side Panel', complete: 'Complete', your_build: 'Your Build', selected_part: 'Selected Part',
     build_total: 'Build Total', passmark_score: 'PassMark Score', verify_passmark: 'Verify on PassMark ↗', dimensions: 'Dimensions',
     vat_included: 'Price includes VAT',
+    part_unavailable: 'Currently unavailable', part_missing: 'No longer available — please choose a replacement',
     passmark_title: (score: number) => `PassMark: ${score.toLocaleString()}`,
     fans: 'Case Fans',
     fan_positions: { front: 'Front', top: 'Top', rear: 'Rear', bottom: 'Bottom', side: 'Side' },
@@ -134,6 +135,7 @@ const T = {
     show_panel: 'Zobraziť bočný panel', complete: 'Dokončené', your_build: 'Vaša zostava', selected_part: 'Vybraný diel',
     build_total: 'Celková cena', passmark_score: 'Skóre PassMark', verify_passmark: 'Overiť na PassMark ↗', dimensions: 'Rozmery',
     vat_included: 'Cena vrátane DPH',
+    part_unavailable: 'Momentálne nedostupné', part_missing: 'Už nie je dostupné — vyberte prosím náhradu',
     passmark_title: (score: number) => `PassMark: ${score.toLocaleString()}`,
     fans: 'Ventilátory skrine',
     fan_positions: { front: 'Predné', top: 'Horné', rear: 'Zadné', bottom: 'Spodné', side: 'Bočné' },
@@ -203,6 +205,7 @@ const T = {
     show_panel: 'Zobrazit boční panel', complete: 'Dokončeno', your_build: 'Vaše sestava', selected_part: 'Vybraný díl',
     build_total: 'Celková cena', passmark_score: 'Skóre PassMark', verify_passmark: 'Ověřit na PassMark ↗', dimensions: 'Rozměry',
     vat_included: 'Cena včetně DPH',
+    part_unavailable: 'Momentálně nedostupné', part_missing: 'Již není dostupné — vyberte prosím náhradu',
     passmark_title: (score: number) => `PassMark: ${score.toLocaleString()}`,
     fans: 'Ventilátory skříně',
     fan_positions: { front: 'Přední', top: 'Horní', rear: 'Zadní', bottom: 'Spodní', side: 'Boční' },
@@ -510,6 +513,12 @@ function BuildPageContent() {
     const cached = getCachedComponentDb();
     return cached ? normalizeComponentDb(cached) : defaultComponentDb();
   });
+  // The same fetch as compDb, before normalizeComponentDb drops hidden (isLive: false) rows —
+  // kept around so a prebuilt/customer-build reference to a part that's since gone out of stock
+  // can still be resolved and shown (flagged unavailable) instead of silently falling back to an
+  // unrelated part. See findComp, resolveAnyComp, partAvailability, and the prebuilt-hydration
+  // effect below — this is the fix for the "Configure opens a different GPU" bug.
+  const [rawComponentDb, setRawComponentDb] = useState<ComponentDb>(defaultComponentDb());
   const [selected, setSelected] = useState<Record<CompId, boolean>>({} as Record<CompId, boolean>);
   const [selections, setSelections] = useState<Record<CompId, string>>({} as Record<CompId, string>);
   const [caseCat, setCaseCat] = useState('Mid Tower');
@@ -592,6 +601,7 @@ function BuildPageContent() {
       if (cancelled) return;
       const db = normalizeComponentDb(raw);
       setCompDb(db);
+      setRawComponentDb(raw);
       if (!catalogInitializedRef.current) {
         catalogInitializedRef.current = true;
         const initSelections = {} as Record<CompId, string>;
@@ -717,16 +727,27 @@ function BuildPageContent() {
     if (!preset) return;
     clearAll();
     setPrebuiltName(preset.name);
-    const components: Partial<Record<CompId, string>> = {
+    const names: Partial<Record<CompId, string>> = {
       mobo: preset.mobo, cpu: preset.cpu, cooler: preset.cooler, ram: preset.ram,
       gpu: preset.gpu, storage: preset.storage, psu: preset.psu, case: preset.case,
     };
+    const ids: Partial<Record<CompId, string | undefined>> = {
+      mobo: preset.moboId, cpu: preset.cpuId, cooler: preset.coolerId, ram: preset.ramId,
+      gpu: preset.gpuId, storage: preset.storageId, psu: preset.psuId, case: preset.caseId,
+    };
+    // Resolve each slot by its stable id first (against the full, unfiltered catalog — so a
+    // hidden-but-still-existing part still resolves, and a renamed one resolves to its *current*
+    // name) rather than trusting the prebuilt's own cached name directly. Only pre-migration rows
+    // with no id yet (ids[id] === undefined) fall back to that cached name as-is. This is the fix
+    // for "Configure" silently swapping in an unrelated part — see resolveAnyComp/findComp above.
     SLOTS.forEach((id, i) => {
-      const name = components[id];
+      const idRef = ids[id];
+      const byId = idRef ? (rawComponentDb[id] || []).find((c) => c.id === idRef) : undefined;
+      const name = byId?.name ?? names[id];
       if (!name) return;
       setTimeout(() => selectCard(id, name, false), 600 + i * 90);
     });
-  }, [compDb, searchParams, prebuiltPcs]);
+  }, [compDb, rawComponentDb, searchParams, prebuiltPcs]);
 
   // Swaps the native cursor for the same gold dot used on nav-link hovers whenever the
   // pointer is over a built component in the 3D view (see handleViewportPointerMove below).
@@ -860,6 +881,28 @@ function BuildPageContent() {
 
   const installedCount = SLOTS.filter((id) => selected[id]).length;
 
+  // Resolves a name against the live (compDb) catalog first, falling back to the full,
+  // unfiltered rawComponentDb — so a part that's currently hidden (out of stock) but still exists
+  // can still be found and rendered correctly (flagged unavailable, see partAvailability) instead
+  // of silently resolving to something else entirely. Used anywhere a *specific, already-decided*
+  // selection (from a prebuilt/customer-build hydration, not a live picker click — a visitor can
+  // never click a hidden option in the first place) needs to become a real Component.
+  function resolveAnyComp(id: CompId, name: string): Component | undefined {
+    return (compDb[id] || []).find((c) => c.name === name) ?? (rawComponentDb[id] || []).find((c) => c.name === name);
+  }
+
+  // 'hidden' means the part genuinely exists but isn't currently live (out of stock) — resolveAnyComp
+  // still returns it, so it renders correctly, but the picker can no longer offer to re-select it,
+  // so the summary panel flags it instead. 'missing' means the reference doesn't resolve at all
+  // (the part was deleted outright) — the rarer, genuine "nothing to show" case.
+  function partAvailability(id: CompId): 'live' | 'hidden' | 'missing' {
+    const name = selections[id];
+    if (!name) return 'live';
+    if ((compDb[id] || []).some((c) => c.name === name)) return 'live';
+    if ((rawComponentDb[id] || []).some((c) => c.name === name)) return 'hidden';
+    return 'missing';
+  }
+
   // Falls back to a compatible default rather than always list[0] — otherwise "Build Complete
   // PC" (which just toggles every unpicked category via its list-item default) could default
   // into a combo the picker itself would never let you click together, e.g. a 360mm-radiator
@@ -868,6 +911,12 @@ function BuildPageContent() {
     const list = compDb[id] || [];
     const preferred = list.find((c) => c.name === selections[id]);
     if (preferred) return preferred;
+    // The selection might reference a part that still exists but is just hidden (out of stock) —
+    // resolve it from the full catalog before ever falling through to list[0] below, which would
+    // otherwise silently substitute a completely unrelated part (see partAvailability for the
+    // "flag it as unavailable" half of this fix).
+    const hiddenMatch = (rawComponentDb[id] || []).find((c) => c.name === selections[id]);
+    if (hiddenMatch) return hiddenMatch;
     if (id === 'case') {
       const mobo = selected.mobo ? (compDb.mobo || []).find((c) => c.name === selections.mobo) : undefined;
       const compatible = list.find((c) => {
@@ -945,7 +994,7 @@ function BuildPageContent() {
   // toggleComponent(id, true), since the scene doesn't mark itself selected until then.
   function changeSelection(id: CompId, name: string) {
     setSelections((s) => ({ ...s, [id]: name }));
-    const comp = (compDb[id] || []).find((c) => c.name === name);
+    const comp = resolveAnyComp(id, name);
     if (id === 'case') {
       dropPartsIncompatibleWithCase(comp);
       const size = caseUnitsFor(comp, comp?.category || 'Mid Tower');
@@ -1029,7 +1078,7 @@ function BuildPageContent() {
     if (!selected[id]) {
       setSelected((s) => ({ ...s, [id]: true }));
       sceneRef.current?.toggleComponent(id, true, flyInDelayMs);
-      const comp = (compDb[id] || []).find((c) => c.name === name);
+      const comp = resolveAnyComp(id, name);
       const gpuVertical =
         id === 'gpu' && selected.case
           ? caseHasVerticalGpuMount((compDb.case || []).find((c) => c.name === selections.case)?.name)
@@ -2302,6 +2351,11 @@ function BuildPageContent() {
                               <TierBadge tier={tier} small />
                             </div>
                           </div>
+                          {partAvailability(id) !== 'live' && (
+                            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MAROON, marginTop: 6 }}>
+                              {partAvailability(id) === 'hidden' ? t.part_unavailable : t.part_missing}
+                            </div>
+                          )}
                           <p style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{t.cat_desc[id]}</p>
                           <div style={{ marginTop: 12 }}>
                             {(comp.specs || '').split(' · ').map((s, i) => (
@@ -2330,6 +2384,11 @@ function BuildPageContent() {
                           <div style={{ minWidth: 0 }}>
                             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>{t.cat_names[id]}</div>
                             <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: INK, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{comp.name}</div>
+                            {partAvailability(id) !== 'live' && (
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9.5, fontWeight: 600, color: MAROON }}>
+                                {partAvailability(id) === 'hidden' ? t.part_unavailable : t.part_missing}
+                              </div>
+                            )}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                             <TierBadge tier={tier} small />

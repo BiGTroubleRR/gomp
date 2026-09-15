@@ -472,6 +472,9 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
 type BuildFormState = {
   name: string; taglineEn: string; taglineSk: string; taglineCz: string; cat: Build['cat']; tier: Tier;
   gpu: string; cpu: string; ram: string; storage: string; mobo: string; cooler: string; psu: string; case: string;
+  // Stable ids alongside the names above, kept in sync by CompSelect's onChange — see the
+  // "Configure" mismatch fix note on Build['gpuId'] etc. in component-db-seed.ts.
+  gpuId?: string; cpuId?: string; ramId?: string; storageId?: string; moboId?: string; coolerId?: string; psuId?: string; caseId?: string;
   price: string; rating: string;
 };
 
@@ -596,6 +599,9 @@ function validateImageFile(file: File): string | null {
 type CgFormState = {
   title: string; customerLabel: string; specs: string; priceEur: string; builtOn: string; imageUrls: string[];
   mobo: string; cpu: string; cooler: string; ram: string; gpu: string; storage: string; psu: string; case: string;
+  // Stable ids alongside the names above, kept in sync by CompSelect's onChange — same "Configure"
+  // mismatch fix as the prebuilt (Zostavy) form above.
+  moboId?: string; cpuId?: string; coolerId?: string; ramId?: string; gpuId?: string; storageId?: string; psuId?: string; caseId?: string;
 };
 
 function initialCgForm(): CgFormState {
@@ -663,12 +669,21 @@ function CompSelect({
   label, value, options, placeholder, t, fmt, onChange,
 }: {
   label: string; value: string; options: Component[]; placeholder: string;
-  t: Translations; fmt: (n: number) => string; onChange: (v: string) => void;
+  t: Translations; fmt: (n: number) => string;
+  // Passes the resolved Component alongside its name (undefined for the blank placeholder option)
+  // so callers can save its stable id together with the display name — see saveBuild/saveCg, and
+  // the "Configure" mismatch bug this closes (a name-only reference silently stopped resolving
+  // once its component was hidden/renamed).
+  onChange: (v: string, comp: Component | undefined) => void;
 }) {
   return (
     <div>
       <div style={LABEL_STYLE}>{label}</div>
-      <select value={value} onChange={(e) => onChange(e.target.value)} style={INPUT_STYLE}>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value, options.find((c) => c.name === e.target.value))}
+        style={INPUT_STYLE}
+      >
         <option value="">{t.select_prefix}{placeholder}{t.select_suffix}</option>
         {options.map((c) => (
           <option key={c.id} value={c.name}>{`${c.name}  ·  ${fmt(c.price)}`}</option>
@@ -983,6 +998,7 @@ export default function AdminPage() {
     setForm({
       name: b.name, taglineEn: b.taglineEn, taglineSk: b.taglineSk, taglineCz: b.taglineCz, cat: b.cat, tier: b.tier,
       gpu: b.gpu, cpu: b.cpu, ram: b.ram, storage: b.storage, mobo: b.mobo, cooler: b.cooler, psu: b.psu, case: b.case,
+      gpuId: b.gpuId, cpuId: b.cpuId, ramId: b.ramId, storageId: b.storageId, moboId: b.moboId, coolerId: b.coolerId, psuId: b.psuId, caseId: b.caseId,
       price: String(b.price), rating: String(b.rating),
     });
   }
@@ -994,6 +1010,7 @@ export default function AdminPage() {
       name: form.name.trim(), taglineEn: form.taglineEn.trim(), taglineSk: form.taglineSk.trim(), taglineCz: form.taglineCz.trim(),
       cat: form.cat, tier: computeBuildTier(form, compDb) ?? 'B',
       gpu: form.gpu, cpu: form.cpu, ram: form.ram, storage: form.storage, mobo: form.mobo, cooler: form.cooler, psu: form.psu, case: form.case,
+      gpuId: form.gpuId, cpuId: form.cpuId, ramId: form.ramId, storageId: form.storageId, moboId: form.moboId, coolerId: form.coolerId, psuId: form.psuId, caseId: form.caseId,
       price: parseFloat(form.price) || 0, rating: parseFloat(form.rating) || 0, isLive: true, sortOrder: 0,
     };
     if (editId !== null) {
@@ -1047,6 +1064,8 @@ export default function AdminPage() {
       imageUrls: [...b.imageUrls],
       mobo: b.mobo ?? '', cpu: b.cpu ?? '', cooler: b.cooler ?? '', ram: b.ram ?? '',
       gpu: b.gpu ?? '', storage: b.storage ?? '', psu: b.psu ?? '', case: b.case ?? '',
+      moboId: b.moboId ?? undefined, cpuId: b.cpuId ?? undefined, coolerId: b.coolerId ?? undefined, ramId: b.ramId ?? undefined,
+      gpuId: b.gpuId ?? undefined, storageId: b.storageId ?? undefined, psuId: b.psuId ?? undefined, caseId: b.caseId ?? undefined,
     });
     setCgImageStatus('idle');
     setCgImageError(null);
@@ -1076,6 +1095,14 @@ export default function AdminPage() {
       storage: cgForm.storage || null,
       psu: cgForm.psu || null,
       case: cgForm.case || null,
+      moboId: cgForm.moboId ?? null,
+      cpuId: cgForm.cpuId ?? null,
+      coolerId: cgForm.coolerId ?? null,
+      ramId: cgForm.ramId ?? null,
+      gpuId: cgForm.gpuId ?? null,
+      storageId: cgForm.storageId ?? null,
+      psuId: cgForm.psuId ?? null,
+      caseId: cgForm.caseId ?? null,
       isLive: true,
       sortOrder: 0,
       createdAt: '',
@@ -1251,8 +1278,27 @@ export default function AdminPage() {
   // price, a discontinued part, or a mining artifact worth double-checking before it's gone for
   // good. Spreads the full existing component (not just a couple of fields, like the edit form
   // does) so this never has to know about every other field that might need carrying forward.
+  // The 8 *Id fields a prebuilt/customer build can reference a component by — used below to warn
+  // before hiding a part still linked from a live listing, so Jakub isn't the last to know (see
+  // the "Configure" mismatch this closes: a hidden/renamed reference used to fail silently).
+  const REF_ID_KEYS = ['moboId', 'cpuId', 'coolerId', 'ramId', 'gpuId', 'storageId', 'psuId', 'caseId'] as const;
+
   async function toggleComponentLive(cat: Category, comp: Component) {
-    const updated: Component = { ...comp, isLive: !(comp.isLive ?? true) };
+    const goingHidden = comp.isLive ?? true;
+    if (goingHidden) {
+      const affectedBuilds = builds.filter((b) => b.isLive !== false && REF_ID_KEYS.some((k) => b[k] === comp.id));
+      const affectedGomps = customerGomps.filter((g) => g.isLive && REF_ID_KEYS.some((k) => g[k] === comp.id));
+      const names = [...affectedBuilds.map((b) => b.name), ...affectedGomps.map((g) => g.title)];
+      if (names.length > 0) {
+        const proceed = window.confirm(
+          `"${comp.name}" is still referenced by: ${names.join(', ')}. Hiding it won't break their ` +
+          `"Configure" links (they'll still show this part, flagged unavailable) — but you may want ` +
+          `to review them. Hide anyway?`,
+        );
+        if (!proceed) return;
+      }
+    }
+    const updated: Component = { ...comp, isLive: !goingHidden };
     const saved = await updateComponentRow(comp.id, cat, updated);
     setCompDb((db) => ({ ...db, [cat]: (db[cat] || []).map((c) => (c.id === comp.id ? saved : c)) }));
   }
@@ -2179,16 +2225,16 @@ export default function AdminPage() {
                     </div>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
-                    <CompSelect label="GPU" value={form.gpu} options={compDb.gpu || []} placeholder="GPU" t={t} fmt={fmt} onChange={(v) => setForm({ ...form, gpu: v })} />
-                    <CompSelect label="CPU" value={form.cpu} options={compDb.cpu || []} placeholder="CPU" t={t} fmt={fmt} onChange={(v) => setForm({ ...form, cpu: v })} />
-                    <CompSelect label="RAM" value={form.ram} options={compDb.ram || []} placeholder="RAM" t={t} fmt={fmt} onChange={(v) => setForm({ ...form, ram: v })} />
-                    <CompSelect label={t.storage_label} value={form.storage} options={compDb.storage || []} placeholder={catLabels.storage} t={t} fmt={fmt} onChange={(v) => setForm({ ...form, storage: v })} />
+                    <CompSelect label="GPU" value={form.gpu} options={compDb.gpu || []} placeholder="GPU" t={t} fmt={fmt} onChange={(v, c) => setForm({ ...form, gpu: v, gpuId: c?.id })} />
+                    <CompSelect label="CPU" value={form.cpu} options={compDb.cpu || []} placeholder="CPU" t={t} fmt={fmt} onChange={(v, c) => setForm({ ...form, cpu: v, cpuId: c?.id })} />
+                    <CompSelect label="RAM" value={form.ram} options={compDb.ram || []} placeholder="RAM" t={t} fmt={fmt} onChange={(v, c) => setForm({ ...form, ram: v, ramId: c?.id })} />
+                    <CompSelect label={t.storage_label} value={form.storage} options={compDb.storage || []} placeholder={catLabels.storage} t={t} fmt={fmt} onChange={(v, c) => setForm({ ...form, storage: v, storageId: c?.id })} />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
-                    <CompSelect label={t.mobo_label} value={form.mobo} options={compDb.mobo || []} placeholder={catLabels.mobo} t={t} fmt={fmt} onChange={(v) => setForm({ ...form, mobo: v })} />
-                    <CompSelect label={t.cooler_label} value={form.cooler} options={compDb.cooler || []} placeholder={catLabels.cooler} t={t} fmt={fmt} onChange={(v) => setForm({ ...form, cooler: v })} />
-                    <CompSelect label="PSU" value={form.psu} options={compDb.psu || []} placeholder="PSU" t={t} fmt={fmt} onChange={(v) => setForm({ ...form, psu: v })} />
-                    <CompSelect label={catLabels.case} value={form.case} options={compDb.case || []} placeholder={catLabels.case} t={t} fmt={fmt} onChange={(v) => setForm({ ...form, case: v })} />
+                    <CompSelect label={t.mobo_label} value={form.mobo} options={compDb.mobo || []} placeholder={catLabels.mobo} t={t} fmt={fmt} onChange={(v, c) => setForm({ ...form, mobo: v, moboId: c?.id })} />
+                    <CompSelect label={t.cooler_label} value={form.cooler} options={compDb.cooler || []} placeholder={catLabels.cooler} t={t} fmt={fmt} onChange={(v, c) => setForm({ ...form, cooler: v, coolerId: c?.id })} />
+                    <CompSelect label="PSU" value={form.psu} options={compDb.psu || []} placeholder="PSU" t={t} fmt={fmt} onChange={(v, c) => setForm({ ...form, psu: v, psuId: c?.id })} />
+                    <CompSelect label={catLabels.case} value={form.case} options={compDb.case || []} placeholder={catLabels.case} t={t} fmt={fmt} onChange={(v, c) => setForm({ ...form, case: v, caseId: c?.id })} />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 22 }}>
                     <div>
@@ -2355,16 +2401,16 @@ export default function AdminPage() {
                     <div style={LABEL_STYLE}>{t.cg_components_label}</div>
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginBottom: 10 }}>{t.cg_components_help}</div>
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
-                      <CompSelect label="GPU" value={cgForm.gpu} options={compDb.gpu || []} placeholder="GPU" t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, gpu: v })} />
-                      <CompSelect label="CPU" value={cgForm.cpu} options={compDb.cpu || []} placeholder="CPU" t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, cpu: v })} />
-                      <CompSelect label="RAM" value={cgForm.ram} options={compDb.ram || []} placeholder="RAM" t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, ram: v })} />
-                      <CompSelect label={t.storage_label} value={cgForm.storage} options={compDb.storage || []} placeholder={catLabels.storage} t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, storage: v })} />
+                      <CompSelect label="GPU" value={cgForm.gpu} options={compDb.gpu || []} placeholder="GPU" t={t} fmt={fmt} onChange={(v, c) => setCgForm({ ...cgForm, gpu: v, gpuId: c?.id })} />
+                      <CompSelect label="CPU" value={cgForm.cpu} options={compDb.cpu || []} placeholder="CPU" t={t} fmt={fmt} onChange={(v, c) => setCgForm({ ...cgForm, cpu: v, cpuId: c?.id })} />
+                      <CompSelect label="RAM" value={cgForm.ram} options={compDb.ram || []} placeholder="RAM" t={t} fmt={fmt} onChange={(v, c) => setCgForm({ ...cgForm, ram: v, ramId: c?.id })} />
+                      <CompSelect label={t.storage_label} value={cgForm.storage} options={compDb.storage || []} placeholder={catLabels.storage} t={t} fmt={fmt} onChange={(v, c) => setCgForm({ ...cgForm, storage: v, storageId: c?.id })} />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: 14 }}>
-                      <CompSelect label={t.mobo_label} value={cgForm.mobo} options={compDb.mobo || []} placeholder={catLabels.mobo} t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, mobo: v })} />
-                      <CompSelect label={t.cooler_label} value={cgForm.cooler} options={compDb.cooler || []} placeholder={catLabels.cooler} t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, cooler: v })} />
-                      <CompSelect label="PSU" value={cgForm.psu} options={compDb.psu || []} placeholder="PSU" t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, psu: v })} />
-                      <CompSelect label={catLabels.case} value={cgForm.case} options={compDb.case || []} placeholder={catLabels.case} t={t} fmt={fmt} onChange={(v) => setCgForm({ ...cgForm, case: v })} />
+                      <CompSelect label={t.mobo_label} value={cgForm.mobo} options={compDb.mobo || []} placeholder={catLabels.mobo} t={t} fmt={fmt} onChange={(v, c) => setCgForm({ ...cgForm, mobo: v, moboId: c?.id })} />
+                      <CompSelect label={t.cooler_label} value={cgForm.cooler} options={compDb.cooler || []} placeholder={catLabels.cooler} t={t} fmt={fmt} onChange={(v, c) => setCgForm({ ...cgForm, cooler: v, coolerId: c?.id })} />
+                      <CompSelect label="PSU" value={cgForm.psu} options={compDb.psu || []} placeholder="PSU" t={t} fmt={fmt} onChange={(v, c) => setCgForm({ ...cgForm, psu: v, psuId: c?.id })} />
+                      <CompSelect label={catLabels.case} value={cgForm.case} options={compDb.case || []} placeholder={catLabels.case} t={t} fmt={fmt} onChange={(v, c) => setCgForm({ ...cgForm, case: v, caseId: c?.id })} />
                     </div>
                     {(() => {
                       const computed = computeBuildTier(cgForm, compDb);
