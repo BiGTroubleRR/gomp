@@ -1,0 +1,59 @@
+name: Refresh PassMark scores
+
+# Weekly automated refresh of src/lib/passmark.ts's hardcoded GPU/CPU score table against
+# PassMark's own public charts (see scripts/refresh-passmark.mjs for the scrape/update logic).
+# Opens a PR rather than committing straight to main, since Vercel auto-deploys from main and a
+# scraper is exactly the kind of change that should get one human glance before it goes live.
+#
+# Requires this repo's Settings -> Actions -> General -> Workflow permissions to be set to
+# "Read and write permissions" (with "Allow GitHub Actions to create pull requests" checked) —
+# a one-time repo setting, not something this file can set itself.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # every Monday, 06:00 UTC — PassMark's charts move far slower than daily
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run refresh script
+        run: node scripts/refresh-passmark.mjs | tee refresh-output.txt
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet -- src/lib/passmark.ts; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open pull request
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="passmark-refresh-$(date +%Y-%m-%d-%H%M)"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add src/lib/passmark.ts
+          git commit -m "Refresh PassMark scores ($(date +%Y-%m-%d))"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "Refresh PassMark scores ($(date +%Y-%m-%d))" \
+            --body-file refresh-output.txt \
+            --base main \
+            --head "$BRANCH"
