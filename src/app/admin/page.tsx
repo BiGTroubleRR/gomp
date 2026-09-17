@@ -209,7 +209,7 @@ type Translations = {
   live: string; hidden: string;
   edit_build: string; new_build: string; saved_ok: string;
   components_db: string; components_db_desc: string;
-  comp_search_placeholder: string; comp_sort_default: string; comp_sort_by_number: string;
+  comp_search_placeholder: string; comp_sort_default: string; comp_sort_by_number: string; comp_sort_by_tier: string;
   suggestions_search_placeholder: string; already_added: string; no_suggestions: string;
   vat_rate_title: string; vat_rate_desc: string; vat_rate_suffix: string;
   market_price_label: string; market_price_placeholder: string;
@@ -291,7 +291,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     live: 'Live', hidden: 'Hidden',
     edit_build: 'Edit Build', new_build: 'New Build', saved_ok: '✓ Saved successfully',
     components_db: 'Components Database', components_db_desc: 'Parts available in the 3D PC Builder configurator',
-    comp_search_placeholder: 'Search by name…', comp_sort_default: 'Default order', comp_sort_by_number: 'By number (5090 → 5060)',
+    comp_search_placeholder: 'Search by name…', comp_sort_default: 'Default order', comp_sort_by_number: 'By number (5090 → 5060)', comp_sort_by_tier: 'By tier (S → B)',
     suggestions_search_placeholder: 'Search suggestions…', already_added: 'Added', no_suggestions: 'No matches — type a custom name.',
     vat_rate_title: 'VAT Rate', vat_rate_desc: 'Every stored price is pre-tax — this is added on top for what customers actually see. Czech standard rate is 21%.', vat_rate_suffix: '%',
     market_price_label: 'Market Price (Alza/Heureka)', market_price_placeholder: 'e.g. 1650',
@@ -385,7 +385,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     live: 'Aktívna', hidden: 'Skrytá',
     edit_build: 'Upraviť zostavu', new_build: 'Nová zostava', saved_ok: '✓ Úspešne uložené',
     components_db: 'Databáza komponentov', components_db_desc: 'Súčiastky dostupné v 3D konfigurátore PC',
-    comp_search_placeholder: 'Hľadať podľa názvu…', comp_sort_default: 'Predvolené poradie', comp_sort_by_number: 'Podľa čísla (5090 → 5060)',
+    comp_search_placeholder: 'Hľadať podľa názvu…', comp_sort_default: 'Predvolené poradie', comp_sort_by_number: 'Podľa čísla (5090 → 5060)', comp_sort_by_tier: 'Podľa triedy (S → B)',
     suggestions_search_placeholder: 'Hľadať návrhy…', already_added: 'Pridané', no_suggestions: 'Nenájdené — zadajte vlastný názov.',
     vat_rate_title: 'Sadzba DPH', vat_rate_desc: 'Každá uložená cena je bez dane — DPH sa pripočíta navrch pre to, čo skutočne vidí zákazník. Slovenská/česká základná sadzba je 21 %.', vat_rate_suffix: '%',
     market_price_label: 'Tržnová cena (Alza/Heureka)', market_price_placeholder: 'napr. 1650',
@@ -539,6 +539,14 @@ function gpuNumericSortKey(name: string): number {
   const num = parseInt(model.match(/(\d{3,4})/)?.[1] ?? '0', 10);
   const suffixRank = /Ti\s*Super/i.test(model) ? 3 : /Super/i.test(model) ? 2 : /\bTi\b/i.test(model) ? 1 : 0;
   return num * 10 + suffixRank;
+}
+
+// Best-tier-first ordering for the "Sort by tier" toggle, available on every category (unlike
+// gpuNumericSortKey above, which is GPU-only). Untiered components (no S/A/B assigned yet) sort
+// last rather than erroring or floating to the top.
+const TIER_SORT_VALUE: Record<Tier, number> = { S: 3, A: 2, B: 1 };
+function tierSortValue(tier: Tier | undefined): number {
+  return tier ? (TIER_SORT_VALUE[tier] ?? 0) : 0;
 }
 
 // Shared by addComponent/updateComponent so the same category-scoped set of dimension fields
@@ -744,6 +752,11 @@ export default function AdminPage() {
   // GPU-only: sorts the grid by parsed chip number descending (5090 -> 5080 -> ... -> 5060)
   // instead of today's sort_order — see gpuNumericSortKey below.
   const [gpuSortByNumber, setGpuSortByNumber] = useState(false);
+  // Available on every category (unlike gpuSortByNumber above): sorts the grid best-tier-first
+  // (S -> A -> B, untiered last) instead of today's sort_order — see tierSortValue above.
+  // Mutually exclusive with gpuSortByNumber on the GPU tab; not reset on category switch, since
+  // "always show me the best parts first" is a preference worth carrying between tabs.
+  const [sortByTier, setSortByTier] = useState(false);
   const [compForm, setCompForm] = useState<CompFormState>(initialCompForm());
   const [editCompId, setEditCompId] = useState<string | null>(null);
   // Drives the tier glow's hover-brightened state on the grid card below — separate from
@@ -1303,13 +1316,16 @@ export default function AdminPage() {
     setCompDb((db) => ({ ...db, [cat]: (db[cat] || []).map((c) => (c.id === comp.id ? saved : c)) }));
   }
 
-  // The active category's catalog, filtered by compSearch and (GPU-only) sorted by gpuSortByNumber
-  // — the grid below renders this directly.
+  // The active category's catalog, filtered by compSearch and sorted by whichever of
+  // gpuSortByNumber (GPU-only) / sortByTier (any category) is active — the grid below renders
+  // this directly.
   function visibleComponents(cat: Category): Component[] {
     const q = compSearch.trim().toLowerCase();
     let visible = (compDb[cat] || []).filter((c) => !q || c.name.toLowerCase().includes(q));
     if (cat === 'gpu' && gpuSortByNumber) {
       visible = [...visible].sort((a, b) => gpuNumericSortKey(b.name) - gpuNumericSortKey(a.name));
+    } else if (sortByTier) {
+      visible = [...visible].sort((a, b) => tierSortValue(b.tier) - tierSortValue(a.tier));
     }
     return visible;
   }
@@ -2616,22 +2632,28 @@ export default function AdminPage() {
                   placeholder={t.comp_search_placeholder}
                   style={{ flex: '1 1 220px', maxWidth: 320, padding: '9px 12px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 12, background: '#FDFAF4', color: '#1C1C1A', fontFamily: 'var(--font-sans)' }}
                 />
-                {compCat === 'gpu' && (
-                  <div style={{ display: 'flex', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ display: 'flex', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, overflow: 'hidden' }}>
+                  <button
+                    onClick={() => { setGpuSortByNumber(false); setSortByTier(false); }}
+                    style={{ padding: '8px 14px', background: !gpuSortByNumber && !sortByTier ? '#6E1423' : 'transparent', color: !gpuSortByNumber && !sortByTier ? '#FDFAF4' : '#7A7469', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                  >
+                    {t.comp_sort_default}
+                  </button>
+                  <button
+                    onClick={() => { setSortByTier(true); setGpuSortByNumber(false); }}
+                    style={{ padding: '8px 14px', background: sortByTier ? '#6E1423' : 'transparent', color: sortByTier ? '#FDFAF4' : '#7A7469', border: 'none', borderLeft: '0.5px solid rgba(28,28,26,0.15)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                  >
+                    {t.comp_sort_by_tier}
+                  </button>
+                  {compCat === 'gpu' && (
                     <button
-                      onClick={() => setGpuSortByNumber(false)}
-                      style={{ padding: '8px 14px', background: !gpuSortByNumber ? '#6E1423' : 'transparent', color: !gpuSortByNumber ? '#FDFAF4' : '#7A7469', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
-                    >
-                      {t.comp_sort_default}
-                    </button>
-                    <button
-                      onClick={() => setGpuSortByNumber(true)}
+                      onClick={() => { setGpuSortByNumber(true); setSortByTier(false); }}
                       style={{ padding: '8px 14px', background: gpuSortByNumber ? '#6E1423' : 'transparent', color: gpuSortByNumber ? '#FDFAF4' : '#7A7469', border: 'none', borderLeft: '0.5px solid rgba(28,28,26,0.15)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
                     >
                       {t.comp_sort_by_number}
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? '16px' : '20px 22px', marginBottom: 24 }}>
