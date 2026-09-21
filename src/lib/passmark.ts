@@ -4,38 +4,38 @@
 // it through lookup() rather than trusting a persisted value, so a stale stored score is only
 // ever a fallback for a name this table doesn't track.
 
-export const PASSMARK_UPDATED = '2026-09-17';
+export const PASSMARK_UPDATED = '2026-09-21';
 
 type Entry = { score: number; url: string; names: string[] };
 
 // Top 25 consumer desktop GPUs by PassMark G3D Mark, pulled from
 // videocardbenchmark.net/high_end_gpus.html (Desktop) on PASSMARK_UPDATED.
 const GPU: Entry[] = [
-  { score: 39008, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5090&id=5725', names: ['NVIDIA RTX 5090 FE', 'RTX 5090 FE', 'NVIDIA RTX 5090', 'RTX 5090'] },
-  { score: 38034, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4090&id=4606', names: ['NVIDIA RTX 4090', 'RTX 4090'] },
-  { score: 35626, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5080&id=5721', names: ['NVIDIA RTX 5080', 'RTX 5080'] },
-  { score: 34206, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4080+SUPER&id=4984', names: ['NVIDIA RTX 4080 Super', 'RTX 4080 Super'] },
-  { score: 34430, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4080&id=4622', names: ['NVIDIA RTX 4080', 'RTX 4080'] },
-  { score: 31462, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7900+XTX&id=4644', names: ['AMD Radeon RX 7900 XTX', 'Radeon RX 7900 XTX', 'RX 7900 XTX'] },
-  { score: 32325, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5070+Ti&id=5878', names: ['NVIDIA RTX 5070 Ti', 'RTX 5070 Ti'] },
-  { score: 31842, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+Ti+SUPER&id=4980', names: ['NVIDIA RTX 4070 Ti Super', 'RTX 4070 Ti Super'] },
+  { score: 39019, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5090&id=5725', names: ['NVIDIA RTX 5090 FE', 'RTX 5090 FE', 'NVIDIA RTX 5090', 'RTX 5090'] },
+  { score: 38036, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4090&id=4606', names: ['NVIDIA RTX 4090', 'RTX 4090'] },
+  { score: 35633, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5080&id=5721', names: ['NVIDIA RTX 5080', 'RTX 5080'] },
+  { score: 34200, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4080+SUPER&id=4984', names: ['NVIDIA RTX 4080 Super', 'RTX 4080 Super'] },
+  { score: 34435, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4080&id=4622', names: ['NVIDIA RTX 4080', 'RTX 4080'] },
+  { score: 31457, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7900+XTX&id=4644', names: ['AMD Radeon RX 7900 XTX', 'Radeon RX 7900 XTX', 'RX 7900 XTX'] },
+  { score: 32329, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5070+Ti&id=5878', names: ['NVIDIA RTX 5070 Ti', 'RTX 5070 Ti'] },
+  { score: 31841, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+Ti+SUPER&id=4980', names: ['NVIDIA RTX 4070 Ti Super', 'RTX 4070 Ti Super'] },
   { score: 31519, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+Ti&id=4699', names: ['NVIDIA RTX 4070 Ti', 'RTX 4070 Ti'] },
-  { score: 29217, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3090+Ti&id=4524', names: ['NVIDIA RTX 3090 Ti', 'RTX 3090 Ti'] },
-  { score: 29118, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7900+XT&id=4646', names: ['AMD Radeon RX 7900 XT', 'Radeon RX 7900 XT', 'RX 7900 XT'] },
-  { score: 29945, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+SUPER&id=4973', names: ['NVIDIA RTX 4070 Super', 'RTX 4070 Super'] },
-  { score: 28651, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5070&id=5940', names: ['NVIDIA RTX 5070', 'RTX 5070'] },
-  { score: 26907, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9070+XT&id=5956', names: ['AMD Radeon RX 9070 XT', 'Radeon RX 9070 XT', 'RX 9070 XT', 'XFX Swift AMD Radeon RX 9070 XT 16G', 'XFX Mercury AMD Radeon RX 9070 XT OC Gaming Edition', 'XFX Mercury AMD Radeon RX 9070 XT OC Magnetic Air 16G', 'SAPPHIRE NITRO+ AMD Radeon RX 9070 XT GAMING OC 16G'] },
-  { score: 26741, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3080+Ti&id=4409', names: ['NVIDIA RTX 3080 Ti', 'RTX 3080 Ti'] },
+  { score: 29211, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3090+Ti&id=4524', names: ['NVIDIA RTX 3090 Ti', 'RTX 3090 Ti'] },
+  { score: 29122, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7900+XT&id=4646', names: ['AMD Radeon RX 7900 XT', 'Radeon RX 7900 XT', 'RX 7900 XT'] },
+  { score: 29942, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070+SUPER&id=4973', names: ['NVIDIA RTX 4070 Super', 'RTX 4070 Super'] },
+  { score: 28650, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5070&id=5940', names: ['NVIDIA RTX 5070', 'RTX 5070'] },
+  { score: 26905, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9070+XT&id=5956', names: ['AMD Radeon RX 9070 XT', 'Radeon RX 9070 XT', 'RX 9070 XT', 'XFX Swift AMD Radeon RX 9070 XT 16G', 'XFX Mercury AMD Radeon RX 9070 XT OC Gaming Edition', 'XFX Mercury AMD Radeon RX 9070 XT OC Magnetic Air 16G', 'SAPPHIRE NITRO+ AMD Radeon RX 9070 XT GAMING OC 16G'] },
+  { score: 26742, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3080+Ti&id=4409', names: ['NVIDIA RTX 3080 Ti', 'RTX 3080 Ti'] },
   { score: 26857, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4070&id=4795', names: ['NVIDIA RTX 4070', 'RTX 4070'] },
-  { score: 25359, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9070&id=5958', names: ['AMD Radeon RX 9070', 'Radeon RX 9070', 'RX 9070', 'ASUS PRIME Radeon RX 9070 O16G'] },
-  { score: 25092, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+6800+XT&id=4312', names: ['AMD Radeon RX 6800 XT', 'Radeon RX 6800 XT', 'RX 6800 XT'] },
-  { score: 24465, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7800+XT&id=4917', names: ['AMD Radeon RX 7800 XT', 'Radeon RX 7800 XT', 'RX 7800 XT'] },
-  { score: 22615, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5060+Ti+16GB&id=6160', names: ['NVIDIA RTX 5060 Ti 16GB', 'RTX 5060 Ti 16GB'] },
-  { score: 22598, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4060+Ti&id=4827', names: ['NVIDIA RTX 4060 Ti', 'RTX 4060 Ti'] },
+  { score: 25372, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+9070&id=5958', names: ['AMD Radeon RX 9070', 'Radeon RX 9070', 'RX 9070', 'ASUS PRIME Radeon RX 9070 O16G'] },
+  { score: 25101, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+6800+XT&id=4312', names: ['AMD Radeon RX 6800 XT', 'Radeon RX 6800 XT', 'RX 6800 XT'] },
+  { score: 24468, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=Radeon+RX+7800+XT&id=4917', names: ['AMD Radeon RX 7800 XT', 'Radeon RX 7800 XT', 'RX 7800 XT'] },
+  { score: 22611, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5060+Ti+16GB&id=6160', names: ['NVIDIA RTX 5060 Ti 16GB', 'RTX 5060 Ti 16GB'] },
+  { score: 22596, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4060+Ti&id=4827', names: ['NVIDIA RTX 4060 Ti', 'RTX 4060 Ti'] },
   { score: 23170, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3070+Ti&id=4413', names: ['NVIDIA RTX 3070 Ti', 'RTX 3070 Ti'] },
-  { score: 20633, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5060&id=5602', names: ['NVIDIA RTX 5060', 'RTX 5060'] },
-  { score: 20219, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3060+Ti&id=4318', names: ['NVIDIA RTX 3060 Ti', 'RTX 3060 Ti'] },
-  { score: 19488, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4060&id=4850', names: ['NVIDIA RTX 4060', 'RTX 4060'] },
+  { score: 20626, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+5060&id=5602', names: ['NVIDIA RTX 5060', 'RTX 5060'] },
+  { score: 20217, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+3060+Ti&id=4318', names: ['NVIDIA RTX 3060 Ti', 'RTX 3060 Ti'] },
+  { score: 19486, url: 'https://www.videocardbenchmark.net/gpu.php?gpu=GeForce+RTX+4060&id=4850', names: ['NVIDIA RTX 4060', 'RTX 4060'] },
 ];
 
 // Top 25 consumer desktop CPUs (AM5/AM4/LGA1700/LGA1851, no Threadripper/Xeon/EPYC/laptop
