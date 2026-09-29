@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { createPortal } from 'react-dom';
 import { createBuildScene, type CompId } from '@/lib/build-scene';
 import type { Component } from '@/lib/component-db-seed';
+import { MAROON, INK, MUTED, PANEL_BG } from '@/lib/design-tokens';
 
 export type CompDb = Partial<Record<CompId, Component[]>>;
 
@@ -26,11 +27,6 @@ const CAT_LABEL: Record<CompId, string> = {
   psu: 'PSU',
   case: 'Case',
 };
-
-const MAROON = '#6E1423';
-const INK = '#1C1C1A';
-const MUTED = '#7A7469';
-const PANEL_BG = '#FDFAF4';
 
 // Renders the saved build using the exact same engine as the Build page's live configurator
 // (build-scene.ts's createBuildScene + applyBuildSnapshot) instead of a separate simplified

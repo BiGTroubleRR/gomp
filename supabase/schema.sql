@@ -163,6 +163,7 @@ create table if not exists public.components (
   gpu_width_mm numeric(6, 1), -- gpu only: top-to-bottom card height — drives the 3D box's height axis (falls back to GPU_HEIGHT_MM when unset, see component-db-seed.ts)
   cooler_height_mm numeric(6, 1), -- cooler only: air towers
   cooler_radiator_mm numeric(6, 1), -- cooler only: AIO radiator size
+  cooler_type text check (cooler_type in ('air', 'aio')), -- cooler only: explicit 3D-model choice; null falls back to height/radiator-presence detection
   psu_length_mm numeric(6, 1), -- psu only
   ram_height_mm numeric(6, 1), -- ram only: per-SKU heatsink height (RAM_DIMM_SIZE_MM.height is the bare-PCB fallback)
   ram_generation smallint, -- ram only: 4 or 5 (DDR4/DDR5) — drives the /build DDR filter
@@ -223,6 +224,12 @@ alter table public.components add column if not exists gpu_slot_width numeric(3,
 alter table public.components add column if not exists gpu_width_mm numeric(6, 1);
 alter table public.components add column if not exists cooler_height_mm numeric(6, 1);
 alter table public.components add column if not exists cooler_radiator_mm numeric(6, 1);
+-- Explicit air/liquid model choice for a cooler — previously inferred purely from which of the
+-- two columns above happened to be filled in, which meant the 3D model an admin got depended on
+-- which field they filled in rather than a direct choice. Null means "not chosen yet" — build-
+-- scene.ts falls back to the old height/radiator-presence detection in that case, so no existing
+-- cooler's rendered model changes until this is explicitly set.
+alter table public.components add column if not exists cooler_type text check (cooler_type in ('air', 'aio'));
 alter table public.components add column if not exists psu_length_mm numeric(6, 1);
 alter table public.components add column if not exists ram_height_mm numeric(6, 1);
 alter table public.components add column if not exists ram_generation smallint;

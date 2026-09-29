@@ -8,15 +8,10 @@ import SiteFooter from '@/components/SiteFooter';
 import { useIsMobile } from '@/lib/use-media-query';
 import { submitGbbRequest } from '@/lib/gbb-submit';
 import { GBB_GREEN, GBB_GREEN_DARK, GBB_GREEN_TINT } from '@/lib/gbb-theme';
-
 // Only the bordeaux accent is swapped for GBB_GREEN — gold, ink, and the cream/parchment
 // backgrounds are identical to the rest of the site, so this reads as the same store rather
 // than a different brand bolted on.
-const GOLD = '#C4A35A';
-const INK = '#1C1C1A';
-const MUTED = '#7A7469';
-const PAGE_BG = '#F5F0E6';
-const PANEL_BG = '#FDFAF4';
+import { GOLD, INK, MUTED, PAGE_BG, PANEL_BG } from '@/lib/design-tokens';
 
 type UseCase = 'gaming' | 'office' | 'creative' | 'server' | 'other';
 const USE_CASES: UseCase[] = ['gaming', 'office', 'creative', 'server', 'other'];

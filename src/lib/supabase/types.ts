@@ -137,6 +137,7 @@ export type Database = {
           gpu_width_mm: number | null;
           cooler_height_mm: number | null;
           cooler_radiator_mm: number | null;
+          cooler_type: 'air' | 'aio' | null;
           psu_length_mm: number | null;
           ram_height_mm: number | null;
           ram_generation: number | null;
@@ -180,6 +181,7 @@ export type Database = {
           gpu_width_mm?: number | null;
           cooler_height_mm?: number | null;
           cooler_radiator_mm?: number | null;
+          cooler_type?: 'air' | 'aio' | null;
           psu_length_mm?: number | null;
           ram_height_mm?: number | null;
           ram_generation?: number | null;
@@ -220,6 +222,7 @@ export type Database = {
           gpu_width_mm?: number | null;
           cooler_height_mm?: number | null;
           cooler_radiator_mm?: number | null;
+          cooler_type?: 'air' | 'aio' | null;
           psu_length_mm?: number | null;
           ram_height_mm?: number | null;
           ram_generation?: number | null;

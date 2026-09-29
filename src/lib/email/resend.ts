@@ -13,6 +13,7 @@
 // RESEND_FROM_EMAIL pointing at it.
 import { Resend } from 'resend';
 import type { Lang } from '@/lib/gomp-storage';
+import { MAROON, GOLD, PAGE_BG, PANEL_BG, INK, MUTED } from '@/lib/design-tokens';
 
 const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL || 'GOMP <onboarding@resend.dev>';
 
@@ -65,17 +66,11 @@ const T = {
   },
 } as const;
 
-// Site brand constants (mirrors MAROON/GOLD/PAGE_BG/PANEL_BG/INK/MUTED used throughout
-// src/app/page.tsx, SiteFooter.tsx, etc.) — not imported from anywhere, since email HTML can't
-// pull in next/font or CSS custom properties; every style here has to be a literal, inline value
-// email clients (Outlook included) can render on their own, with web-safe font fallbacks standing
-// in for the site's actual Nova Square / DM Sans faces.
-const MAROON = '#6E1423';
-const GOLD = '#C4A35A';
-const PAGE_BG = '#F5F0E6';
-const PANEL_BG = '#FDFAF4';
-const INK = '#1C1C1A';
-const MUTED = '#7A7469';
+// Colors are shared with the rest of the site via src/lib/design-tokens.ts. Fonts stay local,
+// deliberately NOT imported from there — email HTML can't pull in next/font or resolve CSS
+// custom properties, so every font here has to be a literal, web-safe stack email clients
+// (Outlook included) can render on their own, standing in for the site's actual Nova Square /
+// DM Sans faces.
 const SERIF = "Georgia, 'Times New Roman', serif";
 const SANS = 'Arial, Helvetica, sans-serif';
 

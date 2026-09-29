@@ -8,6 +8,7 @@ import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import { useIsMobile } from '@/lib/use-media-query';
 import { pick } from '@/lib/i18n';
+import { MAROON, INK, MUTED, PAGE_BG, PANEL_BG } from '@/lib/design-tokens';
 
 const translations = {
   en: {
@@ -175,12 +176,6 @@ const team = [
   { initial: 'J', name: 'Jakub G.', role_en: 'Founder', role_sk: 'Zakladateľ', role_cz: 'Zakladatel', opacity: 1 },
   { initial: 'M', name: 'Max G.', role_en: 'Second in Command', role_sk: 'Druhý v poradí', role_cz: 'Druhý v pořadí', opacity: 1 },
 ] as const;
-
-const MAROON = '#6E1423';
-const INK = '#1C1C1A';
-const MUTED = '#7A7469';
-const PAGE_BG = '#F5F0E6';
-const PANEL_BG = '#FDFAF4';
 
 const serif: CSSProperties = { fontFamily: 'var(--font-serif)' };
 const sans: CSSProperties = { fontFamily: 'var(--font-sans)' };

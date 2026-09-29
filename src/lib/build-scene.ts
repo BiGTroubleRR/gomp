@@ -52,10 +52,17 @@ export type AlignmentTuning = {
 // gpuAnchoredZ() reads directly (see below), matching moboRearClearance/PSU_REAR_CLEARANCE's own
 // ~0.04 scale. X/Y stay genuine mobo-relative offsets (the card still has to line up with the
 // PCIe slot's actual position on the board).
+// cooler's X used to be -0.42 (tuned for the old buildAirCoolerMesh, which centered its own
+// height span around the group's local origin — so this constant placed that *midpoint*, not the
+// base plate, a real distance from the CPU). The rewritten mesh anchors its base's CPU-facing
+// surface at its own local X=0 instead (see buildAirCoolerMesh's comment), so this now needs to
+// place the base right up against the CPU's own contact face — calculated from the CPU mesh's own
+// geometry (die box centered at its group origin, contact face at local X=+0.05):
+// BASE_POS.cpu[0] + 0.05 = -0.73. Nudge via Admin's alignment panel if a visual check shows a gap.
 const BASE_POS: Record<Exclude<CompId, 'case'>, [number, number, number]> = {
   mobo: [-0.88, 0.2, -0.35],
   cpu: [-0.78, 0.55, -0.25],
-  cooler: [-0.42, 0.65, -0.25],
+  cooler: [-0.73, 0.65, -0.25],
   ram: [-0.8, 0.55, -0.88],
   gpu: [-0.45, -0.5, 0.04],
   storage: [-0.8, 0.08, 0.37],
@@ -107,6 +114,22 @@ export const SIZES: Record<string, { w: number; h: number; d: number }> = {
 export const MM_PER_UNIT = 105;
 export function mmToUnits(mm: number): number {
   return mm / MM_PER_UNIT;
+}
+
+// Many small repeated parts (fan frames/blades, heatsink fins, port shields) were each
+// constructing their own fresh MeshStandardMaterial with identical params on every build call —
+// harmless per-material, but it adds up across a scene with several fans/coolers/RAM sticks. Safe
+// to share: nothing mutates a material in place for hover/selection highlighting — that's done by
+// cloning the material and swapping the clone onto the mesh instead (see cloneWithEmissiveGlow),
+// so two meshes pointing at the very same shared base material never fight over its properties.
+const sharedMaterialCache = new Map<string, THREE.MeshStandardMaterial>();
+function getSharedMaterial(key: string, params: THREE.MeshStandardMaterialParameters): THREE.MeshStandardMaterial {
+  let mat = sharedMaterialCache.get(key);
+  if (!mat) {
+    mat = new THREE.MeshStandardMaterial(params);
+    sharedMaterialCache.set(key, mat);
+  }
+  return mat;
 }
 
 export type SizeScale = { x: number; y: number; z: number };
@@ -209,8 +232,18 @@ export function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVe
     ];
   }
   if (id === 'cooler') {
-    if (comp.coolerRadiatorMm) return [{ axis: 'x', mm: comp.coolerRadiatorMm, label: `Ø ${cm(comp.coolerRadiatorMm)}`, scalesMesh: false, lineLengthMm: 40 }];
-    if (comp.coolerHeightMm) return [{ axis: 'y', mm: comp.coolerHeightMm }];
+    // comp.coolerType, when an admin has explicitly set it, decides which shape to return outright
+    // — same priority order setSizeScale uses for the actual 3D-model swap, so the two can't
+    // disagree about which variant is installed. Falls back to the old radiatorMm/heightMm-presence
+    // detection only when coolerType is unset (pre-migration rows, or a cooler nobody has switched
+    // yet).
+    const isAio = comp.coolerType ? comp.coolerType === 'aio' : !!comp.coolerRadiatorMm;
+    if (isAio && comp.coolerRadiatorMm) return [{ axis: 'x', mm: comp.coolerRadiatorMm, label: `Ø ${cm(comp.coolerRadiatorMm)}`, scalesMesh: false, lineLengthMm: 40 }];
+    // 'x', not 'y' — buildAirCoolerMesh() builds its height (base-to-fin-stack) along local X now,
+    // matching the file-wide "X = away from the motherboard face" convention (see that function's
+    // own comment for why). sizeScaleFromSpecs is axis-generic, so this one label is what actually
+    // makes the real-mm rescale and the on-screen dimension annotation land on the right axis.
+    if (!isAio && comp.coolerHeightMm) return [{ axis: 'x', mm: comp.coolerHeightMm }];
   }
   if (id === 'psu' && comp.psuLengthMm) {
     return [
@@ -399,10 +432,10 @@ const MOBO_PCIE_Y_MINI_ITX = -1.3;
 // to actually line up. Z is the thin card-thickness axis, doubling as the slot-repeat axis.
 function buildRamStick(T: typeof THREE): THREE.Group {
   const g = new T.Group();
-  const pcbMat = new T.MeshStandardMaterial({ color: 0x001825, roughness: 0.6 });
-  const bodyMat = new T.MeshStandardMaterial({ color: 0x2a2530, roughness: 0.28, metalness: 0.75 });
-  const toothMat = new T.MeshStandardMaterial({ color: 0x3d3648, roughness: 0.22, metalness: 0.85 });
-  const goldMat = new T.MeshStandardMaterial({ color: 0xc4a35a, emissive: 0xc4a35a, emissiveIntensity: 0.8 });
+  const pcbMat = getSharedMaterial('ram-pcb', { color: 0x001825, roughness: 0.6 });
+  const bodyMat = getSharedMaterial('ram-body', { color: 0x2a2530, roughness: 0.28, metalness: 0.75 });
+  const toothMat = getSharedMaterial('ram-tooth', { color: 0x3d3648, roughness: 0.22, metalness: 0.85 });
+  const goldMat = getSharedMaterial('ram-gold', { color: 0xc4a35a, emissive: 0xc4a35a, emissiveIntensity: 0.8 });
 
   // Bare PCB edge peeking out below the heatsink shroud.
   const pcbHeight = 0.86;
@@ -422,15 +455,27 @@ function buildRamStick(T: typeof THREE): THREE.Group {
   strip.position.x = stripX;
   g.add(strip);
 
-  // Jagged crown: alternating-height teeth along the top ridge, sitting on the strip.
+  // Jagged crown: alternating-height teeth along the top ridge, sitting on the strip. One
+  // InstancedMesh (a shared unit cube, scaled per-instance to each tooth's own height) instead of
+  // 7 separate Mesh/BoxGeometry pairs — teeth vary in height, but InstancedMesh's per-instance
+  // transform already supports non-uniform scale, so a single geometry still reproduces every
+  // tooth's exact dimensions.
   const toothHeights = [0.09, 0.18, 0.1, 0.2, 0.1, 0.18, 0.09];
   const toothWidth = (pcbHeight * 0.94) / toothHeights.length;
   const toothBaseX = stripX + 0.015;
+  const toothGeo = new T.BoxGeometry(1, 1, 1);
+  const teeth = new T.InstancedMesh(toothGeo, toothMat, toothHeights.length);
+  const toothMatrix = new T.Matrix4();
+  const toothPos = new T.Vector3();
+  const toothQuat = new T.Quaternion();
+  const toothScale = new T.Vector3();
   toothHeights.forEach((h, i) => {
-    const tooth = new T.Mesh(new T.BoxGeometry(h, toothWidth * 0.7, 0.05), toothMat);
-    tooth.position.set(toothBaseX + h / 2, -pcbHeight * 0.47 + toothWidth * (i + 0.5), 0);
-    g.add(tooth);
+    toothPos.set(toothBaseX + h / 2, -pcbHeight * 0.47 + toothWidth * (i + 0.5), 0);
+    toothScale.set(h, toothWidth * 0.7, 0.05);
+    toothMatrix.compose(toothPos, toothQuat, toothScale);
+    teeth.setMatrixAt(i, toothMatrix);
   });
+  g.add(teeth);
 
   return g;
 }
@@ -456,34 +501,46 @@ function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
       // featureless slab before a case/cables give it visual context. Sits level with the CPU
       // (same local Y band) on the side opposite the RAM slots, since the real shield runs down
       // the same edge the CPU socket is closest to, not up near the board's top edge.
-      const shieldMat = new T.MeshStandardMaterial({ color: 0x8a8a90, roughness: 0.3, metalness: 0.85 });
-      const portMat = new T.MeshStandardMaterial({ color: 0x141414, roughness: 0.4, metalness: 0.5 });
-      const usbMat = new T.MeshStandardMaterial({ color: 0x2a9d8f, roughness: 0.3, metalness: 0.4 });
-      const ethernetMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.25, metalness: 0.8 });
-      const jackMat = new T.MeshStandardMaterial({ color: 0xb5b0a8, roughness: 0.3, metalness: 0.7 });
+      const shieldMat = getSharedMaterial('mobo-shield', { color: 0x8a8a90, roughness: 0.3, metalness: 0.85 });
+      const portMat = getSharedMaterial('mobo-port', { color: 0x141414, roughness: 0.4, metalness: 0.5 });
+      const usbMat = getSharedMaterial('mobo-usb', { color: 0x2a9d8f, roughness: 0.3, metalness: 0.4 });
+      const ethernetMat = getSharedMaterial('mobo-ethernet', { color: 0xc4a35a, roughness: 0.25, metalness: 0.8 });
+      const jackMat = getSharedMaterial('mobo-jack', { color: 0xb5b0a8, roughness: 0.3, metalness: 0.7 });
       const io = new T.Group();
       io.add(new T.Mesh(new T.BoxGeometry(0.03, 0.5, 0.42), shieldMat));
 
+      // Each repeated port group below (identical geometry, only position varies) is one
+      // InstancedMesh instead of N separate Mesh objects — this rear-IO cluster alone was 16
+      // individual meshes per motherboard.
+      const usbPositions: [number, number][] = [];
       [-0.13, -0.02].forEach((z) => {
-        [0.18, 0.09, 0.0].forEach((y) => {
-          const usb = new T.Mesh(new T.BoxGeometry(0.045, 0.06, 0.045), usbMat);
-          usb.position.set(0.02, y, z);
-          io.add(usb);
-        });
+        [0.18, 0.09, 0.0].forEach((y) => usbPositions.push([y, z]));
       });
+      const usbGeo = new T.BoxGeometry(0.045, 0.06, 0.045);
+      const usbPorts = new T.InstancedMesh(usbGeo, usbMat, usbPositions.length);
+      const ioMatrix = new T.Matrix4();
+      usbPositions.forEach(([y, z], i) => {
+        ioMatrix.makeTranslation(0.02, y, z);
+        usbPorts.setMatrixAt(i, ioMatrix);
+      });
+      io.add(usbPorts);
 
-      [0.18, 0.09].forEach((y) => {
-        const eth = new T.Mesh(new T.BoxGeometry(0.05, 0.08, 0.09), ethernetMat);
-        eth.position.set(0.02, y, 0.13);
-        io.add(eth);
+      const ethGeo = new T.BoxGeometry(0.05, 0.08, 0.09);
+      const ethernetPorts = new T.InstancedMesh(ethGeo, ethernetMat, 2);
+      [0.18, 0.09].forEach((y, i) => {
+        ioMatrix.makeTranslation(0.02, y, 0.13);
+        ethernetPorts.setMatrixAt(i, ioMatrix);
       });
+      io.add(ethernetPorts);
 
-      [0.0, -0.09, -0.18].forEach((y) => {
-        const jack = new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.04, 12), jackMat);
-        jack.rotation.z = Math.PI / 2;
-        jack.position.set(0.03, y, 0.13);
-        io.add(jack);
+      const jackGeo = new T.CylinderGeometry(0.02, 0.02, 0.04, 12);
+      const jacks = new T.InstancedMesh(jackGeo, jackMat, 3);
+      const jackRotation = new T.Matrix4().makeRotationZ(Math.PI / 2);
+      [0.0, -0.09, -0.18].forEach((y, i) => {
+        ioMatrix.copy(jackRotation).setPosition(0.03, y, 0.13);
+        jacks.setMatrixAt(i, ioMatrix);
       });
+      io.add(jacks);
 
       const hdmi = new T.Mesh(new T.BoxGeometry(0.045, 0.045, 0.09), portMat);
       hdmi.position.set(0.02, -0.09, -0.13);
@@ -492,11 +549,13 @@ function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
       dp.position.set(0.02, -0.09, -0.02);
       io.add(dp);
 
-      [-0.13, -0.02].forEach((z) => {
-        const usbC = new T.Mesh(new T.BoxGeometry(0.035, 0.035, 0.06), portMat);
-        usbC.position.set(0.02, -0.18, z);
-        io.add(usbC);
+      const usbCGeo = new T.BoxGeometry(0.035, 0.035, 0.06);
+      const usbCPorts = new T.InstancedMesh(usbCGeo, portMat, 2);
+      [-0.13, -0.02].forEach((z, i) => {
+        ioMatrix.makeTranslation(0.02, -0.18, z);
+        usbCPorts.setMatrixAt(i, ioMatrix);
       });
+      io.add(usbCPorts);
 
       // Rotated -90° about Y so the ports open along +Z (the case's rear wall — see buildCase's
       // `rear` panel at z=+d/2; the front sits at -d/2) instead of +X (the board's own
@@ -734,11 +793,15 @@ function buildFanMesh(sizeMm: number): THREE.Group {
   const size = mmToUnits(sizeMm);
   const radius = size / 2;
   const depth = size * 0.21; // real 120/140mm fans are ~25mm thick — roughly a fifth of the frame width
-  const frameMat = new T.MeshStandardMaterial({ color: 0x241318, roughness: 0.4, metalness: 0.45 });
-  const bezelMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.25, metalness: 0.85 });
-  const bladeMat = new T.MeshStandardMaterial({ color: 0x2e181d, roughness: 0.45, metalness: 0.3 });
-  const hubMat = new T.MeshStandardMaterial({ color: 0xc4a35a, roughness: 0.2, metalness: 0.85 });
-  const screwMat = new T.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.4, metalness: 0.6 });
+  // Shared (not freshly constructed per fan) — every fan of a given size uses the exact same
+  // finish, and a scene can build a dozen+ fans (case mounts, AIO radiator), so this avoids a
+  // dozen+ redundant MeshStandardMaterial allocations. Safe: nothing mutates these in place, see
+  // getSharedMaterial's own comment.
+  const frameMat = getSharedMaterial('fan-frame', { color: 0x241318, roughness: 0.4, metalness: 0.45 });
+  const bezelMat = getSharedMaterial('fan-bezel', { color: 0xc4a35a, roughness: 0.25, metalness: 0.85 });
+  const bladeMat = getSharedMaterial('fan-blade', { color: 0x2e181d, roughness: 0.45, metalness: 0.3 });
+  const hubMat = getSharedMaterial('fan-hub', { color: 0xc4a35a, roughness: 0.2, metalness: 0.85 });
+  const screwMat = getSharedMaterial('fan-screw', { color: 0x1a1a1a, roughness: 0.4, metalness: 0.6 });
 
   const borderWidth = size * 0.12;
   const topBar = new T.Mesh(new T.BoxGeometry(size, borderWidth, depth), frameMat);
@@ -763,25 +826,35 @@ function buildFanMesh(sizeMm: number): THREE.Group {
 
   // Blades kept just inside the bezel's own radius so their tips never poke past the fan's
   // circular silhouette, tapering toward the tip so they read as blades rather than paddles.
+  // One InstancedMesh instead of bladeCount separate Mesh objects — a scene with several fans
+  // (case mounts + AIO radiator) was easily adding 50-100+ blade draw calls on its own, which was
+  // a real contributor to the whole viewport feeling sluggish (see setHoverOutline's own
+  // InstancedMesh-aware branch, which keeps hover highlighting correct for this).
   const bladeCount = 7;
   const bladeGeo = makeBladeGeometry(radius * 0.68, radius * 0.34, depth * 0.5);
+  const blades = new T.InstancedMesh(bladeGeo, bladeMat, bladeCount);
+  const bladeMatrix = new T.Matrix4();
   for (let i = 0; i < bladeCount; i++) {
     const angle = (i / bladeCount) * Math.PI * 2;
-    const blade = new T.Mesh(bladeGeo, bladeMat);
-    blade.rotation.z = angle;
-    group.add(blade);
+    bladeMatrix.makeRotationZ(angle);
+    blades.setMatrixAt(i, bladeMatrix);
   }
+  group.add(blades);
   const hub = new T.Mesh(new T.CylinderGeometry(radius * 0.15, radius * 0.15, depth * 0.65, 16), hubMat);
   hub.rotation.x = Math.PI / 2;
   group.add(hub);
 
   const inset = size * 0.42;
-  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
-    const screw = new T.Mesh(new T.CylinderGeometry(size * 0.025, size * 0.025, depth * 1.02, 10), screwMat);
-    screw.rotation.x = Math.PI / 2;
-    screw.position.set(sx * inset, sy * inset, 0);
-    group.add(screw);
+  const screwGeo = new T.CylinderGeometry(size * 0.025, size * 0.025, depth * 1.02, 10);
+  const screwPositions: [number, number][] = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+  const screws = new T.InstancedMesh(screwGeo, screwMat, screwPositions.length);
+  const screwMatrix = new T.Matrix4();
+  const screwRotation = new T.Matrix4().makeRotationX(Math.PI / 2);
+  screwPositions.forEach(([sx, sy], i) => {
+    screwMatrix.copy(screwRotation).setPosition(sx * inset, sy * inset, 0);
+    screws.setMatrixAt(i, screwMatrix);
   });
+  group.add(screws);
 
   return group;
 }
@@ -790,22 +863,30 @@ function buildFanMesh(sizeMm: number): THREE.Group {
 // 165mm" in its own specs string) — two fin-stack towers connected by heatpipes bending up from a
 // shared base, with a single fan sandwiched between them. Every dimension below is a real mm value
 // run through mmToUnits, matching the same accurate scale buildFanMesh and the rest of the scene
-// (case, motherboard, BASE_POS coordinates) already use — the previous single-tower version used
-// small hand-picked numbers unrelated to real mm (fin box 0.32x0.018x0.34), which made a 120mm fan
-// (an accurate 1.14-unit diameter) look roughly 3.5x oversized next to it. Fixing that scale
-// mismatch matters as much here as adding the second tower.
-// Built along local Y as the "height" axis, matching dimensionSpecsFor's existing `{axis:'y', mm:
-// coolerHeightMm}` — the fin stacks (not the fixed-size fan) are what read as "this is the
-// dimension that grows with a taller cooler". Local X is the shared airflow axis (intake through
-// one tower, through the fan, through the other tower, matching the outward-facing +X convention
-// the old side-mounted fan and the AIO's pump/LCD both already use); local Z is lateral width.
+// (case, motherboard, BASE_POS coordinates) already use.
+//
+// Axis roles (corrected from an earlier version of this function, which built its height along
+// local Y with nothing ever rotating it into place — leaving the base plate floating off in the
+// wrong direction instead of touching the CPU): **local X is the height axis** (base at the local
+// origin, fin stack rising toward +X), matching the file-wide convention that X is "away from the
+// motherboard's face" (see moboAnchoredX's own comment, the CPU die's +X-facing contact surface,
+// and the AIO pump's +X-facing LCD — X is where a cooler's own height axis has to live for
+// BASE_POS.cooler's world offset to mean anything). Local Z is the tower-spread + airflow axis
+// (matches a real case's front-to-rear airflow). Local Y is each fin's own plate width.
+//
+// The base plate sits with its CPU-facing surface AT the local origin (X=0), not centered inside
+// the fin span — this is deliberate, not just "start counting from zero": it's what makes
+// BASE_POS.cooler's world offset represent "how far the cooler's CPU-contact point sits from the
+// board" (the same convention BASE_POS.cpu/mobo already use), and it means rescaling this mesh for
+// a different coolerHeightMm (a future second air-tower SKU) scales the fin stack's far end
+// without walking the base away from the CPU it's supposed to be touching.
 function buildAirCoolerMesh(): THREE.Group {
   const T = THREE;
   const g = new T.Group();
-  const finMat = new T.MeshStandardMaterial({ color: 0x8a8a90, roughness: 0.3, metalness: 0.75 });
-  const pipeMat = new T.MeshStandardMaterial({ color: 0xc4823a, roughness: 0.25, metalness: 0.85 });
-  const baseMat = new T.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.35, metalness: 0.6 });
-  const rodMat = new T.MeshStandardMaterial({ color: 0xb9b9be, roughness: 0.3, metalness: 0.8 });
+  const finMat = getSharedMaterial('cooler-fin', { color: 0x8a8a90, roughness: 0.3, metalness: 0.75 });
+  const pipeMat = getSharedMaterial('cooler-pipe', { color: 0xc4823a, roughness: 0.25, metalness: 0.85 });
+  const baseMat = getSharedMaterial('cooler-base', { color: 0x3a3a3a, roughness: 0.35, metalness: 0.6 });
+  const rodMat = getSharedMaterial('cooler-rod', { color: 0xb9b9be, roughness: 0.3, metalness: 0.8 });
 
   // Loosely modeled on the Noctua NH-D15: ~135mm-wide fin towers, ~45mm deep each, spread 80mm
   // apart center-to-center — which, after each tower's own 45mm depth and the fan's real ~25mm
@@ -817,78 +898,108 @@ function buildAirCoolerMesh(): THREE.Group {
   const FIN_COUNT = 11;
   const FIN_SPAN_MM = 148;
   const FIN_THICKNESS_MM = 1.2;
-  const BASE_WIDTH_MM = 52;
+  // Matches the CPU die's own real footprint (buildComponentMesh's 'cpu' case: BoxGeometry(0.1,
+  // 0.3, 0.3) -> 0.3 * MM_PER_UNIT = 31.5mm) — a real dual-tower cooler's copper contact block is
+  // roughly this size, not a plate spanning the whole gap between towers.
+  const BASE_SIZE_MM = 31.5;
   const BASE_THICKNESS_MM = 8;
   const PIPE_DIAMETER_MM = 8;
-  const PIPE_SPREAD_MM = 100;
+  // Small enough to sit inside BASE_SIZE_MM's own ±15.75mm half-width (with a clean margin) —
+  // this used to be 100mm, tuned against the old, much wider base plate; left unchanged when the
+  // base shrank to the CPU's own footprint, the pipes ended up spread past its edges into thin
+  // air. Adjacent pipe centers land ~7.3mm apart against an 8mm pipe diameter, so they touch/
+  // slightly overlap right at the base — matching how a real cooler's heatpipes bundle together
+  // at the contact block before spreading apart into the fins.
+  const PIPE_SPREAD_MM = 22;
 
-  const towerOffsetX = mmToUnits(TOWER_GAP_MM) / 2;
+  const towerOffsetZ = mmToUnits(TOWER_GAP_MM) / 2;
   const finDepth = mmToUnits(TOWER_DEPTH_MM);
   const finWidth = mmToUnits(TOWER_WIDTH_MM);
   const finThickness = mmToUnits(FIN_THICKNESS_MM);
   const finSpan = mmToUnits(FIN_SPAN_MM);
   const pipeRadius = mmToUnits(PIPE_DIAMETER_MM) / 2;
+  const baseThickness = mmToUnits(BASE_THICKNESS_MM);
+  const finStackStartX = baseThickness; // fins sit directly on top of the base, not at the group origin
 
-  // Shared contact base plate, spanning the full footprint under both towers — the copper/nickel
-  // block heatpipes visibly emerge from and bend outward from in a real dual-tower cooler.
+  // Shared contact base plate — the copper/nickel block heatpipes visibly emerge from and bend
+  // outward from into each tower. Sized to the CPU's own footprint (BASE_SIZE_MM), not stretched
+  // across the gap between towers — the heatpipes are what actually span that distance. Its
+  // CPU-facing surface sits at local X=0 (see the function's own comment above); the plate itself
+  // extends from there to X=baseThickness.
   const base = new T.Mesh(
-    new T.BoxGeometry(mmToUnits(TOWER_GAP_MM + TOWER_DEPTH_MM), mmToUnits(BASE_THICKNESS_MM), mmToUnits(BASE_WIDTH_MM)),
+    new T.BoxGeometry(baseThickness, mmToUnits(BASE_SIZE_MM), mmToUnits(BASE_SIZE_MM)),
     baseMat,
   );
-  base.position.y = -finSpan / 2 - mmToUnits(BASE_THICKNESS_MM) / 2;
+  base.position.x = baseThickness / 2;
   g.add(base);
 
-  // Two fin towers, spread along X, each a stack of thin plates spread along Y.
-  [-towerOffsetX, towerOffsetX].forEach((towerX) => {
+  // Two fin towers, spread along Z (the airflow axis), each a stack of thin plates spread along X
+  // (height, away from the board) — one InstancedMesh for all 2*FIN_COUNT fins (identical
+  // geometry, only position varies) instead of 22 separate Mesh/BoxGeometry pairs.
+  const finGeo = new T.BoxGeometry(finThickness, finWidth, finDepth);
+  const fins = new T.InstancedMesh(finGeo, finMat, 2 * FIN_COUNT);
+  const finMatrix = new T.Matrix4();
+  let finIdx = 0;
+  [-towerOffsetZ, towerOffsetZ].forEach((towerZ) => {
     for (let i = 0; i < FIN_COUNT; i++) {
-      const fin = new T.Mesh(new T.BoxGeometry(finDepth, finThickness, finWidth), finMat);
-      fin.position.set(towerX, -finSpan / 2 + (finSpan / (FIN_COUNT - 1)) * i, 0);
-      g.add(fin);
+      finMatrix.makeTranslation(finStackStartX + (finSpan / (FIN_COUNT - 1)) * i, 0, towerZ);
+      fins.setMatrixAt(finIdx++, finMatrix);
     }
   });
+  g.add(fins);
 
   // Heatpipes: each bends from the shared base out into one of the two towers, then runs straight
-  // up through that tower's fin stack — a short horizontal segment + a long vertical segment, the
-  // same two-segment bend technique buildAioTubes uses for the AIO's own tubing below (no
-  // curve/TubeGeometry precedent exists anywhere in this file). 2 pipes feed each tower.
+  // up (along X now) through that tower's fin stack — a short horizontal segment + a long vertical
+  // segment, the same two-segment bend technique buildAioTubes uses for the AIO's own tubing below
+  // (no curve/TubeGeometry precedent exists anywhere in this file). 2 pipes feed each tower. Every
+  // horizontal segment shares the same length (hLen is towerOffsetZ regardless of which tower,
+  // since it's the same magnitude in either direction) and every vertical segment shares the same
+  // length too — so each group is one InstancedMesh(4), only position differs within a group.
   const pipeSpread = mmToUnits(PIPE_SPREAD_MM);
-  const pipeZs = [-pipeSpread / 2, -pipeSpread / 6, pipeSpread / 6, pipeSpread / 2];
-  const pipeBaseY = -finSpan / 2;
-  pipeZs.forEach((z, idx) => {
-    const towerX = idx % 2 === 0 ? -towerOffsetX : towerOffsetX;
-    const hLen = Math.abs(towerX);
-    if (hLen > 0.001) {
-      const hSeg = new T.Mesh(new T.CylinderGeometry(pipeRadius, pipeRadius, hLen, 10), pipeMat);
-      hSeg.rotation.z = Math.PI / 2;
-      hSeg.position.set(towerX / 2, pipeBaseY, z);
-      g.add(hSeg);
-    }
-    const vLen = finSpan + mmToUnits(10);
-    const vSeg = new T.Mesh(new T.CylinderGeometry(pipeRadius, pipeRadius, vLen, 10), pipeMat);
-    vSeg.position.set(towerX, pipeBaseY + vLen / 2, z);
-    g.add(vSeg);
+  const pipeYs = [-pipeSpread / 2, -pipeSpread / 6, pipeSpread / 6, pipeSpread / 2];
+  const hLen = towerOffsetZ;
+  const vLen = finSpan + mmToUnits(10);
+  const hPipeGeo = new T.CylinderGeometry(pipeRadius, pipeRadius, hLen, 10);
+  const vPipeGeo = new T.CylinderGeometry(pipeRadius, pipeRadius, vLen, 10);
+  const hPipes = new T.InstancedMesh(hPipeGeo, pipeMat, pipeYs.length);
+  const vPipes = new T.InstancedMesh(vPipeGeo, pipeMat, pipeYs.length);
+  const pipeMatrix = new T.Matrix4();
+  const hPipeRotation = new T.Matrix4().makeRotationX(Math.PI / 2);
+  const vPipeRotation = new T.Matrix4().makeRotationZ(Math.PI / 2);
+  pipeYs.forEach((y, idx) => {
+    const towerZ = idx % 2 === 0 ? -towerOffsetZ : towerOffsetZ;
+    pipeMatrix.copy(hPipeRotation).setPosition(finStackStartX / 2, y, towerZ / 2);
+    hPipes.setMatrixAt(idx, pipeMatrix);
+    pipeMatrix.copy(vPipeRotation).setPosition(finStackStartX + vLen / 2, y, towerZ);
+    vPipes.setMatrixAt(idx, pipeMatrix);
   });
+  g.add(hPipes);
+  g.add(vPipes);
 
   // Thin top corner rods connecting the two towers — a cheap detail matching the reference photo's
   // visible corner bracket, at the same "a few extra cylinders" cost as the fan's own corner screws.
-  [-mmToUnits(60), mmToUnits(60)].forEach((z) => {
-    const rod = new T.Mesh(new T.CylinderGeometry(mmToUnits(2), mmToUnits(2), towerOffsetX * 2, 8), rodMat);
-    rod.rotation.z = Math.PI / 2;
-    rod.position.set(0, finSpan / 2 + mmToUnits(4), z);
-    g.add(rod);
+  const rodGeo = new T.CylinderGeometry(mmToUnits(2), mmToUnits(2), towerOffsetZ * 2, 8);
+  const rods = new T.InstancedMesh(rodGeo, rodMat, 2);
+  const rodMatrix = new T.Matrix4();
+  const rodRotation = new T.Matrix4().makeRotationX(Math.PI / 2);
+  [-mmToUnits(60), mmToUnits(60)].forEach((y, i) => {
+    rodMatrix.copy(rodRotation).setPosition(finStackStartX + finSpan + mmToUnits(4), y, 0);
+    rods.setMatrixAt(i, rodMatrix);
   });
+  g.add(rods);
 
-  // Single fan sandwiched between the two towers, facing along the shared airflow (+X) axis —
-  // recentered at local X origin instead of mounted beside a single tower.
+  // Single fan sandwiched between the two towers — buildFanMesh already faces local +Z by default
+  // (see its own comment), which is exactly this cooler's airflow axis now, so no corrective
+  // rotation is needed here (the old fan.rotation.y = Math.PI/2 existed only to redirect it onto
+  // the previous, wrong, X-as-airflow convention). Centered on the fin stack's own X-midpoint.
   const fan = buildFanMesh(120);
-  fan.rotation.y = Math.PI / 2;
+  fan.position.x = finStackStartX + finSpan / 2;
   g.add(fan);
 
-  // No extra uniform scale here (the old version's g.scale.setScalar(0.85) fudge factor is gone
-  // deliberately) — every dimension above is already accurately mm-derived, so an unexplained 15%
-  // shrink would just reintroduce a small scale error on top of an otherwise correctly-proportioned
-  // model. dimensionSpecsFor's Y-rescaling (against the real selected cooler's coolerHeightMm)
-  // still applies on top of this regardless, exactly as before.
+  // No extra uniform scale here — every dimension above is already accurately mm-derived, so an
+  // unexplained fudge-factor shrink would just reintroduce a small scale error on top of an
+  // otherwise correctly-proportioned model. dimensionSpecsFor's X-rescaling (against the real
+  // selected cooler's coolerHeightMm) still applies on top of this regardless.
   return g;
 }
 
@@ -1943,6 +2054,19 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
           outline.scale.multiplyScalar(1.015);
           hoverOutlineGroup.add(outline);
         }
+      } else if (obj instanceof THREE.InstancedMesh) {
+        // Mirrors the plain-Mesh branch below, but for a part built as an InstancedMesh (fan
+        // blades/screws, cooler fins/heatpipes, RAM crown teeth, motherboard port clusters — see
+        // buildFanMesh etc.) — copying instanceMatrix across reproduces every instance's own
+        // transform, so the outline still traces each individual blade/tooth/port correctly
+        // instead of collapsing to one wrongly-placed blob at the InstancedMesh's own origin.
+        const outline = new THREE.InstancedMesh(obj.geometry, hoverOutlineMaterial, obj.count);
+        outline.instanceMatrix.copy(obj.instanceMatrix);
+        obj.getWorldPosition(outline.position);
+        obj.getWorldQuaternion(outline.quaternion);
+        obj.getWorldScale(outline.scale);
+        outline.scale.multiplyScalar(1.04);
+        hoverOutlineGroup.add(outline);
       } else {
         const m = obj as THREE.Mesh;
         if (m.isMesh) {
@@ -2052,17 +2176,18 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   // size without replaying the fly-in). For a first-time install, the page calls this before
   // toggleComponent(id, true), so the stored sizeScale is already correct when the install
   // animation reads it.
-  function setSizeScale(id: CompId, specs: DimensionSpec[]) {
+  function setSizeScale(id: CompId, specs: DimensionSpec[], comp?: Component) {
     const obj = objects[id];
     if (!obj || id === 'case') return;
     if (id === 'cooler') {
-      // The AIO branch of dimensionSpecsFor is the one tell-tale sign: `{axis:'x', ...,
-      // scalesMesh:false}` only ever appears for a cooler with a real radiator spec (see
-      // dimensionSpecsFor above) — anything else (including no cooler spec at all) means air
-      // tower. Only rebuild when the variant (or, for AIO, the specific radiator size) actually
-      // changed, since this swaps out real geometry rather than just adjusting a scale factor.
+      // The AIO branch of dimensionSpecsFor is the tell-tale sign when no explicit choice has been
+      // made: `{axis:'x', ..., scalesMesh:false}` only ever appears for a cooler with a real
+      // radiator spec (see dimensionSpecsFor above) — anything else (including no cooler spec at
+      // all) means air tower. comp.coolerType, when an admin has explicitly set it, wins over that
+      // inference outright — this matters for the case where the type was just switched but the
+      // matching mm field hasn't been filled in yet, which the spec-only inference can't see.
       const radiatorSpec = specs.find((s) => s.axis === 'x' && s.scalesMesh === false);
-      const isAio = !!radiatorSpec;
+      const isAio = comp?.coolerType ? comp.coolerType === 'aio' : !!radiatorSpec;
       const radiatorMm = radiatorSpec?.mm;
       if (isAio !== lastCoolerIsAio || (isAio && radiatorMm !== lastCoolerRadiatorMm)) {
         const mesh = obj.mesh;
@@ -2272,7 +2397,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     SLOTS.forEach((id) => {
       const comp = findComp(id);
       if (comp) {
-        setSizeScale(id, dimensionSpecsFor(id, comp, gpuVertical));
+        setSizeScale(id, dimensionSpecsFor(id, comp, gpuVertical), comp);
         if (id === 'ram') setRamModules(ramModuleCount(comp));
         if (id === 'mobo') setMoboRamSlots(moboRamSlotCount(comp));
       }

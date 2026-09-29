@@ -4,10 +4,7 @@ import { CSSProperties, ReactNode } from 'react';
 import TransitionLink from '@/components/TransitionLink';
 import { useSite } from '@/contexts/SiteContext';
 import { useIsMobile } from '@/lib/use-media-query';
-
-const INK = '#1C1C1A';
-const MUTED = '#7A7469';
-const GOLD = '#C4A35A';
+import { INK, MUTED, GOLD } from '@/lib/design-tokens';
 
 const serif: CSSProperties = { fontFamily: 'var(--font-serif)' };
 const sans: CSSProperties = { fontFamily: 'var(--font-sans)' };

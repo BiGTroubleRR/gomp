@@ -13,12 +13,7 @@ import type { CustomerBuild } from '@/lib/supabase/customer-build-mapping';
 import { fetchComponentDb, getCachedComponentDb } from '@/lib/supabase/components';
 import { defaultComponentDb, computeBuildTier, type ComponentDb } from '@/lib/component-db-seed';
 import TierBadge from '@/components/TierBadge';
-
-const INK = '#1C1C1A';
-const MUTED = '#7A7469';
-const MAROON = '#6E1423';
-const PAGE_BG = '#F5F0E6';
-const PANEL = '#FDFAF4';
+import { INK, MUTED, MAROON, PAGE_BG, PANEL_BG as PANEL } from '@/lib/design-tokens';
 
 // Spec lines are free admin-typed text ("Procesor: Intel Core i9-14900K"), not structured
 // {label, value} data — split on the first ':' so the label can be colored/bolded separately

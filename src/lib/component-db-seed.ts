@@ -60,11 +60,11 @@ export type Component = {
   // (not sourced from any third-party dataset), for the categories where per-SKU size actually
   // varies enough to matter. Drives the Build page's 3D scene scaling in build-scene.ts — for a
   // cooler specifically, whether coolerRadiatorMm is set is also what decides AIO vs air-tower
-  // 3D model (see dimensionSpecsFor/buildAioCoolerMesh in build-scene.ts), not just clearance
-  // checking. Optional and often unset — fitsInCase/build-scene.ts both fall back to generic
-  // per-category sizing when a value is missing, so leaving these blank never breaks the 3D
-  // configurator, just makes part placement/collision-checking (and, for coolers, the model
-  // choice) less precise for that SKU.
+  // 3D model when coolerType (below) is left unset (see dimensionSpecsFor/buildAioCoolerMesh in
+  // build-scene.ts), not just clearance checking. Optional and often unset — fitsInCase/
+  // build-scene.ts both fall back to generic per-category sizing when a value is missing, so
+  // leaving these blank never breaks the 3D configurator, just makes part placement/collision-
+  // checking (and, for coolers, the model choice) less precise for that SKU.
   caseWidthMm?: number; // case only
   caseHeightMm?: number; // case only
   caseDepthMm?: number; // case only
@@ -77,6 +77,10 @@ export type Component = {
   gpuWidthMm?: number; // gpu only — top-to-bottom card height, falls back to GPU_HEIGHT_MM when unset
   coolerHeightMm?: number; // cooler only, air towers
   coolerRadiatorMm?: number; // cooler only, AIO — the radiator that mounts on the case, not the pump block
+  // cooler only: explicit air/liquid 3D-model choice, settable in Admin. Undefined falls back to
+  // the old implicit detection (coolerRadiatorMm present -> AIO, else air tower) — see
+  // dimensionSpecsFor/setSizeScale in build-scene.ts.
+  coolerType?: 'air' | 'aio';
   psuLengthMm?: number; // psu only
   ramHeightMm?: number; // ram only, per-SKU heatsink height — falls back to RAM_DIMM_SIZE_MM.height (bare PCB) when unset
   ramGeneration?: 4 | 5; // ram only: DDR4 vs DDR5 — drives the /build DDR filter

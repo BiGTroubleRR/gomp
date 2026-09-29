@@ -14,6 +14,7 @@ import { fetchPrebuilts } from '@/lib/supabase/prebuilts';
 import { fetchComponentDb, getCachedComponentDb } from '@/lib/supabase/components';
 import { computeBuildTotalGross, computeBuildTier, defaultComponentDb, type Build, type ComponentDb } from '@/lib/component-db-seed';
 import TierBadge from '@/components/TierBadge';
+import { PAGE_BG as BG, PANEL_BG as PANEL, INK, MUTED, MAROON, GOLD } from '@/lib/design-tokens';
 
 const CAT_LABEL: Record<Build['cat'], { en: string; sk: string; cz: string }> = {
   flagship: { en: 'Flagship', sk: 'Vlajková loď', cz: 'Vlajková loď' },
@@ -21,14 +22,6 @@ const CAT_LABEL: Record<Build['cat'], { en: string; sk: string; cz: string }> = 
   midrange: { en: 'Value', sk: 'Hodnotová', cz: 'Hodnotová' },
   entry: { en: 'Entry', sk: 'Základná', cz: 'Základní' },
 };
-
-// ---- Palette (exact literal hex values from the original site) ----
-const BG = '#F5F0E6';
-const PANEL = '#FDFAF4';
-const INK = '#1C1C1A';
-const MUTED = '#7A7469';
-const MAROON = '#6E1423';
-const GOLD = '#C4A35A';
 
 // ---- Translations ----
 type Dict = Record<string, string>;
@@ -315,6 +308,22 @@ export default function Home() {
 
         {/* ---- Hero ---- */}
         <section style={{ minHeight: isMobile ? 'auto' : '100vh', padding: isMobile ? '100px 24px 64px' : '140px 60px 100px', display: 'flex', alignItems: 'center', position: 'relative' }}>
+          {/* Ambient decoration across the hero's own side margins — a calmer, slower reuse of
+              the swipe-transition's ember-rise dots, alongside a light mobile-only dot pair
+              (this section otherwise shows zero decoration on mobile). */}
+          {!isMobile ? (
+            <>
+              <div style={{ position: 'absolute', top: '22%', left: '4%', width: 4, height: 4, borderRadius: '50%', background: GOLD, boxShadow: '0 0 8px 2px rgba(196,163,90,0.4)', pointerEvents: 'none', animation: 'gompEmberRise 5s ease-out infinite' }} />
+              <div style={{ position: 'absolute', top: '68%', left: '7%', width: 3, height: 3, borderRadius: '50%', background: '#E8A9B4', pointerEvents: 'none', animation: 'gompEmberRise 6s 1.2s ease-out infinite' }} />
+              <div style={{ position: 'absolute', top: '40%', right: '5%', width: 5, height: 5, borderRadius: '50%', background: GOLD, boxShadow: '0 0 9px 2px rgba(196,163,90,0.4)', pointerEvents: 'none', animation: 'gompEmberRise 5.6s 0.6s ease-out infinite' }} />
+              <div style={{ position: 'absolute', top: '78%', right: '8%', width: 3, height: 3, borderRadius: '50%', background: '#E8A9B4', pointerEvents: 'none', animation: 'gompEmberRise 4.6s 1.8s ease-out infinite' }} />
+            </>
+          ) : (
+            <>
+              <div style={{ position: 'absolute', top: 90, left: 16, width: 3, height: 3, borderRadius: '50%', background: GOLD, pointerEvents: 'none', animation: 'gompPulseDot 4.6s ease-in-out infinite' }} />
+              <div style={{ position: 'absolute', top: 90, right: 16, width: 3, height: 3, borderRadius: '50%', background: MAROON, pointerEvents: 'none', animation: 'gompPulseDot 5.2s ease-in-out infinite 0.6s' }} />
+            </>
+          )}
           <div
             style={{
               maxWidth: 1280,
@@ -652,7 +661,7 @@ export default function Home() {
 
         {/* ---- Stats strip ---- */}
         <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.12)', borderBottom: '0.5px solid rgba(28,28,26,0.12)', position: 'relative' }}>
-          {!isMobile && (
+          {!isMobile ? (
             <>
               <div
                 style={{
@@ -667,12 +676,35 @@ export default function Home() {
                   animation: 'gompRotateSlow 95s linear infinite',
                 }}
               />
+              {/* Mirrored, smaller accent on the opposite side — the section previously decorated
+                  only its right half. */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: -30,
+                  left: 90,
+                  width: 90,
+                  height: 90,
+                  border: '0.5px solid rgba(110,20,35,0.22)',
+                  borderRadius: '50%',
+                  pointerEvents: 'none',
+                  animation: 'gompRotateSlowRev 85s linear infinite',
+                }}
+              />
               <div
                 style={{ position: 'absolute', top: -3, left: '25%', width: 6, height: 6, borderRadius: '50%', background: GOLD, pointerEvents: 'none', animation: 'gompPulseDot 4.2s ease-in-out infinite' }}
               />
               <div
                 style={{ position: 'absolute', bottom: -3, left: '75%', width: 5, height: 5, borderRadius: '50%', background: MAROON, pointerEvents: 'none', animation: 'gompPulseDot 5.2s ease-in-out infinite 1.1s' }}
               />
+              <div
+                style={{ position: 'absolute', bottom: -3, left: '48%', width: 4, height: 4, borderRadius: '50%', background: GOLD, pointerEvents: 'none', animation: 'gompPulseDot 4.9s ease-in-out infinite 0.5s' }}
+              />
+            </>
+          ) : (
+            <>
+              <div style={{ position: 'absolute', top: 6, left: 14, width: 3, height: 3, borderRadius: '50%', background: GOLD, pointerEvents: 'none', animation: 'gompPulseDot 4.5s ease-in-out infinite' }} />
+              <div style={{ position: 'absolute', top: 6, right: 14, width: 3, height: 3, borderRadius: '50%', background: MAROON, pointerEvents: 'none', animation: 'gompPulseDot 5.1s ease-in-out infinite 0.6s' }} />
             </>
           )}
           <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: `repeat(${stats.length},1fr)` }}>
@@ -697,6 +729,18 @@ export default function Home() {
 
         {/* ---- Featured Builds ---- */}
         <section style={{ padding: isMobile ? '64px 24px' : '100px 60px', position: 'relative' }}>
+          {/* Mirrors the heading's existing top-left double-ring with a smaller top-right accent
+              (desktop), or a light dot pair framing the section (mobile, previously undecorated). */}
+          {!isMobile ? (
+            <div style={{ position: 'absolute', top: 70, right: 70, width: 100, height: 100, pointerEvents: 'none', zIndex: -1 }}>
+              <div style={{ position: 'absolute', inset: 0, border: '0.5px solid rgba(110,20,35,0.18)', borderRadius: '50%', animation: 'gompRotateSlowRev 75s linear infinite' }} />
+            </div>
+          ) : (
+            <>
+              <div style={{ position: 'absolute', top: 14, left: 16, width: 4, height: 4, borderRadius: '50%', background: MAROON, pointerEvents: 'none', animation: 'gompPulseDot 4.6s ease-in-out infinite' }} />
+              <div style={{ position: 'absolute', top: 14, right: 16, width: 3, height: 3, borderRadius: '50%', background: GOLD, pointerEvents: 'none', animation: 'gompPulseDot 5.2s ease-in-out infinite 0.5s' }} />
+            </>
+          )}
           <div style={{ maxWidth: 1280, margin: '0 auto' }}>
             <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'flex-end', justifyContent: 'space-between', gap: isMobile ? 16 : 0, marginBottom: isMobile ? 32 : 56 }}>
               <div style={{ position: 'relative' }}>
@@ -832,11 +876,23 @@ export default function Home() {
         <section style={{ borderTop: '0.5px solid rgba(28,28,26,0.12)', backgroundColor: PANEL, position: 'relative', overflow: 'hidden' }}>
           <div style={{ maxWidth: 1280, margin: '0 auto' }}>
             <div style={{ padding: isMobile ? '56px 24px 32px' : '80px 60px 56px', position: 'relative' }}>
-              {!isMobile && (
-                <div style={{ position: 'absolute', top: -30, right: 40, width: 170, height: 170, pointerEvents: 'none', zIndex: 0 }}>
-                  <div style={{ position: 'absolute', inset: 0, border: '0.5px solid rgba(196,163,90,0.28)', borderRadius: '50%', animation: 'gompRotateSlowRev 105s linear infinite' }} />
-                  <div style={{ position: 'absolute', inset: 30, border: '0.5px solid rgba(196,163,90,0.16)', borderRadius: '50%', animation: 'gompRotateSlow 70s linear infinite' }} />
-                </div>
+              {!isMobile ? (
+                <>
+                  <div style={{ position: 'absolute', top: -30, right: 40, width: 170, height: 170, pointerEvents: 'none', zIndex: 0 }}>
+                    <div style={{ position: 'absolute', inset: 0, border: '0.5px solid rgba(196,163,90,0.28)', borderRadius: '50%', animation: 'gompRotateSlowRev 105s linear infinite' }} />
+                    <div style={{ position: 'absolute', inset: 30, border: '0.5px solid rgba(196,163,90,0.16)', borderRadius: '50%', animation: 'gompRotateSlow 70s linear infinite' }} />
+                  </div>
+                  {/* Opposite-side accent — this heading previously decorated only its right side. */}
+                  <div style={{ position: 'absolute', top: -10, left: 20, width: 100, height: 100, pointerEvents: 'none', zIndex: 0 }}>
+                    <div style={{ position: 'absolute', inset: 0, border: '0.5px solid rgba(110,20,35,0.18)', borderRadius: '50%', animation: 'gompRotateSlow 88s linear infinite' }} />
+                  </div>
+                  <div style={{ position: 'absolute', top: 4, left: 130, width: 4, height: 4, borderRadius: '50%', background: MAROON, pointerEvents: 'none', animation: 'gompPulseDot 5.3s ease-in-out infinite 0.3s' }} />
+                </>
+              ) : (
+                <>
+                  <div style={{ position: 'absolute', top: 10, left: 16, width: 3, height: 3, borderRadius: '50%', background: MAROON, pointerEvents: 'none', animation: 'gompPulseDot 4.7s ease-in-out infinite' }} />
+                  <div style={{ position: 'absolute', top: 10, right: 16, width: 3, height: 3, borderRadius: '50%', background: GOLD, pointerEvents: 'none', animation: 'gompPulseDot 5.4s ease-in-out infinite 0.8s' }} />
+                </>
               )}
               <div
                 style={{
@@ -887,10 +943,14 @@ export default function Home() {
         {/* ---- CTA banner ---- */}
         <section style={{ padding: isMobile ? '64px 24px' : '120px 60px', borderTop: '0.5px solid rgba(28,28,26,0.12)', backgroundColor: BG, position: 'relative' }}>
           <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 40 : 80, alignItems: 'center', position: 'relative' }}>
-            {!isMobile && (
+            {!isMobile ? (
               <>
                 <div style={{ position: 'absolute', top: -50, left: '38%', width: 200, height: 200, pointerEvents: 'none', zIndex: 0 }}>
                   <div style={{ position: 'absolute', inset: 0, border: '0.5px solid rgba(110,20,35,0.2)', borderRadius: '50%', animation: 'gompRotateSlow 92s linear infinite' }} />
+                </div>
+                {/* Right-side accent — the banner previously decorated only its center/left. */}
+                <div style={{ position: 'absolute', top: 30, right: '6%', width: 110, height: 110, pointerEvents: 'none', zIndex: 0 }}>
+                  <div style={{ position: 'absolute', inset: 0, border: '0.5px solid rgba(196,163,90,0.26)', borderRadius: '50%', animation: 'gompRotateSlowRev 82s linear infinite' }} />
                 </div>
                 <div
                   style={{
@@ -914,6 +974,12 @@ export default function Home() {
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: 0.5, color: MAROON, whiteSpace: 'nowrap' }}>★ 4.9 RATED</span>
                 </div>
                 <div style={{ position: 'absolute', bottom: 30, left: '30%', width: 6, height: 6, borderRadius: '50%', background: GOLD, pointerEvents: 'none', animation: 'gompPulseDot 5.4s ease-in-out infinite 0.6s' }} />
+                <div style={{ position: 'absolute', bottom: 50, right: '10%', width: 5, height: 5, borderRadius: '50%', background: MAROON, pointerEvents: 'none', animation: 'gompPulseDot 4.6s ease-in-out infinite 0.9s' }} />
+              </>
+            ) : (
+              <>
+                <div style={{ position: 'absolute', top: 8, left: 8, width: 3, height: 3, borderRadius: '50%', background: GOLD, pointerEvents: 'none', animation: 'gompPulseDot 4.8s ease-in-out infinite' }} />
+                <div style={{ position: 'absolute', top: 8, right: 8, width: 3, height: 3, borderRadius: '50%', background: MAROON, pointerEvents: 'none', animation: 'gompPulseDot 5.3s ease-in-out infinite 0.5s' }} />
               </>
             )}
             <Reveal revealKey="cta-text">

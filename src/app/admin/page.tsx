@@ -233,6 +233,7 @@ type Translations = {
   max_gpu_length_mm: string; max_cooler_height_mm: string; max_radiator_mm: string; max_psu_length_mm: string;
   gpu_length_mm: string; gpu_slot_width: string; gpu_width_mm: string;
   cooler_height_mm: string; cooler_radiator_mm: string;
+  cooler_type_label: string; cooler_type_air: string; cooler_type_aio: string;
   psu_length_mm: string;
   update_arrow: string; add_prefix: string; edit_prefix: string;
   select_prefix: string; select_suffix: string;
@@ -326,6 +327,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     max_gpu_length_mm: 'Max GPU length', max_cooler_height_mm: 'Max cooler height', max_radiator_mm: 'Max radiator size', max_psu_length_mm: 'Max PSU length',
     gpu_length_mm: 'Length', gpu_slot_width: 'Slot width', gpu_width_mm: 'Width (height)',
     cooler_height_mm: 'Height (air)', cooler_radiator_mm: 'Radiator size (AIO)',
+    cooler_type_label: '3D model', cooler_type_air: 'Air', cooler_type_aio: 'Liquid',
     psu_length_mm: 'Length',
     update_arrow: 'Update →', add_prefix: 'Add ', edit_prefix: 'Edit ',
     select_prefix: '— Select ', select_suffix: ' —',
@@ -420,6 +422,7 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     max_gpu_length_mm: 'Max. dĺžka GPU', max_cooler_height_mm: 'Max. výška chladiča', max_radiator_mm: 'Max. veľkosť radiátora', max_psu_length_mm: 'Max. dĺžka zdroja',
     gpu_length_mm: 'Dĺžka', gpu_slot_width: 'Šírka (sloty)', gpu_width_mm: 'Šírka (výška karty)',
     cooler_height_mm: 'Výška (vzduchový)', cooler_radiator_mm: 'Veľkosť radiátora (AIO)',
+    cooler_type_label: '3D model', cooler_type_air: 'Vzduchový', cooler_type_aio: 'Vodný',
     psu_length_mm: 'Dĺžka',
     update_arrow: 'Aktualizovať →', add_prefix: 'Pridať ', edit_prefix: 'Upraviť ',
     select_prefix: '— Vybrať ', select_suffix: ' —',
@@ -498,7 +501,7 @@ type CompFormState = {
   caseWidthMm: string; caseHeightMm: string; caseDepthMm: string;
   maxGpuLengthMm: string; maxCoolerHeightMm: string; maxRadiatorMm: string; maxPsuLengthMm: string;
   gpuLengthMm: string; gpuSlotWidth: string; gpuWidthMm: string; // gpu only
-  coolerHeightMm: string; coolerRadiatorMm: string; // cooler only
+  coolerHeightMm: string; coolerRadiatorMm: string; coolerType: '' | 'air' | 'aio'; // cooler only
   psuLengthMm: string; // psu only
 };
 
@@ -510,7 +513,7 @@ function initialCompForm(): CompFormState {
     caseWidthMm: '', caseHeightMm: '', caseDepthMm: '',
     maxGpuLengthMm: '', maxCoolerHeightMm: '', maxRadiatorMm: '', maxPsuLengthMm: '',
     gpuLengthMm: '', gpuSlotWidth: '', gpuWidthMm: '',
-    coolerHeightMm: '', coolerRadiatorMm: '',
+    coolerHeightMm: '', coolerRadiatorMm: '', coolerType: '',
     psuLengthMm: '',
   };
 }
@@ -569,6 +572,7 @@ function dimensionFieldsFromForm(cat: Category, form: CompFormState): Partial<Co
     ...(cat === 'gpu' && form.gpuWidthMm ? { gpuWidthMm: num(form.gpuWidthMm) } : {}),
     ...(cat === 'cooler' && form.coolerHeightMm ? { coolerHeightMm: num(form.coolerHeightMm) } : {}),
     ...(cat === 'cooler' && form.coolerRadiatorMm ? { coolerRadiatorMm: num(form.coolerRadiatorMm) } : {}),
+    ...(cat === 'cooler' && form.coolerType ? { coolerType: form.coolerType } : {}),
     ...(cat === 'psu' && form.psuLengthMm ? { psuLengthMm: num(form.psuLengthMm) } : {}),
   };
 }
@@ -1387,6 +1391,7 @@ export default function AdminPage() {
       gpuWidthMm: comp.gpuWidthMm != null ? String(comp.gpuWidthMm) : '',
       coolerHeightMm: comp.coolerHeightMm != null ? String(comp.coolerHeightMm) : '',
       coolerRadiatorMm: comp.coolerRadiatorMm != null ? String(comp.coolerRadiatorMm) : '',
+      coolerType: comp.coolerType ?? '',
       psuLengthMm: comp.psuLengthMm != null ? String(comp.psuLengthMm) : '',
     });
   }
@@ -3147,6 +3152,28 @@ export default function AdminPage() {
                         onChange={(e) => setCompForm({ ...compForm, gpuWidthMm: e.target.value })}
                         style={INPUT_STYLE}
                       />
+                    </div>
+                  </div>
+                )}
+                {compCat === 'cooler' && (
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={LABEL_STYLE}>{t.cooler_type_label}</div>
+                    <div style={{ display: 'flex', gap: 4, background: 'rgba(28,28,26,0.05)', borderRadius: 4, padding: 4, marginBottom: 16, maxWidth: 280 }}>
+                      {(['air', 'aio'] as const).map((v) => (
+                        <button
+                          key={v}
+                          onClick={() => setCompForm({ ...compForm, coolerType: v })}
+                          style={{
+                            flex: 1, fontFamily: 'var(--font-sans)', fontSize: 12.5, fontWeight: 600, padding: '7px 0',
+                            borderRadius: 2, border: 'none', cursor: 'pointer',
+                            background: compForm.coolerType === v ? '#fff' : 'transparent',
+                            color: compForm.coolerType === v ? '#6E1423' : '#7A7469',
+                            boxShadow: compForm.coolerType === v ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                          }}
+                        >
+                          {v === 'air' ? t.cooler_type_air : t.cooler_type_aio}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}

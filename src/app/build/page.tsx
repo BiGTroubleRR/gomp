@@ -56,6 +56,7 @@ import {
 import { useIsMobile } from '@/lib/use-media-query';
 import { setDustCursorVisible, isDustEnabled } from '@/lib/cursor-dust';
 import { fetchAlignmentTuningConfig, subscribeAlignmentTuning, resolveAlignmentTuning, type AlignmentTuningConfig } from '@/lib/supabase/alignment-tuning';
+import { PAGE_BG as BG, PANEL_BG as PANEL, INK, MUTED, MAROON, GOLD } from '@/lib/design-tokens';
 
 const T = {
   en: {
@@ -270,12 +271,6 @@ const T = {
   },
 } as const;
 
-const BG = '#F5F0E6';
-const PANEL = '#FDFAF4';
-const INK = '#1C1C1A';
-const MUTED = '#7A7469';
-const MAROON = '#6E1423';
-const GOLD = '#C4A35A';
 const POSH_GREEN = '#5C7A5C'; // muted sage, so the wattage bar's "safe" end still reads as part of the site's palette
 
 // Best-to-worst tier order for the sort-by-tier toggle; an unset tier (bulk-imported SKUs with
@@ -961,7 +956,7 @@ function BuildPageContent() {
         setFanConfigState(newFanConfig);
         sceneRef.current?.setFans(newFanConfig);
       }
-      if (comp) sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp));
+      if (comp) sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp), comp);
       if (id === 'ram' && comp) sceneRef.current?.setRamModules(ramModuleCount(comp));
       sceneRef.current?.toggleComponent(id, next, delayMs);
       const gpuVertical =
@@ -1017,7 +1012,7 @@ function BuildPageContent() {
       // Also covers a same-category SKU swap while already installed (e.g. GPU already on,
       // user picks a different card) — that path doesn't go through toggleComponent (see
       // selectCard), so this is what picks up the new part's real size in that case.
-      sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp));
+      sceneRef.current?.setSizeScale(id, dimensionSpecsFor(id, comp), comp);
       if (id === 'ram') sceneRef.current?.setRamModules(ramModuleCount(comp));
       if (id === 'mobo') sceneRef.current?.setMoboRamSlots(moboRamSlotCount(comp));
     }

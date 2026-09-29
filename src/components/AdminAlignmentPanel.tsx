@@ -15,11 +15,8 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { DEFAULT_ALIGNMENT_TUNING, MM_PER_UNIT, SIZES, type AlignmentTunableId, type AlignmentTuning } from '@/lib/build-scene';
 import type { FormFactor } from '@/lib/component-db-seed';
 import { fetchAlignmentTuningConfig, saveAlignmentTuningConfig, type AlignmentTuningConfig } from '@/lib/supabase/alignment-tuning';
+import { INK, SUBTEXT, MAROON as ACCENT, BORDER } from '@/lib/design-tokens';
 
-const INK = '#1C1C1A';
-const SUBTEXT = '#8A8378';
-const ACCENT = '#6E1423';
-const BORDER = 'rgba(28,28,26,0.1)';
 const sans: CSSProperties = { fontFamily: 'var(--font-sans)' };
 const mono: CSSProperties = { fontFamily: 'var(--font-mono)' };
 

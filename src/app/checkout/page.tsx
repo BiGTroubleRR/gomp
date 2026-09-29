@@ -12,6 +12,7 @@ import { useIsMobile } from '@/lib/use-media-query';
 import { submitCheckoutIntent, type PaymentMethod } from '@/lib/supabase/checkout-intents';
 import { pick } from '@/lib/i18n';
 import { applyVat, effectiveSitePriceCzk } from '@/lib/component-db-seed';
+import { MAROON, GOLD, INK, MUTED, PAGE_BG, PANEL_BG } from '@/lib/design-tokens';
 
 type ShippingId = 'standard' | 'express' | 'overnight';
 
@@ -297,13 +298,6 @@ const TRANSLATIONS = {
 };
 
 type T = typeof TRANSLATIONS.en;
-
-const MAROON = '#6E1423';
-const GOLD = '#C4A35A';
-const INK = '#1C1C1A';
-const MUTED = '#7A7469';
-const PAGE_BG = '#F5F0E6';
-const PANEL_BG = '#FDFAF4';
 
 const serif: CSSProperties = { fontFamily: 'var(--font-serif)' };
 const sans: CSSProperties = { fontFamily: 'var(--font-sans)' };

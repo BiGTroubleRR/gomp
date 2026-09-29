@@ -9,6 +9,7 @@ import { navigateWithTransition } from '@/lib/gomp-nav';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
 import { passmarkLookup, TIER_COLORS } from '@/lib/passmark';
 import { useIsMobile } from '@/lib/use-media-query';
+import { MAROON, GOLD, INK, MUTED, FAINT, PAGE_BG, PANEL_BG } from '@/lib/design-tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -294,14 +295,6 @@ const translations = {
 // ---------------------------------------------------------------------------
 // Style constants
 // ---------------------------------------------------------------------------
-
-const MAROON = '#6E1423';
-const GOLD = '#C4A35A';
-const INK = '#1C1C1A';
-const MUTED = '#7A7469';
-const FAINT = '#A09890';
-const PAGE_BG = '#F5F0E6';
-const PANEL_BG = '#FDFAF4';
 
 const serif: CSSProperties = { fontFamily: 'var(--font-serif)' };
 const sans: CSSProperties = { fontFamily: 'var(--font-sans)' };

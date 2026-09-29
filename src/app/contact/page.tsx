@@ -7,12 +7,7 @@ import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import { useIsMobile } from '@/lib/use-media-query';
 import { submitContactMessage } from '@/lib/contact-submit';
-
-const MAROON = '#6E1423';
-const INK = '#1C1C1A';
-const MUTED = '#7A7469';
-const PAGE_BG = '#F5F0E6';
-const PANEL_BG = '#FDFAF4';
+import { MAROON, INK, MUTED, PAGE_BG, PANEL_BG } from '@/lib/design-tokens';
 
 const T = {
   en: {

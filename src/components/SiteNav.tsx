@@ -9,12 +9,7 @@ import { useIsMobile, useMediaQuery } from '@/lib/use-media-query';
 import DeviceViewToggle from '@/components/DeviceViewToggle';
 import { GBB_GREEN } from '@/lib/gbb-theme';
 import { pick } from '@/lib/i18n';
-
-const INK = '#1C1C1A';
-const MUTED = '#7A7469';
-const MAROON = '#6E1423';
-const GOLD = '#C4A35A';
-const BG = '#F5F0E6';
+import { INK, MUTED, MAROON, GOLD, PAGE_BG as BG } from '@/lib/design-tokens';
 
 const LINKS: { href: string; en: string; sk: string; cz: string }[] = [
   { href: '/', en: 'Home', sk: 'Domov', cz: 'Domů' },
