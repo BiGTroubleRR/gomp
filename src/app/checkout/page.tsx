@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import TransitionLink from '@/components/TransitionLink';
 import type { CompDb } from '@/components/Case3DViewer';
 import SiteNav from '@/components/SiteNav';
+import OrderTicket from '@/components/OrderTicket';
+import { normalizeCurrency, type OrderTicketData } from '@/lib/order-ticket';
 import { readJSON, type Currency, type Lang } from '@/lib/gomp-storage';
 import { useIsMobile } from '@/lib/use-media-query';
 import { submitCheckoutIntent, type PaymentMethod } from '@/lib/supabase/checkout-intents';
@@ -149,17 +151,8 @@ const TRANSLATIONS = {
     back: '← Back',
     processing: 'Submitting…',
     submit_request: 'Submit Order Request  ·  ',
-    request_received: 'Order Request Received',
-    thanks_line1: "We'll Take It",
-    thanks_line2: 'From Here.',
     we_will_contact: 'The GOMP team will reach out at',
-    outcome_note:
-      'Card and wallet payments are not live on GOMP yet, so nothing has been charged. Your configuration is saved and the GOMP team will contact you to confirm availability and complete the order. The final price may vary from the estimate above, depending on component prices and availability at the time of assembly.',
-    reference: 'Reference',
     your_build: 'Your build',
-    delivering_to: 'For delivery to',
-    estimated_arrival: 'Indicative build time',
-    would_pay_with: 'Preferred payment',
     build_another: '← Build Another',
     go_home: 'Go to Home',
     itemCount: (n: number) => `${n} components · assembled & tested`,
@@ -213,17 +206,8 @@ const TRANSLATIONS = {
     back: '← Späť',
     processing: 'Odosiela sa…',
     submit_request: 'Odoslať žiadosť  ·  ',
-    request_received: 'Žiadosť prijatá',
-    thanks_line1: 'Ďalej sa',
-    thanks_line2: 'postaráme my.',
     we_will_contact: 'Tím GOMP sa ozve na',
-    outcome_note:
-      'Platby kartou a peňaženkou na GOMP ešte nie sú aktívne, takže sa nič nestrhlo. Vaša konfigurácia je uložená a tím GOMP vás bude kontaktovať, aby potvrdil dostupnosť a dokončil objednávku. Konečná cena sa môže líšiť od uvedeného odhadu podľa cien a dostupnosti komponentov v čase montáže.',
-    reference: 'Referencia',
     your_build: 'Vaša zostava',
-    delivering_to: 'Na doručenie na',
-    estimated_arrival: 'Orientačný čas zostavenia',
-    would_pay_with: 'Preferovaná platba',
     build_another: '← Zostaviť ďalšiu',
     go_home: 'Prejsť na domovskú stránku',
     itemCount: (n: number) => `${n} komponentov · zostavené a otestované`,
@@ -277,17 +261,8 @@ const TRANSLATIONS = {
     back: '← Zpět',
     processing: 'Odesílá se…',
     submit_request: 'Odeslat žádost  ·  ',
-    request_received: 'Žádost přijata',
-    thanks_line1: 'Dále se',
-    thanks_line2: 'postaráme my.',
     we_will_contact: 'Tým GOMP se ozve na',
-    outcome_note:
-      'Platby kartou a peněženkou na GOMP zatím nejsou aktivní, takže nic nebylo strženo. Vaše konfigurace je uložena a tým GOMP vás bude kontaktovat, aby potvrdil dostupnost a dokončil objednávku. Konečná cena se může lišit od uvedeného odhadu podle cen a dostupnosti komponent v době montáže.',
-    reference: 'Reference',
     your_build: 'Vaše sestava',
-    delivering_to: 'Pro doručení na',
-    estimated_arrival: 'Orientační doba sestavení',
-    would_pay_with: 'Preferovaná platba',
     build_another: '← Sestavit další',
     go_home: 'Přejít na domovskou stránku',
     itemCount: (n: number) => {
@@ -404,7 +379,7 @@ export default function CheckoutPage() {
   const [shipping, setShipping] = useState<ShippingId>('standard');
   const [promoApplied, setPromoApplied] = useState(false);
   const [placing, setPlacing] = useState(false);
-  const [refNumber, setRefNumber] = useState('');
+  const [order, setOrder] = useState<OrderTicketData | null>(null);
   const [orderError, setOrderError] = useState<string | null>(null);
   const [selectedSavedAddr, setSelectedSavedAddr] = useState<number | null>(null);
   const [form, setForm] = useState<CheckoutForm>(EMPTY_FORM);
@@ -480,7 +455,6 @@ export default function CheckoutPage() {
     { id: 'google_pay', label: t.method_google, desc: t.method_google_desc },
     { id: 'apple_pay', label: t.method_apple, desc: t.method_apple_desc },
   ];
-  const methodLabel = PAYMENT_METHODS.find((m) => m.id === paymentMethod)?.label ?? '';
 
   function handleSelectSavedAddr(i: number) {
     setSelectedSavedAddr(i);
@@ -508,7 +482,7 @@ export default function CheckoutPage() {
     setPlacing(true);
     setOrderError(null);
 
-    const { error, referenceCode } = await submitCheckoutIntent({
+    const { error, referenceCode, order: serverOrder } = await submitCheckoutIntent({
       userId: user?.id ?? null,
       firstName: form.firstName,
       lastName: form.lastName,
@@ -544,7 +518,28 @@ export default function CheckoutPage() {
     }
 
     placeOrderTimeout.current = setTimeout(() => {
-      setRefNumber(referenceCode ?? '');
+      // Normally the server's own snapshot (the exact figures it stored and emailed); the local
+      // rebuild below is only a safety net if a response ever arrives without one.
+      setOrder(
+        serverOrder ?? {
+          referenceCode: referenceCode ?? '',
+          createdAt: new Date().toISOString(),
+          customerName: `${form.firstName} ${form.lastName}`.trim(),
+          email: form.email.trim(),
+          addressLines: [form.address, [form.city, [form.state, form.zip].filter(Boolean).join(' ')].filter(Boolean).join(', ')].filter(Boolean),
+          lang,
+          currency: normalizeCurrency(currency),
+          paymentMethod,
+          shippingMethod: shipping,
+          items: buildItems.map((i) => ({ category: i.category, name: i.name, price: i.priceEur })),
+          partsTotal,
+          assembly: assemblyFeeEur,
+          shipping: shippingCostEur,
+          discount,
+          promoCode: promoApplied ? form.promo : '',
+          total: grandTotalEur,
+        },
+      );
       setStep(3);
       setPlacing(false);
     }, 700);
@@ -947,98 +942,12 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          {/* Step 3: Confirmation */}
-          {step === 3 && (
+          {/* Step 3: Confirmation — the same order ticket the confirmation email carries */}
+          {step === 3 && order && (
             <div style={{ animation: 'gompFadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both', textAlign: 'center', padding: isMobile ? '20px 0' : '40px 0' }}>
-              <div
-                style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: '50%',
-                  background: 'rgba(63,174,116,0.08)',
-                  border: '0.5px solid rgba(63,174,116,0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 28px',
-                  animation: 'gompPulse 1.8s ease-in-out 0.4s both',
-                }}
-              >
-                <svg width={36} height={36} viewBox="0 0 36 36" fill="none">
-                  <polyline
-                    points="8,18 15,25 28,11"
-                    stroke={ACCENT}
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeDasharray={60}
-                    strokeDashoffset={60}
-                    style={{ animation: 'gompCheckDraw 0.6s 0.3s cubic-bezier(0.16,1,0.3,1) forwards' }}
-                  />
-                </svg>
-              </div>
-              <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 12 }}>
-                {t.request_received}
-              </div>
-              <div style={{ ...serif, fontSize: isMobile ? 28 : 42, fontWeight: 600, color: INK, lineHeight: 1.1, marginBottom: 10 }}>
-                {t.thanks_line1}
-                <br />
-                {t.thanks_line2}
-              </div>
-              <div style={{ ...sans, fontSize: 13, color: MUTED, fontWeight: 300, marginBottom: 8 }}>
-                {t.we_will_contact} {form.email}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 40 }}>
-                <span style={{ ...sans, fontSize: 12, color: MUTED }}>{t.reference}</span>
-                <span style={{ ...mono, fontSize: 13, color: INK, background: 'rgba(63,174,116,0.07)', padding: '4px 10px', borderRadius: 2 }}>{refNumber}</span>
-              </div>
-              <div
-                style={{
-                  background: PANEL_BG,
-                  border: '0.5px solid rgba(235,230,218,0.12)',
-                  borderRadius: 2,
-                  padding: isMobile ? '20px 20px' : '24px 28px',
-                  textAlign: 'left',
-                  marginBottom: 36,
-                  maxWidth: 420,
-                  marginLeft: 'auto',
-                  marginRight: 'auto',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                  <span style={{ ...sans, fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.delivering_to}</span>
-                </div>
-                <div style={{ ...sans, fontSize: 14, color: INK, lineHeight: 1.6 }}>
-                  {form.firstName} {form.lastName}
-                  <br />
-                  {form.address}
-                  <br />
-                  {form.city}, {form.state} {form.zip}
-                </div>
-                <div style={{ height: 0.5, background: 'rgba(235,230,218,0.1)', margin: '16px 0' }} />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span style={{ ...sans, fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.would_pay_with}</span>
-                  <span style={{ ...sans, fontSize: 14, fontWeight: 500, color: INK }}>{methodLabel}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ ...sans, fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.estimated_arrival}</span>
-                  <span style={{ ...serif, fontSize: 16, fontWeight: 500, color: INK }}>{deliveryDate}</span>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  ...sans,
-                  fontSize: 11.5,
-                  color: MUTED,
-                  fontWeight: 300,
-                  lineHeight: 1.75,
-                  maxWidth: 420,
-                  margin: '0 auto 32px',
-                  textAlign: 'left',
-                }}
-              >
-                {t.outcome_note}
+              <OrderTicket order={order} />
+              <div style={{ ...sans, fontSize: 13, color: MUTED, fontWeight: 300, margin: '28px auto 32px', maxWidth: 420 }}>
+                {t.we_will_contact} {order.email}
               </div>
               <TransitionLink
                 href="/build"

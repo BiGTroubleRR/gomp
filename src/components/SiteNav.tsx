@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { FormEvent, ReactNode, useEffect, useRef, useState } from 'react';
+import { CSSProperties, FormEvent, ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs';
 import TransitionLink from '@/components/TransitionLink';
 import { useSite } from '@/contexts/SiteContext';
@@ -61,6 +61,28 @@ const TIER_OPTIONS: { value: string; label: L3 }[] = [
   { value: 'A', label: { en: 'Class A', sk: 'Trieda A', cz: 'Třída A' } },
   { value: 'B', label: { en: 'Class B', sk: 'Trieda B', cz: 'Třída B' } },
 ];
+
+const ACCOUNT_LABEL: L3 = { en: 'Account', sk: 'Účet', cz: 'Účet' };
+
+// Viewport width at/below which the compact (/build) bar collapses to the mobile bar instead of overflowing.
+// (Measured: the bar needs ~1325px of viewport — logo + categories + 7 links + language/account/cart cluster.)
+const COMPACT_NAV_MIN_PX = 1340;
+
+// Renders every translation in ONE grid cell and shows only the active one (the others stay in the
+// layout as `visibility: hidden`), so the slot is always as wide as its longest translation. Switching
+// SK / CZ / EN then changes the text only — nothing to its right ever moves.
+function StableLabel({ text, align = 'start', style }: { text: L3; align?: 'start' | 'center' | 'end'; style?: CSSProperties }) {
+  const { lang } = useSite();
+  return (
+    <span style={{ display: 'inline-grid', justifyItems: align, ...style }}>
+      {(['sk', 'cz', 'en'] as const).map((l) => (
+        <span key={l} aria-hidden={l !== lang} style={{ gridArea: '1 / 1', whiteSpace: 'nowrap', visibility: l === lang ? 'visible' : 'hidden' }}>
+          {text[l]}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 function itemsLabel(n: number, lang: 'en' | 'sk' | 'cz'): string {
   if (lang === 'en') return n === 1 ? 'item' : 'items';
@@ -368,6 +390,10 @@ function SearchForm({ stacked, onDone }: { stacked?: boolean; onDone?: () => voi
           fontSize: stacked ? 15 : 12,
           padding: stacked ? '12px 14px' : '0 12px',
           cursor: 'pointer',
+          // Fixed width on desktop: a <select> otherwise resizes to its longest option, which changes
+          // with the language and would resize the search box beside it.
+          width: stacked ? undefined : 138,
+          flexShrink: 0,
         }}
       >
         {TIER_OPTIONS.map((o) => (
@@ -401,8 +427,7 @@ function SearchForm({ stacked, onDone }: { stacked?: boolean; onDone?: () => voi
 // otherwise sends the visitor to the configurator to start one.
 function CartWidget({ compact, onNavigate }: { compact?: boolean; onNavigate?: () => void }) {
   const { lang, fmt } = useSite();
-  const pathname = usePathname();
-  const { count, totalCzk } = useCartSummary(pathname);
+  const { count, totalCzk } = useCartSummary();
   const href = count > 0 ? '/checkout' : '/build';
   return (
     <TransitionLink
@@ -456,7 +481,9 @@ function CartWidget({ compact, onNavigate }: { compact?: boolean; onNavigate?: (
         )}
       </span>
       {!compact && (
-        <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
+        // minWidth fits a 6-digit total in either currency, so "0 Kč" -> "30 550 Kč" (or switching Kč/€)
+        // never resizes the cart and, with it, the search box beside it.
+        <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 92 }}>
           <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED }}>
             {count} {itemsLabel(count, lang)}
           </span>
@@ -480,7 +507,9 @@ export default function SiteNav({ variant = 'full' }: { variant?: 'full' | 'comp
   const { lang } = useSite();
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const navTooNarrow = useMediaQuery('(max-width: 1180px)');
+  // The compact bar (/build) carries the logo AND the language / account / cart cluster in one row, so
+  // it needs more width than the full header's green bar before it must fall back to the mobile bar.
+  const navTooNarrow = useMediaQuery(variant === 'compact' ? `(max-width: ${COMPACT_NAV_MIN_PX}px)` : '(max-width: 1180px)');
   const showMobileNav = isMobile || navTooNarrow;
   // Open state is remembered together with the route it was opened on, so navigating anywhere
   // closes both menus without an effect that resets them.
@@ -498,9 +527,9 @@ export default function SiteNav({ variant = 'full' }: { variant?: 'full' | 'comp
   };
   const [hoveredHref, setHoveredHref] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
-  const barRef = useRef<HTMLElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
   const catRef = useRef<HTMLDivElement>(null);
-  const mobileCart = useCartSummary(pathname);
+  const mobileCart = useCartSummary();
 
   const closeMenu = () => setMenuOpen(false);
 
@@ -520,7 +549,9 @@ export default function SiteNav({ variant = 'full' }: { variant?: 'full' | 'comp
     };
   }, [catOpen]);
 
-  useEffect(() => {
+  // Layout effect (not useEffect): the heights are published before the first paint of a freshly
+  // mounted page, so anything sized from --gomp-header-h / --gomp-bar-h never paints with a stale value.
+  useLayoutEffect(() => {
     const root = document.documentElement;
     const apply = () => {
       const top = topRef.current?.offsetHeight ?? 0;
@@ -702,7 +733,7 @@ export default function SiteNav({ variant = 'full' }: { variant?: 'full' | 'comp
           display: 'flex',
           alignItems: 'center',
           height: '100%',
-          padding: '0 18px',
+          padding: variant === 'compact' ? '0 10px' : '0 18px',
           fontFamily: 'var(--font-sans)',
           fontSize: 13,
           fontWeight: 700,
@@ -715,7 +746,7 @@ export default function SiteNav({ variant = 'full' }: { variant?: 'full' | 'comp
         }}
       >
         <span style={{ position: 'relative', display: 'inline-block', overflow: 'hidden', padding: '2px 8px', margin: '-2px -8px' }}>
-          {pick(lang, l)}
+          <StableLabel text={l} align="center" />
           {isUndervolt && hovered && <UndervoltBolts />}
         </span>
       </TransitionLink>
@@ -725,39 +756,46 @@ export default function SiteNav({ variant = 'full' }: { variant?: 'full' | 'comp
   return (
     <>
       {variant === 'full' && (
-        <div ref={topRef} className="gomp-header-top" style={{ background: PAGE_BG }}>
-          {/* 1 — utility bar */}
-          <div style={{ background: SURFACE_ALT, borderBottom: `1px solid ${BORDER}` }}>
-            <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 60px', height: 34, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, letterSpacing: 1.4, textTransform: 'uppercase', color: MUTED }}>
-                {pick(lang, {
-                  en: 'Hand-built gaming PCs · Prague, CZ',
-                  sk: 'Ručne stavané herné PC · Praha, ČR',
-                  cz: 'Ručně stavěná herní PC · Praha, ČR',
-                })}
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-                <LangCurrencyChips />
+        // 1 — utility bar: the only part of the header that scrolls away with the page
+        <div ref={topRef} className="gomp-header-top" style={{ background: SURFACE_ALT, borderBottom: `1px solid ${BORDER}` }}>
+          <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 60px', height: 34, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, letterSpacing: 1.4, textTransform: 'uppercase', color: MUTED }}>
+              {pick(lang, {
+                en: 'Hand-built gaming PCs · Prague, CZ',
+                sk: 'Ručne stavané herné PC · Praha, ČR',
+                cz: 'Ručně stavěná herní PC · Praha, ČR',
+              })}
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+              <LangCurrencyChips />
+              {/* Fixed-width, right-aligned slot: Clerk renders nothing until it has loaded, and
+                  "Sign in · Register" / the avatar differ in width — neither may move the chips. */}
+              <div style={{ width: 196, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', minHeight: 28 }}>
                 <ClerkAuthControls />
-                <TransitionLink
-                  href="/account"
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 11,
-                    letterSpacing: 0.8,
-                    textTransform: 'uppercase',
-                    color: pathname === '/account' ? ACCENT : INK,
-                    fontWeight: 600,
-                    background: 'transparent',
-                  }}
-                >
-                  {pick(lang, { en: 'Account', sk: 'Účet', cz: 'Účet' })}
-                </TransitionLink>
-                <DeviceViewToggle />
               </div>
+              <TransitionLink
+                href="/account"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 11,
+                  letterSpacing: 0.8,
+                  textTransform: 'uppercase',
+                  color: pathname === '/account' ? ACCENT : INK,
+                  fontWeight: 600,
+                  background: 'transparent',
+                }}
+              >
+                <StableLabel text={ACCOUNT_LABEL} align="end" />
+              </TransitionLink>
+              <DeviceViewToggle />
             </div>
           </div>
-          {/* 2 — main row */}
+        </div>
+      )}
+      {/* Sticky wrapper: the main row (logo, support, search, cart) and the green nav bar stay pinned together,
+          so the logo is visible on every page and scroll position. */}
+      <div ref={barRef} className="gomp-nav-bar" style={{ position: 'sticky', top: 0, zIndex: 100, background: PAGE_BG }}>
+        {variant === 'full' && (
           <div style={{ borderBottom: `1px solid ${BORDER}` }}>
             <div style={{ maxWidth: 1280, margin: '0 auto', padding: '16px 60px', display: 'flex', alignItems: 'center', gap: 32 }}>
               <Logo size={27} />
@@ -768,10 +806,10 @@ export default function SiteNav({ variant = 'full' }: { variant?: 'full' | 'comp
                 <IconHeadset />
                 <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
                   <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10.5, color: MUTED }}>
-                    {pick(lang, { en: 'Personal service', sk: 'Osobný prístup', cz: 'Osobní přístup' })}
+                    <StableLabel text={{ en: 'Personal service', sk: 'Osobný prístup', cz: 'Osobní přístup' }} />
                   </span>
                   <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 700, color: INK }}>
-                    {pick(lang, { en: 'Contact & support', sk: 'Kontakt a podpora', cz: 'Kontakt a podpora' })}
+                    <StableLabel text={{ en: 'Contact & support', sk: 'Kontakt a podpora', cz: 'Kontakt a podpora' }} />
                   </span>
                 </span>
               </TransitionLink>
@@ -779,98 +817,109 @@ export default function SiteNav({ variant = 'full' }: { variant?: 'full' | 'comp
               <CartWidget />
             </div>
           </div>
-        </div>
-      )}
-      {/* 3 — sticky green nav bar */}
-      <nav
-        ref={barRef}
-        className="gomp-nav-bar"
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          background: ACCENT_DEEP,
-          backgroundImage: 'linear-gradient(90deg, #0F5C3A 0%, #0D5233 100%)',
-          boxShadow: '0 6px 18px -8px rgba(0,0,0,0.6)',
-        }}
-      >
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 60px', height: 46, display: 'flex', alignItems: 'stretch', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'stretch' }}>
-            <div ref={catRef} style={{ position: 'relative', display: 'flex' }}>
-              <button
-                onClick={() => setCatOpen((v) => !v)}
-                aria-expanded={catOpen}
-                aria-haspopup="true"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '0 22px',
-                  background: catOpen ? 'rgba(0,0,0,0.38)' : 'rgba(0,0,0,0.28)',
-                  border: 'none',
-                  borderRight: '1px solid rgba(255,255,255,0.12)',
-                  color: ON_ACCENT,
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  letterSpacing: 1,
-                  textTransform: 'uppercase',
-                  cursor: 'pointer',
-                }}
-              >
-                <IconMenu />
-                {pick(lang, { en: 'Categories', sk: 'Kategórie', cz: 'Kategorie' })}
-              </button>
-              {catOpen && (
-                <div
-                  role="menu"
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    width: 290,
-                    background: PANEL_BG,
-                    border: `1px solid ${BORDER_STRONG}`,
-                    borderTop: `2px solid ${ACCENT}`,
-                    boxShadow: '0 24px 40px -12px rgba(0,0,0,0.7)',
-                    padding: '10px 0',
-                    animation: 'fadeUp 0.18s ease both',
-                  }}
-                >
-                  <div style={{ padding: '8px 20px 6px', fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase', color: MUTED }}>
-                    {pick(lang, { en: 'Ready-made builds', sk: 'Hotové zostavy', cz: 'Hotové sestavy' })}
-                  </div>
-                  {CATEGORY_LINKS.map((c) => (
-                    <Link key={c.href} href={c.href} role="menuitem" onClick={() => setCatOpen(false)} className="gomp-menu-item">
-                      {pick(lang, c)}
-                    </Link>
-                  ))}
-                  <div style={{ height: 1, background: BORDER, margin: '8px 0' }} />
-                  {MORE_LINKS.map((c) => (
-                    <Link key={c.href} href={c.href} role="menuitem" onClick={() => setCatOpen(false)} className="gomp-menu-item">
-                      {pick(lang, c)}
-                    </Link>
-                  ))}
+        )}
+        <nav
+          style={{
+            background: ACCENT_DEEP,
+            backgroundImage: 'linear-gradient(90deg, #0F5C3A 0%, #0D5233 100%)',
+            boxShadow: '0 6px 18px -8px rgba(0,0,0,0.6)',
+          }}
+        >
+          <div
+            style={{
+              // /build is a full-bleed app layout: its bar spans the width instead of the 1280px column.
+              maxWidth: variant === 'compact' ? undefined : 1280,
+              margin: '0 auto',
+              padding: variant === 'compact' ? '0 20px' : '0 60px',
+              height: 46,
+              display: 'flex',
+              alignItems: 'stretch',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'stretch' }}>
+              {/* /build has no main row, so the logo lives at the left of the green bar there. */}
+              {variant === 'compact' && (
+                <div style={{ display: 'flex', alignItems: 'center', paddingRight: 18 }}>
+                  <Logo size={21} />
                 </div>
               )}
+              <div ref={catRef} style={{ position: 'relative', display: 'flex' }}>
+                <button
+                  onClick={() => setCatOpen((v) => !v)}
+                  aria-expanded={catOpen}
+                  aria-haspopup="true"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '0 22px',
+                    background: catOpen ? 'rgba(0,0,0,0.38)' : 'rgba(0,0,0,0.28)',
+                    border: 'none',
+                    borderRight: '1px solid rgba(255,255,255,0.12)',
+                    color: ON_ACCENT,
+                    fontFamily: 'var(--font-sans)',
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    letterSpacing: 1,
+                    textTransform: 'uppercase',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <IconMenu />
+                  <StableLabel text={{ en: 'Categories', sk: 'Kategórie', cz: 'Kategorie' }} />
+                </button>
+                {catOpen && (
+                  <div
+                    role="menu"
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      width: 290,
+                      background: PANEL_BG,
+                      border: `1px solid ${BORDER_STRONG}`,
+                      borderTop: `2px solid ${ACCENT}`,
+                      boxShadow: '0 24px 40px -12px rgba(0,0,0,0.7)',
+                      padding: '10px 0',
+                      animation: 'fadeUp 0.18s ease both',
+                    }}
+                  >
+                    <div style={{ padding: '8px 20px 6px', fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: 1.4, textTransform: 'uppercase', color: MUTED }}>
+                      {pick(lang, { en: 'Ready-made builds', sk: 'Hotové zostavy', cz: 'Hotové sestavy' })}
+                    </div>
+                    {CATEGORY_LINKS.map((c) => (
+                      <Link key={c.href} href={c.href} role="menuitem" onClick={() => setCatOpen(false)} className="gomp-menu-item">
+                        {pick(lang, c)}
+                      </Link>
+                    ))}
+                    <div style={{ height: 1, background: BORDER, margin: '8px 0' }} />
+                    {MORE_LINKS.map((c) => (
+                      <Link key={c.href} href={c.href} role="menuitem" onClick={() => setCatOpen(false)} className="gomp-menu-item">
+                        {pick(lang, c)}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {LINKS.map(barLink)}
             </div>
-            {LINKS.map(barLink)}
+            {variant === 'compact' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingLeft: 12 }}>
+                <LangCurrencyChips />
+                <TransitionLink
+                  href="/account"
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase', color: ON_ACCENT, fontWeight: 600, background: 'transparent' }}
+                >
+                  <StableLabel text={ACCOUNT_LABEL} align="end" />
+                </TransitionLink>
+                <CartWidget compact />
+                <DeviceViewToggle />
+              </div>
+            )}
           </div>
-          {variant === 'compact' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-              <LangCurrencyChips />
-              <TransitionLink
-                href="/account"
-                style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase', color: ON_ACCENT, fontWeight: 600, background: 'transparent' }}
-              >
-                {pick(lang, { en: 'Account', sk: 'Účet', cz: 'Účet' })}
-              </TransitionLink>
-              <CartWidget compact />
-              <DeviceViewToggle />
-            </div>
-          )}
-        </div>
-      </nav>
+        </nav>
+      </div>
     </>
   );
 }

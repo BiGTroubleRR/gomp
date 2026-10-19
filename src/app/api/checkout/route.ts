@@ -19,6 +19,7 @@ import { createClient as createSessionClient } from '@/lib/supabase/server';
 import { checkRateLimit, clientIpFromHeaders } from '@/lib/rate-limit';
 import { applyVat } from '@/lib/component-db-seed';
 import { sendOrderConfirmationEmail } from '@/lib/email/resend';
+import { normalizeCurrency, normalizeLang, type OrderTicketData } from '@/lib/order-ticket';
 
 // Cosmetic, human-friendly handle for the thank-you screen, the confirmation email, and the
 // customer's own "My Orders" tab — moved here (from the old client-only checkout/page.tsx
@@ -187,7 +188,7 @@ export async function POST(request: Request) {
       contact_consent: Boolean(body.contactConsent),
       reference_code: referenceCode,
     })
-    .select('id')
+    .select('id, created_at')
     .single();
 
   if (error || !inserted) return NextResponse.json({ error: error?.message ?? 'Insert failed.' }, { status: 500 });
@@ -196,13 +197,30 @@ export async function POST(request: Request) {
   // checkout response — the intent is already safely recorded either way. The outcome is written
   // back onto the row so Admin's Žiadosti tab can show whether the customer actually got their
   // confirmation, instead of that only ever showing up in a server log.
-  const emailResult = await sendOrderConfirmationEmail({
-    to: email,
+  // One authoritative snapshot of the order, used for BOTH the confirmation email and the ticket the
+  // checkout screen renders (returned below), so the two always show the same numbers and date.
+  const order: OrderTicketData = {
     referenceCode,
-    buildItems,
-    totalEur,
-    lang: (body.lang ?? 'en').trim(),
-  });
+    createdAt: inserted.created_at,
+    customerName: [body.firstName, body.lastName].map((p) => (p ?? '').trim()).filter(Boolean).join(' '),
+    email,
+    addressLines: [
+      (body.address ?? '').trim(),
+      [(body.city ?? '').trim(), [(body.region ?? '').trim(), (body.zip ?? '').trim()].filter(Boolean).join(' ')].filter(Boolean).join(', '),
+    ].filter(Boolean),
+    lang: normalizeLang(body.lang),
+    currency: normalizeCurrency(body.displayCurrency),
+    paymentMethod: body.paymentMethod as PaymentMethod,
+    shippingMethod: body.shippingMethod,
+    items: buildItems.map((i) => ({ category: i.category, name: i.name, price: i.price_eur })),
+    partsTotal: partsTotalEur,
+    assembly: assemblyEur,
+    shipping: shippingEur,
+    discount: discountEur,
+    promoCode: promoApplied ? promoCodeInput : '',
+    total: totalEur,
+  };
+  const emailResult = await sendOrderConfirmationEmail(order);
   await supabase
     .from('checkout_intents')
     .update({
@@ -211,5 +229,5 @@ export async function POST(request: Request) {
     })
     .eq('id', inserted.id);
 
-  return NextResponse.json({ ok: true, referenceCode });
+  return NextResponse.json({ ok: true, referenceCode, order });
 }
