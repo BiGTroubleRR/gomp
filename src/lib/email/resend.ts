@@ -28,7 +28,7 @@ import {
   formatTicketDate,
   ticketMoney,
 } from '@/lib/order-ticket';
-import { ACCENT, ACCENT_DEEP, BORDER, BORDER_STRONG, GOLD, INK, MUTED, PAGE_BG, PANEL_BG, SURFACE_ALT } from '@/lib/design-tokens';
+import { ACCENT, ACCENT_DEEP, ACCENT_FILL, ON_ACCENT, BORDER, BORDER_STRONG, GOLD, INK, MUTED, PANEL_BG, SURFACE_ALT } from '@/lib/design-tokens';
 
 const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL || 'GOMP <onboarding@resend.dev>';
 
@@ -53,6 +53,9 @@ const SANS = 'Arial, Helvetica, sans-serif';
 const MONO = "'Courier New', Courier, monospace";
 // ACCENT at ~12% over PANEL_BG — the check-circle fill (email clients can't blend alpha reliably).
 const CHECK_FILL = '#182C22';
+// The email's surround is white (the dark ticket card sits on it); the ticket's cut-out notches are
+// painted in this colour so they read as bites out of the card.
+const EMAIL_BG = '#FFFFFF';
 
 // Customer-typed text (name, address, item names) goes into the markup — always escape it.
 function esc(v: string): string {
@@ -66,7 +69,7 @@ const label = (text: string) =>
 // square gaps in clients without border-radius support, e.g. desktop Outlook).
 function tearLine(): string {
   const notch = (radius: string) =>
-    `<td width="16" bgcolor="${PAGE_BG}" style="width:16px;height:32px;background:${PAGE_BG};border-radius:${radius};font-size:0;line-height:0;">&nbsp;</td>`;
+    `<td width="16" bgcolor="${EMAIL_BG}" style="width:16px;height:32px;background:${EMAIL_BG};border-radius:${radius};font-size:0;line-height:0;">&nbsp;</td>`;
   return `
     <tr><td style="padding:0;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -121,6 +124,20 @@ function renderHtml(d: OrderTicketData): string {
     sumRow(`${t.shippingFee} · ${ship.name}`, d.shipping > 0 ? money(d.shipping) : esc(t.free)) +
     (d.discount > 0 ? sumRow(d.promoCode ? `${t.discount} (${d.promoCode})` : t.discount, `−${money(d.discount)}`, ACCENT) : '');
 
+  // Bulletproof button: a padded <a> inside a coloured <td>, so it renders in every mail client.
+  const accountButton = d.accountUrl
+    ? `
+        <tr>
+          <td align="center" style="padding:10px 28px 28px;">
+            <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+              <td align="center" bgcolor="${ACCENT_FILL}" style="background:${ACCENT_FILL};border-radius:6px;">
+                <a href="${esc(d.accountUrl)}" style="display:inline-block;padding:13px 26px;font-family:${SANS};font-size:14px;font-weight:700;color:${ON_ACCENT};text-decoration:none;">${esc(t.viewInAccount)} &rarr;</a>
+              </td>
+            </tr></table>
+          </td>
+        </tr>`
+    : '';
+
   const addressHtml = [d.customerName, ...d.addressLines, d.email].filter(Boolean).map(esc).join('<br>');
 
   return `<!doctype html>
@@ -128,14 +145,14 @@ function renderHtml(d: OrderTicketData): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="dark">
-  <meta name="supported-color-schemes" content="dark">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
   <title>${esc(t.subject(d.referenceCode))}</title>
 </head>
-<body bgcolor="${PAGE_BG}" style="margin:0;padding:0;background:${PAGE_BG};">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${PAGE_BG}" style="background:${PAGE_BG};padding:32px 12px;">
+<body bgcolor="${EMAIL_BG}" style="margin:0;padding:0;background:${EMAIL_BG};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${EMAIL_BG}" style="background:${EMAIL_BG};padding:32px 12px;">
     <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${PANEL_BG}" style="max-width:480px;background:${PANEL_BG};border:1px solid ${BORDER_STRONG};border-radius:16px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${PANEL_BG}" style="max-width:480px;background:${PANEL_BG};border:1px solid ${ACCENT_DEEP};border-radius:16px;">
         <tr>
           <td align="center" bgcolor="${SURFACE_ALT}" style="background:${SURFACE_ALT};padding:20px 28px;border-radius:15px 15px 0 0;border-bottom:3px solid ${ACCENT_DEEP};">
             <span style="font-family:${SERIF};font-weight:700;letter-spacing:4px;font-size:22px;color:${GOLD};">◆ GOMP</span>
@@ -198,8 +215,8 @@ function renderHtml(d: OrderTicketData): string {
           </td>
         </tr>
         <tr>
-          <td style="padding:14px 28px 26px;font-family:${SANS};font-size:11.5px;line-height:1.7;color:${MUTED};">${esc(t.note)}</td>
-        </tr>
+          <td style="padding:14px 28px ${d.accountUrl ? '8px' : '26px'};font-family:${SANS};font-size:11.5px;line-height:1.7;color:${MUTED};">${esc(t.note)}</td>
+        </tr>${accountButton}
         <tr>
           <td align="center" bgcolor="${SURFACE_ALT}" style="background:${SURFACE_ALT};padding:14px 28px;border-top:1px solid ${BORDER};border-radius:0 0 15px 15px;font-family:${SANS};font-size:11px;color:${MUTED};">${esc(t.footer)}</td>
         </tr>
@@ -237,6 +254,7 @@ function renderText(d: OrderTicketData): string {
     `${t.total}: ${money(d.total)} (${t.vatNote})`,
     '',
     t.note,
+    ...(d.accountUrl ? ['', `${t.viewInAccount}: ${d.accountUrl}`] : []),
     '',
     t.footer,
   ];

@@ -68,6 +68,13 @@ type CheckoutRequestBody = {
   contactConsent?: boolean;
 };
 
+// Base URL for links inside the confirmation email: an explicit SITE_URL wins; otherwise the origin
+// this request came in on, so localhost, previews and production all work with no configuration.
+function siteOrigin(request: Request): string {
+  const configured = process.env.SITE_URL?.trim().replace(/\/+$/, '');
+  return configured || new URL(request.url).origin;
+}
+
 function isShippingMethod(v: unknown): v is ShippingMethod {
   return typeof v === 'string' && v in SHIPPING_COSTS_EUR;
 }
@@ -219,6 +226,8 @@ export async function POST(request: Request) {
     discount: discountEur,
     promoCode: promoApplied ? promoCodeInput : '',
     total: totalEur,
+    // Only orders attached to an account show up under My Orders, so only they get the link.
+    ...(sessionUser ? { accountUrl: `${siteOrigin(request)}/account` } : {}),
   };
   const emailResult = await sendOrderConfirmationEmail(order);
   await supabase

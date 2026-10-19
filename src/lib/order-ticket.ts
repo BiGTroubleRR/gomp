@@ -22,6 +22,8 @@ export type OrderTicketData = {
   discount: number;
   promoCode: string;
   total: number;
+  // Absolute URL of the customer's account page — set only when the order is attached to an account.
+  accountUrl?: string;
 };
 
 export function normalizeLang(v: unknown): Lang {
@@ -56,6 +58,7 @@ type TicketCopy = {
   vatNote: string;
   note: string;
   footer: string;
+  viewInAccount: string;
   payments: Record<OrderTicketData['paymentMethod'], string>;
   shippingNames: Record<OrderTicketData['shippingMethod'], { name: string; eta: string }>;
 };
@@ -81,6 +84,7 @@ export const TICKET_T: Record<Lang, TicketCopy> = {
     vatNote: 'Prices include VAT.',
     note: 'Card and wallet payments are not live on GOMP yet, so nothing has been charged. The GOMP team will contact you to confirm availability and complete the order. The final price may vary from the estimate above, depending on component prices and availability at the time of assembly.',
     footer: 'GOMP · Hand-built gaming PCs',
+    viewInAccount: 'View this order in your account',
     payments: { card: 'Card', google_pay: 'Google Pay', apple_pay: 'Apple Pay' },
     shippingNames: {
       standard: { name: 'Standard Shipping', eta: '8–12 business days' },
@@ -108,6 +112,7 @@ export const TICKET_T: Record<Lang, TicketCopy> = {
     vatNote: 'Ceny sú uvedené vrátane DPH.',
     note: 'Platby kartou a peňaženkou na GOMP ešte nie sú aktívne, takže sa nič nestrhlo. Tím GOMP vás bude kontaktovať, aby potvrdil dostupnosť a dokončil objednávku. Konečná cena sa môže líšiť od uvedeného odhadu podľa cien a dostupnosti komponentov v čase montáže.',
     footer: 'GOMP · Ručne stavané herné PC',
+    viewInAccount: 'Zobraziť objednávku vo vašom účte',
     payments: { card: 'Karta', google_pay: 'Google Pay', apple_pay: 'Apple Pay' },
     shippingNames: {
       standard: { name: 'Štandardná doprava', eta: '8 – 12 pracovných dní' },
@@ -135,6 +140,7 @@ export const TICKET_T: Record<Lang, TicketCopy> = {
     vatNote: 'Ceny jsou uvedeny včetně DPH.',
     note: 'Platby kartou a peněženkou na GOMP zatím nejsou aktivní, takže nic nebylo strženo. Tým GOMP vás bude kontaktovat, aby potvrdil dostupnost a dokončil objednávku. Konečná cena se může lišit od uvedeného odhadu podle cen a dostupnosti komponent v době montáže.',
     footer: 'GOMP · Ručně stavěná herní PC',
+    viewInAccount: 'Zobrazit objednávku ve vašem účtu',
     payments: { card: 'Karta', google_pay: 'Google Pay', apple_pay: 'Apple Pay' },
     shippingNames: {
       standard: { name: 'Standardní doprava', eta: '8–12 pracovních dnů' },

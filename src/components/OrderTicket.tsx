@@ -12,10 +12,12 @@ import {
   seededRandom,
   ticketMoney,
 } from '@/lib/order-ticket';
+import TransitionLink from '@/components/TransitionLink';
 import { useMediaQuery } from '@/lib/use-media-query';
 import {
   ACCENT,
   ACCENT_DEEP,
+  ACCENT_GRADIENT,
   BORDER,
   BORDER_STRONG,
   FONT_MONO,
@@ -25,6 +27,7 @@ import {
   GOLD_LIGHT,
   INK,
   MUTED,
+  ON_ACCENT,
   PAGE_BG,
   PANEL_BG,
   SURFACE_ALT,
@@ -150,7 +153,7 @@ export default function OrderTicket({ order }: { order: OrderTicketData }) {
           position: 'relative',
           zIndex: 1,
           width: '100%',
-          maxWidth: 440,
+          maxWidth: 540,
           margin: '0 auto',
           background: PANEL_BG,
           border: `1px solid ${BORDER_STRONG}`,
@@ -277,7 +280,18 @@ export default function OrderTicket({ order }: { order: OrderTicketData }) {
         <div style={{ padding: '18px 28px 8px' }}>
           <Barcode value={order.referenceCode} />
         </div>
-        <div style={{ padding: '10px 28px 26px', fontFamily: FONT_SANS, fontSize: 11.5, lineHeight: 1.7, color: MUTED }}>{t.note}</div>
+        <div style={{ padding: order.accountUrl ? '10px 28px 8px' : '10px 28px 26px', fontFamily: FONT_SANS, fontSize: 11.5, lineHeight: 1.7, color: MUTED }}>{t.note}</div>
+        {order.accountUrl && (
+          <div style={{ padding: '10px 28px 28px', textAlign: 'center' }}>
+            {/* Relative path: same-tab navigation with the site's page transition. The email carries the absolute URL. */}
+            <TransitionLink
+              href="/account"
+              style={{ display: 'inline-block', padding: '13px 26px', background: ACCENT_GRADIENT, color: ON_ACCENT, borderRadius: 6, fontFamily: FONT_SANS, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}
+            >
+              {t.viewInAccount} →
+            </TransitionLink>
+          </div>
+        )}
       </div>
     </>
   );

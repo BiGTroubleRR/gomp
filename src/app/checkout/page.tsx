@@ -614,7 +614,17 @@ export default function CheckoutPage() {
         </div>
 
         {/* Main step content */}
-        <div style={{ flex: 1, padding: isMobile ? '28px 20px' : '48px 64px', minWidth: 0, overflowY: 'auto', maxWidth: isMobile ? '100%' : 680 }}>
+        <div
+          style={{
+            // On the confirmation step the main column outweighs the 3D viewer 3:1 (instead of splitting
+            // the leftover width evenly), so the order ticket gets room to render at its full width.
+            flex: !isMobile && step === 3 ? '3 1 0' : 1,
+            padding: isMobile ? '28px 20px' : '48px 64px',
+            minWidth: 0,
+            overflowY: 'auto',
+            maxWidth: isMobile ? '100%' : step === 3 ? 760 : 680,
+          }}
+        >
           {/* Step indicator */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: isMobile ? 32 : 52 }}>
             {[1, 2, 3].map((n, i) => {
