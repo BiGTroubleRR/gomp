@@ -4,11 +4,11 @@ import { CSSProperties, ReactNode } from 'react';
 import TransitionLink from '@/components/TransitionLink';
 import { useSite } from '@/contexts/SiteContext';
 import { useIsMobile } from '@/lib/use-media-query';
-import { INK, MUTED, GOLD } from '@/lib/design-tokens';
+import { MUTED, FAINT, GOLD, SURFACE_ALT, BORDER } from '@/lib/design-tokens';
 
 const serif: CSSProperties = { fontFamily: 'var(--font-serif)' };
 const sans: CSSProperties = { fontFamily: 'var(--font-sans)' };
-const linkStyle: CSSProperties = { ...sans, fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 };
+const linkStyle: CSSProperties = { ...sans, fontSize: 13, color: MUTED, textDecoration: 'none', fontWeight: 300 };
 
 const T = {
   en: {
@@ -33,7 +33,7 @@ const T = {
       'Prices are shown in CZK (Kč); the € figure is an approximate conversion (1 € ≈ 24.30 Kč, reference Jul 2026). Final price confirmed at checkout.',
     vatNote: (pct: number) => `All prices include VAT (${pct}%).`,
     tier_explanation:
-      'Every GOMP is rated on a tier scale from S (top) down to D (entry-level), calculated as the average tier of its individual components.',
+      'Every GOMP is rated on a tier scale from S (top) down to B (entry-level), calculated as the average tier of its individual components.',
   },
   sk: {
     blurb: 'Ručne stavané herné počítače presne podľa vašich požiadaviek. Staviame ich hráči pre hráčov.',
@@ -57,7 +57,7 @@ const T = {
       'Ceny sú uvedené v Kč; suma v € je približný prepočet (1 € ≈ 24,30 Kč, referenčný júl 2026). Konečná cena bude potvrdená pri objednávke.',
     vatNote: (pct: number) => `Všetky ceny obsahujú DPH (${pct}%).`,
     tier_explanation:
-      'Každý GOMP má hodnotenie na škále S (najvyššie) až D (základné), vypočítané ako priemer úrovní jeho jednotlivých komponentov.',
+      'Každý GOMP má hodnotenie na škále S (najvyššie) až B (základné), vypočítané ako priemer úrovní jeho jednotlivých komponentov.',
   },
   cz: {
     blurb: 'Ručně stavěné herní počítače přesně podle vašich požadavků. Stavíme je hráči pro hráče.',
@@ -81,7 +81,7 @@ const T = {
       'Ceny jsou uvedeny v Kč; částka v € je přibližný přepočet (1 € ≈ 24,30 Kč, referenční červenec 2026). Konečná cena bude potvrzena při objednávce.',
     vatNote: (pct: number) => `Všechny ceny zahrnují DPH (${pct}%).`,
     tier_explanation:
-      'Každý GOMP má hodnocení na škále S (nejvyšší) až D (základní), vypočítané jako průměr úrovní jeho jednotlivých komponentů.',
+      'Každý GOMP má hodnocení na škále S (nejvyšší) až B (základní), vypočítané jako průměr úrovní jeho jednotlivých komponentů.',
   },
 } as const;
 
@@ -105,7 +105,7 @@ export default function SiteFooter() {
   const isMobile = useIsMobile();
 
   return (
-    <footer style={{ background: INK, padding: isMobile ? 24 : 60, borderTop: '0.5px solid rgba(28,28,26,0.3)' }}>
+    <footer style={{ background: SURFACE_ALT, padding: isMobile ? 24 : 60, borderTop: `1px solid ${BORDER}` }}>
       <div style={{ maxWidth: 1280, margin: '0 auto' }}>
         <div
           style={{
@@ -117,23 +117,23 @@ export default function SiteFooter() {
         >
           <div>
             <div style={{ ...serif, fontSize: 19, fontWeight: 600, color: GOLD, letterSpacing: 1.5, marginBottom: 16 }}>
-              GOMP
+              ◆ GOMP
             </div>
             <p style={{ ...sans, fontSize: 13, color: MUTED, lineHeight: 1.75, maxWidth: 260, margin: 0, fontWeight: 300 }}>{t.blurb}</p>
           </div>
           <Col title={t.products}>
             <TransitionLink href="/shop" style={linkStyle}>{t.prebuilt}</TransitionLink>
             <TransitionLink href="/build" style={linkStyle}>{t.custom}</TransitionLink>
-            <a href="#" style={linkStyle}>{t.accessories}</a>
+            <TransitionLink href="/accessories" style={linkStyle}>{t.accessories}</TransitionLink>
           </Col>
           <Col title={t.company}>
             <TransitionLink href="/about" style={linkStyle}>{t.aboutus}</TransitionLink>
-            <a href="#" style={linkStyle}>Blog</a>
-            <a href="#" style={linkStyle}>{t.careers}</a>
+            <TransitionLink href="/blog" style={linkStyle}>Blog</TransitionLink>
+            <TransitionLink href="/careers" style={linkStyle}>{t.careers}</TransitionLink>
           </Col>
           <Col title={t.support}>
-            <a href="#" style={linkStyle}>{t.faq}</a>
-            <a href="#" style={linkStyle}>{t.warranty}</a>
+            <TransitionLink href="/faq" style={linkStyle}>{t.faq}</TransitionLink>
+            <TransitionLink href="/terms#complaints" style={linkStyle}>{t.warranty}</TransitionLink>
             <TransitionLink href="/contact" style={linkStyle}>{t.contact}</TransitionLink>
           </Col>
           <Col title={t.legal}>
@@ -143,7 +143,7 @@ export default function SiteFooter() {
         </div>
         <div
           style={{
-            borderTop: '0.5px solid rgba(245,240,230,0.1)',
+            borderTop: `1px solid ${BORDER}`,
             paddingTop: 24,
             display: 'flex',
             flexDirection: isMobile ? 'column' : 'row',
@@ -151,19 +151,19 @@ export default function SiteFooter() {
             justifyContent: 'space-between',
           }}
         >
-          <span style={{ ...sans, fontSize: 12, color: 'rgba(245,240,230,0.3)', fontWeight: 300 }}>© 2026 GOMP. {t.rights}</span>
-          <span style={{ ...sans, fontSize: 12, color: 'rgba(245,240,230,0.3)', fontWeight: 300, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ ...sans, fontSize: 12, color: FAINT, fontWeight: 300 }}>© 2026 GOMP. {t.rights}</span>
+          <span style={{ ...sans, fontSize: 12, color: FAINT, fontWeight: 300, display: 'flex', alignItems: 'center', gap: 10 }}>
             {t.madein}
             {/* Deliberately understated admin-panel entry point, not a typo — matches the original Home footer. */}
-            <TransitionLink href="/admin" style={{ color: 'rgba(245,240,230,0.18)', textDecoration: 'none' }}>
+            <TransitionLink href="/admin" style={{ color: FAINT, textDecoration: 'none' }}>
               ·
             </TransitionLink>
           </span>
         </div>
-        <div style={{ borderTop: '0.5px solid rgba(245,240,230,0.08)', marginTop: 20, paddingTop: 20 }}>
-          <span style={{ ...sans, fontSize: 11, color: 'rgba(245,240,230,0.28)', fontWeight: 300, lineHeight: 1.6 }}>{t.vatNote(vatRatePct)} {t.disclaimer}</span>
+        <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: 20, paddingTop: 20 }}>
+          <span style={{ ...sans, fontSize: 11, color: FAINT, fontWeight: 300, lineHeight: 1.6 }}>{t.vatNote(vatRatePct)} {t.disclaimer}</span>
           <br />
-          <span style={{ ...sans, fontSize: 11, color: 'rgba(245,240,230,0.28)', fontWeight: 300, lineHeight: 1.6 }}>{t.tier_explanation}</span>
+          <span style={{ ...sans, fontSize: 11, color: FAINT, fontWeight: 300, lineHeight: 1.6 }}>{t.tier_explanation}</span>
         </div>
       </div>
     </footer>

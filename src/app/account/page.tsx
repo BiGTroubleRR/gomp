@@ -78,10 +78,10 @@ const STATUS_CZ: Record<OrderStatus, string> = {
 
 // Matches the color language already used for the same statuses in Admin's order-requests tab.
 const STATUS_COLORS: Record<OrderStatus, { color: string; bg: string; border: string }> = {
-  new: { color: '#8B2020', bg: '#FFF0EE', border: 'rgba(204,51,51,0.3)' },
-  contacted: { color: '#1A3080', bg: '#E8F0FF', border: 'rgba(51,102,204,0.3)' },
-  converted: { color: '#1A5030', bg: '#E8FFF0', border: 'rgba(51,153,102,0.35)' },
-  archived: { color: '#505060', bg: '#F2F2F6', border: 'rgba(144,144,160,0.35)' },
+  new: { color: '#E5645F', bg: 'rgba(204,51,51,0.14)', border: 'rgba(204,51,51,0.3)' },
+  contacted: { color: '#8FB0FF', bg: 'rgba(74,144,217,0.16)', border: 'rgba(51,102,204,0.3)' },
+  converted: { color: '#5FB98A', bg: 'rgba(39,174,96,0.16)', border: 'rgba(51,153,102,0.35)' },
+  archived: { color: '#505060', bg: 'rgba(235,230,218,0.08)', border: 'rgba(144,144,160,0.35)' },
 };
 
 const DEFAULT_ADDRESSES: Address[] = [
@@ -287,14 +287,14 @@ const TRANSLATIONS = {
 
 type T = typeof TRANSLATIONS.en;
 
-const ACTIVE_COLOR = '#6E1423';
-const INACTIVE_COLOR = '#7A7469';
+const ACTIVE_COLOR = '#3FAE74';
+const INACTIVE_COLOR = '#98A39D';
 
 const labelStyle: CSSProperties = {
   fontFamily: 'var(--font-sans)',
   fontSize: 10,
   fontWeight: 600,
-  color: '#7A7469',
+  color: '#98A39D',
   letterSpacing: 2,
   textTransform: 'uppercase',
   display: 'block',
@@ -304,17 +304,17 @@ const labelStyle: CSSProperties = {
 const inputStyle: CSSProperties = {
   width: '100%',
   padding: '12px 14px',
-  border: '0.5px solid rgba(28,28,26,0.2)',
+  border: '0.5px solid rgba(235,230,218,0.2)',
   borderRadius: 2,
-  background: '#F5F0E6',
+  background: '#0D0D0C',
   fontFamily: 'var(--font-sans)',
   fontSize: 14,
-  color: '#1C1C1A',
+  color: '#EBE6DA',
 };
 
 const panelStyle: CSSProperties = {
-  background: '#FDFAF4',
-  border: '0.5px solid rgba(28,28,26,0.14)',
+  background: '#131A17',
+  border: '0.5px solid rgba(235,230,218,0.14)',
   borderRadius: 2,
 };
 
@@ -363,7 +363,7 @@ function TabHeader({ t, title, action, isMobile }: { t: T; title: string; action
             fontFamily: 'var(--font-sans)',
             fontSize: 10,
             fontWeight: 600,
-            color: '#7A7469',
+            color: '#98A39D',
             letterSpacing: 2.5,
             textTransform: 'uppercase',
             marginBottom: 8,
@@ -376,7 +376,7 @@ function TabHeader({ t, title, action, isMobile }: { t: T; title: string; action
             fontFamily: 'var(--font-serif)',
             fontSize: isMobile ? 30 : 48,
             fontWeight: 600,
-            color: '#1C1C1A',
+            color: '#EBE6DA',
             letterSpacing: -1.5,
             margin: 0,
             lineHeight: 1,
@@ -513,7 +513,7 @@ function AuthGate({ isMobile }: { isMobile: boolean }) {
   }
 
   return (
-    <div style={{ position: 'relative', zIndex: 2, background: '#F5F0E6', minHeight: '100vh' }}>
+    <div style={{ position: 'relative', zIndex: 2, background: '#0D0D0C', minHeight: '100vh' }}>
       <SiteNav />
       <div
         style={{
@@ -521,14 +521,14 @@ function AuthGate({ isMobile }: { isMobile: boolean }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: isMobile ? '90px 20px 48px' : '100px 24px 80px',
+          padding: isMobile ? '34px 20px 48px' : '40px 24px 80px',
         }}
       >
         <div style={{ width: '100%', maxWidth: 400, ...panelStyle, padding: isMobile ? 28 : 40 }}>
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600, color: '#1C1C1A', marginBottom: 6, letterSpacing: -0.4 }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600, color: '#EBE6DA', marginBottom: 6, letterSpacing: -0.4 }}>
             {copy.title}
           </div>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300, marginBottom: 28 }}>
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', fontWeight: 300, marginBottom: 28 }}>
             {mode === 'signin' ? copy.subtitleIn : copy.subtitleUp}
           </div>
 
@@ -542,7 +542,7 @@ function AuthGate({ isMobile }: { isMobile: boolean }) {
                 marginBottom: 16,
                 fontFamily: 'var(--font-sans)',
                 fontSize: 12,
-                color: '#14532D',
+                color: '#5FB98A',
               }}
             >
               {notice}
@@ -552,13 +552,13 @@ function AuthGate({ isMobile }: { isMobile: boolean }) {
             <div
               style={{
                 padding: '10px 14px',
-                background: 'rgba(110,20,35,0.07)',
-                border: '0.5px solid rgba(110,20,35,0.2)',
+                background: 'rgba(63,174,116,0.07)',
+                border: '0.5px solid rgba(63,174,116,0.2)',
                 borderRadius: 2,
                 marginBottom: 16,
                 fontFamily: 'var(--font-sans)',
                 fontSize: 12,
-                color: '#6E1423',
+                color: '#3FAE74',
               }}
             >
               {error}
@@ -581,7 +581,7 @@ function AuthGate({ isMobile }: { isMobile: boolean }) {
               style={{
                 marginTop: 8,
                 padding: '13px 24px',
-                background: '#6E1423',
+                background: '#1F8A55',
                 color: '#FDFAF4',
                 border: 'none',
                 borderRadius: 2,
@@ -610,7 +610,7 @@ function AuthGate({ isMobile }: { isMobile: boolean }) {
               padding: 0,
               fontFamily: 'var(--font-sans)',
               fontSize: 12,
-              color: '#7A7469',
+              color: '#98A39D',
               textDecoration: 'underline',
               textUnderlineOffset: 3,
             }}
@@ -838,7 +838,7 @@ export default function Account() {
 
   if (authLoading) {
     return (
-      <div style={{ position: 'relative', zIndex: 2, background: '#F5F0E6', minHeight: '100vh' }}>
+      <div style={{ position: 'relative', zIndex: 2, background: '#0D0D0C', minHeight: '100vh' }}>
         <SiteNav />
       </div>
     );
@@ -849,11 +849,11 @@ export default function Account() {
   }
 
   return (
-    <div style={{ position: 'relative', zIndex: 2, background: '#F5F0E6', minHeight: '100vh' }}>
+    <div style={{ position: 'relative', zIndex: 2, background: '#0D0D0C', minHeight: '100vh' }}>
       {/* Nav */}
       <SiteNav />
 
-      <div style={{ minHeight: '100vh', padding: isMobile ? '90px 20px 48px' : '100px 60px 80px' }}>
+      <div style={{ minHeight: '100vh', padding: isMobile ? '34px 20px 48px' : '40px 60px 80px' }}>
         <div
           style={{
             maxWidth: 1280,
@@ -865,14 +865,14 @@ export default function Account() {
           }}
         >
           {/* Sidebar */}
-          <aside style={isMobile ? {} : { position: 'sticky', top: 84 }}>
+          <aside style={isMobile ? {} : { position: 'sticky', top: 'calc(var(--gomp-bar-h) + 24px)' }}>
             <div style={{ marginBottom: 36 }}>
               <div
                 style={{
                   width: 60,
                   height: 60,
                   borderRadius: '50%',
-                  background: '#6E1423',
+                  background: '#1F8A55',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -888,7 +888,7 @@ export default function Account() {
                   fontFamily: 'var(--font-serif)',
                   fontSize: 24,
                   fontWeight: 600,
-                  color: '#1C1C1A',
+                  color: '#EBE6DA',
                   letterSpacing: -0.4,
                   lineHeight: 1.1,
                   marginBottom: 4,
@@ -900,7 +900,7 @@ export default function Account() {
                 style={{
                   fontFamily: 'var(--font-sans)',
                   fontSize: 12,
-                  color: '#7A7469',
+                  color: '#98A39D',
                   fontWeight: 300,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -923,15 +923,15 @@ export default function Account() {
                       alignItems: 'center',
                       padding: '10px 13px',
                       cursor: 'pointer',
-                      borderLeft: `2px solid ${active ? '#6E1423' : 'transparent'}`,
-                      background: active ? 'rgba(110,20,35,0.065)' : 'transparent',
+                      borderLeft: `2px solid ${active ? '#3FAE74' : 'transparent'}`,
+                      background: active ? 'rgba(63,174,116,0.065)' : 'transparent',
                     }}
                   >
                     <span
                       style={{
                         fontFamily: 'var(--font-sans)',
                         fontSize: 13,
-                        color: active ? '#1C1C1A' : '#7A7469',
+                        color: active ? '#EBE6DA' : '#98A39D',
                         fontWeight: active ? 500 : 400,
                       }}
                     >
@@ -941,12 +941,12 @@ export default function Account() {
                 );
               })}
             </div>
-            <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.12)', paddingTop: 20 }}>
+            <div style={{ borderTop: '0.5px solid rgba(235,230,218,0.12)', paddingTop: 20 }}>
               <div
                 style={{
                   fontFamily: 'var(--font-sans)',
                   fontSize: 10,
-                  color: '#7A7469',
+                  color: '#98A39D',
                   letterSpacing: 1.5,
                   textTransform: 'uppercase',
                   marginBottom: 4,
@@ -954,14 +954,14 @@ export default function Account() {
               >
                 {t.member_since}
               </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#1C1C1A', marginBottom: 18 }}>{t.member_date}</div>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#EBE6DA', marginBottom: 18 }}>{t.member_date}</div>
               <TransitionLink
                 href="/"
                 onClick={() => signOut()}
                 style={{
                   fontFamily: 'var(--font-sans)',
                   fontSize: 12,
-                  color: '#7A7469',
+                  color: '#98A39D',
                   textDecoration: 'none',
                   borderBottom: '0.5px solid rgba(122,116,105,0.35)',
                   paddingBottom: 1,
@@ -980,7 +980,7 @@ export default function Account() {
                   <TabHeader t={t} title={t.my_orders} isMobile={isMobile} />
                   {!ordersLoading && orders.length === 0 && (
                     <div style={{ ...panelStyle, padding: isMobile ? 24 : 32, textAlign: 'center' }}>
-                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469' }}>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D' }}>
                         {pick(lang, {
                           en: "You don't have any orders yet.",
                           sk: 'Zatiaľ nemáte žiadne objednávky.',
@@ -1011,13 +1011,13 @@ export default function Account() {
                             }}
                           >
                             <div>
-                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', letterSpacing: 0.8, marginBottom: 5 }}>
+                              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#98A39D', letterSpacing: 0.8, marginBottom: 5 }}>
                                 {order.id}
                               </div>
-                              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: '#1C1C1A', marginBottom: 3 }}>
+                              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: '#EBE6DA', marginBottom: 3 }}>
                                 {name}
                               </div>
-                              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', fontWeight: 300 }}>{date}</div>
+                              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#98A39D', fontWeight: 300 }}>{date}</div>
                             </div>
                             <div
                               style={{
@@ -1028,7 +1028,7 @@ export default function Account() {
                                 flexWrap: 'wrap',
                               }}
                             >
-                              <div style={{ fontFamily: 'var(--font-serif)', fontSize: 16, fontWeight: 500, color: '#1C1C1A', whiteSpace: 'nowrap' }}>
+                              <div style={{ fontFamily: 'var(--font-serif)', fontSize: 16, fontWeight: 500, color: '#EBE6DA', whiteSpace: 'nowrap' }}>
                                 {fmtGross(order.totalEur)}
                               </div>
                               <div style={{ padding: '4px 11px', borderRadius: 2, background: s.bg, border: `0.5px solid ${s.border}` }}>
@@ -1049,7 +1049,7 @@ export default function Account() {
                                 style={{
                                   fontFamily: 'var(--font-mono)',
                                   fontSize: 15,
-                                  color: '#7A7469',
+                                  color: '#98A39D',
                                   width: 16,
                                   textAlign: 'center',
                                   userSelect: 'none',
@@ -1062,9 +1062,9 @@ export default function Account() {
                           {expanded && (
                             <div
                               style={{
-                                borderTop: '0.5px solid rgba(28,28,26,0.09)',
+                                borderTop: '0.5px solid rgba(235,230,218,0.09)',
                                 padding: isMobile ? '18px 16px 20px' : '20px 28px 24px',
-                                background: 'rgba(28,28,26,0.018)',
+                                background: 'rgba(235,230,218,0.018)',
                               }}
                             >
                               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 20 : 32, marginBottom: 20 }}>
@@ -1074,7 +1074,7 @@ export default function Account() {
                                       fontFamily: 'var(--font-sans)',
                                       fontSize: 10,
                                       fontWeight: 600,
-                                      color: '#7A7469',
+                                      color: '#98A39D',
                                       letterSpacing: 2,
                                       textTransform: 'uppercase',
                                       marginBottom: 10,
@@ -1088,13 +1088,13 @@ export default function Account() {
                                       return (
                                         <div
                                           key={part}
-                                          style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1C1C1A', display: 'flex', alignItems: 'center', gap: 8 }}
+                                          style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#EBE6DA', display: 'flex', alignItems: 'center', gap: 8 }}
                                         >
                                           {img ? (
                                             <div
                                               style={{
                                                 width: 22, height: 22, borderRadius: 3, flexShrink: 0,
-                                                background: 'repeating-conic-gradient(rgba(28,28,26,0.06) 0% 25%, transparent 0% 50%) 0 0 / 8px 8px',
+                                                background: 'repeating-conic-gradient(rgba(235,230,218,0.06) 0% 25%, transparent 0% 50%) 0 0 / 8px 8px',
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                                                 position: 'relative',
                                               }}
@@ -1102,7 +1102,7 @@ export default function Account() {
                                               <Image src={img} alt={part} fill sizes="22px" style={{ objectFit: 'contain' }} />
                                             </div>
                                           ) : (
-                                            <span style={{ color: 'rgba(28,28,26,0.28)', flexShrink: 0 }}>—</span>
+                                            <span style={{ color: 'rgba(235,230,218,0.28)', flexShrink: 0 }}>—</span>
                                           )}
                                           <span>{part}</span>
                                         </div>
@@ -1116,7 +1116,7 @@ export default function Account() {
                                       fontFamily: 'var(--font-sans)',
                                       fontSize: 10,
                                       fontWeight: 600,
-                                      color: '#7A7469',
+                                      color: '#98A39D',
                                       letterSpacing: 2,
                                       textTransform: 'uppercase',
                                       marginBottom: 10,
@@ -1124,8 +1124,8 @@ export default function Account() {
                                   >
                                     {t.delivery}
                                   </div>
-                                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#1C1C1A', marginBottom: 8 }}>{eta}</div>
-                                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', fontWeight: 300, lineHeight: 1.65 }}>
+                                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#EBE6DA', marginBottom: 8 }}>{eta}</div>
+                                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', fontWeight: 300, lineHeight: 1.65 }}>
                                     {t.warranty_note}
                                   </div>
                                 </div>
@@ -1136,11 +1136,11 @@ export default function Account() {
                                   style={{
                                     padding: '8px 16px',
                                     background: 'transparent',
-                                    border: '0.5px solid rgba(28,28,26,0.18)',
+                                    border: '0.5px solid rgba(235,230,218,0.18)',
                                     borderRadius: 2,
                                     fontFamily: 'var(--font-sans)',
                                     fontSize: 12,
-                                    color: '#7A7469',
+                                    color: '#98A39D',
                                     cursor: 'pointer',
                                   }}
                                 >
@@ -1151,11 +1151,11 @@ export default function Account() {
                                   style={{
                                     padding: '8px 16px',
                                     background: 'transparent',
-                                    border: '0.5px solid rgba(28,28,26,0.18)',
+                                    border: '0.5px solid rgba(235,230,218,0.18)',
                                     borderRadius: 2,
                                     fontFamily: 'var(--font-sans)',
                                     fontSize: 12,
-                                    color: '#7A7469',
+                                    color: '#98A39D',
                                     cursor: 'pointer',
                                   }}
                                 >
@@ -1183,7 +1183,7 @@ export default function Account() {
                           onClick={openAddAddress}
                           style={{
                             padding: '10px 20px',
-                            background: '#6E1423',
+                            background: '#1F8A55',
                             color: '#FDFAF4',
                             border: 'none',
                             borderRadius: 2,
@@ -1205,7 +1205,7 @@ export default function Account() {
                         key={`${addr.label}-${idx}`}
                         style={{
                           ...panelStyle,
-                          border: `0.5px solid ${addr.default ? 'rgba(110,20,35,0.22)' : 'rgba(28,28,26,0.14)'}`,
+                          border: `0.5px solid ${addr.default ? 'rgba(63,174,116,0.22)' : 'rgba(235,230,218,0.14)'}`,
                           padding: isMobile ? '18px 16px 16px' : '22px 22px 18px',
                           position: 'relative',
                         }}
@@ -1217,12 +1217,12 @@ export default function Account() {
                               top: 13,
                               right: 13,
                               padding: '2px 8px',
-                              background: 'rgba(110,20,35,0.07)',
-                              border: '0.5px solid rgba(110,20,35,0.18)',
+                              background: 'rgba(63,174,116,0.07)',
+                              border: '0.5px solid rgba(63,174,116,0.18)',
                               borderRadius: 2,
                             }}
                           >
-                            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: '#6E1423', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: '#3FAE74', letterSpacing: 1.5, textTransform: 'uppercase' }}>
                               {t.default_badge}
                             </span>
                           </div>
@@ -1232,7 +1232,7 @@ export default function Account() {
                             fontFamily: 'var(--font-sans)',
                             fontSize: 10,
                             fontWeight: 600,
-                            color: '#7A7469',
+                            color: '#98A39D',
                             letterSpacing: 2,
                             textTransform: 'uppercase',
                             marginBottom: 10,
@@ -1240,24 +1240,24 @@ export default function Account() {
                         >
                           {addr.label}
                         </div>
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#1C1C1A', lineHeight: 1.8, marginBottom: 14 }}>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#EBE6DA', lineHeight: 1.8, marginBottom: 14 }}>
                           {addr.street}
                           <br />
                           {addr.city}, {addr.zip}
                           <br />
                           {addr.country}
                         </div>
-                        <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12, display: 'flex', gap: 8 }}>
+                        <div style={{ borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 12, display: 'flex', gap: 8 }}>
                           <button
                             onClick={() => openEditAddress(idx)}
                             style={{
                               padding: '7px 14px',
                               background: 'transparent',
-                              border: '0.5px solid rgba(28,28,26,0.2)',
+                              border: '0.5px solid rgba(235,230,218,0.2)',
                               borderRadius: 2,
                               fontFamily: 'var(--font-sans)',
                               fontSize: 11,
-                              color: '#7A7469',
+                              color: '#98A39D',
                               cursor: 'pointer',
                             }}
                           >
@@ -1270,11 +1270,11 @@ export default function Account() {
                                 style={{
                                   padding: '7px 14px',
                                   background: 'transparent',
-                                  border: '0.5px solid rgba(28,28,26,0.2)',
+                                  border: '0.5px solid rgba(235,230,218,0.2)',
                                   borderRadius: 2,
                                   fontFamily: 'var(--font-sans)',
                                   fontSize: 11,
-                                  color: '#7A7469',
+                                  color: '#98A39D',
                                   cursor: 'pointer',
                                 }}
                               >
@@ -1285,11 +1285,11 @@ export default function Account() {
                                 style={{
                                   padding: '7px 14px',
                                   background: 'transparent',
-                                  border: '0.5px solid rgba(28,28,26,0.1)',
+                                  border: '0.5px solid rgba(235,230,218,0.1)',
                                   borderRadius: 2,
                                   fontFamily: 'var(--font-sans)',
                                   fontSize: 11,
-                                  color: 'rgba(28,28,26,0.35)',
+                                  color: 'rgba(235,230,218,0.35)',
                                   cursor: 'pointer',
                                 }}
                               >
@@ -1302,8 +1302,8 @@ export default function Account() {
                     ))}
                   </div>
                   {showAddressForm && (
-                    <div style={{ ...panelStyle, border: '0.5px solid rgba(28,28,26,0.18)', padding: isMobile ? 20 : 28 }}>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: '#1C1C1A', letterSpacing: 0.2, marginBottom: 20 }}>
+                    <div style={{ ...panelStyle, border: '0.5px solid rgba(235,230,218,0.18)', padding: isMobile ? 20 : 28 }}>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: '#EBE6DA', letterSpacing: 0.2, marginBottom: 20 }}>
                         {editingAddressIdx !== null ? t.edit_address : t.new_address}
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
@@ -1344,11 +1344,11 @@ export default function Account() {
                           style={{
                             padding: '11px 20px',
                             background: 'transparent',
-                            border: '0.5px solid rgba(28,28,26,0.2)',
+                            border: '0.5px solid rgba(235,230,218,0.2)',
                             borderRadius: 2,
                             fontFamily: 'var(--font-sans)',
                             fontSize: 13,
-                            color: '#7A7469',
+                            color: '#98A39D',
                             cursor: 'pointer',
                           }}
                         >
@@ -1358,7 +1358,7 @@ export default function Account() {
                           onClick={saveAddress}
                           style={{
                             padding: '11px 22px',
-                            background: '#6E1423',
+                            background: '#1F8A55',
                             color: '#FDFAF4',
                             border: 'none',
                             borderRadius: 2,
@@ -1389,11 +1389,11 @@ export default function Account() {
                           style={{
                             padding: '10px 20px',
                             background: 'transparent',
-                            border: '0.5px solid rgba(28,28,26,0.2)',
+                            border: '0.5px solid rgba(235,230,218,0.2)',
                             borderRadius: 2,
                             fontFamily: 'var(--font-sans)',
                             fontSize: 12,
-                            color: '#7A7469',
+                            color: '#98A39D',
                             cursor: 'pointer',
                           }}
                         >
@@ -1406,13 +1406,13 @@ export default function Account() {
                     <div
                       style={{
                         padding: '12px 16px',
-                        background: 'rgba(110,20,35,0.07)',
-                        border: '0.5px solid rgba(110,20,35,0.2)',
+                        background: 'rgba(63,174,116,0.07)',
+                        border: '0.5px solid rgba(63,174,116,0.2)',
                         borderRadius: 2,
                         marginBottom: 16,
                       }}
                     >
-                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#6E1423' }}>{profileError}</span>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#3FAE74' }}>{profileError}</span>
                     </div>
                   )}
                   {profileSaved && (
@@ -1428,7 +1428,7 @@ export default function Account() {
                         marginBottom: 16,
                       }}
                     >
-                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#14532D', fontWeight: 500 }}>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#5FB98A', fontWeight: 500 }}>
                         ✓ {t.profile_updated}
                       </span>
                     </div>
@@ -1449,7 +1449,7 @@ export default function Account() {
                             alignItems: isMobile ? 'flex-start' : 'center',
                             gap: isMobile ? 4 : 0,
                             padding: isMobile ? '14px 16px' : '17px 26px',
-                            borderBottom: i === arr.length - 1 ? 'none' : '0.5px solid rgba(28,28,26,0.07)',
+                            borderBottom: i === arr.length - 1 ? 'none' : '0.5px solid rgba(235,230,218,0.07)',
                           }}
                         >
                           <div
@@ -1459,14 +1459,14 @@ export default function Account() {
                               fontFamily: 'var(--font-sans)',
                               fontSize: 10,
                               fontWeight: 600,
-                              color: '#7A7469',
+                              color: '#98A39D',
                               letterSpacing: 2,
                               textTransform: 'uppercase',
                             }}
                           >
                             {row.label}
                           </div>
-                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#1C1C1A' }}>{row.value}</div>
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#EBE6DA' }}>{row.value}</div>
                         </div>
                       ))}
                     </div>
@@ -1502,11 +1502,11 @@ export default function Account() {
                           style={{
                             padding: '12px 20px',
                             background: 'transparent',
-                            border: '0.5px solid rgba(28,28,26,0.2)',
+                            border: '0.5px solid rgba(235,230,218,0.2)',
                             borderRadius: 2,
                             fontFamily: 'var(--font-sans)',
                             fontSize: 13,
-                            color: '#7A7469',
+                            color: '#98A39D',
                             cursor: 'pointer',
                           }}
                         >
@@ -1516,7 +1516,7 @@ export default function Account() {
                           onClick={saveProfile}
                           style={{
                             padding: '12px 24px',
-                            background: '#6E1423',
+                            background: '#1F8A55',
                             color: '#FDFAF4',
                             border: 'none',
                             borderRadius: 2,
@@ -1538,10 +1538,10 @@ export default function Account() {
                 <>
                   <TabHeader t={t} title={t.security} isMobile={isMobile} />
                   <div style={{ ...panelStyle, padding: isMobile ? 20 : 28, marginBottom: 14 }}>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: '#1C1C1A', marginBottom: 4 }}>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: '#EBE6DA', marginBottom: 4 }}>
                       {t.change_password}
                     </div>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', fontWeight: 300, marginBottom: 24 }}>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#98A39D', fontWeight: 300, marginBottom: 24 }}>
                       {t.change_password_desc}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24 }}>
@@ -1568,13 +1568,13 @@ export default function Account() {
                       <div
                         style={{
                           padding: '10px 14px',
-                          background: 'rgba(110,20,35,0.07)',
-                          border: '0.5px solid rgba(110,20,35,0.2)',
+                          background: 'rgba(63,174,116,0.07)',
+                          border: '0.5px solid rgba(63,174,116,0.2)',
                           borderRadius: 2,
                           marginBottom: 14,
                         }}
                       >
-                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#6E1423' }}>{passwordError}</span>
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#3FAE74' }}>{passwordError}</span>
                       </div>
                     )}
                     {passwordChanged && (
@@ -1590,7 +1590,7 @@ export default function Account() {
                           marginBottom: 16,
                         }}
                       >
-                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#14532D', fontWeight: 500 }}>
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#5FB98A', fontWeight: 500 }}>
                           ✓ {t.password_updated}
                         </span>
                       </div>
@@ -1599,7 +1599,7 @@ export default function Account() {
                       onClick={submitPassword}
                       style={{
                         padding: '12px 24px',
-                        background: '#6E1423',
+                        background: '#1F8A55',
                         color: '#FDFAF4',
                         border: 'none',
                         borderRadius: 2,
@@ -1619,7 +1619,7 @@ export default function Account() {
                         fontFamily: 'var(--font-sans)',
                         fontSize: 10,
                         fontWeight: 600,
-                        color: '#7A7469',
+                        color: '#98A39D',
                         letterSpacing: 2,
                         textTransform: 'uppercase',
                         marginBottom: 14,
@@ -1633,21 +1633,21 @@ export default function Account() {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '12px 0',
-                        borderBottom: '0.5px solid rgba(28,28,26,0.07)',
+                        borderBottom: '0.5px solid rgba(235,230,218,0.07)',
                       }}
                     >
                       <div>
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#1C1C1A', marginBottom: 2 }}>{t.last_signin}</div>
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', fontWeight: 300 }}>{t.signin_location}</div>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#EBE6DA', marginBottom: 2 }}>{t.last_signin}</div>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', fontWeight: 300 }}>{t.signin_location}</div>
                       </div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', whiteSpace: 'nowrap' }}>{t.today_time}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#98A39D', whiteSpace: 'nowrap' }}>{t.today_time}</div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
                       <div>
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#1C1C1A', marginBottom: 2 }}>{t.previous_signin}</div>
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', fontWeight: 300 }}>{t.signin_location}</div>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#EBE6DA', marginBottom: 2 }}>{t.previous_signin}</div>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', fontWeight: 300 }}>{t.signin_location}</div>
                       </div>
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', whiteSpace: 'nowrap' }}>{t.previous_time}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#98A39D', whiteSpace: 'nowrap' }}>{t.previous_time}</div>
                     </div>
                   </div>
 
@@ -1668,10 +1668,10 @@ export default function Account() {
                         }}
                       >
                         <div>
-                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: '#1C1C1A', marginBottom: 5 }}>
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: '#EBE6DA', marginBottom: 5 }}>
                             {t.delete_account}
                           </div>
-                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', fontWeight: 300, lineHeight: 1.65, maxWidth: isMobile ? '100%' : 400 }}>
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#98A39D', fontWeight: 300, lineHeight: 1.65, maxWidth: isMobile ? '100%' : 400 }}>
                             {t.delete_account_desc}
                           </div>
                         </div>
@@ -1705,7 +1705,7 @@ export default function Account() {
                             borderRadius: 2,
                           }}
                         >
-                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#1C1C1A', marginBottom: 12 }}>
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#EBE6DA', marginBottom: 12 }}>
                             {t.type_delete} <strong>DELETE</strong> {t.to_confirm}
                           </div>
                           <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: 8 }}>
@@ -1720,10 +1720,10 @@ export default function Account() {
                                 padding: '10px 14px',
                                 border: '0.5px solid rgba(176,32,32,0.25)',
                                 borderRadius: 2,
-                                background: '#FDFAF4',
+                                background: '#131A17',
                                 fontFamily: 'var(--font-mono)',
                                 fontSize: 13,
-                                color: '#1C1C1A',
+                                color: '#EBE6DA',
                                 letterSpacing: 1,
                               }}
                             />
@@ -1733,11 +1733,11 @@ export default function Account() {
                                 style={{
                                   padding: '10px 16px',
                                   background: 'transparent',
-                                  border: '0.5px solid rgba(28,28,26,0.18)',
+                                  border: '0.5px solid rgba(235,230,218,0.18)',
                                   borderRadius: 2,
                                   fontFamily: 'var(--font-sans)',
                                   fontSize: 12,
-                                  color: '#7A7469',
+                                  color: '#98A39D',
                                   cursor: 'pointer',
                                   whiteSpace: 'nowrap',
                                   flex: isMobile ? 1 : undefined,

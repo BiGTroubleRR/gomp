@@ -10,7 +10,7 @@ import { useDeviceView } from '@/contexts/DeviceViewContext';
 export default function DeviceViewToggle({ dark }: { dark?: boolean }) {
   const { forcePhone, toggleForcePhone } = useDeviceView();
 
-  const ink = dark ? 'rgba(245,240,230,0.85)' : '#1C1C1A';
+  const ink = dark ? 'rgba(235,230,218,0.85)' : '#EBE6DA'; // light either way — every page is dark now
   const whooshEase = 'cubic-bezier(.16,1,.3,1)';
 
   return (

@@ -7,7 +7,7 @@ import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import { useIsMobile } from '@/lib/use-media-query';
 import { submitContactMessage } from '@/lib/contact-submit';
-import { MAROON, INK, MUTED, PAGE_BG, PANEL_BG } from '@/lib/design-tokens';
+import { INK, MUTED, PAGE_BG, PANEL_BG, ACCENT, ACCENT_FILL } from '@/lib/design-tokens';
 
 const T = {
   en: {
@@ -50,7 +50,7 @@ const T = {
 } as const;
 
 const INPUT_STYLE: CSSProperties = {
-  width: '100%', padding: '11px 12px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3,
+  width: '100%', padding: '11px 12px', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 3,
   fontSize: 14, fontFamily: 'var(--font-sans)', background: PAGE_BG, color: INK, outline: 'none',
 };
 const LABEL_STYLE: CSSProperties = {
@@ -91,11 +91,11 @@ export default function ContactPage() {
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
       <SiteNav />
 
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: isMobile ? '56px 20px 60px' : '84px 32px 90px' }}>
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: isMobile ? '28px 20px 60px' : '44px 32px 90px' }}>
         <div
           style={{
             fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600,
-            letterSpacing: 1.5, color: MAROON, marginBottom: 12,
+            letterSpacing: 1.5, color: ACCENT, marginBottom: 12,
           }}
         >
           {t.eyebrow}
@@ -112,10 +112,10 @@ export default function ContactPage() {
           {t.intro}
         </p>
 
-        <div style={{ background: PANEL_BG, border: '0.5px solid rgba(28,28,26,0.12)', borderRadius: 4, padding: isMobile ? 22 : 36 }}>
+        <div style={{ background: PANEL_BG, border: '0.5px solid rgba(235,230,218,0.12)', borderRadius: 4, padding: isMobile ? 22 : 36 }}>
           {submitted ? (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(110,20,35,0.08)', border: `1.5px solid ${MAROON}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: 22, color: MAROON }}>
+              <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(63,174,116,0.08)', border: `1.5px solid ${ACCENT}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: 22, color: ACCENT }}>
                 ✓
               </div>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 19, fontWeight: 600, color: INK, marginBottom: 8 }}>{t.success_title}</div>
@@ -156,13 +156,13 @@ export default function ContactPage() {
                 />
               </div>
               {error && (
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#CC3333', marginBottom: 14 }}>{error}</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#E5645F', marginBottom: 14 }}>{error}</div>
               )}
               <button
                 type="submit"
                 disabled={submitting}
                 style={{
-                  width: '100%', padding: '13px 0', background: submitting ? '#4A0E1A' : MAROON, color: '#FDFAF4',
+                  width: '100%', padding: '13px 0', background: submitting ? '#0A4129' : ACCENT_FILL, color: '#FDFAF4',
                   border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
                   cursor: submitting ? 'default' : 'pointer', letterSpacing: 0.3,
                 }}

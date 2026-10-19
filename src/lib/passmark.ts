@@ -106,15 +106,11 @@ export function tierFromPassmark(isGpu: boolean, score: number): Tier {
 }
 
 export const TIER_COLORS: Record<Tier, { bg: string; text: string; border: string }> = {
-  S: { bg: '#FFF8CC', text: '#7A5500', border: '#D4A017' },
-  A: { bg: '#F2E6FF', text: '#5B1A8B', border: '#9B59B6' },
-  B: { bg: '#E6FAF0', text: '#1A6B3A', border: '#27AE60' },
+  // Dark-scheme badges: tinted fill, bright readable text, saturated border.
+  S: { bg: 'rgba(212,160,23,0.16)', text: '#E3C47F', border: '#D4A017' },
+  A: { bg: 'rgba(155,89,182,0.20)', text: '#D2A8E8', border: '#9B59B6' },
+  B: { bg: 'rgba(39,174,96,0.16)', text: '#5FB98A', border: '#27AE60' },
 };
-
-export function hexToRgba(hex: string, alpha: number): string {
-  const n = parseInt(hex.slice(1), 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
-}
 
 // RAM has no PassMark-style benchmark table, so its tier is derived from the specs a kit
 // actually ships with instead: clock speed and CAS latency (the two numbers that determine real

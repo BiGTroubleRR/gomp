@@ -1,8 +1,10 @@
 // Shared accent color for Gomp Budget Builds (GBB) — the used/secondhand-parts section.
-// Deliberately only swaps the site's bordeaux/maroon accent (#6E1423) for a deep forest green;
-// gold, ink, and the cream/parchment neutrals stay exactly as they are everywhere else, so this
-// reads as "the same site, a different department" rather than a different brand.
-export const GBB_GREEN = '#1F4A3D';
-export const GBB_GREEN_RGB = '31,74,61';
-export const GBB_GREEN_DARK = '#163830'; // hover/active state, mirrors how bordeaux buttons darken on press
-export const GBB_GREEN_TINT = (opacity: number) => `rgba(${GBB_GREEN_RGB},${opacity})`;
+// The storefront accent is now green (see design-tokens.ts), so GBB's own department accent is the
+// brand gold instead — matching the gold "Budget Builds" link in the header — which keeps it clearly
+// distinct from every green button elsewhere while staying on the same dark palette. Text that sits
+// on a gold fill must use GBB_ON_ACCENT (dark), not cream: cream-on-gold is too low contrast.
+export const GBB_ACCENT = '#C4A35A';
+export const GBB_ACCENT_RGB = '196,163,90';
+export const GBB_ACCENT_DARK = '#A88B45'; // hover/active state
+export const GBB_ON_ACCENT = '#0D0D0C';
+export const GBB_ACCENT_TINT = (opacity: number) => `rgba(${GBB_ACCENT_RGB},${opacity})`;

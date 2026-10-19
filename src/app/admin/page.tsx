@@ -11,7 +11,7 @@ import { fetchIntents, updateIntentStatus, type CheckoutIntent, type IntentStatu
 import { fetchGbbRequests, updateGbbRequest, type GbbRequest, type GbbStatus } from '@/lib/admin-gbb';
 import { fetchContactMessages, updateContactMessageStatus, type ContactMessage, type ContactStatus } from '@/lib/admin-contact';
 import { marketplaceSearchLinks } from '@/lib/gbb-links';
-import { GBB_GREEN, GBB_GREEN_TINT } from '@/lib/gbb-theme';
+import { GBB_ACCENT, GBB_ACCENT_TINT } from '@/lib/gbb-theme';
 import { fetchComponentDb, subscribeComponents, insertComponent, updateComponentRow, deleteComponentRow } from '@/lib/supabase/components';
 import {
   fetchCustomerBuilds,
@@ -629,44 +629,44 @@ function initialCgForm(): CgFormState {
 const EDIT_PANEL_WIDTH = 640;
 
 const LABEL_STYLE: CSSProperties = {
-  fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469',
+  fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#98A39D',
   letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6,
 };
 
 const INPUT_STYLE: CSSProperties = {
-  width: '100%', padding: '9px 12px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2,
-  fontSize: 13, background: '#F5F0E6', color: '#1C1C1A', fontFamily: 'var(--font-sans)',
+  width: '100%', padding: '9px 12px', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2,
+  fontSize: 13, background: '#0D0D0C', color: '#EBE6DA', fontFamily: 'var(--font-sans)',
 };
 
 // Order-request detail panel: small caps label over a plain value block.
 const ADMIN_LABEL: CSSProperties = {
-  fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: '#A09890',
+  fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: '#6B7570',
   letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 5,
 };
 
 const ADMIN_VALUE: CSSProperties = {
-  fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1C1C1A', lineHeight: 1.7,
+  fontFamily: 'var(--font-sans)', fontSize: 12, color: '#EBE6DA', lineHeight: 1.7,
 };
 
 const STATUS_COLORS: Record<IntentStatus, { bg: string; text: string; border: string }> = {
-  new: { bg: '#FFF0EE', text: '#8B2020', border: 'rgba(204,51,51,0.3)' },
-  contacted: { bg: '#E8F0FF', text: '#1A3080', border: 'rgba(51,102,204,0.3)' },
-  converted: { bg: '#E8FFF0', text: '#1A5030', border: 'rgba(51,153,102,0.35)' },
-  archived: { bg: '#F2F2F6', text: '#505060', border: 'rgba(144,144,160,0.35)' },
+  new: { bg: 'rgba(204,51,51,0.14)', text: '#E5645F', border: 'rgba(204,51,51,0.3)' },
+  contacted: { bg: 'rgba(74,144,217,0.16)', text: '#8FB0FF', border: 'rgba(51,102,204,0.3)' },
+  converted: { bg: 'rgba(39,174,96,0.16)', text: '#5FB98A', border: 'rgba(51,153,102,0.35)' },
+  archived: { bg: 'rgba(235,230,218,0.08)', text: '#505060', border: 'rgba(144,144,160,0.35)' },
 };
 
 const GBB_STATUS_COLORS: Record<GbbStatus, { bg: string; text: string; border: string }> = {
-  new: { bg: '#FFF0EE', text: '#8B2020', border: 'rgba(204,51,51,0.3)' },
-  researching: { bg: '#FFF8E8', text: '#8A6D2F', border: 'rgba(196,163,90,0.4)' },
-  quoted: { bg: GBB_GREEN_TINT(0.1), text: GBB_GREEN, border: GBB_GREEN_TINT(0.35) },
-  converted: { bg: '#E8FFF0', text: '#1A5030', border: 'rgba(51,153,102,0.35)' },
-  archived: { bg: '#F2F2F6', text: '#505060', border: 'rgba(144,144,160,0.35)' },
+  new: { bg: 'rgba(204,51,51,0.14)', text: '#E5645F', border: 'rgba(204,51,51,0.3)' },
+  researching: { bg: 'rgba(196,163,90,0.14)', text: '#8A6D2F', border: 'rgba(196,163,90,0.4)' },
+  quoted: { bg: GBB_ACCENT_TINT(0.1), text: GBB_ACCENT, border: GBB_ACCENT_TINT(0.35) },
+  converted: { bg: 'rgba(39,174,96,0.16)', text: '#5FB98A', border: 'rgba(51,153,102,0.35)' },
+  archived: { bg: 'rgba(235,230,218,0.08)', text: '#505060', border: 'rgba(144,144,160,0.35)' },
 };
 
 const CONTACT_STATUS_COLORS: Record<ContactStatus, { bg: string; text: string; border: string }> = {
-  new: { bg: '#FFF0EE', text: '#8B2020', border: 'rgba(204,51,51,0.3)' },
-  read: { bg: '#E8F0FF', text: '#1A3080', border: 'rgba(51,102,204,0.3)' },
-  archived: { bg: '#F2F2F6', text: '#505060', border: 'rgba(144,144,160,0.35)' },
+  new: { bg: 'rgba(204,51,51,0.14)', text: '#E5645F', border: 'rgba(204,51,51,0.3)' },
+  read: { bg: 'rgba(74,144,217,0.16)', text: '#8FB0FF', border: 'rgba(51,102,204,0.3)' },
+  archived: { bg: 'rgba(235,230,218,0.08)', text: '#505060', border: 'rgba(144,144,160,0.35)' },
 };
 
 function tierBadge(tier: Tier | undefined, palette: Record<Tier, { bg: string; text: string; border: string }>) {
@@ -1512,30 +1512,30 @@ export default function AdminPage() {
       <div
         style={{
           position: 'relative', zIndex: 2, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: 'linear-gradient(135deg,#170809 0%,#2E1114 60%,#3A161A 100%)',
+          background: 'linear-gradient(135deg,#0A0F0D 0%,#0F1C16 60%,#14261D 100%)',
           padding: isMobile ? '0 16px' : 0, boxSizing: 'border-box',
         }}
       >
-        <div style={{ background: '#FDFAF4', borderRadius: 2, padding: isMobile ? 28 : 52, width: isMobile ? '100%' : 400, maxWidth: 400, boxSizing: 'border-box', border: '0.5px solid rgba(28,28,26,0.1)' }}>
+        <div style={{ background: '#131A17', borderRadius: 2, padding: isMobile ? 28 : 52, width: isMobile ? '100%' : 400, maxWidth: 400, boxSizing: 'border-box', border: '0.5px solid rgba(235,230,218,0.1)' }}>
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: 17, fontWeight: 600, letterSpacing: 1.5, color: '#C4A35A', marginBottom: 6 }}>
             GOMP
           </div>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 26, fontWeight: 600, color: '#1C1C1A', marginBottom: 6, letterSpacing: -0.5 }}>
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 26, fontWeight: 600, color: '#EBE6DA', marginBottom: 6, letterSpacing: -0.5 }}>
             {t.admin_panel}
           </div>
 
           {checking ? (
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300, marginTop: 18 }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', fontWeight: 300, marginTop: 18 }}>
               {t.checking_access}
             </div>
           ) : !isSignedIn ? (
             <>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', marginBottom: 32, fontWeight: 300, lineHeight: 1.6 }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', marginBottom: 32, fontWeight: 300, lineHeight: 1.6 }}>
                 {t.sign_in_clerk_desc}
               </div>
               <SignInButton mode="modal">
                 <button
-                  style={{ width: '100%', background: '#6E1423', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3, fontFamily: 'var(--font-sans)' }}
+                  style={{ width: '100%', background: '#1F8A55', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: 13, fontSize: 14, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3, fontFamily: 'var(--font-sans)' }}
                 >
                   {t.sign_in}
                 </button>
@@ -1543,7 +1543,7 @@ export default function AdminPage() {
             </>
           ) : (
             <>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', marginBottom: 16, fontWeight: 300, lineHeight: 1.6 }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', marginBottom: 16, fontWeight: 300, lineHeight: 1.6 }}>
                 {t.not_admin_desc}
               </div>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#8A6D2F', background: 'rgba(196,163,90,0.12)', border: '0.5px solid rgba(196,163,90,0.5)', borderRadius: 2, padding: '10px 12px', lineHeight: 1.6, marginBottom: 20 }}>
@@ -1551,15 +1551,15 @@ export default function AdminPage() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <UserButton />
-                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469' }}>{t.switch_account}</span>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#98A39D' }}>{t.switch_account}</span>
               </div>
             </>
           )}
 
-          <div style={{ marginTop: 24, paddingTop: 16, borderTop: '0.5px solid rgba(28,28,26,0.1)', display: 'flex', gap: 6, justifyContent: 'center' }}>
-            <button onClick={() => setLang('sk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 6px', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'sk' ? '#6E1423' : '#7A7469' }}>SK</button>
-            <span style={{ color: 'rgba(28,28,26,0.25)' }}>/</span>
-            <button onClick={() => setLang('en')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 6px', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'en' ? '#6E1423' : '#7A7469' }}>EN</button>
+          <div style={{ marginTop: 24, paddingTop: 16, borderTop: '0.5px solid rgba(235,230,218,0.1)', display: 'flex', gap: 6, justifyContent: 'center' }}>
+            <button onClick={() => setLang('sk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 6px', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'sk' ? '#3FAE74' : '#98A39D' }}>SK</button>
+            <span style={{ color: 'rgba(235,230,218,0.25)' }}>/</span>
+            <button onClick={() => setLang('en')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 6px', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'en' ? '#3FAE74' : '#98A39D' }}>EN</button>
           </div>
         </div>
       </div>
@@ -1576,7 +1576,7 @@ export default function AdminPage() {
         className="gomp-nav-bar"
         style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200, height: 54, display: 'flex', alignItems: 'center',
-          padding: isMobile ? '0 14px' : '0 28px', background: '#170A0C', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+          padding: isMobile ? '0 14px' : '0 28px', background: '#0A0F0D', borderBottom: '0.5px solid rgba(255,255,255,0.06)',
         }}
       >
         <TransitionLink
@@ -1585,23 +1585,23 @@ export default function AdminPage() {
         >
           GOMP
         </TransitionLink>
-        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.28)', letterSpacing: 2, textTransform: 'uppercase', marginRight: 'auto', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(235,230,218,0.28)', letterSpacing: 2, textTransform: 'uppercase', marginRight: 'auto', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           / {t.admin_crumb}
         </span>
         {!isMobile && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginRight: 20, fontFamily: 'var(--font-sans)', fontSize: 12 }}>
-            <button onClick={() => setLang('sk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'sk' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: lang === 'sk' ? 600 : 400 }}>SK</button>
-            <span style={{ color: 'rgba(245,240,230,0.25)' }}>/</span>
-            <button onClick={() => setLang('en')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'en' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: lang === 'en' ? 600 : 400 }}>EN</button>
-            <span style={{ color: 'rgba(245,240,230,0.18)', marginLeft: 4 }}>|</span>
-            <button onClick={() => setCurrency('eur')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: currency === 'eur' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: currency === 'eur' ? 600 : 400 }}>€</button>
-            <span style={{ color: 'rgba(245,240,230,0.25)' }}>/</span>
-            <button onClick={() => setCurrency('czk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: currency === 'czk' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontWeight: currency === 'czk' ? 600 : 400 }}>Kč</button>
+            <button onClick={() => setLang('sk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'sk' ? '#F5F0E6' : 'rgba(235,230,218,0.42)', fontWeight: lang === 'sk' ? 600 : 400 }}>SK</button>
+            <span style={{ color: 'rgba(235,230,218,0.25)' }}>/</span>
+            <button onClick={() => setLang('en')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: lang === 'en' ? '#F5F0E6' : 'rgba(235,230,218,0.42)', fontWeight: lang === 'en' ? 600 : 400 }}>EN</button>
+            <span style={{ color: 'rgba(235,230,218,0.18)', marginLeft: 4 }}>|</span>
+            <button onClick={() => setCurrency('eur')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: currency === 'eur' ? '#F5F0E6' : 'rgba(235,230,218,0.42)', fontWeight: currency === 'eur' ? 600 : 400 }}>€</button>
+            <span style={{ color: 'rgba(235,230,218,0.25)' }}>/</span>
+            <button onClick={() => setCurrency('czk')} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px 0', fontFamily: 'var(--font-sans)', fontSize: 12, color: currency === 'czk' ? '#F5F0E6' : 'rgba(235,230,218,0.42)', fontWeight: currency === 'czk' ? 600 : 400 }}>Kč</button>
           </div>
         )}
         <div style={{ display: 'flex', gap: isMobile ? 10 : 20, alignItems: 'center' }}>
           {!isMobile && (
-            <TransitionLink href="/shop" style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(245,240,230,0.45)', textDecoration: 'none' }}>
+            <TransitionLink href="/shop" style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(235,230,218,0.45)', textDecoration: 'none' }}>
               {t.view_shop}
             </TransitionLink>
           )}
@@ -1614,7 +1614,7 @@ export default function AdminPage() {
         {/* Sidebar */}
         <div
           style={{
-            width: isMobile ? '100%' : 188, flexShrink: 0, background: '#1D0D0F',
+            width: isMobile ? '100%' : 188, flexShrink: 0, background: '#0D1511',
             borderRight: isMobile ? 'none' : '0.5px solid rgba(255,255,255,0.06)',
             borderBottom: isMobile ? '0.5px solid rgba(255,255,255,0.06)' : 'none',
             display: 'flex', flexDirection: 'column',
@@ -1623,7 +1623,7 @@ export default function AdminPage() {
           }}
         >
           {!isMobile && (
-            <div style={{ padding: '20px 16px 10px', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 500, color: 'rgba(245,240,230,0.22)', letterSpacing: 2.5, textTransform: 'uppercase' }}>
+            <div style={{ padding: '20px 16px 10px', fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 500, color: 'rgba(235,230,218,0.22)', letterSpacing: 2.5, textTransform: 'uppercase' }}>
               {t.manage}
             </div>
           )}
@@ -1633,18 +1633,18 @@ export default function AdminPage() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'space-between', gap: 10,
                 width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
-                background: tab === 'requests' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                background: tab === 'requests' ? 'rgba(13,13,12,0.07)' : 'transparent',
                 border: 'none',
                 borderLeft: isMobile ? 'none' : `2px solid ${tab === 'requests' ? '#4A90D9' : 'transparent'}`,
                 borderBottom: isMobile ? `2px solid ${tab === 'requests' ? '#4A90D9' : 'transparent'}` : 'none',
-                color: tab === 'requests' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'requests' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                color: tab === 'requests' ? '#F5F0E6' : 'rgba(235,230,218,0.42)', fontSize: 13, fontWeight: tab === 'requests' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
               }}
             >
               <span>{t.requests_tab}</span>
               {newIntentCount > 0 && (
                 <span
                   style={{
-                    fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, background: '#6E1423', color: '#FDFAF4',
+                    fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, background: '#1F8A55', color: '#FDFAF4',
                     borderRadius: 10, padding: '2px 7px', lineHeight: 1.4,
                   }}
                 >
@@ -1657,11 +1657,11 @@ export default function AdminPage() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 10,
                 width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
-                background: tab === 'builds' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                background: tab === 'builds' ? 'rgba(13,13,12,0.07)' : 'transparent',
                 border: 'none',
                 borderLeft: isMobile ? 'none' : `2px solid ${tab === 'builds' ? '#4A90D9' : 'transparent'}`,
                 borderBottom: isMobile ? `2px solid ${tab === 'builds' ? '#4A90D9' : 'transparent'}` : 'none',
-                color: tab === 'builds' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'builds' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                color: tab === 'builds' ? '#F5F0E6' : 'rgba(235,230,218,0.42)', fontSize: 13, fontWeight: tab === 'builds' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
               }}
             >
               {t.builds_tab}
@@ -1671,11 +1671,11 @@ export default function AdminPage() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 10,
                 width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
-                background: tab === 'components' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                background: tab === 'components' ? 'rgba(13,13,12,0.07)' : 'transparent',
                 border: 'none',
                 borderLeft: isMobile ? 'none' : `2px solid ${tab === 'components' ? '#4A90D9' : 'transparent'}`,
                 borderBottom: isMobile ? `2px solid ${tab === 'components' ? '#4A90D9' : 'transparent'}` : 'none',
-                color: tab === 'components' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'components' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                color: tab === 'components' ? '#F5F0E6' : 'rgba(235,230,218,0.42)', fontSize: 13, fontWeight: tab === 'components' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
               }}
             >
               {t.components_tab}
@@ -1685,18 +1685,18 @@ export default function AdminPage() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'space-between', gap: 10,
                 width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
-                background: tab === 'gbb' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                background: tab === 'gbb' ? 'rgba(13,13,12,0.07)' : 'transparent',
                 border: 'none',
                 borderLeft: isMobile ? 'none' : `2px solid ${tab === 'gbb' ? '#4A90D9' : 'transparent'}`,
                 borderBottom: isMobile ? `2px solid ${tab === 'gbb' ? '#4A90D9' : 'transparent'}` : 'none',
-                color: tab === 'gbb' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'gbb' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                color: tab === 'gbb' ? '#F5F0E6' : 'rgba(235,230,218,0.42)', fontSize: 13, fontWeight: tab === 'gbb' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
               }}
             >
               <span>{t.gbb_tab}</span>
               {newGbbCount > 0 && (
                 <span
                   style={{
-                    fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, background: GBB_GREEN, color: '#FDFAF4',
+                    fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, background: GBB_ACCENT, color: '#0D0D0C',
                     borderRadius: 10, padding: '2px 7px', lineHeight: 1.4,
                   }}
                 >
@@ -1709,18 +1709,18 @@ export default function AdminPage() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'space-between', gap: 10,
                 width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
-                background: tab === 'contact' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                background: tab === 'contact' ? 'rgba(13,13,12,0.07)' : 'transparent',
                 border: 'none',
                 borderLeft: isMobile ? 'none' : `2px solid ${tab === 'contact' ? '#4A90D9' : 'transparent'}`,
                 borderBottom: isMobile ? `2px solid ${tab === 'contact' ? '#4A90D9' : 'transparent'}` : 'none',
-                color: tab === 'contact' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'contact' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                color: tab === 'contact' ? '#F5F0E6' : 'rgba(235,230,218,0.42)', fontSize: 13, fontWeight: tab === 'contact' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
               }}
             >
               <span>{t.contact_tab}</span>
               {newContactCount > 0 && (
                 <span
                   style={{
-                    fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, background: '#6E1423', color: '#FDFAF4',
+                    fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, background: '#1F8A55', color: '#FDFAF4',
                     borderRadius: 10, padding: '2px 7px', lineHeight: 1.4,
                   }}
                 >
@@ -1733,11 +1733,11 @@ export default function AdminPage() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 10,
                 width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
-                background: tab === 'customerGomps' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                background: tab === 'customerGomps' ? 'rgba(13,13,12,0.07)' : 'transparent',
                 border: 'none',
                 borderLeft: isMobile ? 'none' : `2px solid ${tab === 'customerGomps' ? '#4A90D9' : 'transparent'}`,
                 borderBottom: isMobile ? `2px solid ${tab === 'customerGomps' ? '#4A90D9' : 'transparent'}` : 'none',
-                color: tab === 'customerGomps' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'customerGomps' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                color: tab === 'customerGomps' ? '#F5F0E6' : 'rgba(235,230,218,0.42)', fontSize: 13, fontWeight: tab === 'customerGomps' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
               }}
             >
               {t.customer_gomps_tab}
@@ -1747,11 +1747,11 @@ export default function AdminPage() {
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'center' : 'flex-start', gap: 10,
                 width: '100%', flex: isMobile ? 1 : undefined, textAlign: 'left', padding: isMobile ? '12px 10px' : '10px 18px',
-                background: tab === 'alignment' ? 'rgba(245,240,230,0.07)' : 'transparent',
+                background: tab === 'alignment' ? 'rgba(13,13,12,0.07)' : 'transparent',
                 border: 'none',
                 borderLeft: isMobile ? 'none' : `2px solid ${tab === 'alignment' ? '#4A90D9' : 'transparent'}`,
                 borderBottom: isMobile ? `2px solid ${tab === 'alignment' ? '#4A90D9' : 'transparent'}` : 'none',
-                color: tab === 'alignment' ? '#F5F0E6' : 'rgba(245,240,230,0.42)', fontSize: 13, fontWeight: tab === 'alignment' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                color: tab === 'alignment' ? '#F5F0E6' : 'rgba(235,230,218,0.42)', fontSize: 13, fontWeight: tab === 'alignment' ? 500 : 400, cursor: 'pointer', fontFamily: 'var(--font-sans)',
               }}
             >
               {t.alignment_tab}
@@ -1759,13 +1759,13 @@ export default function AdminPage() {
           </div>
           {!isMobile && (
             <div style={{ padding: '24px 18px 0', marginTop: 20, borderTop: '0.5px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(245,240,230,0.22)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(235,230,218,0.22)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
                 {t.database}
               </div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 600, color: '#F5F0E6', lineHeight: 1, marginBottom: 3 }}>{builds.length}</div>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.32)', marginBottom: 18 }}>{t.builds_listed}</div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(235,230,218,0.32)', marginBottom: 18 }}>{t.builds_listed}</div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 600, color: '#F5F0E6', lineHeight: 1, marginBottom: 3 }}>{totalComps}</div>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.32)' }}>{t.components_word}</div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(235,230,218,0.32)' }}>{t.components_word}</div>
             </div>
           )}
         </div>
@@ -1776,30 +1776,30 @@ export default function AdminPage() {
             <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.order_requests}</h1>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300 }}>{t.requests_count(intents.length, newIntentCount)}</div>
+                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#EBE6DA', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.order_requests}</h1>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', fontWeight: 300 }}>{t.requests_count(intents.length, newIntentCount)}</div>
                 </div>
                 <button
                   onClick={loadIntents}
                   disabled={intentsLoading}
-                  style={{ background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, padding: '8px 16px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', cursor: intentsLoading ? 'default' : 'pointer' }}
+                  style={{ background: 'transparent', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, padding: '8px 16px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#98A39D', cursor: intentsLoading ? 'default' : 'pointer' }}
                 >
                   {intentsLoading ? t.loading : t.refresh}
                 </button>
               </div>
 
               {intentsError && (
-                <div style={{ background: needsServiceKey ? 'rgba(196,163,90,0.12)' : '#FFF0EE', border: `0.5px solid ${needsServiceKey ? 'rgba(196,163,90,0.5)' : 'rgba(204,51,51,0.25)'}`, borderRadius: 2, padding: '14px 16px', marginBottom: 20 }}>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: needsServiceKey ? '#8A6D2F' : '#CC3333', marginBottom: 4 }}>
+                <div style={{ background: needsServiceKey ? 'rgba(196,163,90,0.12)' : 'rgba(204,51,51,0.14)', border: `0.5px solid ${needsServiceKey ? 'rgba(196,163,90,0.5)' : 'rgba(204,51,51,0.25)'}`, borderRadius: 2, padding: '14px 16px', marginBottom: 20 }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: needsServiceKey ? '#8A6D2F' : '#E5645F', marginBottom: 4 }}>
                     {needsServiceKey ? t.setup_needed : t.error_word}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: needsServiceKey ? '#6B5526' : '#8B2020', lineHeight: 1.6 }}>{intentsError}</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: needsServiceKey ? '#6B5526' : '#E5645F', lineHeight: 1.6 }}>{intentsError}</div>
                 </div>
               )}
 
               {!intentsError && intents.length === 0 && !intentsLoading && (
-                <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 2, padding: '40px 24px', textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#7A7469', fontWeight: 300 }}>{t.no_requests}</div>
+                <div style={{ background: '#131A17', border: '0.5px solid rgba(235,230,218,0.1)', borderRadius: 2, padding: '40px 24px', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#98A39D', fontWeight: 300 }}>{t.no_requests}</div>
                 </div>
               )}
 
@@ -1807,46 +1807,46 @@ export default function AdminPage() {
                 const open = expandedIntent === it.id;
                 const badge = STATUS_COLORS[it.status];
                 return (
-                  <div key={it.id} style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 2, marginBottom: 10, overflow: 'hidden' }}>
+                  <div key={it.id} style={{ background: '#131A17', border: '0.5px solid rgba(235,230,218,0.1)', borderRadius: 2, marginBottom: 10, overflow: 'hidden' }}>
                     <div
                       onClick={() => setExpandedIntent(open ? null : it.id)}
                       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isMobile ? '14px 14px' : '16px 20px', cursor: 'pointer', flexWrap: 'wrap' }}
                     >
                       <div style={{ flex: 1, minWidth: 180 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: '#1C1C1A' }}>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: '#EBE6DA' }}>
                             {[it.first_name, it.last_name].filter(Boolean).join(' ') || t.no_name}
                           </span>
                           <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', background: badge.bg, color: badge.text, border: `0.5px solid ${badge.border}`, borderRadius: 2, padding: '2px 6px' }}>
                             {t.status_labels[it.status]}
                           </span>
                           {it.email_status === 'sent' && (
-                            <span title={t.email_word} style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', background: '#E8FFF0', color: '#1A5030', border: '0.5px solid rgba(51,153,102,0.35)', borderRadius: 2, padding: '2px 6px' }}>
+                            <span title={t.email_word} style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', background: 'rgba(39,174,96,0.16)', color: '#5FB98A', border: '0.5px solid rgba(51,153,102,0.35)', borderRadius: 2, padding: '2px 6px' }}>
                               ✓ {t.email_word}
                             </span>
                           )}
                           {(it.email_status === 'failed' || it.email_status === 'skipped') && (
-                            <span title={t.email_word} style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', background: '#FFF0EE', color: '#8B2020', border: '0.5px solid rgba(204,51,51,0.3)', borderRadius: 2, padding: '2px 6px' }}>
+                            <span title={t.email_word} style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', background: 'rgba(204,51,51,0.14)', color: '#E5645F', border: '0.5px solid rgba(204,51,51,0.3)', borderRadius: 2, padding: '2px 6px' }}>
                               ✕ {t.email_word}
                             </span>
                           )}
                         </div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', marginTop: 3 }}>{it.email}</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#98A39D', marginTop: 3 }}>{it.email}</div>
                         {it.reference_code && (
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', marginTop: 2 }}>{it.reference_code}</div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#98A39D', marginTop: 2 }}>{it.reference_code}</div>
                         )}
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, color: '#1C1C1A' }}>{fmt(Number(it.total_eur))}</div>
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890', marginTop: 2 }}>
+                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, color: '#EBE6DA' }}>{fmt(Number(it.total_eur))}</div>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6B7570', marginTop: 2 }}>
                           {t.method_labels[it.payment_method]} · {new Date(it.created_at).toLocaleDateString(lang === 'sk' ? 'sk-SK' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </div>
                       </div>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#A09890', width: 12, textAlign: 'center' }}>{open ? '−' : '+'}</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#6B7570', width: 12, textAlign: 'center' }}>{open ? '−' : '+'}</span>
                     </div>
 
                     {open && (
-                      <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.08)', padding: isMobile ? '14px' : '18px 20px', background: '#F8F4EA' }}>
+                      <div style={{ borderTop: '0.5px solid rgba(235,230,218,0.08)', padding: isMobile ? '14px' : '18px 20px', background: '#F8F4EA' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 18, marginBottom: 18 }}>
                           <div>
                             <div style={ADMIN_LABEL}>{t.reference_word}</div>
@@ -1894,10 +1894,10 @@ export default function AdminPage() {
                         <div style={{ marginBottom: 18 }}>
                           {it.build_items.length === 0 && <div style={ADMIN_VALUE}>—</div>}
                           {it.build_items.map((bi, idx) => (
-                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '5px 0', borderBottom: '0.5px solid rgba(28,28,26,0.06)' }}>
-                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', minWidth: 90 }}>{bi.category}</span>
-                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1C1C1A', flex: 1 }}>{bi.name}</span>
-                              <span style={{ fontFamily: 'var(--font-serif)', fontSize: 12, color: '#1C1C1A' }}>{fmt(Number(bi.price_eur))}</span>
+                            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '5px 0', borderBottom: '0.5px solid rgba(235,230,218,0.06)' }}>
+                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', minWidth: 90 }}>{bi.category}</span>
+                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#EBE6DA', flex: 1 }}>{bi.name}</span>
+                              <span style={{ fontFamily: 'var(--font-serif)', fontSize: 12, color: '#EBE6DA' }}>{fmt(Number(bi.price_eur))}</span>
                             </div>
                           ))}
                         </div>
@@ -1911,9 +1911,9 @@ export default function AdminPage() {
                                 key={s}
                                 onClick={() => changeIntentStatus(it.id, s)}
                                 style={{
-                                  background: active ? '#6E1423' : 'transparent',
-                                  color: active ? '#FDFAF4' : '#7A7469',
-                                  border: `0.5px solid ${active ? '#6E1423' : 'rgba(28,28,26,0.2)'}`,
+                                  background: active ? '#1F8A55' : 'transparent',
+                                  color: active ? '#FDFAF4' : '#98A39D',
+                                  border: `0.5px solid ${active ? '#3FAE74' : 'rgba(235,230,218,0.2)'}`,
                                   borderRadius: 2, padding: '6px 12px', fontFamily: 'var(--font-sans)', fontSize: 11,
                                   cursor: active ? 'default' : 'pointer',
                                 }}
@@ -1935,30 +1935,30 @@ export default function AdminPage() {
             <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.contact_title}</h1>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300 }}>{t.contact_count(contactMessages.length, newContactCount)}</div>
+                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#EBE6DA', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.contact_title}</h1>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', fontWeight: 300 }}>{t.contact_count(contactMessages.length, newContactCount)}</div>
                 </div>
                 <button
                   onClick={loadContactMessages}
                   disabled={contactLoading}
-                  style={{ background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, padding: '8px 16px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', cursor: contactLoading ? 'default' : 'pointer' }}
+                  style={{ background: 'transparent', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, padding: '8px 16px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#98A39D', cursor: contactLoading ? 'default' : 'pointer' }}
                 >
                   {contactLoading ? t.loading : t.refresh}
                 </button>
               </div>
 
               {contactError && (
-                <div style={{ background: contactNeedsServiceKey ? 'rgba(196,163,90,0.12)' : '#FFF0EE', border: `0.5px solid ${contactNeedsServiceKey ? 'rgba(196,163,90,0.5)' : 'rgba(204,51,51,0.25)'}`, borderRadius: 2, padding: '14px 16px', marginBottom: 20 }}>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: contactNeedsServiceKey ? '#8A6D2F' : '#CC3333', marginBottom: 4 }}>
+                <div style={{ background: contactNeedsServiceKey ? 'rgba(196,163,90,0.12)' : 'rgba(204,51,51,0.14)', border: `0.5px solid ${contactNeedsServiceKey ? 'rgba(196,163,90,0.5)' : 'rgba(204,51,51,0.25)'}`, borderRadius: 2, padding: '14px 16px', marginBottom: 20 }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: contactNeedsServiceKey ? '#8A6D2F' : '#E5645F', marginBottom: 4 }}>
                     {contactNeedsServiceKey ? t.setup_needed : t.error_word}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: contactNeedsServiceKey ? '#6B5526' : '#8B2020', lineHeight: 1.6 }}>{contactError}</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: contactNeedsServiceKey ? '#6B5526' : '#E5645F', lineHeight: 1.6 }}>{contactError}</div>
                 </div>
               )}
 
               {!contactError && contactMessages.length === 0 && !contactLoading && (
-                <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 2, padding: '40px 24px', textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#7A7469', fontWeight: 300 }}>{t.contact_no_messages}</div>
+                <div style={{ background: '#131A17', border: '0.5px solid rgba(235,230,218,0.1)', borderRadius: 2, padding: '40px 24px', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#98A39D', fontWeight: 300 }}>{t.contact_no_messages}</div>
                 </div>
               )}
 
@@ -1966,32 +1966,32 @@ export default function AdminPage() {
                 const open = expandedContact === m.id;
                 const badge = CONTACT_STATUS_COLORS[m.status];
                 return (
-                  <div key={m.id} style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 2, marginBottom: 10, overflow: 'hidden' }}>
+                  <div key={m.id} style={{ background: '#131A17', border: '0.5px solid rgba(235,230,218,0.1)', borderRadius: 2, marginBottom: 10, overflow: 'hidden' }}>
                     <div
                       onClick={() => setExpandedContact(open ? null : m.id)}
                       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isMobile ? '14px 14px' : '16px 20px', cursor: 'pointer', flexWrap: 'wrap' }}
                     >
                       <div style={{ flex: 1, minWidth: 180 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: '#1C1C1A' }}>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: '#EBE6DA' }}>
                             {[m.first_name, m.last_name].filter(Boolean).join(' ') || t.no_name}
                           </span>
                           <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', background: badge.bg, color: badge.text, border: `0.5px solid ${badge.border}`, borderRadius: 2, padding: '2px 6px' }}>
                             {t.contact_status_labels[m.status]}
                           </span>
                         </div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', marginTop: 3 }}>{m.email}</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#98A39D', marginTop: 3 }}>{m.email}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890' }}>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6B7570' }}>
                           {new Date(m.created_at).toLocaleDateString(lang === 'sk' ? 'sk-SK' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </div>
                       </div>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#A09890', width: 12, textAlign: 'center' }}>{open ? '−' : '+'}</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#6B7570', width: 12, textAlign: 'center' }}>{open ? '−' : '+'}</span>
                     </div>
 
                     {open && (
-                      <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.08)', padding: isMobile ? '14px' : '18px 20px', background: '#F8F4EA' }}>
+                      <div style={{ borderTop: '0.5px solid rgba(235,230,218,0.08)', padding: isMobile ? '14px' : '18px 20px', background: '#F8F4EA' }}>
                         <div style={ADMIN_LABEL}>{t.contact_word}</div>
                         <div style={{ ...ADMIN_VALUE, marginBottom: 14 }}>
                           {m.email}
@@ -2009,9 +2009,9 @@ export default function AdminPage() {
                                 key={s}
                                 onClick={() => changeContactStatus(m.id, s)}
                                 style={{
-                                  background: active ? '#6E1423' : 'transparent',
-                                  color: active ? '#FDFAF4' : '#7A7469',
-                                  border: `0.5px solid ${active ? '#6E1423' : 'rgba(28,28,26,0.2)'}`,
+                                  background: active ? '#1F8A55' : 'transparent',
+                                  color: active ? '#FDFAF4' : '#98A39D',
+                                  border: `0.5px solid ${active ? '#3FAE74' : 'rgba(235,230,218,0.2)'}`,
                                   borderRadius: 2, padding: '6px 12px', fontFamily: 'var(--font-sans)', fontSize: 11,
                                   cursor: active ? 'default' : 'pointer',
                                 }}
@@ -2033,30 +2033,30 @@ export default function AdminPage() {
             <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.gbb_title}</h1>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300 }}>{t.gbb_count(gbbRequests.length, newGbbCount)}</div>
+                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#EBE6DA', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.gbb_title}</h1>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', fontWeight: 300 }}>{t.gbb_count(gbbRequests.length, newGbbCount)}</div>
                 </div>
                 <button
                   onClick={loadGbbRequests}
                   disabled={gbbLoading}
-                  style={{ background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, padding: '8px 16px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', cursor: gbbLoading ? 'default' : 'pointer' }}
+                  style={{ background: 'transparent', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, padding: '8px 16px', fontFamily: 'var(--font-sans)', fontSize: 12, color: '#98A39D', cursor: gbbLoading ? 'default' : 'pointer' }}
                 >
                   {gbbLoading ? t.loading : t.refresh}
                 </button>
               </div>
 
               {gbbError && (
-                <div style={{ background: gbbNeedsServiceKey ? 'rgba(196,163,90,0.12)' : '#FFF0EE', border: `0.5px solid ${gbbNeedsServiceKey ? 'rgba(196,163,90,0.5)' : 'rgba(204,51,51,0.25)'}`, borderRadius: 2, padding: '14px 16px', marginBottom: 20 }}>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: gbbNeedsServiceKey ? '#8A6D2F' : '#CC3333', marginBottom: 4 }}>
+                <div style={{ background: gbbNeedsServiceKey ? 'rgba(196,163,90,0.12)' : 'rgba(204,51,51,0.14)', border: `0.5px solid ${gbbNeedsServiceKey ? 'rgba(196,163,90,0.5)' : 'rgba(204,51,51,0.25)'}`, borderRadius: 2, padding: '14px 16px', marginBottom: 20 }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, color: gbbNeedsServiceKey ? '#8A6D2F' : '#E5645F', marginBottom: 4 }}>
                     {gbbNeedsServiceKey ? t.setup_needed : t.error_word}
                   </div>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: gbbNeedsServiceKey ? '#6B5526' : '#8B2020', lineHeight: 1.6 }}>{gbbError}</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: gbbNeedsServiceKey ? '#6B5526' : '#E5645F', lineHeight: 1.6 }}>{gbbError}</div>
                 </div>
               )}
 
               {!gbbError && gbbRequests.length === 0 && !gbbLoading && (
-                <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 2, padding: '40px 24px', textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#7A7469', fontWeight: 300 }}>{t.gbb_no_requests}</div>
+                <div style={{ background: '#131A17', border: '0.5px solid rgba(235,230,218,0.1)', borderRadius: 2, padding: '40px 24px', textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: '#98A39D', fontWeight: 300 }}>{t.gbb_no_requests}</div>
                 </div>
               )}
 
@@ -2066,33 +2066,33 @@ export default function AdminPage() {
                 const draft = gbbProposalDraft[r.id] ?? { price: r.price_proposal_eur != null ? String(r.price_proposal_eur) : '', notes: r.proposal_notes };
                 const searchTerm = gbbSearchTerm[r.id] ?? '';
                 return (
-                  <div key={r.id} style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 2, marginBottom: 10, overflow: 'hidden' }}>
+                  <div key={r.id} style={{ background: '#131A17', border: '0.5px solid rgba(235,230,218,0.1)', borderRadius: 2, marginBottom: 10, overflow: 'hidden' }}>
                     <div
                       onClick={() => setExpandedGbb(open ? null : r.id)}
                       style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isMobile ? '14px 14px' : '16px 20px', cursor: 'pointer', flexWrap: 'wrap' }}
                     >
                       <div style={{ flex: 1, minWidth: 180 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: '#1C1C1A' }}>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: '#EBE6DA' }}>
                             {[r.first_name, r.last_name].filter(Boolean).join(' ') || t.no_name}
                           </span>
                           <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', background: badge.bg, color: badge.text, border: `0.5px solid ${badge.border}`, borderRadius: 2, padding: '2px 6px' }}>
                             {t.gbb_status_labels[r.status]}
                           </span>
                         </div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469', marginTop: 3 }}>{r.email}</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#98A39D', marginTop: 3 }}>{r.email}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, color: '#1C1C1A' }}>{r.budget_eur != null ? fmt(Number(r.budget_eur)) : '—'}</div>
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890', marginTop: 2 }}>
+                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, color: '#EBE6DA' }}>{r.budget_eur != null ? fmt(Number(r.budget_eur)) : '—'}</div>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6B7570', marginTop: 2 }}>
                           {t.gbb_use_case_labels[r.use_case] ?? r.use_case} · {new Date(r.created_at).toLocaleDateString(lang === 'sk' ? 'sk-SK' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </div>
                       </div>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#A09890', width: 12, textAlign: 'center' }}>{open ? '−' : '+'}</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#6B7570', width: 12, textAlign: 'center' }}>{open ? '−' : '+'}</span>
                     </div>
 
                     {open && (
-                      <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.08)', padding: isMobile ? '14px' : '18px 20px', background: '#F8F4EA' }}>
+                      <div style={{ borderTop: '0.5px solid rgba(235,230,218,0.08)', padding: isMobile ? '14px' : '18px 20px', background: '#F8F4EA' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 18, marginBottom: 18 }}>
                           <div>
                             <div style={ADMIN_LABEL}>{t.contact_word}</div>
@@ -2123,7 +2123,7 @@ export default function AdminPage() {
                               value={searchTerm}
                               onChange={(e) => setGbbSearchTerm((s) => ({ ...s, [r.id]: e.target.value }))}
                               placeholder={t.gbb_search_placeholder}
-                              style={{ flex: 1, minWidth: 160, padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#FDFAF4', color: '#1C1C1A', fontFamily: 'var(--font-sans)' }}
+                              style={{ flex: 1, minWidth: 160, padding: '8px 10px', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, fontSize: 13, background: '#131A17', color: '#EBE6DA', fontFamily: 'var(--font-sans)' }}
                             />
                           </div>
                           {searchTerm.trim() && (
@@ -2134,7 +2134,7 @@ export default function AdminPage() {
                                   href={link.url}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: GBB_GREEN, textDecoration: 'none', border: `0.5px solid ${GBB_GREEN_TINT(0.4)}`, borderRadius: 2, padding: '5px 10px' }}
+                                  style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: GBB_ACCENT, textDecoration: 'none', border: `0.5px solid ${GBB_ACCENT_TINT(0.4)}`, borderRadius: 2, padding: '5px 10px' }}
                                 >
                                   {link.label} ↗
                                 </a>
@@ -2150,7 +2150,7 @@ export default function AdminPage() {
                               type="number"
                               value={draft.price}
                               onChange={(e) => setGbbProposalDraft((d) => ({ ...d, [r.id]: { ...draft, price: e.target.value } }))}
-                              style={{ width: '100%', padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#FDFAF4', color: '#1C1C1A', fontFamily: 'var(--font-mono)' }}
+                              style={{ width: '100%', padding: '8px 10px', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, fontSize: 13, background: '#131A17', color: '#EBE6DA', fontFamily: 'var(--font-mono)' }}
                             />
                           </div>
                           <div>
@@ -2158,13 +2158,13 @@ export default function AdminPage() {
                             <input
                               value={draft.notes}
                               onChange={(e) => setGbbProposalDraft((d) => ({ ...d, [r.id]: { ...draft, notes: e.target.value } }))}
-                              style={{ width: '100%', padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#FDFAF4', color: '#1C1C1A', fontFamily: 'var(--font-sans)' }}
+                              style={{ width: '100%', padding: '8px 10px', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, fontSize: 13, background: '#131A17', color: '#EBE6DA', fontFamily: 'var(--font-sans)' }}
                             />
                           </div>
                         </div>
                         <button
                           onClick={() => saveGbbProposal(r.id)}
-                          style={{ background: GBB_GREEN, color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '8px 16px', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 18 }}
+                          style={{ background: GBB_ACCENT, color: '#0D0D0C', border: 'none', borderRadius: 2, padding: '8px 16px', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 18 }}
                         >
                           {t.gbb_save_proposal}
                         </button>
@@ -2178,9 +2178,9 @@ export default function AdminPage() {
                                 key={s}
                                 onClick={() => changeGbbStatus(r.id, s)}
                                 style={{
-                                  background: active ? GBB_GREEN : 'transparent',
-                                  color: active ? '#FDFAF4' : '#7A7469',
-                                  border: `0.5px solid ${active ? GBB_GREEN : 'rgba(28,28,26,0.2)'}`,
+                                  background: active ? GBB_ACCENT : 'transparent',
+                                  color: active ? '#0D0D0C' : '#98A39D',
+                                  border: `0.5px solid ${active ? GBB_ACCENT : 'rgba(235,230,218,0.2)'}`,
                                   borderRadius: 2, padding: '6px 12px', fontFamily: 'var(--font-sans)', fontSize: 11,
                                   cursor: active ? 'default' : 'pointer',
                                 }}
@@ -2202,18 +2202,18 @@ export default function AdminPage() {
             <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.pc_builds}</h1>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300 }}>{t.listings(builds.length)}</div>
+                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#EBE6DA', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.pc_builds}</h1>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', fontWeight: 300 }}>{t.listings(builds.length)}</div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   {saveMsg && (
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1A6B3A', background: '#EAFAF2', border: '0.5px solid #6DCFA0', borderRadius: 2, padding: '6px 14px' }}>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#5FB98A', background: '#EAFAF2', border: '0.5px solid #6DCFA0', borderRadius: 2, padding: '6px 14px' }}>
                       {t.saved_ok}
                     </div>
                   )}
                   <button
                     onClick={openAddBuild}
-                    style={{ background: '#6E1423', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '10px 20px', fontSize: 13, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.2, fontFamily: 'var(--font-sans)' }}
+                    style={{ background: '#1F8A55', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '10px 20px', fontSize: 13, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.2, fontFamily: 'var(--font-sans)' }}
                   >
                     {t.add_build}
                   </button>
@@ -2221,8 +2221,8 @@ export default function AdminPage() {
               </div>
 
               {showForm && (
-                <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? 16 : 28, marginBottom: 24, borderLeft: '3px solid #6E1423' }}>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 600, color: '#1C1C1A', marginBottom: 22 }}>
+                <div style={{ background: '#131A17', border: '0.5px solid rgba(235,230,218,0.15)', borderRadius: 2, padding: isMobile ? 16 : 28, marginBottom: 24, borderLeft: '3px solid #3FAE74' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 600, color: '#EBE6DA', marginBottom: 22 }}>
                     {editId !== null ? t.edit_build : t.new_build}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
@@ -2278,17 +2278,17 @@ export default function AdminPage() {
                                 {t[`tier_${computed.toLowerCase()}` as keyof Translations] as string}
                               </span>
                             ) : (
-                              <span style={{ color: '#B0A898' }}>{t.build_tier_pending}</span>
+                              <span style={{ color: '#98A39D' }}>{t.build_tier_pending}</span>
                             )}
                           </div>
                         );
                       })()}
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#B0A898', marginTop: 4 }}>{t.build_tier_help}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#98A39D', marginTop: 4 }}>{t.build_tier_help}</div>
                     </div>
                     <div>
                       <div style={LABEL_STYLE}>{t.price_eur_label}</div>
                       <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="4299" style={INPUT_STYLE} />
-                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: 10, color: '#9A9488', marginTop: 4 }}>
+                      <div style={{ fontFamily: 'var(--font-serif)', fontSize: 10, color: '#6B7570', marginTop: 4 }}>
                         {t.live_total_label} — {t.price_excl_vat}: {fmt(computeBuildTotal(form, compDb))} · {t.price_incl_vat(vatRatePct)}: {fmt(computeBuildTotalGross(form, compDb, vatRatePct))}
                       </div>
                     </div>
@@ -2297,56 +2297,56 @@ export default function AdminPage() {
                       <input type="number" value={form.rating} onChange={(e) => setForm({ ...form, rating: e.target.value })} placeholder="4.9" min={0} max={5} step={0.1} style={INPUT_STYLE} />
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 18 }}>
-                    <button onClick={() => setShowForm(false)} style={{ background: 'transparent', color: '#7A7469', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, padding: '9px 20px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 18 }}>
+                    <button onClick={() => setShowForm(false)} style={{ background: 'transparent', color: '#98A39D', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, padding: '9px 20px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
                       {t.cancel}
                     </button>
-                    <button onClick={saveBuild} style={{ background: '#6E1423', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '9px 26px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                    <button onClick={saveBuild} style={{ background: '#1F8A55', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '9px 26px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
                       {t.save_build}
                     </button>
                   </div>
                 </div>
               )}
 
-              <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.12)', borderRadius: 2, overflow: 'hidden' }}>
+              <div style={{ background: '#131A17', border: '0.5px solid rgba(235,230,218,0.12)', borderRadius: 2, overflow: 'hidden' }}>
                 <div style={{ overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch' }}>
                   <div style={{ minWidth: isMobile ? 700 : undefined }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 210px 90px 54px 104px 88px 108px', padding: '11px 20px', background: '#EDE7DC', borderBottom: '0.5px solid rgba(28,28,26,0.1)', gap: 12, alignItems: 'center' }}>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_build}</div>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>GPU / CPU</div>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_price}</div>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.tier_label}</div>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_rating}</div>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#7A7469', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_status}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 210px 90px 54px 104px 88px 108px', padding: '11px 20px', background: '#EDE7DC', borderBottom: '0.5px solid rgba(235,230,218,0.1)', gap: 12, alignItems: 'center' }}>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#98A39D', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_build}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#98A39D', letterSpacing: 1.5, textTransform: 'uppercase' }}>GPU / CPU</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#98A39D', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_price}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#98A39D', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.tier_label}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#98A39D', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_rating}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: '#98A39D', letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.col_status}</div>
                       <div />
                     </div>
                     {builds.map((b) => {
                       const computedTier = computeBuildTier(b, compDb);
                       const tc = tierBadge(computedTier, TIER_COLORS);
                       const visible = b.isLive !== false;
-                      const visibleColor = visible ? '#1A7040' : '#9090A0';
+                      const visibleColor = visible ? '#5FB98A' : '#9090A0';
                       return (
                         <div
                           key={b.id}
-                          style={{ display: 'grid', gridTemplateColumns: '1fr 210px 90px 54px 104px 88px 108px', padding: '14px 20px', borderBottom: '0.5px solid rgba(28,28,26,0.07)', alignItems: 'center', gap: 12, background: visible ? '#FDFAF4' : 'rgba(240,235,225,0.6)' }}
+                          style={{ display: 'grid', gridTemplateColumns: '1fr 210px 90px 54px 104px 88px 108px', padding: '14px 20px', borderBottom: '0.5px solid rgba(235,230,218,0.07)', alignItems: 'center', gap: 12, background: visible ? '#131A17' : 'rgba(240,235,225,0.6)' }}
                         >
                           <div>
-                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: '#1C1C1A', marginBottom: 2 }}>{b.name}</div>
-                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', lineHeight: 1.4, fontWeight: 300 }}>{b.taglineEn}</div>
+                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: '#EBE6DA', marginBottom: 2 }}>{b.name}</div>
+                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', lineHeight: 1.4, fontWeight: 300 }}>{b.taglineEn}</div>
                           </div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', lineHeight: 1.8 }}>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#98A39D', lineHeight: 1.8 }}>
                             {b.gpu}<br />{b.cpu}
                           </div>
                           <div>
-                            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 13, fontWeight: 500, color: '#1C1C1A' }}>{fmt(computeBuildTotal(b, compDb))}</div>
-                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#9A9488' }} title={t.price_incl_vat(vatRatePct)}>{fmt(computeBuildTotalGross(b, compDb, vatRatePct))} ({t.vat_incl_short})</div>
+                            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 13, fontWeight: 500, color: '#EBE6DA' }}>{fmt(computeBuildTotal(b, compDb))}</div>
+                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#6B7570' }} title={t.price_incl_vat(vatRatePct)}>{fmt(computeBuildTotalGross(b, compDb, vatRatePct))} ({t.vat_incl_short})</div>
                           </div>
                           <div>
                             <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, background: tc.bg, border: `1.5px solid ${tc.border}`, borderRadius: 4 }}>
                               <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700, color: tc.text }}>{computedTier ?? '—'}</span>
                             </div>
                           </div>
-                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#1C1C1A' }}>{typeof b.rating === 'number' ? b.rating.toFixed(1) : b.rating} / 5</div>
+                          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: '#EBE6DA' }}>{typeof b.rating === 'number' ? b.rating.toFixed(1) : b.rating} / 5</div>
                           <div>
                             <button
                               onClick={() => toggleVisible(b.id)}
@@ -2356,10 +2356,10 @@ export default function AdminPage() {
                             </button>
                           </div>
                           <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                            <button onClick={() => openEditBuild(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#6E1423', background: 'transparent', border: '0.5px solid rgba(110,20,35,0.4)', borderRadius: 2, padding: '5px 12px', cursor: 'pointer' }}>
+                            <button onClick={() => openEditBuild(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#3FAE74', background: 'transparent', border: '0.5px solid rgba(63,174,116,0.4)', borderRadius: 2, padding: '5px 12px', cursor: 'pointer' }}>
                               {t.edit}
                             </button>
-                            <button onClick={() => deleteBuild(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#CC3333', background: 'transparent', border: '0.5px solid rgba(204,51,51,0.35)', borderRadius: 2, padding: '5px 12px', cursor: 'pointer' }}>
+                            <button onClick={() => deleteBuild(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#E5645F', background: 'transparent', border: '0.5px solid rgba(204,51,51,0.35)', borderRadius: 2, padding: '5px 12px', cursor: 'pointer' }}>
                               {t.del}
                             </button>
                           </div>
@@ -2376,20 +2376,20 @@ export default function AdminPage() {
             <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.customer_gomps_title}</h1>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300 }}>{t.cg_listed(customerGomps.length)}</div>
+                  <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#EBE6DA', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.customer_gomps_title}</h1>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', fontWeight: 300 }}>{t.cg_listed(customerGomps.length)}</div>
                 </div>
                 <button
                   onClick={openAddCg}
-                  style={{ background: '#6E1423', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '10px 20px', fontSize: 13, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.2, fontFamily: 'var(--font-sans)' }}
+                  style={{ background: '#1F8A55', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '10px 20px', fontSize: 13, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.2, fontFamily: 'var(--font-sans)' }}
                 >
                   {t.add_customer_gomp}
                 </button>
               </div>
 
               {showCgForm && (
-                <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? 16 : 28, marginBottom: 24, borderLeft: '3px solid #6E1423' }}>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 600, color: '#1C1C1A', marginBottom: 22 }}>
+                <div style={{ background: '#131A17', border: '0.5px solid rgba(235,230,218,0.15)', borderRadius: 2, padding: isMobile ? 16 : 28, marginBottom: 24, borderLeft: '3px solid #3FAE74' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 600, color: '#EBE6DA', marginBottom: 22 }}>
                     {cgEditId !== null ? t.edit : t.add_customer_gomp}
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
@@ -2416,11 +2416,11 @@ export default function AdminPage() {
                       rows={3}
                       style={{ ...INPUT_STYLE, resize: 'vertical', fontFamily: 'var(--font-mono)' }}
                     />
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginTop: 5 }}>{t.cg_specs_help}</div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', marginTop: 5 }}>{t.cg_specs_help}</div>
                   </div>
                   <div style={{ marginBottom: 18 }}>
                     <div style={LABEL_STYLE}>{t.cg_components_label}</div>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginBottom: 10 }}>{t.cg_components_help}</div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', marginBottom: 10 }}>{t.cg_components_help}</div>
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
                       <CompSelect label="GPU" value={cgForm.gpu} options={compDb.gpu || []} placeholder="GPU" t={t} fmt={fmt} onChange={(v, c) => setCgForm({ ...cgForm, gpu: v, gpuId: c?.id })} />
                       <CompSelect label="CPU" value={cgForm.cpu} options={compDb.cpu || []} placeholder="CPU" t={t} fmt={fmt} onChange={(v, c) => setCgForm({ ...cgForm, cpu: v, cpuId: c?.id })} />
@@ -2447,7 +2447,7 @@ export default function AdminPage() {
                       <div style={LABEL_STYLE}>{t.cg_price_label}</div>
                       <input type="number" value={cgForm.priceEur} onChange={(e) => setCgForm({ ...cgForm, priceEur: e.target.value })} placeholder="1999" style={INPUT_STYLE} />
                       {cgForm.priceEur !== '' && (
-                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 10, color: '#9A9488', marginTop: 4 }}>
+                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 10, color: '#6B7570', marginTop: 4 }}>
                           {t.price_incl_vat(vatRatePct)}: {fmtGross(parseFloat(cgForm.priceEur) || 0)}
                         </div>
                       )}
@@ -2465,8 +2465,8 @@ export default function AdminPage() {
                           <div
                             style={{
                               width: 64, height: 64, borderRadius: 2,
-                              border: '0.5px solid rgba(28,28,26,0.15)',
-                              background: 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 12px 12px',
+                              border: '0.5px solid rgba(235,230,218,0.15)',
+                              background: 'repeating-conic-gradient(#1A231F 0% 25%, #131A17 0% 50%) 0 0 / 12px 12px',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                               position: 'relative',
                             }}
@@ -2478,7 +2478,7 @@ export default function AdminPage() {
                             title={t.image_remove}
                             style={{
                               position: 'absolute', top: -6, right: -6, width: 18, height: 18, borderRadius: '50%',
-                              background: '#1C1C1A', color: '#FDFAF4', border: '1px solid #FDFAF4',
+                              background: '#1A231F', color: '#FDFAF4', border: '1px solid #2A332E',
                               fontSize: 10, lineHeight: '16px', cursor: 'pointer', padding: 0,
                             }}
                           >
@@ -2489,8 +2489,8 @@ export default function AdminPage() {
                       <label
                         style={{
                           width: 64, height: 64, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6E1423', cursor: 'pointer', textAlign: 'center',
-                          border: '0.5px dashed rgba(110,20,35,0.35)', borderRadius: 2, padding: 4,
+                          fontFamily: 'var(--font-sans)', fontSize: 10, color: '#3FAE74', cursor: 'pointer', textAlign: 'center',
+                          border: '0.5px dashed rgba(63,174,116,0.35)', borderRadius: 2, padding: 4,
                         }}
                       >
                         {t.cg_add_photo}
@@ -2513,17 +2513,17 @@ export default function AdminPage() {
                       </label>
                     </div>
                     {cgImageStatus === 'uploading' && (
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginTop: 6 }}>{t.image_uploading}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', marginTop: 6 }}>{t.image_uploading}</div>
                     )}
                     {cgImageStatus === 'error' && (
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#CC3333', marginTop: 6 }}>{cgImageError}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#E5645F', marginTop: 6 }}>{cgImageError}</div>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 18 }}>
-                    <button onClick={cancelEditCg} style={{ background: 'transparent', color: '#7A7469', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, padding: '9px 20px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 18 }}>
+                    <button onClick={cancelEditCg} style={{ background: 'transparent', color: '#98A39D', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, padding: '9px 20px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
                       {t.cancel}
                     </button>
-                    <button onClick={saveCg} style={{ background: '#6E1423', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '9px 26px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                    <button onClick={saveCg} style={{ background: '#1F8A55', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '9px 26px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
                       {t.save_build}
                     </button>
                   </div>
@@ -2535,8 +2535,8 @@ export default function AdminPage() {
                   <div
                     key={b.id}
                     style={{
-                      background: b.isLive ? '#FDFAF4' : 'rgba(240,235,225,0.6)',
-                      border: '0.5px solid rgba(28,28,26,0.12)', borderRadius: 2, padding: 16,
+                      background: b.isLive ? '#131A17' : 'rgba(240,235,225,0.6)',
+                      border: '0.5px solid rgba(235,230,218,0.12)', borderRadius: 2, padding: 16,
                       display: 'flex', gap: 14, opacity: b.isLive ? 1 : 0.65,
                     }}
                   >
@@ -2544,8 +2544,8 @@ export default function AdminPage() {
                       <div
                         style={{
                           width: 72, height: 72, borderRadius: 2,
-                          border: '0.5px solid rgba(28,28,26,0.12)',
-                          background: b.imageUrls[0] ? 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 12px 12px' : '#F5F0E6',
+                          border: '0.5px solid rgba(235,230,218,0.12)',
+                          background: b.imageUrls[0] ? 'repeating-conic-gradient(#1A231F 0% 25%, #131A17 0% 50%) 0 0 / 12px 12px' : '#0D0D0C',
                           display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                           position: 'relative',
                         }}
@@ -2553,14 +2553,14 @@ export default function AdminPage() {
                         {b.imageUrls[0] ? (
                           <Image src={b.imageUrls[0]} alt={b.title} fill sizes="72px" style={{ objectFit: 'contain' }} />
                         ) : (
-                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890' }}>—</span>
+                          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#6B7570' }}>—</span>
                         )}
                       </div>
                       {b.imageUrls.length > 1 && (
                         <div
                           style={{
                             position: 'absolute', bottom: -4, right: -4, padding: '1px 5px', borderRadius: 8,
-                            background: '#1C1C1A', color: '#FDFAF4', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
+                            background: '#1A231F', color: '#FDFAF4', fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
                           }}
                         >
                           +{b.imageUrls.length - 1}
@@ -2568,24 +2568,24 @@ export default function AdminPage() {
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: '#1C1C1A', marginBottom: 2 }}>{b.title}</div>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: '#EBE6DA', marginBottom: 2 }}>{b.title}</div>
                       {b.customerLabel && (
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginBottom: 4 }}>{b.customerLabel}</div>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', marginBottom: 4 }}>{b.customerLabel}</div>
                       )}
-                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: '#7A7469', lineHeight: 1.6, marginBottom: 8, whiteSpace: 'pre-wrap' }}>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: '#98A39D', lineHeight: 1.6, marginBottom: 8, whiteSpace: 'pre-wrap' }}>
                         {b.specs}
                       </div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <button
                           onClick={() => toggleCgLive(b)}
-                          style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: b.isLive ? '#1A7040' : '#9090A0', background: 'transparent', border: `0.5px solid ${b.isLive ? '#1A7040' : '#9090A0'}`, borderRadius: 2, padding: '4px 10px', cursor: 'pointer' }}
+                          style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: b.isLive ? '#5FB98A' : '#9090A0', background: 'transparent', border: `0.5px solid ${b.isLive ? '#5FB98A' : '#9090A0'}`, borderRadius: 2, padding: '4px 10px', cursor: 'pointer' }}
                         >
                           {b.isLive ? t.live : t.hidden}
                         </button>
-                        <button onClick={() => openEditCg(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#6E1423', background: 'transparent', border: '0.5px solid rgba(110,20,35,0.4)', borderRadius: 2, padding: '4px 10px', cursor: 'pointer' }}>
+                        <button onClick={() => openEditCg(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#3FAE74', background: 'transparent', border: '0.5px solid rgba(63,174,116,0.4)', borderRadius: 2, padding: '4px 10px', cursor: 'pointer' }}>
                           {t.edit}
                         </button>
-                        <button onClick={() => deleteCg(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#CC3333', background: 'transparent', border: '0.5px solid rgba(204,51,51,0.35)', borderRadius: 2, padding: '4px 10px', cursor: 'pointer' }}>
+                        <button onClick={() => deleteCg(b.id)} style={{ fontSize: 11, fontFamily: 'var(--font-sans)', color: '#E5645F', background: 'transparent', border: '0.5px solid rgba(204,51,51,0.35)', borderRadius: 2, padding: '4px 10px', cursor: 'pointer' }}>
                           {t.del}
                         </button>
                       </div>
@@ -2599,7 +2599,7 @@ export default function AdminPage() {
           {tab === 'alignment' && (
             <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
               <div style={{ marginBottom: 28 }}>
-                <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.alignment_title}</h1>
+                <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#EBE6DA', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.alignment_title}</h1>
               </div>
               <AdminAlignmentPanel />
             </div>
@@ -2608,19 +2608,19 @@ export default function AdminPage() {
           {tab === 'components' && (
             <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
               <div style={{ marginBottom: 28 }}>
-                <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1C1C1A', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.components_db}</h1>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300 }}>{t.components_db_desc}</div>
+                <h1 style={{ fontFamily: 'var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#EBE6DA', margin: '0 0 4px', letterSpacing: -0.3 }}>{t.components_db}</h1>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', fontWeight: 300 }}>{t.components_db_desc}</div>
               </div>
 
               <div style={{ overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch', marginBottom: 24 }}>
-                <div style={{ display: 'flex', gap: 0, border: '0.5px solid rgba(28,28,26,0.14)', borderRadius: 2, overflow: 'hidden', width: 'fit-content' }}>
+                <div style={{ display: 'flex', gap: 0, border: '0.5px solid rgba(235,230,218,0.14)', borderRadius: 2, overflow: 'hidden', width: 'fit-content' }}>
                   {CATEGORY_TAB_ORDER.map((cat) => (
                     <button
                       key={cat}
                       onClick={() => { setCompCat(cat); setCompSearch(''); }}
                       style={{
-                        padding: '9px 16px', background: cat === compCat ? '#6E1423' : 'transparent', color: cat === compCat ? '#F5F0E6' : '#7A7469',
-                        border: 'none', borderRight: '0.5px solid rgba(28,28,26,0.1)', fontSize: 12, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3, whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'var(--font-sans)',
+                        padding: '9px 16px', background: cat === compCat ? '#1F8A55' : 'transparent', color: cat === compCat ? '#F5F0E6' : '#98A39D',
+                        border: 'none', borderRight: '0.5px solid rgba(235,230,218,0.1)', fontSize: 12, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3, whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'var(--font-sans)',
                       }}
                     >
                       {catLabels[cat]}
@@ -2635,25 +2635,25 @@ export default function AdminPage() {
                   value={compSearch}
                   onChange={(e) => setCompSearch(e.target.value)}
                   placeholder={t.comp_search_placeholder}
-                  style={{ flex: '1 1 220px', maxWidth: 320, padding: '9px 12px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 12, background: '#FDFAF4', color: '#1C1C1A', fontFamily: 'var(--font-sans)' }}
+                  style={{ flex: '1 1 220px', maxWidth: 320, padding: '9px 12px', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, fontSize: 12, background: '#131A17', color: '#EBE6DA', fontFamily: 'var(--font-sans)' }}
                 />
-                <div style={{ display: 'flex', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ display: 'flex', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, overflow: 'hidden' }}>
                   <button
                     onClick={() => { setGpuSortByNumber(false); setSortByTier(false); }}
-                    style={{ padding: '8px 14px', background: !gpuSortByNumber && !sortByTier ? '#6E1423' : 'transparent', color: !gpuSortByNumber && !sortByTier ? '#FDFAF4' : '#7A7469', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                    style={{ padding: '8px 14px', background: !gpuSortByNumber && !sortByTier ? '#1F8A55' : 'transparent', color: !gpuSortByNumber && !sortByTier ? '#FDFAF4' : '#98A39D', border: 'none', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
                   >
                     {t.comp_sort_default}
                   </button>
                   <button
                     onClick={() => { setSortByTier(true); setGpuSortByNumber(false); }}
-                    style={{ padding: '8px 14px', background: sortByTier ? '#6E1423' : 'transparent', color: sortByTier ? '#FDFAF4' : '#7A7469', border: 'none', borderLeft: '0.5px solid rgba(28,28,26,0.15)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                    style={{ padding: '8px 14px', background: sortByTier ? '#1F8A55' : 'transparent', color: sortByTier ? '#FDFAF4' : '#98A39D', border: 'none', borderLeft: '0.5px solid rgba(235,230,218,0.15)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
                   >
                     {t.comp_sort_by_tier}
                   </button>
                   {compCat === 'gpu' && (
                     <button
                       onClick={() => { setGpuSortByNumber(true); setSortByTier(false); }}
-                      style={{ padding: '8px 14px', background: gpuSortByNumber ? '#6E1423' : 'transparent', color: gpuSortByNumber ? '#FDFAF4' : '#7A7469', border: 'none', borderLeft: '0.5px solid rgba(28,28,26,0.15)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                      style={{ padding: '8px 14px', background: gpuSortByNumber ? '#1F8A55' : 'transparent', color: gpuSortByNumber ? '#FDFAF4' : '#98A39D', border: 'none', borderLeft: '0.5px solid rgba(235,230,218,0.15)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
                     >
                       {t.comp_sort_by_number}
                     </button>
@@ -2661,9 +2661,9 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? '16px' : '20px 22px', marginBottom: 24 }}>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: '#1C1C1A', marginBottom: 5 }}>{t.vat_rate_title}</div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#7A7469', fontWeight: 300, lineHeight: 1.6, marginBottom: 14, maxWidth: 640 }}>{t.vat_rate_desc}</div>
+              <div style={{ background: '#131A17', border: '0.5px solid rgba(235,230,218,0.15)', borderRadius: 2, padding: isMobile ? '16px' : '20px 22px', marginBottom: 24 }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, color: '#EBE6DA', marginBottom: 5 }}>{t.vat_rate_title}</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#98A39D', fontWeight: 300, lineHeight: 1.6, marginBottom: 14, maxWidth: 640 }}>{t.vat_rate_desc}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input
                     type="number"
@@ -2673,9 +2673,9 @@ export default function AdminPage() {
                     onChange={(e) => setVatRateInput(e.target.value)}
                     onBlur={() => updateVatRate(parseFloat(vatRateInput) || 0)}
                     onKeyDown={(e) => { if (e.key === 'Enter') updateVatRate(parseFloat(vatRateInput) || 0); }}
-                    style={{ width: 100, padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 13, background: '#F5F0E6', color: '#1C1C1A', fontFamily: 'var(--font-mono)' }}
+                    style={{ width: 100, padding: '8px 10px', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, fontSize: 13, background: '#0D0D0C', color: '#EBE6DA', fontFamily: 'var(--font-mono)' }}
                   />
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469' }}>{t.vat_rate_suffix}</span>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D' }}>{t.vat_rate_suffix}</span>
                 </div>
               </div>
 
@@ -2691,8 +2691,8 @@ export default function AdminPage() {
                       onMouseEnter={() => setHoveredCompId(comp.id)}
                       onMouseLeave={() => setHoveredCompId((id) => (id === comp.id ? null : id))}
                       style={{
-                        background: isEditing ? 'rgba(110,20,35,0.05)' : isLive ? '#FDFAF4' : 'rgba(240,235,225,0.6)',
-                        border: `0.5px solid ${isEditing ? 'rgba(110,20,35,0.3)' : 'rgba(28,28,26,0.12)'}`,
+                        background: isEditing ? 'rgba(63,174,116,0.05)' : isLive ? '#131A17' : 'rgba(240,235,225,0.6)',
+                        border: `0.5px solid ${isEditing ? 'rgba(63,174,116,0.3)' : 'rgba(235,230,218,0.12)'}`,
                         borderRadius: 2, padding: 18, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10,
                         opacity: isLive ? 1 : 0.7, position: 'relative', zIndex: 0, overflow: 'hidden',
                       }}
@@ -2702,8 +2702,8 @@ export default function AdminPage() {
                         <div
                           style={{
                             width: 40, height: 40, borderRadius: 2, flexShrink: 0,
-                            background: 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 10px 10px',
-                            border: '0.5px solid rgba(28,28,26,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                            background: 'repeating-conic-gradient(#1A231F 0% 25%, #131A17 0% 50%) 0 0 / 10px 10px',
+                            border: '0.5px solid rgba(235,230,218,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                             position: 'relative',
                           }}
                         >
@@ -2712,31 +2712,31 @@ export default function AdminPage() {
                       )}
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: '#1C1C1A', lineHeight: 1.35 }}>{comp.name}</div>
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 500, color: '#EBE6DA', lineHeight: 1.35 }}>{comp.name}</div>
                           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, background: tc.bg, border: `1.5px solid ${tc.border}`, borderRadius: 3, fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: tc.text }}>
                             {comp.tier}
                           </div>
                           {compCat === 'case' && comp.category && (
-                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: '#6E1423', background: 'rgba(110,20,35,0.08)', border: '0.5px solid rgba(110,20,35,0.2)', borderRadius: 2, padding: '1px 7px', whiteSpace: 'nowrap', letterSpacing: 0.5 }}>
+                            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: '#3FAE74', background: 'rgba(63,174,116,0.08)', border: '0.5px solid rgba(63,174,116,0.2)', borderRadius: 2, padding: '1px 7px', whiteSpace: 'nowrap', letterSpacing: 0.5 }}>
                               {comp.category}
                             </div>
                           )}
                         </div>
-                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469', marginBottom: 9, lineHeight: 1.6 }}>{comp.specs}</div>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#98A39D', marginBottom: 9, lineHeight: 1.6 }}>{comp.specs}</div>
                         <div style={{ marginBottom: 4 }}>
                           {comp.marketPrice != null && (
-                            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 10, color: '#A09890' }}>{t.original_price_label}: {fmt(comp.marketPrice)}</div>
+                            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 10, color: '#6B7570' }}>{t.original_price_label}: {fmt(comp.marketPrice)}</div>
                           )}
-                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 14, fontWeight: 600, color: '#6E1423' }}>{t.price_excl_vat}: {fmt(comp.price)}</div>
-                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 12, color: '#7A7469' }}>{t.price_incl_vat(vatRatePct)}: {fmtGross(comp.price)}</div>
+                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 14, fontWeight: 600, color: '#3FAE74' }}>{t.price_excl_vat}: {fmt(comp.price)}</div>
+                          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 12, color: '#98A39D' }}>{t.price_incl_vat(vatRatePct)}: {fmtGross(comp.price)}</div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 12, fontWeight: 600, color: '#1C1C1A' }}>{t.site_price_card_label}: {fmt(sitePriceCzk)}</span>
+                            <span style={{ fontFamily: 'var(--font-serif)', fontSize: 12, fontWeight: 600, color: '#EBE6DA' }}>{t.site_price_card_label}: {fmt(sitePriceCzk)}</span>
                             <span
                               style={{
                                 fontFamily: 'var(--font-sans)', fontSize: 8, fontWeight: 600,
-                                color: comp.sitePrice != null ? '#6E1423' : '#7A7469',
-                                background: comp.sitePrice != null ? 'rgba(110,20,35,0.08)' : 'rgba(122,116,105,0.1)',
-                                border: `0.5px solid ${comp.sitePrice != null ? 'rgba(110,20,35,0.2)' : 'rgba(122,116,105,0.25)'}`,
+                                color: comp.sitePrice != null ? '#3FAE74' : '#98A39D',
+                                background: comp.sitePrice != null ? 'rgba(63,174,116,0.08)' : 'rgba(122,116,105,0.1)',
+                                border: `0.5px solid ${comp.sitePrice != null ? 'rgba(63,174,116,0.2)' : 'rgba(122,116,105,0.25)'}`,
                                 borderRadius: 2, padding: '1px 5px', textTransform: 'uppercase', letterSpacing: 0.4,
                               }}
                             >
@@ -2747,7 +2747,7 @@ export default function AdminPage() {
                         {comp.passmark != null && (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: tc.text, fontWeight: 600 }}>PassMark {comp.passmark.toLocaleString()}</span>
-                            <a href={comp.passmarkUrl || '#'} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6E1423', textDecoration: 'none', fontWeight: 500 }}>
+                            <a href={comp.passmarkUrl || '#'} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#3FAE74', textDecoration: 'none', fontWeight: 500 }}>
                               Verify ↗
                             </a>
                           </div>
@@ -2758,7 +2758,7 @@ export default function AdminPage() {
                               (() => {
                                 const delta = sitePriceCzk - comp.heurekaPrice;
                                 const cheaper = delta <= 0;
-                                const color = cheaper ? '#1A7040' : '#CC3333';
+                                const color = cheaper ? '#5FB98A' : '#E5645F';
                                 return (
                                   <>
                                     <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600, color }}>Heureka: {fmt(comp.heurekaPrice)}</span>
@@ -2769,33 +2769,33 @@ export default function AdminPage() {
                                 );
                               })()
                             ) : (
-                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890' }}>Heureka: —</span>
+                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6B7570' }}>Heureka: —</span>
                             )}
                             {comp.heurekaCheckedAt && (
-                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890' }}>{t.heureka_checked_ago(heurekaCheckedLabel(comp.heurekaCheckedAt))}</span>
+                              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#6B7570' }}>{t.heureka_checked_ago(heurekaCheckedLabel(comp.heurekaCheckedAt))}</span>
                             )}
                             {comp.heurekaUrl && (
-                              <a href={comp.heurekaUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6E1423', textDecoration: 'none', fontWeight: 500 }}>
+                              <a href={comp.heurekaUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#3FAE74', textDecoration: 'none', fontWeight: 500 }}>
                                 {t.heureka_view}
                               </a>
                             )}
                           </div>
                         ) : (
-                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890', marginTop: 6 }}>{t.heureka_no_match}</div>
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6B7570', marginTop: 6 }}>{t.heureka_no_match}</div>
                         )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5, flexShrink: 0 }}>
-                        <button onClick={() => openEditComp(compCat, comp.id)} style={{ fontFamily: 'var(--font-sans)', color: '#6E1423', background: 'transparent', border: '0.5px solid rgba(110,20,35,0.35)', borderRadius: 2, padding: '4px 8px', cursor: 'pointer', fontSize: 11 }}>
+                        <button onClick={() => openEditComp(compCat, comp.id)} style={{ fontFamily: 'var(--font-sans)', color: '#3FAE74', background: 'transparent', border: '0.5px solid rgba(63,174,116,0.35)', borderRadius: 2, padding: '4px 8px', cursor: 'pointer', fontSize: 11 }}>
                           {t.edit}
                         </button>
-                        <button onClick={() => deleteComponent(compCat, comp.id)} style={{ fontFamily: 'var(--font-sans)', color: '#CC3333', background: 'transparent', border: '0.5px solid rgba(204,51,51,0.3)', borderRadius: 2, padding: '4px 8px', cursor: 'pointer', fontSize: 11 }}>
+                        <button onClick={() => deleteComponent(compCat, comp.id)} style={{ fontFamily: 'var(--font-sans)', color: '#E5645F', background: 'transparent', border: '0.5px solid rgba(204,51,51,0.3)', borderRadius: 2, padding: '4px 8px', cursor: 'pointer', fontSize: 11 }}>
                           ✕
                         </button>
                         <button
                           onClick={() => toggleComponentLive(compCat, comp)}
                           style={{
                             fontFamily: 'var(--font-sans)', fontSize: 11, cursor: 'pointer', borderRadius: 2, padding: '4px 8px',
-                            background: 'transparent', color: isLive ? '#1A7040' : '#9090A0',
+                            background: 'transparent', color: isLive ? '#5FB98A' : '#9090A0',
                             border: `0.5px solid ${isLive ? 'rgba(26,112,64,0.35)' : 'rgba(144,144,160,0.4)'}`,
                           }}
                         >
@@ -2815,7 +2815,7 @@ export default function AdminPage() {
                 // letting the two renderings drift apart into subtly different forms.
                 const formInner = (
                   <>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: '#1C1C1A', marginBottom: 18 }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: '#EBE6DA', marginBottom: 18 }}>
                   {editCompId ? t.edit_prefix + catLabels[compCat] : t.add_prefix + catLabels[compCat] + ' →'}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 120px', gap: 12, marginBottom: 12 }}>
@@ -2831,26 +2831,26 @@ export default function AdminPage() {
                       style={INPUT_STYLE}
                     />
                     {nameDropdownOpen && (
-                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4, background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, boxShadow: '0 6px 18px rgba(28,28,26,0.15)', maxHeight: 260, overflowY: 'auto' }}>
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4, background: '#131A17', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, boxShadow: '0 6px 18px rgba(0,0,0,0.15)', maxHeight: 260, overflowY: 'auto' }}>
                         {suggestionsToShow.map((s) => (
                           <div
                             key={s.name}
                             onMouseDown={(e) => { e.preventDefault(); pickSuggestion(s.effective); }}
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 12px', cursor: 'pointer', borderBottom: '0.5px solid rgba(28,28,26,0.06)', background: s.already ? 'rgba(28,28,26,0.04)' : '#FDFAF4' }}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '9px 12px', cursor: 'pointer', borderBottom: '0.5px solid rgba(235,230,218,0.06)', background: s.already ? 'rgba(235,230,218,0.04)' : '#131A17' }}
                           >
-                            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: s.already ? '#A09890' : '#1C1C1A' }}>{s.name}</span>
+                            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: s.already ? '#6B7570' : '#EBE6DA' }}>{s.name}</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                               {s.effective.passmark != null && (
-                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#7A7469' }}>{s.effective.passmark.toLocaleString()}</span>
+                                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#98A39D' }}>{s.effective.passmark.toLocaleString()}</span>
                               )}
                               {s.already && (
-                                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890', letterSpacing: 0.5, textTransform: 'uppercase' }}>{t.already_added}</span>
+                                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#6B7570', letterSpacing: 0.5, textTransform: 'uppercase' }}>{t.already_added}</span>
                               )}
                             </div>
                           </div>
                         ))}
                         {noSuggestions && (
-                          <div style={{ padding: '10px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890' }}>{t.no_suggestions}</div>
+                          <div style={{ padding: '10px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570' }}>{t.no_suggestions}</div>
                         )}
                       </div>
                     )}
@@ -2875,7 +2875,7 @@ export default function AdminPage() {
                     placeholder={priceParsed != null ? String(applyVat(priceParsed, vatRatePct)) : t.site_price_placeholder}
                     style={INPUT_STYLE}
                   />
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', fontWeight: 300, lineHeight: 1.5, marginTop: 6 }}>{t.site_price_help}</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', fontWeight: 300, lineHeight: 1.5, marginTop: 6 }}>{t.site_price_help}</div>
                 </div>
                 <div style={{ marginBottom: 12 }}>
                   <div style={LABEL_STYLE}>{t.image_label}</div>
@@ -2883,10 +2883,10 @@ export default function AdminPage() {
                     <div
                       style={{
                         width: 64, height: 64, borderRadius: 2, flexShrink: 0,
-                        border: '0.5px solid rgba(28,28,26,0.15)',
+                        border: '0.5px solid rgba(235,230,218,0.15)',
                         background: compForm.imageUrl
-                          ? 'repeating-conic-gradient(#e8e2d4 0% 25%, #FDFAF4 0% 50%) 0 0 / 12px 12px'
-                          : '#FDFAF4',
+                          ? 'repeating-conic-gradient(#1A231F 0% 25%, #131A17 0% 50%) 0 0 / 12px 12px'
+                          : '#131A17',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
                         position: 'relative',
                       }}
@@ -2894,14 +2894,14 @@ export default function AdminPage() {
                       {compForm.imageUrl ? (
                         <Image src={compForm.imageUrl} alt={compForm.name || 'Component photo'} fill sizes="64px" style={{ objectFit: 'contain' }} />
                       ) : (
-                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#A09890' }}>—</span>
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, color: '#6B7570' }}>—</span>
                       )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <label
                         style={{
-                          fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6E1423', cursor: 'pointer',
-                          border: '0.5px solid rgba(110,20,35,0.35)', borderRadius: 2, padding: '5px 10px', width: 'fit-content',
+                          fontFamily: 'var(--font-sans)', fontSize: 11, color: '#3FAE74', cursor: 'pointer',
+                          border: '0.5px solid rgba(63,174,116,0.35)', borderRadius: 2, padding: '5px 10px', width: 'fit-content',
                         }}
                       >
                         {compForm.imageUrl ? t.image_replace : t.image_label}
@@ -2917,15 +2917,15 @@ export default function AdminPage() {
                         />
                       </label>
                       {imageStatus === 'uploading' && (
-                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469' }}>{t.image_uploading}</span>
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D' }}>{t.image_uploading}</span>
                       )}
                       {imageStatus === 'error' && (
-                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#CC3333' }}>{imageError}</span>
+                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#E5645F' }}>{imageError}</span>
                       )}
                       {compForm.imageUrl && imageStatus === 'idle' && (
                         <button
                           onClick={() => handleImageDownload(compForm.imageUrl!, compForm.name)}
-                          style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                          style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
                         >
                           {t.image_download}
                         </button>
@@ -2933,7 +2933,7 @@ export default function AdminPage() {
                       {compForm.imageUrl && imageStatus === 'idle' && (
                         <button
                           onClick={() => setCompForm((f) => ({ ...f, imageUrl: '' }))}
-                          style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                          style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
                         >
                           {t.image_remove}
                         </button>
@@ -2993,7 +2993,7 @@ export default function AdminPage() {
                                 {t[`tier_${computed.toLowerCase()}` as keyof Translations] as string}
                               </span>
                             ) : (
-                              <span style={{ color: '#B0A898' }}>{t.ram_tier_pending}</span>
+                              <span style={{ color: '#98A39D' }}>{t.ram_tier_pending}</span>
                             )}
                           </div>
                         );
@@ -3006,7 +3006,7 @@ export default function AdminPage() {
                       </select>
                     )}
                     {compCat === 'ram' && (
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#B0A898', marginTop: 6, lineHeight: 1.6 }}>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', marginTop: 6, lineHeight: 1.6 }}>
                         {t.ram_tier_help}
                       </div>
                     )}
@@ -3020,7 +3020,7 @@ export default function AdminPage() {
                         <option key={c} value={c}>{c}</option>
                       ))}
                     </select>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#B0A898', marginTop: 6, lineHeight: 1.6 }}>{t.tower_category_help}</div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', marginTop: 6, lineHeight: 1.6 }}>{t.tower_category_help}</div>
                   </div>
                 )}
                 {compCat === 'case' && (
@@ -3093,7 +3093,7 @@ export default function AdminPage() {
                         style={INPUT_STYLE}
                       />
                     </div>
-                    <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1', fontFamily: 'var(--font-sans)', fontSize: 11, color: '#B0A898', lineHeight: 1.6 }}>
+                    <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1', fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', lineHeight: 1.6 }}>
                       {t.ram_generation_help}
                     </div>
                     <div style={{ gridColumn: isMobile ? 'auto' : '1 / -1' }}>
@@ -3104,7 +3104,7 @@ export default function AdminPage() {
                         placeholder="G.Skill|16GB|6400"
                         style={{ ...INPUT_STYLE, fontFamily: 'var(--font-mono)' }}
                       />
-                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#B0A898', marginTop: 6, lineHeight: 1.6 }}>
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', marginTop: 6, lineHeight: 1.6 }}>
                         {t.ram_family_help}
                       </div>
                     </div>
@@ -3158,7 +3158,7 @@ export default function AdminPage() {
                 {compCat === 'cooler' && (
                   <div style={{ marginBottom: 16 }}>
                     <div style={LABEL_STYLE}>{t.cooler_type_label}</div>
-                    <div style={{ display: 'flex', gap: 4, background: 'rgba(28,28,26,0.05)', borderRadius: 4, padding: 4, marginBottom: 16, maxWidth: 280 }}>
+                    <div style={{ display: 'flex', gap: 4, background: 'rgba(235,230,218,0.05)', borderRadius: 4, padding: 4, marginBottom: 16, maxWidth: 280 }}>
                       {(['air', 'aio'] as const).map((v) => (
                         <button
                           key={v}
@@ -3166,8 +3166,8 @@ export default function AdminPage() {
                           style={{
                             flex: 1, fontFamily: 'var(--font-sans)', fontSize: 12.5, fontWeight: 600, padding: '7px 0',
                             borderRadius: 2, border: 'none', cursor: 'pointer',
-                            background: compForm.coolerType === v ? '#fff' : 'transparent',
-                            color: compForm.coolerType === v ? '#6E1423' : '#7A7469',
+                            background: compForm.coolerType === v ? '#131A17' : 'transparent',
+                            color: compForm.coolerType === v ? '#3FAE74' : '#98A39D',
                             boxShadow: compForm.coolerType === v ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
                           }}
                         >
@@ -3213,7 +3213,7 @@ export default function AdminPage() {
                 {editingCase && editingCase.fanMounts && editingCase.fanMounts.length > 0 && (
                   <div style={{ marginBottom: 16 }}>
                     <div style={LABEL_STYLE}>{t.preinstalled_fans}</div>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', fontWeight: 300, lineHeight: 1.5, marginBottom: 10 }}>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', fontWeight: 300, lineHeight: 1.5, marginBottom: 10 }}>
                       {t.preinstalled_fans_help}
                     </div>
                     {editingCase.fanMounts.map((mount) => {
@@ -3221,7 +3221,7 @@ export default function AdminPage() {
                       const matchingFans = (compDb.fan || []).filter((f) => f.fanSizeMm != null && mount.sizesMm.includes(f.fanSizeMm));
                       return (
                         <div key={mount.position} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '90px 1fr 70px', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#1C1C1A', textTransform: 'capitalize' }}>{mount.position}</div>
+                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#EBE6DA', textTransform: 'capitalize' }}>{mount.position}</div>
                           <select
                             value={pre.fanName}
                             onChange={(e) =>
@@ -3252,12 +3252,12 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                   <button
                     onClick={editCompId ? updateComponent : addComponent}
-                    style={{ background: '#6E1423', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '10px 24px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                    style={{ background: '#1F8A55', color: '#FDFAF4', border: 'none', borderRadius: 2, padding: '10px 24px', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
                   >
                     {editCompId ? t.update_arrow : t.add_prefix + catLabels[compCat] + ' →'}
                   </button>
                   {editCompId && (
-                    <button onClick={cancelEditComp} style={{ background: 'transparent', color: '#7A7469', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, padding: '10px 18px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
+                    <button onClick={cancelEditComp} style={{ background: 'transparent', color: '#98A39D', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, padding: '10px 18px', fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-sans)' }}>
                       {t.cancel}
                     </button>
                   )}
@@ -3267,15 +3267,15 @@ export default function AdminPage() {
                 if (editCompId && editAnchor) {
                   return (
                     <>
-                      <div onClick={cancelEditComp} style={{ position: 'fixed', inset: 0, background: 'rgba(28,28,26,0.35)', zIndex: 50 }} />
+                      <div onClick={cancelEditComp} style={{ position: 'fixed', inset: 0, background: 'rgba(235,230,218,0.35)', zIndex: 50 }} />
                       <div
                         style={{
                           position: 'fixed', top: editAnchor.top, left: editAnchor.left,
                           width: isMobile ? 'calc(100vw - 32px)' : Math.min(EDIT_PANEL_WIDTH, window.innerWidth - 24),
                           maxHeight: 'calc(100vh - 24px)',
                           display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                          background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.2)', borderLeft: '3px solid #6E1423',
-                          borderRadius: 4, boxShadow: '0 16px 48px rgba(28,28,26,0.3)', zIndex: 51,
+                          background: '#131A17', border: '0.5px solid rgba(235,230,218,0.2)', borderLeft: '3px solid #3FAE74',
+                          borderRadius: 4, boxShadow: '0 16px 48px rgba(0,0,0,0.3)', zIndex: 51,
                         }}
                       >
                         {/* Fixed header so the close button stays reachable even once the form's own
@@ -3283,12 +3283,12 @@ export default function AdminPage() {
                         <div
                           style={{
                             flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-                            padding: '8px 10px', borderBottom: '0.5px solid rgba(28,28,26,0.1)', background: 'rgba(28,28,26,0.03)',
+                            padding: '8px 10px', borderBottom: '0.5px solid rgba(235,230,218,0.1)', background: 'rgba(235,230,218,0.03)',
                           }}
                         >
                           <button
                             onClick={cancelEditComp}
-                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#7A7469', fontSize: 14, padding: '2px 6px', lineHeight: 1 }}
+                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#98A39D', fontSize: 14, padding: '2px 6px', lineHeight: 1 }}
                           >
                             ✕
                           </button>
@@ -3299,7 +3299,7 @@ export default function AdminPage() {
                   );
                 }
                 return (
-                  <div style={{ background: '#FDFAF4', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 2, padding: isMobile ? 16 : 26, borderLeft: '3px solid #6E1423' }}>
+                  <div style={{ background: '#131A17', border: '0.5px solid rgba(235,230,218,0.15)', borderRadius: 2, padding: isMobile ? 16 : 26, borderLeft: '3px solid #3FAE74' }}>
                     {formInner}
                   </div>
                 );

@@ -1,4 +1,5 @@
-import { TIER_COLORS, hexToRgba, type Tier } from '@/lib/passmark';
+import { TIER_COLORS, type Tier } from '@/lib/passmark';
+import { hexToRgba } from '@/lib/design-tokens';
 
 // Spans the card's full height (top: 0, bottom: 0 with no explicit height) rather than a small
 // centered circle, so the glow reaches from the card's top edge to its bottom edge. Half of its

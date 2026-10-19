@@ -12,7 +12,7 @@ import { useIsMobile } from '@/lib/use-media-query';
 import { submitCheckoutIntent, type PaymentMethod } from '@/lib/supabase/checkout-intents';
 import { pick } from '@/lib/i18n';
 import { applyVat, effectiveSitePriceCzk } from '@/lib/component-db-seed';
-import { MAROON, GOLD, INK, MUTED, PAGE_BG, PANEL_BG } from '@/lib/design-tokens';
+import { GOLD, INK, MUTED, PAGE_BG, PANEL_BG, ACCENT, ACCENT_FILL, ON_ACCENT } from '@/lib/design-tokens';
 
 type ShippingId = 'standard' | 'express' | 'overnight';
 
@@ -317,7 +317,7 @@ const labelStyle: CSSProperties = {
 const inputStyle: CSSProperties = {
   width: '100%',
   padding: '12px 14px',
-  border: '0.5px solid rgba(28,28,26,0.2)',
+  border: '0.5px solid rgba(235,230,218,0.2)',
   borderRadius: 2,
   background: PANEL_BG,
   ...sans,
@@ -372,7 +372,7 @@ function EntryOverlay() {
         position: 'fixed',
         inset: 0,
         zIndex: 9999,
-        background: 'radial-gradient(circle at 50% 45%, #8E2A3A 0%, #6E1423 55%, #4A0E1A 100%)',
+        background: 'radial-gradient(circle at 50% 45%, #1F8A55 0%, #0F5C3A 55%, #0A4129 100%)',
         pointerEvents: 'none',
         overflow: 'hidden',
         animation: 'gompOverlayOut 0.45s 0.05s cubic-bezier(.16,1,.3,1) forwards',
@@ -382,11 +382,11 @@ function EntryOverlay() {
       <div style={{ position: 'absolute', top: '50%', left: '50%', width: 420, height: 420, margin: '-210px 0 0 -210px', border: '0.5px solid rgba(196,163,90,0.32)', borderRadius: '50%', animation: 'gompRotateSlowRev 6s linear infinite' }} />
       <div style={{ position: 'absolute', top: '50%', left: '50%', width: 960, height: 960, margin: '-480px 0 0 -480px', background: 'radial-gradient(circle, rgba(196,163,90,0.16) 0%, transparent 60%)', animation: 'gompGlowPulse 2.2s ease-in-out infinite' }} />
       <div style={{ position: 'absolute', top: '62%', left: '20%', width: 6, height: 6, borderRadius: '50%', background: GOLD, boxShadow: '0 0 10px 3px rgba(196,163,90,0.55)', animation: 'gompEmberRise 1.6s ease-out infinite' }} />
-      <div style={{ position: 'absolute', top: '70%', left: '68%', width: 4, height: 4, borderRadius: '50%', background: '#E8A9B4', boxShadow: '0 0 8px 2px rgba(232,169,180,0.5)', animation: 'gompEmberRise 1.9s 0.2s ease-out infinite' }} />
+      <div style={{ position: 'absolute', top: '70%', left: '68%', width: 4, height: 4, borderRadius: '50%', background: '#9FE0BC', boxShadow: '0 0 8px 2px rgba(159,224,188,0.5)', animation: 'gompEmberRise 1.9s 0.2s ease-out infinite' }} />
       <div style={{ position: 'absolute', top: '55%', left: '80%', width: 5, height: 5, borderRadius: '50%', background: GOLD, boxShadow: '0 0 9px 2px rgba(196,163,90,0.5)', animation: 'gompEmberRise 1.4s 0.35s ease-out infinite' }} />
-      <div style={{ position: 'absolute', top: '78%', left: '40%', width: 3, height: 3, borderRadius: '50%', background: '#E8A9B4', animation: 'gompEmberRise 2.1s 0.1s ease-out infinite' }} />
+      <div style={{ position: 'absolute', top: '78%', left: '40%', width: 3, height: 3, borderRadius: '50%', background: '#9FE0BC', animation: 'gompEmberRise 2.1s 0.1s ease-out infinite' }} />
       <div style={{ position: 'absolute', top: '32%', left: '14%', width: 4, height: 4, borderRadius: '50%', background: GOLD, boxShadow: '0 0 8px 2px rgba(196,163,90,0.5)', animation: 'gompEmberRise 1.7s 0.5s ease-out infinite' }} />
-      <div style={{ position: 'absolute', top: '28%', left: '86%', width: 5, height: 5, borderRadius: '50%', background: '#E8A9B4', animation: 'gompEmberRise 1.5s 0.25s ease-out infinite' }} />
+      <div style={{ position: 'absolute', top: '28%', left: '86%', width: 5, height: 5, borderRadius: '50%', background: '#9FE0BC', animation: 'gompEmberRise 1.5s 0.25s ease-out infinite' }} />
     </div>
   );
 }
@@ -554,19 +554,19 @@ export default function CheckoutPage() {
     <div style={{ position: 'relative', zIndex: 2, background: PAGE_BG, minHeight: '100vh' }}>
       <SiteNav />
 
-      <div style={{ minHeight: '100vh', paddingTop: 60, display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'stretch' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'stretch' }}>
         {/* Order Summary sidebar */}
         <div
           style={{
             width: isMobile ? '100%' : 420,
             flexShrink: 0,
             background: PANEL_BG,
-            borderRight: isMobile ? 'none' : '0.5px solid rgba(28,28,26,0.12)',
-            borderBottom: isMobile ? '0.5px solid rgba(28,28,26,0.12)' : 'none',
+            borderRight: isMobile ? 'none' : '0.5px solid rgba(235,230,218,0.12)',
+            borderBottom: isMobile ? '0.5px solid rgba(235,230,218,0.12)' : 'none',
             padding: isMobile ? '28px 20px 32px' : '48px 36px 48px',
             position: isMobile ? 'static' : 'sticky',
-            top: isMobile ? undefined : 60,
-            height: isMobile ? 'auto' : 'calc(100vh - 60px)',
+            top: isMobile ? undefined : 'var(--gomp-bar-h)',
+            height: isMobile ? 'auto' : 'calc(100vh - var(--gomp-bar-h))',
             overflowY: isMobile ? 'visible' : 'auto',
             display: 'flex',
             flexDirection: 'column',
@@ -581,7 +581,7 @@ export default function CheckoutPage() {
             {buildItems.map((item, i) => (
               <div
                 key={`${item.category}-${i}`}
-                style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderBottom: '0.5px solid rgba(28,28,26,0.08)' }}
+                style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderBottom: '0.5px solid rgba(235,230,218,0.08)' }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ ...sans, fontSize: 10, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>{item.category}</div>
@@ -593,7 +593,7 @@ export default function CheckoutPage() {
               </div>
             ))}
           </div>
-          <div style={{ height: 0.5, background: 'rgba(28,28,26,0.15)', margin: '20px 0 16px' }} />
+          <div style={{ height: 0.5, background: 'rgba(235,230,218,0.15)', margin: '20px 0 16px' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ ...sans, fontSize: 12, color: MUTED }}>{t.shipping}</span>
             <span style={{ ...serif, fontSize: 12, color: MUTED }}>
@@ -609,8 +609,8 @@ export default function CheckoutPage() {
             <span style={{ ...serif, fontSize: 26, fontWeight: 500, color: INK, letterSpacing: -0.5 }}>{fmt(grandTotalEur)}</span>
           </div>
           <div style={{ ...sans, fontSize: 11, color: MUTED, textAlign: 'right', marginBottom: 24 }}>{t.vat_included} ({vatRatePct}%)</div>
-          <div style={{ background: 'rgba(110,20,35,0.06)', border: '0.5px solid rgba(110,20,35,0.14)', borderRadius: 2, padding: '14px 16px', marginBottom: 14 }}>
-            <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MAROON, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
+          <div style={{ background: 'rgba(63,174,116,0.06)', border: '0.5px solid rgba(63,174,116,0.14)', borderRadius: 2, padding: '14px 16px', marginBottom: 14 }}>
+            <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: ACCENT, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
               {t.estimated_delivery}
             </div>
             <div style={{ ...serif, fontSize: 18, fontWeight: 500, color: INK }}>{deliveryDate}</div>
@@ -633,8 +633,8 @@ export default function CheckoutPage() {
                         width: isMobile ? 18 : 22,
                         height: isMobile ? 18 : 22,
                         borderRadius: '50%',
-                        background: done || active ? MAROON : 'transparent',
-                        border: `0.5px solid ${done || active ? MAROON : 'rgba(28,28,26,0.2)'}`,
+                        background: done || active ? ACCENT_FILL : 'transparent',
+                        border: `0.5px solid ${done || active ? ACCENT : 'rgba(235,230,218,0.2)'}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -642,13 +642,13 @@ export default function CheckoutPage() {
                         transition: 'background 0.3s, border-color 0.3s',
                       }}
                     >
-                      <span style={{ ...mono, fontSize: isMobile ? 8 : 9, fontWeight: 500, color: done || active ? PANEL_BG : MUTED }}>{n}</span>
+                      <span style={{ ...mono, fontSize: isMobile ? 8 : 9, fontWeight: 500, color: done || active ? ON_ACCENT : MUTED }}>{n}</span>
                     </div>
                     <span style={{ ...sans, fontSize: isMobile ? 10 : 12, fontWeight: active ? 500 : 400, color: active ? INK : MUTED, letterSpacing: 0.3, whiteSpace: 'nowrap' }}>
                       {stepLabels[i]}
                     </span>
                   </div>
-                  {n !== 3 && <div style={{ width: isMobile ? 14 : 40, height: 0.5, background: 'rgba(28,28,26,0.18)', margin: isMobile ? '0 6px' : '0 12px' }} />}
+                  {n !== 3 && <div style={{ width: isMobile ? 14 : 40, height: 0.5, background: 'rgba(235,230,218,0.18)', margin: isMobile ? '0 6px' : '0 12px' }} />}
                 </div>
               );
             })}
@@ -674,9 +674,9 @@ export default function CheckoutPage() {
                           onClick={() => handleSelectSavedAddr(i)}
                           style={{
                             padding: '12px 16px',
-                            border: `0.5px solid ${selected ? 'rgba(110,20,35,0.3)' : 'rgba(28,28,26,0.15)'}`,
+                            border: `0.5px solid ${selected ? 'rgba(63,174,116,0.3)' : 'rgba(235,230,218,0.15)'}`,
                             borderRadius: 2,
-                            background: selected ? 'rgba(110,20,35,0.05)' : 'transparent',
+                            background: selected ? 'rgba(63,174,116,0.05)' : 'transparent',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -697,8 +697,8 @@ export default function CheckoutPage() {
                               width: 16,
                               height: 16,
                               borderRadius: '50%',
-                              border: `0.5px solid ${selected ? MAROON : 'rgba(28,28,26,0.25)'}`,
-                              background: selected ? MAROON : 'transparent',
+                              border: `0.5px solid ${selected ? ACCENT : 'rgba(235,230,218,0.25)'}`,
+                              background: selected ? ACCENT_FILL : 'transparent',
                               flexShrink: 0,
                               display: 'flex',
                               alignItems: 'center',
@@ -711,7 +711,7 @@ export default function CheckoutPage() {
                       );
                     })}
                   </div>
-                  <div style={{ height: 0.5, background: 'rgba(28,28,26,0.1)', margin: '20px 0 0' }} />
+                  <div style={{ height: 0.5, background: 'rgba(235,230,218,0.1)', margin: '20px 0 0' }} />
                 </div>
               )}
 
@@ -757,9 +757,9 @@ export default function CheckoutPage() {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '14px 18px',
-                        border: `0.5px solid ${selected ? 'rgba(110,20,35,0.3)' : 'rgba(28,28,26,0.15)'}`,
+                        border: `0.5px solid ${selected ? 'rgba(63,174,116,0.3)' : 'rgba(235,230,218,0.15)'}`,
                         borderRadius: 2,
-                        background: selected ? 'rgba(110,20,35,0.05)' : 'transparent',
+                        background: selected ? 'rgba(63,174,116,0.05)' : 'transparent',
                         cursor: 'pointer',
                         transition: 'border-color 0.2s, background 0.2s',
                       }}
@@ -770,14 +770,14 @@ export default function CheckoutPage() {
                             width: 14,
                             height: 14,
                             borderRadius: '50%',
-                            border: `0.5px solid ${selected ? MAROON : 'rgba(28,28,26,0.25)'}`,
+                            border: `0.5px solid ${selected ? ACCENT : 'rgba(235,230,218,0.25)'}`,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             flexShrink: 0,
                           }}
                         >
-                          {selected && <div style={{ width: 7, height: 7, borderRadius: '50%', background: MAROON }} />}
+                          {selected && <div style={{ width: 7, height: 7, borderRadius: '50%', background: ACCENT_FILL }} />}
                         </div>
                         <div>
                           <div style={{ ...sans, fontSize: 13, fontWeight: 500, color: INK }}>{name}</div>
@@ -792,7 +792,7 @@ export default function CheckoutPage() {
 
               <button
                 onClick={() => setStep(2)}
-                style={{ width: '100%', padding: 15, background: MAROON, color: PANEL_BG, border: 'none', borderRadius: 2, ...sans, fontSize: 14, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3 }}
+                style={{ width: '100%', padding: 15, background: ACCENT_FILL, color: ON_ACCENT, border: 'none', borderRadius: 2, ...sans, fontSize: 14, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3 }}
               >
                 {t.continue_payment}
               </button>
@@ -826,9 +826,9 @@ export default function CheckoutPage() {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '16px 18px',
-                        border: `0.5px solid ${selected ? 'rgba(110,20,35,0.3)' : 'rgba(28,28,26,0.15)'}`,
+                        border: `0.5px solid ${selected ? 'rgba(63,174,116,0.3)' : 'rgba(235,230,218,0.15)'}`,
                         borderRadius: 2,
-                        background: selected ? 'rgba(110,20,35,0.05)' : 'transparent',
+                        background: selected ? 'rgba(63,174,116,0.05)' : 'transparent',
                         cursor: 'pointer',
                         transition: 'border-color 0.2s, background 0.2s',
                       }}
@@ -839,14 +839,14 @@ export default function CheckoutPage() {
                             width: 14,
                             height: 14,
                             borderRadius: '50%',
-                            border: `0.5px solid ${selected ? MAROON : 'rgba(28,28,26,0.25)'}`,
+                            border: `0.5px solid ${selected ? ACCENT : 'rgba(235,230,218,0.25)'}`,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             flexShrink: 0,
                           }}
                         >
-                          {selected && <div style={{ width: 7, height: 7, borderRadius: '50%', background: MAROON }} />}
+                          {selected && <div style={{ width: 7, height: 7, borderRadius: '50%', background: ACCENT_FILL }} />}
                         </div>
                         <div>
                           <div style={{ ...sans, fontSize: 13, fontWeight: 500, color: INK }}>{m.label}</div>
@@ -871,13 +871,13 @@ export default function CheckoutPage() {
                   />
                   <button
                     onClick={handleApplyPromo}
-                    style={{ padding: '12px 20px', background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, ...sans, fontSize: 13, color: MUTED, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    style={{ padding: '12px 20px', background: 'transparent', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, ...sans, fontSize: 13, color: MUTED, cursor: 'pointer', whiteSpace: 'nowrap' }}
                   >
                     {t.apply}
                   </button>
                 </div>
                 {promoApplied && (
-                  <div style={{ ...sans, fontSize: 11, color: '#1B7A40', marginTop: 6, fontWeight: 500 }}>✓ {t.promo_success}</div>
+                  <div style={{ ...sans, fontSize: 11, color: '#5FB98A', marginTop: 6, fontWeight: 500 }}>✓ {t.promo_success}</div>
                 )}
               </div>
 
@@ -897,25 +897,25 @@ export default function CheckoutPage() {
                     setConsent(e.target.checked);
                     if (e.target.checked) setOrderError(null);
                   }}
-                  style={{ marginTop: 2, accentColor: MAROON, width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }}
+                  style={{ marginTop: 2, accentColor: ACCENT, width: 15, height: 15, flexShrink: 0, cursor: 'pointer' }}
                 />
                 <span style={{ ...sans, fontSize: 12, color: MUTED, lineHeight: 1.6 }}>
                   {t.consent_label}{' '}
-                  <TransitionLink href="/privacy" style={{ color: MAROON, textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                  <TransitionLink href="/privacy" style={{ color: ACCENT, textDecoration: 'underline', textUnderlineOffset: 2 }}>
                     {pick(lang, { en: 'Privacy Policy', sk: 'Zásady ochrany osobných údajov', cz: 'Zásady ochrany osobních údajů' })}
                   </TransitionLink>
                 </span>
               </label>
 
               {orderError && (
-                <div style={{ padding: '12px 16px', background: 'rgba(110,20,35,0.06)', border: '0.5px solid rgba(110,20,35,0.18)', borderRadius: 2, marginBottom: 16 }}>
-                  <span style={{ ...sans, fontSize: 12, color: MAROON }}>{orderError}</span>
+                <div style={{ padding: '12px 16px', background: 'rgba(63,174,116,0.06)', border: '0.5px solid rgba(63,174,116,0.18)', borderRadius: 2, marginBottom: 16 }}>
+                  <span style={{ ...sans, fontSize: 12, color: ACCENT }}>{orderError}</span>
                 </div>
               )}
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   onClick={() => setStep(1)}
-                  style={{ padding: '15px 24px', background: 'transparent', color: MUTED, border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, ...sans, fontSize: 13, cursor: 'pointer' }}
+                  style={{ padding: '15px 24px', background: 'transparent', color: MUTED, border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, ...sans, fontSize: 13, cursor: 'pointer' }}
                 >
                   {t.back}
                 </button>
@@ -925,8 +925,8 @@ export default function CheckoutPage() {
                   style={{
                     flex: 1,
                     padding: 15,
-                    background: MAROON,
-                    color: PANEL_BG,
+                    background: ACCENT_FILL,
+                    color: ON_ACCENT,
                     border: 'none',
                     borderRadius: 2,
                     ...sans,
@@ -955,8 +955,8 @@ export default function CheckoutPage() {
                   width: 80,
                   height: 80,
                   borderRadius: '50%',
-                  background: 'rgba(110,20,35,0.08)',
-                  border: '0.5px solid rgba(110,20,35,0.2)',
+                  background: 'rgba(63,174,116,0.08)',
+                  border: '0.5px solid rgba(63,174,116,0.2)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -967,7 +967,7 @@ export default function CheckoutPage() {
                 <svg width={36} height={36} viewBox="0 0 36 36" fill="none">
                   <polyline
                     points="8,18 15,25 28,11"
-                    stroke={MAROON}
+                    stroke={ACCENT}
                     strokeWidth={2}
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -990,12 +990,12 @@ export default function CheckoutPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 40 }}>
                 <span style={{ ...sans, fontSize: 12, color: MUTED }}>{t.reference}</span>
-                <span style={{ ...mono, fontSize: 13, color: INK, background: 'rgba(110,20,35,0.07)', padding: '4px 10px', borderRadius: 2 }}>{refNumber}</span>
+                <span style={{ ...mono, fontSize: 13, color: INK, background: 'rgba(63,174,116,0.07)', padding: '4px 10px', borderRadius: 2 }}>{refNumber}</span>
               </div>
               <div
                 style={{
                   background: PANEL_BG,
-                  border: '0.5px solid rgba(28,28,26,0.12)',
+                  border: '0.5px solid rgba(235,230,218,0.12)',
                   borderRadius: 2,
                   padding: isMobile ? '20px 20px' : '24px 28px',
                   textAlign: 'left',
@@ -1015,7 +1015,7 @@ export default function CheckoutPage() {
                   <br />
                   {form.city}, {form.state} {form.zip}
                 </div>
-                <div style={{ height: 0.5, background: 'rgba(28,28,26,0.1)', margin: '16px 0' }} />
+                <div style={{ height: 0.5, background: 'rgba(235,230,218,0.1)', margin: '16px 0' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                   <span style={{ ...sans, fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.would_pay_with}</span>
                   <span style={{ ...sans, fontSize: 14, fontWeight: 500, color: INK }}>{methodLabel}</span>
@@ -1042,13 +1042,13 @@ export default function CheckoutPage() {
               </div>
               <TransitionLink
                 href="/build"
-                style={{ display: 'inline-block', padding: '13px 32px', background: 'transparent', color: MUTED, border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, ...sans, fontSize: 13, textDecoration: 'none', marginRight: 10 }}
+                style={{ display: 'inline-block', padding: '13px 32px', background: 'transparent', color: MUTED, border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, ...sans, fontSize: 13, textDecoration: 'none', marginRight: 10 }}
               >
                 {t.build_another}
               </TransitionLink>
               <TransitionLink
                 href="/"
-                style={{ display: 'inline-block', padding: '13px 32px', background: MAROON, color: PANEL_BG, border: 'none', borderRadius: 2, ...sans, fontSize: 13, textDecoration: 'none' }}
+                style={{ display: 'inline-block', padding: '13px 32px', background: ACCENT_FILL, color: ON_ACCENT, border: 'none', borderRadius: 2, ...sans, fontSize: 13, textDecoration: 'none' }}
               >
                 {t.go_home}
               </TransitionLink>

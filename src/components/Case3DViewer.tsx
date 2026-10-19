@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { createPortal } from 'react-dom';
 import { createBuildScene, type CompId } from '@/lib/build-scene';
 import type { Component } from '@/lib/component-db-seed';
-import { MAROON, INK, MUTED, PANEL_BG } from '@/lib/design-tokens';
+import { INK, MUTED, PANEL_BG, ACCENT } from '@/lib/design-tokens';
 
 export type CompDb = Partial<Record<CompId, Component[]>>;
 
@@ -115,11 +115,11 @@ export default function Case3DViewer({ config }: { config: Config | null }) {
               zIndex: 1000,
               pointerEvents: 'none',
               background: PANEL_BG,
-              border: '0.5px solid rgba(28,28,26,0.15)',
-              borderLeft: `3px solid ${MAROON}`,
+              border: '0.5px solid rgba(235,230,218,0.15)',
+              borderLeft: `3px solid ${ACCENT}`,
               borderRadius: 3,
               padding: '6px 10px',
-              boxShadow: '0 6px 16px rgba(28,28,26,0.18)',
+              boxShadow: '0 6px 16px rgba(0,0,0,0.18)',
               maxWidth: 220,
             }}
           >

@@ -8,7 +8,7 @@ import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import { useIsMobile } from '@/lib/use-media-query';
 import { pick } from '@/lib/i18n';
-import { MAROON, INK, MUTED, PAGE_BG, PANEL_BG } from '@/lib/design-tokens';
+import { INK, MUTED, PAGE_BG, PANEL_BG, ACCENT, ON_ACCENT, ACCENT_FILL } from '@/lib/design-tokens';
 
 const translations = {
   en: {
@@ -183,38 +183,20 @@ const sans: CSSProperties = { fontFamily: 'var(--font-sans)' };
 export default function AboutPage() {
   const { lang, currency, setLang, setCurrency } = useSite();
   const t = translations[lang];
-  const activeColor = MAROON;
+  const activeColor = ACCENT;
   const inactiveColor = MUTED;
   const isMobile = useIsMobile();
 
   return (
     <div style={{ position: 'relative', zIndex: 2, background: PAGE_BG, minHeight: '100vh' }}>
       {/* Nav */}
-      <SiteNav
-        cta={
-          <TransitionLink
-            href="/build"
-            style={{
-              ...sans,
-              fontSize: 13,
-              fontWeight: 500,
-              color: PANEL_BG,
-              background: MAROON,
-              textDecoration: 'none',
-              padding: '9px 22px',
-              borderRadius: 2,
-            }}
-          >
-            {t.nav_startbuilding}
-          </TransitionLink>
-        }
-      />
+      <SiteNav />
 
       {/* Hero */}
       <section
         style={{
-          padding: isMobile ? '70px 24px 50px' : '140px 60px 100px',
-          borderBottom: '0.5px solid rgba(28,28,26,0.12)',
+          padding: isMobile ? '30px 24px 50px' : '80px 60px 100px',
+          borderBottom: '0.5px solid rgba(235,230,218,0.12)',
           animation: 'fadeUp 0.8s cubic-bezier(.16,1,.3,1) forwards',
         }}
       >
@@ -247,13 +229,13 @@ export default function AboutPage() {
           >
             {t.hero_line1}
             <br />
-            {t.hero_line2} <span style={{ color: MAROON, fontWeight: 600 }}>{t.hero_line3}</span>
+            {t.hero_line2} <span style={{ color: ACCENT, fontWeight: 600 }}>{t.hero_line3}</span>
           </h1>
         </div>
       </section>
 
       {/* Origin */}
-      <section style={{ padding: isMobile ? '50px 24px' : '100px 60px', borderBottom: '0.5px solid rgba(28,28,26,0.12)' }}>
+      <section style={{ padding: isMobile ? '50px 24px' : '100px 60px', borderBottom: '0.5px solid rgba(235,230,218,0.12)' }}>
         <div
           style={{
             maxWidth: 1280,
@@ -289,7 +271,7 @@ export default function AboutPage() {
                 display: 'grid',
                 gridTemplateColumns: 'repeat(3, 1fr)',
                 gap: 0,
-                border: '0.5px solid rgba(28,28,26,0.12)',
+                border: '0.5px solid rgba(235,230,218,0.12)',
                 borderRadius: 2,
                 overflow: 'hidden',
               }}
@@ -305,7 +287,7 @@ export default function AboutPage() {
                   delay={i === 1 ? 90 : i === 2 ? 180 : 0}
                   style={{
                     padding: isMobile ? '16px 8px' : '24px 20px',
-                    borderRight: i !== 2 ? '0.5px solid rgba(28,28,26,0.1)' : undefined,
+                    borderRight: i !== 2 ? '0.5px solid rgba(235,230,218,0.1)' : undefined,
                   }}
                 >
                   <div style={{ ...serif, fontSize: isMobile ? 24 : 36, fontWeight: 600, color: INK, letterSpacing: '-1px', lineHeight: 1 }}>
@@ -317,7 +299,7 @@ export default function AboutPage() {
             </div>
           </div>
           <div style={{ paddingTop: isMobile ? 0 : 8 }}>
-            <div style={{ borderLeft: `2px solid ${MAROON}`, paddingLeft: isMobile ? 20 : 36, marginBottom: isMobile ? 32 : 48 }}>
+            <div style={{ borderLeft: `2px solid ${ACCENT}`, paddingLeft: isMobile ? 20 : 36, marginBottom: isMobile ? 32 : 48 }}>
               <div style={{ ...serif, fontSize: isMobile ? 22 : 32, fontWeight: 600, color: INK, lineHeight: 1.3, marginBottom: 24 }}>
                 {t.pull_quote}
               </div>
@@ -329,7 +311,7 @@ export default function AboutPage() {
       </section>
 
       {/* Values */}
-      <section style={{ borderBottom: '0.5px solid rgba(28,28,26,0.12)', background: PANEL_BG }}>
+      <section style={{ borderBottom: '0.5px solid rgba(235,230,218,0.12)', background: PANEL_BG }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div style={{ padding: isMobile ? '40px 24px 28px' : '80px 60px 56px' }}>
             <div
@@ -353,7 +335,7 @@ export default function AboutPage() {
             style={{
               display: 'grid',
               gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-              borderTop: '0.5px solid rgba(28,28,26,0.12)',
+              borderTop: '0.5px solid rgba(235,230,218,0.12)',
             }}
           >
             {values[lang].map((val, i) => (
@@ -363,8 +345,8 @@ export default function AboutPage() {
                 delay={i * 100}
                 style={{
                   padding: isMobile ? '32px 24px' : '52px 48px',
-                  borderRight: !isMobile && i !== values[lang].length - 1 ? '0.5px solid rgba(28,28,26,0.1)' : undefined,
-                  borderBottom: isMobile && i !== values[lang].length - 1 ? '0.5px solid rgba(28,28,26,0.1)' : undefined,
+                  borderRight: !isMobile && i !== values[lang].length - 1 ? '0.5px solid rgba(235,230,218,0.1)' : undefined,
+                  borderBottom: isMobile && i !== values[lang].length - 1 ? '0.5px solid rgba(235,230,218,0.1)' : undefined,
                 }}
               >
                 <div
@@ -372,7 +354,7 @@ export default function AboutPage() {
                     ...serif,
                     fontSize: isMobile ? 44 : 60,
                     fontWeight: 400,
-                    color: 'rgba(28,28,26,0.08)',
+                    color: 'rgba(235,230,218,0.08)',
                     letterSpacing: '-2px',
                     lineHeight: 1,
                     marginBottom: 24,
@@ -389,7 +371,7 @@ export default function AboutPage() {
       </section>
 
       {/* Team */}
-      <section style={{ padding: isMobile ? '50px 24px' : '100px 60px', borderBottom: '0.5px solid rgba(28,28,26,0.12)' }}>
+      <section style={{ padding: isMobile ? '50px 24px' : '100px 60px', borderBottom: '0.5px solid rgba(235,230,218,0.12)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div style={{ marginBottom: isMobile ? 32 : 60 }}>
             <div
@@ -414,7 +396,7 @@ export default function AboutPage() {
               display: 'grid',
               gridTemplateColumns: 'repeat(2, 1fr)',
               gap: 0,
-              border: '0.5px solid rgba(28,28,26,0.12)',
+              border: '0.5px solid rgba(235,230,218,0.12)',
               borderRadius: 2,
               overflow: 'hidden',
             }}
@@ -427,9 +409,9 @@ export default function AboutPage() {
                 style={{
                   padding: isMobile ? '24px 16px' : '36px 28px',
                   borderRight: isMobile
-                    ? (i % 2 === 0 ? '0.5px solid rgba(28,28,26,0.1)' : undefined)
-                    : (i !== team.length - 1 ? '0.5px solid rgba(28,28,26,0.1)' : undefined),
-                  borderBottom: isMobile && i < team.length - 2 ? '0.5px solid rgba(28,28,26,0.1)' : undefined,
+                    ? (i % 2 === 0 ? '0.5px solid rgba(235,230,218,0.1)' : undefined)
+                    : (i !== team.length - 1 ? '0.5px solid rgba(235,230,218,0.1)' : undefined),
+                  borderBottom: isMobile && i < team.length - 2 ? '0.5px solid rgba(235,230,218,0.1)' : undefined,
                 }}
               >
                 <div
@@ -437,14 +419,14 @@ export default function AboutPage() {
                     width: 48,
                     height: 48,
                     borderRadius: '50%',
-                    background: MAROON,
+                    background: ACCENT_FILL,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     ...serif,
                     fontSize: 20,
                     fontWeight: 600,
-                    color: PAGE_BG,
+                    color: ON_ACCENT,
                     marginBottom: 16,
                     opacity: m.opacity,
                   }}
@@ -487,8 +469,8 @@ export default function AboutPage() {
                   ...sans,
                   fontSize: 14,
                   fontWeight: 500,
-                  color: PANEL_BG,
-                  background: MAROON,
+                  color: ON_ACCENT,
+                  background: ACCENT_FILL,
                   padding: '14px 28px',
                   borderRadius: 2,
                   textDecoration: 'none',
@@ -502,7 +484,7 @@ export default function AboutPage() {
                   ...sans,
                   fontSize: 14,
                   color: INK,
-                  border: '0.5px solid rgba(28,28,26,0.3)',
+                  border: '0.5px solid rgba(235,230,218,0.3)',
                   padding: '14px 28px',
                   borderRadius: 2,
                   textDecoration: 'none',
@@ -518,7 +500,7 @@ export default function AboutPage() {
               display: isMobile ? 'none' : 'block',
               fontSize: 80,
               fontWeight: 400,
-              color: 'rgba(28,28,26,0.06)',
+              color: 'rgba(235,230,218,0.06)',
               letterSpacing: '-3px',
               lineHeight: 0.85,
               textAlign: 'right',

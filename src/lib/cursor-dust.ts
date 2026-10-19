@@ -83,7 +83,7 @@ export function initCursorDust() {
   );
 }
 
-const COLORS = ['#C4A35A', '#C4A35A', '#6E1423'];
+const COLORS = ['#C4A35A', '#C4A35A', '#3FAE74'];
 function easeOutCubic(t: number) {
   return 1 - Math.pow(1 - t, 3);
 }

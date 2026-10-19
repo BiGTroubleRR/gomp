@@ -15,7 +15,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { DEFAULT_ALIGNMENT_TUNING, MM_PER_UNIT, SIZES, type AlignmentTunableId, type AlignmentTuning } from '@/lib/build-scene';
 import type { FormFactor } from '@/lib/component-db-seed';
 import { fetchAlignmentTuningConfig, saveAlignmentTuningConfig, type AlignmentTuningConfig } from '@/lib/supabase/alignment-tuning';
-import { INK, SUBTEXT, MAROON as ACCENT, BORDER } from '@/lib/design-tokens';
+import { INK, SUBTEXT, ACCENT, BORDER } from '@/lib/design-tokens';
 
 const sans: CSSProperties = { fontFamily: 'var(--font-sans)' };
 const mono: CSSProperties = { fontFamily: 'var(--font-mono)' };
@@ -61,7 +61,7 @@ const SLIDER_CSS = `
   appearance: none;
   height: 4px;
   border-radius: 2px;
-  background: rgba(28,28,26,0.12);
+  background: rgba(235,230,218,0.12);
   outline: none;
 }
 .alignment-panel input[type=range]::-webkit-slider-thumb {
@@ -70,7 +70,7 @@ const SLIDER_CSS = `
   height: 16px;
   border-radius: 50%;
   background: ${ACCENT};
-  border: 2px solid #fff;
+  border: 2px solid #2A332E;
   box-shadow: 0 1px 3px rgba(0,0,0,0.25);
   cursor: pointer;
 }
@@ -79,7 +79,7 @@ const SLIDER_CSS = `
   height: 16px;
   border-radius: 50%;
   background: ${ACCENT};
-  border: 2px solid #fff;
+  border: 2px solid #2A332E;
   box-shadow: 0 1px 3px rgba(0,0,0,0.25);
   cursor: pointer;
 }
@@ -121,7 +121,7 @@ function NumberField({
           if (!Number.isNaN(v)) onChange(v);
         }}
         style={{
-          ...mono, width: '100%', fontSize: 12.5, color: INK, background: '#fff',
+          ...mono, width: '100%', fontSize: 12.5, color: INK, background: '#131A17',
           border: `1px solid ${BORDER}`, borderRadius: 6, padding: '5px 7px', textAlign: 'right',
         }}
       />
@@ -131,7 +131,7 @@ function NumberField({
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '16px 18px', marginBottom: 16 }}>
+    <div style={{ background: '#131A17', border: `1px solid ${BORDER}`, borderRadius: 10, padding: '16px 18px', marginBottom: 16 }}>
       <div style={{ ...sans, fontSize: 12, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>{title}</div>
       {children}
     </div>
@@ -243,20 +243,20 @@ export default function AdminAlignmentPanel() {
           Open configurator ↗
         </a>
       </div>
-      <div style={{ ...sans, fontSize: 12, fontWeight: 600, color: status === 'error' ? '#B3261E' : SUBTEXT, height: 18, marginTop: 8 }}>
+      <div style={{ ...sans, fontSize: 12, fontWeight: 600, color: status === 'error' ? '#E5645F' : SUBTEXT, height: 18, marginTop: 8 }}>
         {status === 'saving' && 'Saving…'}
         {status === 'saved' && '✓ Saved — live on /build'}
         {status === 'error' && 'Save failed — check connection and retry'}
       </div>
 
-      <div style={{ display: 'flex', gap: 4, margin: '14px 0 18px', background: 'rgba(28,28,26,0.05)', borderRadius: 8, padding: 4 }}>
+      <div style={{ display: 'flex', gap: 4, margin: '14px 0 18px', background: 'rgba(235,230,218,0.05)', borderRadius: 8, padding: 4 }}>
         {FORM_FACTORS.map((ff) => (
           <button
             key={ff}
             onClick={() => setActiveFormFactor(ff)}
             style={{
               ...sans, flex: 1, fontSize: 12.5, fontWeight: 600, padding: '7px 0', borderRadius: 6, border: 'none', cursor: 'pointer',
-              background: activeFormFactor === ff ? '#fff' : 'transparent',
+              background: activeFormFactor === ff ? '#131A17' : 'transparent',
               color: activeFormFactor === ff ? ACCENT : SUBTEXT,
               boxShadow: activeFormFactor === ff ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
             }}
@@ -323,7 +323,7 @@ export default function AdminAlignmentPanel() {
         onClick={handleReset}
         style={{
           ...sans, fontSize: 12.5, fontWeight: 600, color: INK,
-          background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '9px 18px', cursor: 'pointer',
+          background: '#131A17', border: `1px solid ${BORDER}`, borderRadius: 8, padding: '9px 18px', cursor: 'pointer',
         }}
       >
         Reset {activeFormFactor} to defaults

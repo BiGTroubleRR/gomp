@@ -304,9 +304,9 @@ function makeTextSprite(text: string, targetHeight: number): THREE.Sprite {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineWidth = 8 * scale;
-  ctx.strokeStyle = 'rgba(253,250,244,0.95)';
+  ctx.strokeStyle = 'rgba(13,13,12,0.92)';
   ctx.strokeText(text, canvas.width / 2, canvas.height / 2);
-  ctx.fillStyle = '#6E1423';
+  ctx.fillStyle = '#EBE6DA';
   ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -666,7 +666,7 @@ function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
     case 'storage': {
       const g = new T.Group();
       g.add(new T.Mesh(new T.BoxGeometry(0.04, 0.08, 0.22), new T.MeshStandardMaterial({ color: 0x1a1a22, roughness: 0.4, metalness: 0.5 })));
-      const stk = new T.Mesh(new T.BoxGeometry(0.044, 0.07, 0.2), new T.MeshStandardMaterial({ color: 0x6e1423 }));
+      const stk = new T.Mesh(new T.BoxGeometry(0.044, 0.07, 0.2), new T.MeshStandardMaterial({ color: 0x1f8a55 }));
       stk.position.x = 0.004;
       g.add(stk);
       return g;
@@ -714,7 +714,7 @@ function makeCanLabelTexture(): THREE.CanvasTexture {
   canvas.width = 512;
   canvas.height = 512;
   const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = '#6E1423';
+  ctx.fillStyle = '#0F5C3A';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#C4A35A';
   ctx.fillRect(0, canvas.height * 0.38, canvas.width, canvas.height * 0.1);
@@ -733,7 +733,7 @@ function makeCanLabelTexture(): THREE.CanvasTexture {
   // specific lettering — the exact Coca-Cola script is itself the protected trade dress, not
   // just the wordmark, so this deliberately doesn't reach for that.
   ctx.font = 'bold 92px "Brush Script MT", "Segoe Script", cursive';
-  ctx.fillStyle = '#6E1423';
+  ctx.fillStyle = '#0F5C3A';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText('Cola', 0, 0);
@@ -1016,7 +1016,7 @@ function buildAioCoolerMesh(): THREE.Group {
   g.add(new T.Mesh(new T.BoxGeometry(0.36, 0.36, 0.38), new T.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.2, metalness: 0.85 })));
   const lcd = new T.Mesh(
     new T.CircleGeometry(0.12, 16),
-    new T.MeshStandardMaterial({ color: 0x6e1423, emissive: 0x6e1423, emissiveIntensity: 1.0, side: T.DoubleSide }),
+    new T.MeshStandardMaterial({ color: 0x2f9e66, emissive: 0x2f9e66, emissiveIntensity: 1.0, side: T.DoubleSide }),
   );
   lcd.rotation.y = Math.PI / 2;
   lcd.position.x = 0.185;
@@ -1194,12 +1194,12 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.setSize(W, H);
-  renderer.setClearColor(0xf5f0e6);
+  renderer.setClearColor(0x0c110f);
   renderer.domElement.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;display:block;';
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xf5f0e6);
+  scene.background = new THREE.Color(0x0c110f);
   const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
   camera.position.set(7.0, 2.9, 2.6); // ~30% further back than (5.4, 2.2, 2.0), same viewing angle
   camera.lookAt(0, 0.2, 0);
@@ -1226,25 +1226,25 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     ? new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target)).theta
     : 0;
 
-  scene.add(new THREE.AmbientLight(0xf5ecd8, 1.8));
+  scene.add(new THREE.AmbientLight(0xe6efe9, 1.8));
   const sun = new THREE.DirectionalLight(0xffffff, 2.5);
   sun.position.set(5, 10, 5);
   scene.add(sun);
-  const navyLight = new THREE.PointLight(0x6e1423, 2.0, 22);
+  const navyLight = new THREE.PointLight(0x2f9e66, 2.4, 22);
   navyLight.position.set(-4, 1, -3);
   scene.add(navyLight);
   const warm = new THREE.PointLight(0xffe4c0, 0.7, 15);
   warm.position.set(4, -2, 4);
   scene.add(warm);
 
-  const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshStandardMaterial({ color: 0xede6d8 }));
+  const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshStandardMaterial({ color: 0x101814 }));
   floorMesh.rotation.x = -Math.PI / 2;
   floorMesh.position.y = -2.6;
   scene.add(floorMesh);
-  const gridHelper = new THREE.GridHelper(30, 60, 0xcfc8ba, 0xd8d0c2);
+  const gridHelper = new THREE.GridHelper(30, 60, 0x2a3d33, 0x1c2b24);
   gridHelper.position.y = floorMesh.position.y + 0.05;
   (gridHelper.material as THREE.Material).transparent = true;
-  (gridHelper.material as THREE.Material).opacity = 0.4;
+  (gridHelper.material as THREE.Material).opacity = 0.6;
   scene.add(gridHelper);
 
   // ---- Ambient decoration: 6 clusters of thin rotating rings + floating "motes" ----
@@ -1260,7 +1260,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   ];
   const ringSpins: { mesh: THREE.Mesh; spin: number }[] = [];
   clusterPositions.forEach((pos, i) => {
-    const color = i % 2 === 0 ? 0x6e1423 : 0xc4a35a;
+    const color = i % 2 === 0 ? 0x3fae74 : 0xc4a35a;
     const outer = new THREE.Mesh(
       new THREE.TorusGeometry(2.6 + (i % 3) * 0.3, 0.008, 8, 48),
       new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.22 }),
@@ -1279,11 +1279,11 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     ringSpins.push({ mesh: inner, spin: (i % 2 === 0 ? 1 : -1) * 0.0006 });
   });
   const motesData: { pos: [number, number, number]; color: number; size: number }[] = [
-    { pos: [-2.6, 2.4, -1.0], color: 0x6e1423, size: 0.028 },
+    { pos: [-2.6, 2.4, -1.0], color: 0x3fae74, size: 0.028 },
     { pos: [-3.4, 1.2, 3.2], color: 0xc4a35a, size: 0.022 },
-    { pos: [-1.2, -0.8, 4.0], color: 0x6e1423, size: 0.02 },
+    { pos: [-1.2, -0.8, 4.0], color: 0x3fae74, size: 0.02 },
     { pos: [-5.2, 2.8, -2.0], color: 0xc4a35a, size: 0.024 },
-    { pos: [-4.0, -1.4, -4.2], color: 0x6e1423, size: 0.018 },
+    { pos: [-4.0, -1.4, -4.2], color: 0x3fae74, size: 0.018 },
     { pos: [1.4, 2.6, -3.0], color: 0xc4a35a, size: 0.02 },
   ];
   const motes = motesData.map((m, i) => {
@@ -1358,7 +1358,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     caseGroup.add(rear);
 
     const boxGeo = new THREE.BoxGeometry(w, h, d);
-    caseGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo, 1), new THREE.LineBasicMaterial({ color: 0x6e1423, transparent: true, opacity: 0.55 })));
+    caseGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo, 1), new THREE.LineBasicMaterial({ color: 0x3fae74, transparent: true, opacity: 0.55 })));
 
     glassMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(d, h),

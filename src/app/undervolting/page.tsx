@@ -5,7 +5,7 @@ import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import { useIsMobile } from '@/lib/use-media-query';
-import { INK, MUTED, MAROON, GOLD, PAGE_BG, PANEL_BG } from '@/lib/design-tokens';
+import { INK, MUTED, GOLD, PAGE_BG, PANEL_BG, ACCENT_FILL, ACCENT, ON_ACCENT } from '@/lib/design-tokens';
 
 const T = {
   en: {
@@ -68,22 +68,22 @@ export default function UndervoltingPage() {
       <style>{`@keyframes gompPulseDot { 0%,100% { opacity:0.18; transform:scale(0.8); } 50% { opacity:0.6; transform:scale(1.2); } }`}</style>
       <SiteNav />
 
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '56px 20px 60px' : '84px 32px 90px', position: 'relative' }}>
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '28px 20px 60px' : '44px 32px 90px', position: 'relative' }}>
         <div style={{ position: 'relative' }}>
           {!isMobile && (
             <>
               <div style={{ position: 'absolute', top: -46, left: -56, width: 210, height: 210, pointerEvents: 'none', zIndex: 0 }}>
-                <div style={{ position: 'absolute', inset: 0, border: '0.5px solid rgba(110,20,35,0.22)', borderRadius: '50%', animation: 'gompRotateSlow 110s linear infinite' }} />
-                <div style={{ position: 'absolute', inset: 30, border: '0.5px solid rgba(110,20,35,0.13)', borderRadius: '50%', animation: 'gompRotateSlowRev 85s linear infinite' }} />
+                <div style={{ position: 'absolute', inset: 0, border: '0.5px solid rgba(63,174,116,0.22)', borderRadius: '50%', animation: 'gompRotateSlow 110s linear infinite' }} />
+                <div style={{ position: 'absolute', inset: 30, border: '0.5px solid rgba(63,174,116,0.13)', borderRadius: '50%', animation: 'gompRotateSlowRev 85s linear infinite' }} />
               </div>
-              <div style={{ position: 'absolute', top: 6, left: 'calc(100% - 40px)', width: 7, height: 7, borderRadius: '50%', background: MAROON, pointerEvents: 'none', zIndex: 1, animation: 'gompPulseDot 5s ease-in-out infinite' }} />
+              <div style={{ position: 'absolute', top: 6, left: 'calc(100% - 40px)', width: 7, height: 7, borderRadius: '50%', background: ACCENT_FILL, pointerEvents: 'none', zIndex: 1, animation: 'gompPulseDot 5s ease-in-out infinite' }} />
               <div style={{ position: 'absolute', top: 172, left: -26, width: 6, height: 6, borderRadius: '50%', background: GOLD, filter: 'blur(0.5px)', pointerEvents: 'none', zIndex: 1, animation: 'gompPulseDot 4.5s ease-in-out infinite 0.8s' }} />
             </>
           )}
           <div
             style={{
               fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600,
-              letterSpacing: 1.5, color: MAROON, marginBottom: 12, position: 'relative', zIndex: 2,
+              letterSpacing: 1.5, color: ACCENT, marginBottom: 12, position: 'relative', zIndex: 2,
             }}
           >
             {t.eyebrow}
@@ -114,7 +114,7 @@ export default function UndervoltingPage() {
               { title: t.point2_title, body: t.point2_body },
               { title: t.point3_title, body: t.point3_body },
             ].map((p) => (
-              <div key={p.title} style={{ background: PANEL_BG, border: '0.5px solid rgba(28,28,26,0.1)', borderRadius: 3, padding: 20, borderLeft: `3px solid ${MAROON}` }}>
+              <div key={p.title} style={{ background: PANEL_BG, border: '0.5px solid rgba(235,230,218,0.1)', borderRadius: 3, padding: 20, borderLeft: `3px solid ${ACCENT}` }}>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: INK, marginBottom: 6 }}>{p.title}</div>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, fontWeight: 300, lineHeight: 1.6 }}>{p.body}</div>
               </div>
@@ -122,7 +122,7 @@ export default function UndervoltingPage() {
           </div>
         </div>
 
-        <div style={{ background: PANEL_BG, border: '0.5px solid rgba(28,28,26,0.12)', borderRadius: 4, padding: isMobile ? 22 : 36, maxWidth: 720, position: 'relative', zIndex: 2 }}>
+        <div style={{ background: PANEL_BG, border: '0.5px solid rgba(235,230,218,0.12)', borderRadius: 4, padding: isMobile ? 22 : 36, maxWidth: 720, position: 'relative', zIndex: 2 }}>
           <p style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: MUTED, fontWeight: 300, lineHeight: 1.75, margin: '0 0 22px' }}>
             {t.closing}
           </p>
@@ -130,7 +130,7 @@ export default function UndervoltingPage() {
             <TransitionLink
               href="/build"
               style={{
-                fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: PANEL_BG, background: MAROON,
+                fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 500, color: ON_ACCENT, background: ACCENT_FILL,
                 border: 'none', padding: '13px 26px', borderRadius: 2, letterSpacing: 0.2, textDecoration: 'none', display: 'inline-block',
               }}
             >

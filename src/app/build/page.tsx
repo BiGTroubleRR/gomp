@@ -56,7 +56,7 @@ import {
 import { useIsMobile } from '@/lib/use-media-query';
 import { setDustCursorVisible, isDustEnabled } from '@/lib/cursor-dust';
 import { fetchAlignmentTuningConfig, subscribeAlignmentTuning, resolveAlignmentTuning, type AlignmentTuningConfig } from '@/lib/supabase/alignment-tuning';
-import { PAGE_BG as BG, PANEL_BG as PANEL, INK, MUTED, MAROON, GOLD } from '@/lib/design-tokens';
+import { PAGE_BG as BG, PANEL_BG as PANEL, INK, MUTED, GOLD, ACCENT, ACCENT_FILL } from '@/lib/design-tokens';
 
 const T = {
   en: {
@@ -382,7 +382,7 @@ function SpecPill({ label }: { label: string }) {
   return (
     <div
       style={{
-        padding: '2px 6px', borderRadius: 3, border: '1px solid rgba(28,28,26,0.2)',
+        padding: '2px 6px', borderRadius: 3, border: '1px solid rgba(235,230,218,0.2)',
         fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 9, color: MUTED, whiteSpace: 'nowrap',
       }}
     >
@@ -400,9 +400,9 @@ function FilterChip({ active, label, onClick }: { active: boolean; label: string
       onClick={onClick}
       style={{
         padding: '4px 9px', borderRadius: 4,
-        border: `1px solid ${active ? MAROON : 'rgba(28,28,26,0.2)'}`,
-        background: active ? 'rgba(110,20,35,0.08)' : 'transparent',
-        color: active ? MAROON : MUTED,
+        border: `1px solid ${active ? ACCENT : 'rgba(235,230,218,0.2)'}`,
+        background: active ? 'rgba(63,174,116,0.08)' : 'transparent',
+        color: active ? ACCENT : MUTED,
         fontFamily: 'var(--font-mono)', fontSize: 9, cursor: 'pointer',
       }}
     >
@@ -495,7 +495,7 @@ function BuildPageContent() {
   const textPop: CSSProperties = !isMobile
     ? {
         textShadow:
-          '0 0 4px #FDFAF4, 0 0 4px #FDFAF4, 1px 1px 1px #FDFAF4, -1px -1px 1px #FDFAF4, 1px -1px 1px #FDFAF4, -1px 1px 1px #FDFAF4',
+          '0 0 4px #131A17, 0 0 4px #131A17, 1px 1px 1px #131A17, -1px -1px 1px #131A17, 1px -1px 1px #131A17, -1px 1px 1px #131A17',
       }
     : {};
 
@@ -1333,9 +1333,9 @@ function BuildPageContent() {
   return (
     <div style={{ position: 'relative', background: BG, minHeight: '100vh', paddingBottom: isMobile ? 72 : 0 }}>
       {/* ---- Nav ---- */}
-      <SiteNav />
+      <SiteNav variant="compact" />
 
-      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: isMobile ? 'auto' : '100vh', minHeight: isMobile ? '100vh' : undefined, paddingTop: 60 }}>
+      <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: isMobile ? 'auto' : 'calc(100vh - var(--gomp-bar-h))', minHeight: isMobile ? '100vh' : undefined }}>
         {/* ---- Sidebar ----
             Desktop: floats over the full-bleed 3D viewport, semi-transparent + blurred, rather
             than sitting beside it. Mobile: opaque and in normal flow — the see-through look
@@ -1346,22 +1346,22 @@ function BuildPageContent() {
             width: isMobile ? '100%' : 264,
             order: isMobile ? 2 : 0,
             position: isMobile ? 'static' : 'absolute',
-            top: isMobile ? undefined : 60,
+            top: isMobile ? undefined : 'var(--gomp-bar-h)',
             bottom: isMobile ? undefined : 0,
             left: isMobile ? undefined : 0,
             zIndex: isMobile ? undefined : 10,
-            background: isMobile ? PANEL : 'rgba(253,250,244,0.5)',
+            background: isMobile ? PANEL : 'rgba(19,26,23,0.5)',
             backdropFilter: isMobile ? undefined : 'blur(20px)',
-            borderRight: isMobile ? 'none' : '0.5px solid rgba(28,28,26,0.1)',
-            borderTop: isMobile ? '0.5px solid rgba(28,28,26,0.1)' : 'none',
-            borderBottom: isMobile ? '0.5px solid rgba(28,28,26,0.1)' : 'none',
+            borderRight: isMobile ? 'none' : '0.5px solid rgba(235,230,218,0.1)',
+            borderTop: isMobile ? '0.5px solid rgba(235,230,218,0.1)' : 'none',
+            borderBottom: isMobile ? '0.5px solid rgba(235,230,218,0.1)' : 'none',
             display: 'flex',
             flexDirection: 'column',
           }}
         >
             <div style={{ padding: isMobile ? '20px 20px 10px' : '20px 20px 14px' }}>
               <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase' }}>{t.pc_builder}</div>
-              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#A09890', marginTop: 4 }}>{t.select_components}</div>
+              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#6B7570', marginTop: 4 }}>{t.select_components}</div>
             </div>
             {/* ---- Budget slider — snaps to common breakpoints (see BUDGET_STEPS), same
                 convention as the RAM min-speed slider below. Drives "Build Complete PC"'s
@@ -1369,7 +1369,7 @@ function BuildPageContent() {
             <div style={{ padding: isMobile ? '0 20px 14px' : '0 20px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.budget}</span>
-                <span style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 14, color: MAROON, fontWeight: 600 }}>{fmt(BUDGET_STEPS[budgetIdx])}</span>
+                <span style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 14, color: ACCENT, fontWeight: 600 }}>{fmt(BUDGET_STEPS[budgetIdx])}</span>
               </div>
               <input
                 type="range"
@@ -1381,7 +1381,7 @@ function BuildPageContent() {
                 onChange={(e) => setBudgetIdx(Number(e.target.value))}
                 style={{ width: '100%', display: 'block', ...sliderFillStyle(budgetIdx, BUDGET_STEPS.length - 1) }}
               />
-              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890', marginTop: 4, lineHeight: 1.4 }}>{t.budget_hint}</div>
+              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6B7570', marginTop: 4, lineHeight: 1.4 }}>{t.budget_hint}</div>
             </div>
             <div style={{ flex: isMobile ? 'none' : 1, overflowY: isMobile ? 'visible' : 'auto', padding: '0 20px 16px' }}>
               {/* ---- Step pills — free-jump between categories, green/checked once picked ---- */}
@@ -1399,9 +1399,9 @@ function BuildPageContent() {
                       style={{
                         ...(isActive ? {} : textPop),
                         display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20,
-                        border: `1px solid ${isActive ? MAROON : done ? 'rgba(110,20,35,0.4)' : 'rgba(28,28,26,0.2)'}`,
-                        background: isActive ? MAROON : done ? 'rgba(110,20,35,0.08)' : 'transparent',
-                        color: isActive ? '#FDFAF4' : done ? MAROON : MUTED,
+                        border: `1px solid ${isActive ? ACCENT : done ? 'rgba(63,174,116,0.4)' : 'rgba(235,230,218,0.2)'}`,
+                        background: isActive ? ACCENT_FILL : done ? 'rgba(63,174,116,0.08)' : 'transparent',
+                        color: isActive ? '#FDFAF4' : done ? ACCENT : MUTED,
                         fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: isActive ? 600 : 500, cursor: 'pointer',
                       }}
                     >
@@ -1536,7 +1536,7 @@ function BuildPageContent() {
                   if (selectedCase) gpuList = gpuList.filter((c) => fitsInCase('gpu', c, selectedCase));
                   if (gpuList.length === 0) {
                     const reason = selectedCase ? t.no_part_fit(selectedCase.name) : t.none_add_admin;
-                    return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', padding: '12px 0' }}>{reason}</div>;
+                    return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570', padding: '12px 0' }}>{reason}</div>;
                   }
 
                   const modelGroups = new Map<string, Component[]>();
@@ -1572,7 +1572,7 @@ function BuildPageContent() {
                             onMouseEnter={() => setHoveredCardKey(g.model)}
                             onMouseLeave={() => setHoveredCardKey((key) => (key === g.model ? null : key))}
                             style={{
-                              border: '1.5px solid rgba(28,28,26,0.12)', background: 'transparent',
+                              border: '1.5px solid rgba(235,230,218,0.12)', background: 'transparent',
                               borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
                               position: 'relative', zIndex: 0, overflow: 'hidden',
                             }}
@@ -1628,8 +1628,8 @@ function BuildPageContent() {
                               onMouseEnter={() => setHoveredCardKey(cardKey)}
                               onMouseLeave={() => setHoveredCardKey((key) => (key === cardKey ? null : key))}
                               style={{
-                                border: `1.5px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.12)'}`,
-                                background: isThisSelected ? 'rgba(110,20,35,0.06)' : 'transparent',
+                                border: `1.5px solid ${isThisSelected ? ACCENT : 'rgba(235,230,218,0.12)'}`,
+                                background: isThisSelected ? 'rgba(63,174,116,0.06)' : 'transparent',
                                 borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
                                 position: 'relative', zIndex: 0, overflow: 'hidden',
                               }}
@@ -1656,7 +1656,7 @@ function BuildPageContent() {
                                 )}
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                                    <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: isThisSelected ? MAROON : INK }}>{c.name}</div>
+                                    <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: isThisSelected ? ACCENT : INK }}>{c.name}</div>
                                     <TierBadge tier={groupTier} small />
                                   </div>
                                   <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -1667,7 +1667,7 @@ function BuildPageContent() {
                                     <div
                                       style={{
                                         width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        background: isThisSelected ? MAROON : 'transparent', border: `1px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.3)'}`,
+                                        background: isThisSelected ? ACCENT_FILL : 'transparent', border: `1px solid ${isThisSelected ? ACCENT : 'rgba(235,230,218,0.3)'}`,
                                         color: isThisSelected ? '#FDFAF4' : MUTED, fontSize: 10, fontWeight: 700,
                                       }}
                                     >
@@ -1697,7 +1697,7 @@ function BuildPageContent() {
                   }
                   if (ramList.length === 0) {
                     const reason = ramGenFilter || ramMinSpeedIdx > 0 ? t.no_ram_match : t.none_add_admin;
-                    return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', padding: '12px 0' }}>{reason}</div>;
+                    return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570', padding: '12px 0' }}>{reason}</div>;
                   }
 
                   const brandSpeedGroups = new Map<string, Component[]>();
@@ -1729,7 +1729,7 @@ function BuildPageContent() {
                               onMouseEnter={() => setHoveredCardKey(g.key)}
                               onMouseLeave={() => setHoveredCardKey((key) => (key === g.key ? null : key))}
                               style={{
-                                border: '1.5px solid rgba(28,28,26,0.12)', background: 'transparent',
+                                border: '1.5px solid rgba(235,230,218,0.12)', background: 'transparent',
                                 borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
                                 position: 'relative', zIndex: 0, overflow: 'hidden',
                               }}
@@ -1821,8 +1821,8 @@ function BuildPageContent() {
                               style={{
                                 ...textPop, flex: 1, fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 600, padding: '10px 0',
                                 borderRadius: 6, cursor: 'pointer', outline: 'none',
-                                border: `1.5px solid ${isInstalledCount || isExpanded ? MAROON : 'rgba(28,28,26,0.15)'}`,
-                                background: isInstalledCount ? MAROON : isExpanded ? 'rgba(110,20,35,0.06)' : 'transparent',
+                                border: `1.5px solid ${isInstalledCount || isExpanded ? ACCENT : 'rgba(235,230,218,0.15)'}`,
+                                background: isInstalledCount ? ACCENT_FILL : isExpanded ? 'rgba(63,174,116,0.06)' : 'transparent',
                                 color: isInstalledCount ? '#FDFAF4' : INK,
                               }}
                             >
@@ -1851,12 +1851,12 @@ function BuildPageContent() {
                                   onClick={() => selectCard('ram', c.name)}
                                   style={{
                                     display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
-                                    border: `1.5px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.12)'}`,
-                                    background: isThisSelected ? 'rgba(110,20,35,0.06)' : 'transparent',
+                                    border: `1.5px solid ${isThisSelected ? ACCENT : 'rgba(235,230,218,0.12)'}`,
+                                    background: isThisSelected ? 'rgba(63,174,116,0.06)' : 'transparent',
                                     borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
                                   }}
                                 >
-                                  <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: isThisSelected ? MAROON : INK }}>
+                                  <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: isThisSelected ? ACCENT : INK }}>
                                     {capacity ? `${capacity}GB/RAM` : c.specs}
                                   </div>
                                   <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 13, color: INK }}>{fmt(effectiveSitePriceCzk(c, vatRatePct))}</div>
@@ -1918,7 +1918,7 @@ function BuildPageContent() {
                                       : activeStep === 'storage' && storagePcieGenFilter
                                       ? t.no_storage_match
                                       : t.none_add_admin;
-                  return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', padding: '12px 0' }}>{reason}</div>;
+                  return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570', padding: '12px 0' }}>{reason}</div>;
                 }
                 const showAll = showAllByStep[activeStep] ?? false;
                 const visibleList = showAll ? list : list.slice(0, SHOW_MORE_STEP);
@@ -1948,8 +1948,8 @@ function BuildPageContent() {
                           onMouseEnter={() => setHoveredCardKey(cardKey)}
                           onMouseLeave={() => setHoveredCardKey((key) => (key === cardKey ? null : key))}
                           style={{
-                            border: `1.5px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.12)'}`,
-                            background: isThisSelected ? 'rgba(110,20,35,0.06)' : 'transparent',
+                            border: `1.5px solid ${isThisSelected ? ACCENT : 'rgba(235,230,218,0.12)'}`,
+                            background: isThisSelected ? 'rgba(63,174,116,0.06)' : 'transparent',
                             borderRadius: 6, padding: '10px 12px', marginBottom: 8, cursor: 'pointer',
                             position: 'relative', zIndex: 0, overflow: 'hidden',
                           }}
@@ -1976,7 +1976,7 @@ function BuildPageContent() {
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: isThisSelected ? MAROON : INK }}>{c.name}</div>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: isThisSelected ? ACCENT : INK }}>{c.name}</div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
                               {c.formFactor && <SpecPill label={c.formFactor} />}
                               {c.socket && <SpecPill label={c.socket} />}
@@ -1996,7 +1996,7 @@ function BuildPageContent() {
                               const moboGen = moboPcieGeneration(selectedMobo);
                               if (!ssdGen || !moboGen || ssdGen <= moboGen) return null;
                               return (
-                                <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9.5, color: MAROON, marginTop: 3, lineHeight: 1.3 }}>
+                                <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9.5, color: ACCENT, marginTop: 3, lineHeight: 1.3 }}>
                                   {t.storage_pcie_capped(ssdGen, moboGen)}
                                 </div>
                               );
@@ -2011,7 +2011,7 @@ function BuildPageContent() {
                             <div
                               style={{
                                 width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: isThisSelected ? MAROON : 'transparent', border: `1px solid ${isThisSelected ? MAROON : 'rgba(28,28,26,0.3)'}`,
+                                background: isThisSelected ? ACCENT_FILL : 'transparent', border: `1px solid ${isThisSelected ? ACCENT : 'rgba(235,230,218,0.3)'}`,
                                 color: isThisSelected ? '#FDFAF4' : MUTED, fontSize: 10, fontWeight: 700,
                               }}
                             >
@@ -2029,7 +2029,7 @@ function BuildPageContent() {
                       onClick={() => setShowAllByStep((s) => ({ ...s, [activeStep]: !showAll }))}
                       style={{
                         ...textPop, width: '100%', padding: '8px', marginTop: 2, marginBottom: 8,
-                        background: 'transparent', border: '0.5px dashed rgba(28,28,26,0.25)', borderRadius: 4,
+                        background: 'transparent', border: '0.5px dashed rgba(235,230,218,0.25)', borderRadius: 4,
                         color: MUTED, fontFamily: 'var(--font-sans)', fontSize: 11, cursor: 'pointer',
                       }}
                     >
@@ -2047,8 +2047,8 @@ function BuildPageContent() {
                   disabled={SLOTS.indexOf(activeStep) === 0}
                   style={{
                     ...textPop, flex: 1, padding: '9px', background: 'transparent',
-                    color: SLOTS.indexOf(activeStep) === 0 ? '#c9c2b4' : MUTED,
-                    border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3,
+                    color: SLOTS.indexOf(activeStep) === 0 ? '#98A39D' : MUTED,
+                    border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 3,
                     fontFamily: 'var(--font-sans)', fontSize: 11,
                     cursor: SLOTS.indexOf(activeStep) === 0 ? 'default' : 'pointer',
                   }}
@@ -2060,9 +2060,9 @@ function BuildPageContent() {
                   disabled={SLOTS.indexOf(activeStep) === SLOTS.length - 1}
                   style={{
                     ...(SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? textPop : {}), flex: 1, padding: '9px',
-                    background: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? 'transparent' : MAROON,
-                    color: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? '#c9c2b4' : '#FDFAF4',
-                    border: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? '0.5px solid rgba(28,28,26,0.2)' : 'none',
+                    background: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? 'transparent' : ACCENT_FILL,
+                    color: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? '#98A39D' : '#FDFAF4',
+                    border: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? '0.5px solid rgba(235,230,218,0.2)' : 'none',
                     borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600,
                     cursor: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? 'default' : 'pointer',
                   }}
@@ -2071,14 +2071,14 @@ function BuildPageContent() {
                 </button>
               </div>
             </div>
-            <div style={{ padding: 16, borderTop: '0.5px solid rgba(28,28,26,0.1)' }}>
-              <button onClick={buildAll} style={{ width: '100%', padding: '11px', background: MAROON, color: '#FDFAF4', border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>
+            <div style={{ padding: 16, borderTop: '0.5px solid rgba(235,230,218,0.1)' }}>
+              <button onClick={buildAll} style={{ width: '100%', padding: '11px', background: ACCENT_FILL, color: '#FDFAF4', border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>
                 {t.build_complete}
               </button>
               <button
                 onClick={clearAll}
                 disabled={completionRunning}
-                style={{ ...textPop, width: '100%', padding: '10px', background: 'transparent', color: completionRunning ? '#c9c2b4' : MUTED, border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 12, cursor: completionRunning ? 'default' : 'pointer' }}
+                style={{ ...textPop, width: '100%', padding: '10px', background: 'transparent', color: completionRunning ? '#98A39D' : MUTED, border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 12, cursor: completionRunning ? 'default' : 'pointer' }}
               >
                 {t.clear_all}
               </button>
@@ -2112,10 +2112,10 @@ function BuildPageContent() {
         >
           <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-            <div style={{ ...textPop, position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(28,28,26,0.35)' }}>
+            <div style={{ ...textPop, position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(235,230,218,0.35)' }}>
               {t.installed(installedCount)}
             </div>
-            <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', background: 'rgba(253,250,244,0.85)', padding: '6px 14px', borderRadius: 20, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED }}>
+            <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', background: 'rgba(19,26,23,0.85)', padding: '6px 14px', borderRadius: 20, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED }}>
               {t.drag_to_orbit}
             </div>
             <div
@@ -2133,15 +2133,15 @@ function BuildPageContent() {
             >
               <button
                 onClick={toggleGlassPanel}
-                style={{ background: 'rgba(253,250,244,0.9)', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 4, padding: '7px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: INK, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                style={{ background: 'rgba(19,26,23,0.9)', border: '0.5px solid rgba(235,230,218,0.15)', borderRadius: 4, padding: '7px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: INK, cursor: 'pointer', whiteSpace: 'nowrap' }}
               >
                 {glassHidden ? t.show_panel : t.hide_panel}
               </button>
               <button
                 onClick={toggleCan}
                 style={{
-                  background: canVisible ? MAROON : 'rgba(253,250,244,0.9)',
-                  border: `0.5px solid ${canVisible ? MAROON : 'rgba(28,28,26,0.15)'}`,
+                  background: canVisible ? ACCENT_FILL : 'rgba(19,26,23,0.9)',
+                  border: `0.5px solid ${canVisible ? ACCENT : 'rgba(235,230,218,0.15)'}`,
                   borderRadius: 4, padding: '7px 12px', fontFamily: 'var(--font-sans)', fontSize: 11,
                   color: canVisible ? '#FDFAF4' : INK, cursor: 'pointer', whiteSpace: 'nowrap',
                 }}
@@ -2150,7 +2150,7 @@ function BuildPageContent() {
               </button>
               <button
                 onClick={toggleDimensions}
-                style={{ background: 'rgba(253,250,244,0.9)', border: '0.5px solid rgba(28,28,26,0.15)', borderRadius: 4, padding: '7px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: INK, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                style={{ background: 'rgba(19,26,23,0.9)', border: '0.5px solid rgba(235,230,218,0.15)', borderRadius: 4, padding: '7px 12px', fontFamily: 'var(--font-sans)', fontSize: 11, color: INK, cursor: 'pointer', whiteSpace: 'nowrap' }}
               >
                 {dimensionsVisible ? t.hide_dims : t.show_dims}
               </button>
@@ -2173,7 +2173,7 @@ function BuildPageContent() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: 'rgba(245,240,230,0.55)', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: 'rgba(235,230,218,0.55)', letterSpacing: 1.5, textTransform: 'uppercase' }}>
                     {t.cat_names[hoverId]}
                   </span>
                   <TierBadge tier={hoverTier} small />
@@ -2194,24 +2194,24 @@ function BuildPageContent() {
                 </div>
                 <div style={{ marginBottom: hoverPassmark || dimensionLabel(hoverId, hoverComp) ? 8 : 0 }}>
                   {(hoverComp.specs || '').split(' · ').map((s, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(245,240,230,0.85)', marginBottom: 3 }}>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(235,230,218,0.85)', marginBottom: 3 }}>
                       <span style={{ width: 3, height: 3, borderRadius: '50%', background: GOLD, flexShrink: 0 }} /> {s}
                     </div>
                   ))}
                 </div>
                 {dimensionLabel(hoverId, hoverComp) && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(245,240,230,0.5)', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(235,230,218,0.5)', marginBottom: 8 }}>
                     <span>{t.dimensions}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', color: 'rgba(245,240,230,0.9)' }}>{dimensionLabel(hoverId, hoverComp)}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', color: 'rgba(235,230,218,0.9)' }}>{dimensionLabel(hoverId, hoverComp)}</span>
                   </div>
                 )}
                 {hoverPassmark && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(245,240,230,0.5)', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(235,230,218,0.5)', marginBottom: 8 }}>
                     <span>{t.passmark_score}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', color: 'rgba(245,240,230,0.9)' }}>{hoverPassmark.score.toLocaleString()}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', color: 'rgba(235,230,218,0.9)' }}>{hoverPassmark.score.toLocaleString()}</span>
                   </div>
                 )}
-                <div style={{ borderTop: '0.5px solid rgba(245,240,230,0.14)', paddingTop: 8, fontFamily: 'var(--font-serif)', fontSize: 14, color: '#FDFAF4', fontWeight: 500 }}>
+                <div style={{ borderTop: '0.5px solid rgba(235,230,218,0.14)', paddingTop: 8, fontFamily: 'var(--font-serif)', fontSize: 14, color: '#FDFAF4', fontWeight: 500 }}>
                   {fmt(effectiveSitePriceCzk(hoverComp, vatRatePct))}
                 </div>
               </div>
@@ -2220,7 +2220,7 @@ function BuildPageContent() {
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? 16 : 0 }}>
                 <div
                   style={{
-                    background: 'linear-gradient(135deg, rgba(26,18,20,0.86), rgba(10,8,10,0.9))',
+                    background: 'linear-gradient(135deg, rgba(13,22,18,0.86), rgba(8,12,10,0.9))',
                     border: '1px solid rgba(196,163,90,0.25)',
                     boxShadow: '0 24px 70px rgba(0,0,0,0.4)',
                     backdropFilter: 'blur(10px)',
@@ -2230,14 +2230,14 @@ function BuildPageContent() {
                     animation: 'gompCompleteFadeIn 0.7s 0.15s cubic-bezier(0.16,1,0.3,1) both',
                   }}
                 >
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, letterSpacing: isMobile ? 4 : 7, color: 'rgba(245,240,230,0.65)', textTransform: 'uppercase' }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, letterSpacing: isMobile ? 4 : 7, color: 'rgba(235,230,218,0.65)', textTransform: 'uppercase' }}>
                     {t.complete}
                   </div>
                   <div style={{ fontFamily: 'var(--font-serif)', fontWeight: 500, fontSize: isMobile ? 34 : 58, color: '#FDFAF4', margin: '10px 0' }}>
                     {prebuiltName ?? t.your_build}
                   </div>
                   <div style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 26 : 38, color: GOLD, fontWeight: 600, letterSpacing: 1 }}>{fmt(totalPriceGross)}</div>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.5)', marginTop: 6 }}>{t.vat_included} ({vatRatePct}%)</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(235,230,218,0.5)', marginTop: 6 }}>{t.vat_included} ({vatRatePct}%)</div>
                 </div>
               </div>
             )}
@@ -2250,13 +2250,13 @@ function BuildPageContent() {
             width: isMobile ? '100%' : 288,
             order: isMobile ? 3 : 2,
             position: isMobile ? 'static' : 'absolute',
-            top: isMobile ? undefined : 60,
+            top: isMobile ? undefined : 'var(--gomp-bar-h)',
             bottom: isMobile ? undefined : 0,
             right: isMobile ? undefined : 0,
             zIndex: isMobile ? undefined : 10,
-            background: isMobile ? PANEL : 'rgba(253,250,244,0.5)',
+            background: isMobile ? PANEL : 'rgba(19,26,23,0.5)',
             backdropFilter: isMobile ? undefined : 'blur(20px)',
-            borderLeft: isMobile ? 'none' : '0.5px solid rgba(28,28,26,0.1)',
+            borderLeft: isMobile ? 'none' : '0.5px solid rgba(235,230,218,0.1)',
             display: 'flex',
             flexDirection: 'column',
             overflowY: isMobile ? 'visible' : 'auto',
@@ -2264,7 +2264,7 @@ function BuildPageContent() {
         >
           <div style={{ padding: 20, flex: isMobile ? 'none' : 1 }}>
             {installedCount === 0 ? (
-              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#A09890' }}>{t.select_components}</div>
+              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#6B7570' }}>{t.select_components}</div>
             ) : (
               <AnimatePresence initial={false} mode="popLayout">
                 {SLOTS.filter((id) => selected[id]).map((id) => {
@@ -2311,7 +2311,7 @@ function BuildPageContent() {
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ layout: { duration: 0.22, ease: 'easeInOut' }, opacity: { duration: 0.18 } }}
-                      style={{ marginBottom: 8, border: '1px solid rgba(28,28,26,0.1)', borderRadius: 6, padding: expanded ? 12 : '8px 10px', overflow: 'hidden' }}
+                      style={{ marginBottom: 8, border: '1px solid rgba(235,230,218,0.1)', borderRadius: 6, padding: expanded ? 12 : '8px 10px', overflow: 'hidden' }}
                     >
                       {expanded ? (
                         <>
@@ -2342,12 +2342,12 @@ function BuildPageContent() {
                                   <Image src={comp.imageUrl} alt={comp.name} fill sizes="36px" style={{ objectFit: 'contain' }} />
                                 </motion.div>
                               )}
-                              <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: MAROON, fontWeight: 600 }}>{comp.name}</div>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: ACCENT, fontWeight: 600 }}>{comp.name}</div>
                               <TierBadge tier={tier} small />
                             </div>
                           </div>
                           {partAvailability(id) !== 'live' && (
-                            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MAROON, marginTop: 6 }}>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: ACCENT, marginTop: 6 }}>
                               {partAvailability(id) === 'hidden' ? t.part_unavailable : t.part_missing}
                             </div>
                           )}
@@ -2355,21 +2355,21 @@ function BuildPageContent() {
                           <div style={{ marginTop: 12 }}>
                             {(comp.specs || '').split(' · ').map((s, i) => (
                               <div key={i} style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: INK, marginBottom: 4 }}>
-                                <span style={{ width: 3, height: 3, borderRadius: '50%', background: MAROON }} /> {s}
+                                <span style={{ width: 3, height: 3, borderRadius: '50%', background: ACCENT_FILL }} /> {s}
                               </div>
                             ))}
                           </div>
                           {dimensionLabel(id, comp) && (
-                            <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
+                            <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 12 }}>
                               <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.dimensions}</div>
                               <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: INK, fontWeight: 600 }}>{dimensionLabel(id, comp)}</div>
                             </div>
                           )}
                           {passmark && (
-                            <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
+                            <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 12 }}>
                               <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.passmark_score}</div>
                               <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 16, color: tier ? TIER_COLORS[tier].text : INK, fontWeight: 600 }}>{passmark.score.toLocaleString()}</div>
-                              <a href={passmark.url} target="_blank" rel="noopener noreferrer" style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MAROON }}>{t.verify_passmark}</a>
+                              <a href={passmark.url} target="_blank" rel="noopener noreferrer" style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: ACCENT }}>{t.verify_passmark}</a>
                             </div>
                           )}
                           <div style={{ ...textPop, marginTop: 12, fontFamily: 'var(--font-serif)', fontSize: 15, color: INK }}>{fmt(effectiveSitePriceCzk(comp, vatRatePct))}</div>
@@ -2380,7 +2380,7 @@ function BuildPageContent() {
                             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>{t.cat_names[id]}</div>
                             <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: INK, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{comp.name}</div>
                             {partAvailability(id) !== 'live' && (
-                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9.5, fontWeight: 600, color: MAROON }}>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9.5, fontWeight: 600, color: ACCENT }}>
                                 {partAvailability(id) === 'hidden' ? t.part_unavailable : t.part_missing}
                               </div>
                             )}
@@ -2399,18 +2399,18 @@ function BuildPageContent() {
                           const moboGen = moboPcieGeneration((compDb.mobo || []).find((c) => c.name === selections.mobo));
                           if (!ssdGen || !moboGen || ssdGen <= moboGen) return null;
                           return (
-                            <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
-                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MAROON, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
+                            <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 12 }}>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: ACCENT, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
                                 {t.storage_pcie_capped_title}
                               </div>
-                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: MAROON, marginTop: 3, lineHeight: 1.4 }}>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: ACCENT, marginTop: 3, lineHeight: 1.4 }}>
                                 {t.storage_pcie_capped(ssdGen, moboGen)}
                               </div>
                             </div>
                           );
                         })()}
                       {id === 'case' && comp.fanMounts && comp.fanMounts.length > 0 && (
-                        <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(28,28,26,0.1)', paddingTop: 12 }}>
+                        <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 12 }}>
                           <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{t.fans}</div>
                           {comp.fanMounts.map((mount) => {
                             const cfg = fanConfig[mount.position] || { count: 0, sizeMm: mount.sizesMm[0] };
@@ -2426,7 +2426,7 @@ function BuildPageContent() {
                                     <select
                                       value={cfg.fanName || ''}
                                       onChange={(e) => setFanProduct(mount.position, e.target.value)}
-                                      style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 10, color: MUTED, background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3, padding: '2px 4px', maxWidth: 150 }}
+                                      style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 10, color: MUTED, background: 'transparent', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 3, padding: '2px 4px', maxWidth: 150 }}
                                     >
                                       <option value="">{t.fan_generic}</option>
                                       {matchingFans.map((f) => (
@@ -2440,7 +2440,7 @@ function BuildPageContent() {
                                     <select
                                       value={cfg.sizeMm}
                                       onChange={(e) => setFanSize(mount.position, Number(e.target.value))}
-                                      style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 10, color: MUTED, background: 'transparent', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3, padding: '2px 4px' }}
+                                      style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 10, color: MUTED, background: 'transparent', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 3, padding: '2px 4px' }}
                                     >
                                       {mount.sizesMm.map((s) => (
                                         <option key={s} value={s}>{s}mm</option>
@@ -2450,7 +2450,7 @@ function BuildPageContent() {
                                   <button
                                     onClick={() => setFanCount(mount.position, Math.max(0, cfg.count - 1))}
                                     disabled={cfg.count <= 0}
-                                    style={{ width: 20, height: 20, borderRadius: 3, border: '0.5px solid rgba(28,28,26,0.2)', background: 'transparent', color: cfg.count <= 0 ? '#c9c2b4' : INK, cursor: cfg.count <= 0 ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1 }}
+                                    style={{ width: 20, height: 20, borderRadius: 3, border: '0.5px solid rgba(235,230,218,0.2)', background: 'transparent', color: cfg.count <= 0 ? '#98A39D' : INK, cursor: cfg.count <= 0 ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1 }}
                                   >
                                     −
                                   </button>
@@ -2458,7 +2458,7 @@ function BuildPageContent() {
                                   <button
                                     onClick={() => setFanCount(mount.position, Math.min(mount.maxCount, cfg.count + 1))}
                                     disabled={cfg.count >= mount.maxCount}
-                                    style={{ width: 20, height: 20, borderRadius: 3, border: '0.5px solid rgba(28,28,26,0.2)', background: 'transparent', color: cfg.count >= mount.maxCount ? '#c9c2b4' : INK, cursor: cfg.count >= mount.maxCount ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1 }}
+                                    style={{ width: 20, height: 20, borderRadius: 3, border: '0.5px solid rgba(235,230,218,0.2)', background: 'transparent', color: cfg.count >= mount.maxCount ? '#98A39D' : INK, cursor: cfg.count >= mount.maxCount ? 'default' : 'pointer', fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1 }}
                                   >
                                     +
                                   </button>
@@ -2475,42 +2475,42 @@ function BuildPageContent() {
             )}
           </div>
           {estimatedWatts > 0 && (
-            <div style={{ padding: '16px 20px 0', borderTop: '0.5px solid rgba(28,28,26,0.1)' }}>
+            <div style={{ padding: '16px 20px 0', borderTop: '0.5px solid rgba(235,230,218,0.1)' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
                 <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.power_draw}</div>
-                <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: psuWatts && estimatedWatts > psuWatts ? MAROON : INK, fontWeight: 600 }}>
+                <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: psuWatts && estimatedWatts > psuWatts ? ACCENT : INK, fontWeight: 600 }}>
                   {estimatedWatts}W{psuWatts ? ` / ${psuWatts}W` : ''}
                 </div>
               </div>
               {psuWatts != null && (
                 <>
-                  <div style={{ height: 5, borderRadius: 3, background: 'rgba(28,28,26,0.08)', marginTop: 6, overflow: 'hidden', position: 'relative' }}>
+                  <div style={{ height: 5, borderRadius: 3, background: 'rgba(235,230,218,0.08)', marginTop: 6, overflow: 'hidden', position: 'relative' }}>
                     <div
                       style={{
                         position: 'absolute',
                         inset: 0,
-                        background: `linear-gradient(to right, ${POSH_GREEN} 0%, ${GOLD} 65%, ${MAROON} 100%)`,
+                        background: `linear-gradient(to right, ${POSH_GREEN} 0%, ${GOLD} 65%, ${ACCENT_FILL} 100%)`,
                         clipPath: `inset(0 ${100 - Math.min(100, (estimatedWatts / psuWatts) * 100)}% 0 0)`,
                         transition: 'clip-path 0.3s',
                       }}
                     />
                   </div>
-                  <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: estimatedWatts > psuWatts ? MAROON : MUTED, marginTop: 5, marginBottom: 2 }}>
+                  <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: estimatedWatts > psuWatts ? ACCENT : MUTED, marginTop: 5, marginBottom: 2 }}>
                     {estimatedWatts > psuWatts ? t.psu_insufficient : t.psu_ok}
                   </div>
                 </>
               )}
             </div>
           )}
-          <div style={{ padding: 20, borderTop: estimatedWatts > 0 ? 'none' : '0.5px solid rgba(28,28,26,0.1)', marginTop: 'auto' }}>
+          <div style={{ padding: 20, borderTop: estimatedWatts > 0 ? 'none' : '0.5px solid rgba(235,230,218,0.1)', marginTop: 'auto' }}>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.build_total}</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 40, color: INK, fontWeight: 500, margin: '4px 0' }}>{fmt(totalPriceGross)}</div>
-            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890' }}>{t.vat_included} ({vatRatePct}%)</div>
-            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#A09890', marginBottom: 14 }}>{t.ofComponents(installedCount)}</div>
-            <button onClick={handleOrder} style={{ width: '100%', padding: 13, background: MAROON, color: '#FDFAF4', border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>
+            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6B7570' }}>{t.vat_included} ({vatRatePct}%)</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570', marginBottom: 14 }}>{t.ofComponents(installedCount)}</div>
+            <button onClick={handleOrder} style={{ width: '100%', padding: 13, background: ACCENT_FILL, color: '#FDFAF4', border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>
               {t.continue_benchmarks}
             </button>
-            <button style={{ width: '100%', padding: 11, background: 'transparent', color: MUTED, border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 12, cursor: 'pointer' }}>
+            <button style={{ width: '100%', padding: 11, background: 'transparent', color: MUTED, border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 12, cursor: 'pointer' }}>
               {t.save_build}
             </button>
           </div>
@@ -2535,18 +2535,18 @@ function BuildPageContent() {
             gap: 12,
             padding: '10px 16px',
             background: PANEL,
-            borderTop: '0.5px solid rgba(28,28,26,0.1)',
-            boxShadow: '0 -4px 16px rgba(28,28,26,0.08)',
+            borderTop: '0.5px solid rgba(235,230,218,0.1)',
+            boxShadow: '0 -4px 16px rgba(0,0,0,0.08)',
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.build_total}</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 18, color: INK, fontWeight: 600 }}>{fmt(totalPriceGross)}</div>
-            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 8, color: '#A09890' }}>{t.vat_included}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 8, color: '#6B7570' }}>{t.vat_included}</div>
           </div>
           <button
             onClick={handleOrder}
-            style={{ padding: '11px 20px', background: MAROON, color: '#FDFAF4', border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            style={{ padding: '11px 20px', background: ACCENT_FILL, color: '#FDFAF4', border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
           >
             {t.continue_benchmarks}
           </button>
@@ -2555,11 +2555,11 @@ function BuildPageContent() {
 
       {/* ---- Order overlay ---- */}
       {ordering && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'radial-gradient(circle at 50% 40%, #8E2A3A 0%, #6E1423 55%, #4A0E1A 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'radial-gradient(circle at 50% 40%, #1F8A55 0%, #0F5C3A 55%, #0A4129 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: '50%', left: '50%', width: 640, height: 640, margin: '-320px 0 0 -320px', border: '0.5px solid rgba(196,163,90,0.22)', borderRadius: '50%', animation: 'gompRotateSlow 8s linear infinite' }} />
           <div style={{ position: 'absolute', top: '50%', left: '50%', width: 420, height: 420, margin: '-210px 0 0 -210px', border: '0.5px solid rgba(196,163,90,0.32)', borderRadius: '50%', animation: 'gompRotateSlowRev 6s linear infinite' }} />
           <div style={{ position: 'absolute', top: '50%', left: '50%', width: 960, height: 960, margin: '-480px 0 0 -480px', background: 'radial-gradient(circle, rgba(196,163,90,0.16) 0%, transparent 60%)', animation: 'gompGlowPulse 2.2s ease-in-out infinite' }} />
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 13, fontWeight: 500, color: 'rgba(245,240,230,0.75)', letterSpacing: 6, textTransform: 'uppercase', position: 'relative', zIndex: 1, animation: 'gompCompleteFadeIn 0.35s 0.05s cubic-bezier(0.16,1,0.3,1) both' }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 13, fontWeight: 500, color: 'rgba(235,230,218,0.75)', letterSpacing: 6, textTransform: 'uppercase', position: 'relative', zIndex: 1, animation: 'gompCompleteFadeIn 0.35s 0.05s cubic-bezier(0.16,1,0.3,1) both' }}>
             {t.preparing_order}
           </div>
         </div>
@@ -2580,7 +2580,7 @@ function BuildPageContent() {
               position: 'fixed', inset: 0, zIndex: 999,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               pointerEvents: 'none',
-              background: 'rgba(28,28,26,0.35)',
+              background: 'rgba(235,230,218,0.35)',
             }}
           >
             {/* No card behind the photo — the source PNGs already carry their own alpha

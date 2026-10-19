@@ -9,7 +9,7 @@ import { navigateWithTransition } from '@/lib/gomp-nav';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
 import { passmarkLookup, TIER_COLORS } from '@/lib/passmark';
 import { useIsMobile } from '@/lib/use-media-query';
-import { MAROON, GOLD, INK, MUTED, FAINT, PAGE_BG, PANEL_BG } from '@/lib/design-tokens';
+import { GOLD, INK, MUTED, FAINT, PAGE_BG, PANEL_BG, ACCENT, ACCENT_FILL, ON_ACCENT } from '@/lib/design-tokens';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -346,16 +346,16 @@ function EmberRings() {
         }}
       />
       <div style={{ position: 'absolute', top: '62%', left: '20%', width: 6, height: 6, borderRadius: '50%', background: GOLD, boxShadow: '0 0 10px 3px rgba(196,163,90,0.55)', animation: 'gompEmberRise 1.6s ease-out infinite' }} />
-      <div style={{ position: 'absolute', top: '70%', left: '68%', width: 4, height: 4, borderRadius: '50%', background: '#E8A9B4', boxShadow: '0 0 8px 2px rgba(232,169,180,0.5)', animation: 'gompEmberRise 1.9s 0.2s ease-out infinite' }} />
+      <div style={{ position: 'absolute', top: '70%', left: '68%', width: 4, height: 4, borderRadius: '50%', background: '#9FE0BC', boxShadow: '0 0 8px 2px rgba(159,224,188,0.5)', animation: 'gompEmberRise 1.9s 0.2s ease-out infinite' }} />
       <div style={{ position: 'absolute', top: '55%', left: '80%', width: 5, height: 5, borderRadius: '50%', background: GOLD, boxShadow: '0 0 9px 2px rgba(196,163,90,0.5)', animation: 'gompEmberRise 1.4s 0.35s ease-out infinite' }} />
-      <div style={{ position: 'absolute', top: '78%', left: '40%', width: 3, height: 3, borderRadius: '50%', background: '#E8A9B4', animation: 'gompEmberRise 2.1s 0.1s ease-out infinite' }} />
+      <div style={{ position: 'absolute', top: '78%', left: '40%', width: 3, height: 3, borderRadius: '50%', background: '#9FE0BC', animation: 'gompEmberRise 2.1s 0.1s ease-out infinite' }} />
       <div style={{ position: 'absolute', top: '32%', left: '14%', width: 4, height: 4, borderRadius: '50%', background: GOLD, boxShadow: '0 0 8px 2px rgba(196,163,90,0.5)', animation: 'gompEmberRise 1.7s 0.5s ease-out infinite' }} />
-      <div style={{ position: 'absolute', top: '28%', left: '86%', width: 5, height: 5, borderRadius: '50%', background: '#E8A9B4', animation: 'gompEmberRise 1.5s 0.25s ease-out infinite' }} />
+      <div style={{ position: 'absolute', top: '28%', left: '86%', width: 5, height: 5, borderRadius: '50%', background: '#9FE0BC', animation: 'gompEmberRise 1.5s 0.25s ease-out infinite' }} />
     </>
   );
 }
 
-const overlayBg = 'radial-gradient(circle at 50% 45%, #8E2A3A 0%, #6E1423 55%, #4A0E1A 100%)';
+const overlayBg = 'radial-gradient(circle at 50% 45%, #1F8A55 0%, #0F5C3A 55%, #0A4129 100%)';
 
 function EntryOverlay() {
   // Fades out once on mount and stays invisible (pointer-events:none throughout) — the
@@ -401,7 +401,7 @@ function ExitOverlay({ label }: { label: string }) {
           ...serif,
           fontSize: 13,
           fontWeight: 500,
-          color: 'rgba(245,240,230,0.75)',
+          color: 'rgba(235,230,218,0.75)',
           letterSpacing: 6,
           textTransform: 'uppercase',
           position: 'relative',
@@ -442,7 +442,7 @@ export default function BenchmarksPage() {
     setBuild(readJSON<BuildPayload | null>('gomp_build', null));
   }, []);
 
-  const activeColor = MAROON;
+  const activeColor = ACCENT;
   const inactiveColor = MUTED;
   const groupLabels = GROUP_LABELS[lang];
 
@@ -543,10 +543,10 @@ export default function BenchmarksPage() {
           ? SUBTITLES_CZ[b.id] || b.subtitleEn
           : b.subtitleEn;
     const tierColors = TIER_COLORS[b.tier];
-    const borderColor = isSel ? 'rgba(110,20,35,0.35)' : 'rgba(28,28,26,0.12)';
-    const bgColor = isSel ? 'rgba(110,20,35,0.05)' : PANEL_BG;
-    const checkBg = isSel ? MAROON : 'transparent';
-    const checkBorder = isSel ? MAROON : 'rgba(28,28,26,0.2)';
+    const borderColor = isSel ? 'rgba(63,174,116,0.35)' : 'rgba(235,230,218,0.12)';
+    const bgColor = isSel ? 'rgba(63,174,116,0.05)' : PANEL_BG;
+    const checkBg = isSel ? ACCENT : 'transparent';
+    const checkBorder = isSel ? ACCENT : 'rgba(235,230,218,0.2)';
     const checkColor = isSel ? PANEL_BG : FAINT;
 
     return (
@@ -569,7 +569,7 @@ export default function BenchmarksPage() {
           <div
             style={{
               padding: '4px 8px',
-              border: '0.5px solid rgba(28,28,26,0.18)',
+              border: '0.5px solid rgba(235,230,218,0.18)',
               borderRadius: 2,
               ...mono,
               fontSize: 10,
@@ -625,7 +625,7 @@ export default function BenchmarksPage() {
           <div style={{ ...serif, fontSize: 19, fontWeight: 600, color: INK, lineHeight: 1.15, marginBottom: 2 }}>{b.name}</div>
           <div style={{ ...sans, fontSize: 11, color: MUTED, fontWeight: 300 }}>{subtitle}</div>
         </div>
-        {fps !== null && <div style={{ ...mono, fontSize: 15, fontWeight: 600, color: MAROON }}>{`~${fps} FPS`}</div>}
+        {fps !== null && <div style={{ ...mono, fontSize: 15, fontWeight: 600, color: ACCENT }}>{`~${fps} FPS`}</div>}
         <div
           style={{
             display: 'flex',
@@ -633,7 +633,7 @@ export default function BenchmarksPage() {
             justifyContent: 'space-between',
             marginTop: 'auto',
             paddingTop: 10,
-            borderTop: '0.5px solid rgba(28,28,26,0.08)',
+            borderTop: '0.5px solid rgba(235,230,218,0.08)',
           }}
         >
           <div
@@ -678,19 +678,19 @@ export default function BenchmarksPage() {
         {/* Nav */}
         <SiteNav />
 
-        <div style={{ minHeight: '100vh', paddingTop: 60, display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'stretch' }}>
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'stretch' }}>
           {/* Left sidebar */}
           <div
             style={{
               width: isMobile ? '100%' : 400,
               flexShrink: 0,
               background: PANEL_BG,
-              borderRight: isMobile ? 'none' : '0.5px solid rgba(28,28,26,0.12)',
-              borderBottom: isMobile ? '0.5px solid rgba(28,28,26,0.12)' : 'none',
+              borderRight: isMobile ? 'none' : '0.5px solid rgba(235,230,218,0.12)',
+              borderBottom: isMobile ? '0.5px solid rgba(235,230,218,0.12)' : 'none',
               padding: isMobile ? '32px 20px 28px' : '48px 32px 40px',
               position: isMobile ? 'static' : 'sticky',
-              top: isMobile ? undefined : 60,
-              height: isMobile ? 'auto' : 'calc(100vh - 60px)',
+              top: isMobile ? undefined : 'var(--gomp-bar-h)',
+              height: isMobile ? 'auto' : 'calc(100vh - var(--gomp-bar-h))',
               overflowY: isMobile ? 'visible' : 'auto',
               display: 'flex',
               flexDirection: 'column',
@@ -701,7 +701,7 @@ export default function BenchmarksPage() {
             </div>
             <div style={{ ...serif, fontSize: 26, fontWeight: 600, color: INK, lineHeight: 1.15, marginBottom: 6 }}>{buildLabel}</div>
             <div style={{ ...sans, fontSize: 12, color: MUTED, fontWeight: 300, marginBottom: 28 }}>{buildSubline}</div>
-            <div style={{ height: 0.5, background: 'rgba(28,28,26,0.15)', marginBottom: 28 }} />
+            <div style={{ height: 0.5, background: 'rgba(235,230,218,0.15)', marginBottom: 28 }} />
             <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 12 }}>
               {t.benchmark_suite}
             </div>
@@ -717,7 +717,7 @@ export default function BenchmarksPage() {
                 selectedList.map((item, i) => (
                   <div
                     key={i}
-                    style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderBottom: '0.5px solid rgba(28,28,26,0.08)' }}
+                    style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderBottom: '0.5px solid rgba(235,230,218,0.08)' }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ ...sans, fontSize: 10, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>{item.groupLabel}</div>
@@ -732,13 +732,13 @@ export default function BenchmarksPage() {
             </div>
             <button
               onClick={() => navigateTo(selectedIds)}
-              style={{ width: '100%', padding: 15, background: MAROON, color: PANEL_BG, border: 'none', borderRadius: 2, ...sans, fontSize: 14, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3, marginBottom: 8 }}
+              style={{ width: '100%', padding: 15, background: ACCENT_FILL, color: ON_ACCENT, border: 'none', borderRadius: 2, ...sans, fontSize: 14, fontWeight: 500, cursor: 'pointer', letterSpacing: 0.3, marginBottom: 8 }}
             >
               {t.continue_checkout}
             </button>
             <button
               onClick={() => navigateTo([])}
-              style={{ width: '100%', padding: 11, background: 'transparent', color: MUTED, border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, ...sans, fontSize: 12, cursor: 'pointer', marginBottom: 16 }}
+              style={{ width: '100%', padding: 11, background: 'transparent', color: MUTED, border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, ...sans, fontSize: 12, cursor: 'pointer', marginBottom: 16 }}
             >
               {t.skip_benchmarks}
             </button>
@@ -752,8 +752,8 @@ export default function BenchmarksPage() {
             {/* Step indicator */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: isMobile ? 28 : 40, flexWrap: 'wrap' }}>
               {flowSteps.map((step, i) => {
-                const bgColor = step.state !== 'upcoming' ? MAROON : 'transparent';
-                const borderColor = step.state !== 'upcoming' ? MAROON : 'rgba(28,28,26,0.2)';
+                const bgColor = step.state !== 'upcoming' ? ACCENT : 'transparent';
+                const borderColor = step.state !== 'upcoming' ? ACCENT : 'rgba(235,230,218,0.2)';
                 const numColor = step.state !== 'upcoming' ? PANEL_BG : MUTED;
                 const labelColor = step.state === 'active' ? INK : MUTED;
                 const labelWeight = step.state === 'active' ? 500 : 400;
@@ -765,7 +765,7 @@ export default function BenchmarksPage() {
                       </div>
                       <span style={{ ...sans, fontSize: isMobile ? 11 : 12, fontWeight: labelWeight, color: labelColor, letterSpacing: 0.3, whiteSpace: 'nowrap' }}>{step.label}</span>
                     </div>
-                    {i < flowSteps.length - 1 && <div style={{ width: isMobile ? 20 : 40, height: 0.5, background: 'rgba(28,28,26,0.18)', margin: isMobile ? '0 8px' : '0 12px' }} />}
+                    {i < flowSteps.length - 1 && <div style={{ width: isMobile ? 20 : 40, height: 0.5, background: 'rgba(235,230,218,0.18)', margin: isMobile ? '0 8px' : '0 12px' }} />}
                   </div>
                 );
               })}
@@ -773,7 +773,7 @@ export default function BenchmarksPage() {
 
             {/* Header */}
             <div style={{ ...serif, fontSize: isMobile ? 30 : 44, fontWeight: 400, color: INK, letterSpacing: '-1px', marginBottom: 10, lineHeight: 1.1 }}>
-              {t.choose_title_line1} <span style={{ color: MAROON, fontWeight: 600 }}>{t.choose_title_em}</span>
+              {t.choose_title_line1} <span style={{ color: ACCENT, fontWeight: 600 }}>{t.choose_title_em}</span>
             </div>
             <p style={{ ...sans, fontSize: isMobile ? 13 : 15, lineHeight: 1.7, color: MUTED, margin: '0 0 28px', maxWidth: 600, fontWeight: 300 }}>{t.choose_desc}</p>
 
@@ -781,13 +781,13 @@ export default function BenchmarksPage() {
             <div style={{ display: 'flex', gap: 10, marginBottom: 44 }}>
               <button
                 onClick={selectRecommended}
-                style={{ padding: '10px 18px', background: 'transparent', color: MAROON, border: '0.5px solid rgba(110,20,35,0.35)', borderRadius: 2, ...sans, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+                style={{ padding: '10px 18px', background: 'transparent', color: ACCENT, border: '0.5px solid rgba(63,174,116,0.35)', borderRadius: 2, ...sans, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
               >
                 {t.select_recommended}
               </button>
               <button
                 onClick={clearAll}
-                style={{ padding: '10px 18px', background: 'transparent', color: MUTED, border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, ...sans, fontSize: 12, cursor: 'pointer' }}
+                style={{ padding: '10px 18px', background: 'transparent', color: MUTED, border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, ...sans, fontSize: 12, cursor: 'pointer' }}
               >
                 {t.clear_all}
               </button>
@@ -796,7 +796,7 @@ export default function BenchmarksPage() {
             {/* FPS section */}
             <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 4 }}>{t.section_fps_title}</div>
             <div style={{ ...sans, fontSize: 12, color: FAINT, fontWeight: 300, marginBottom: 16 }}>{t.section_fps_desc}</div>
-            <div style={{ background: PANEL_BG, border: '0.5px solid rgba(28,28,26,0.14)', borderRadius: 2, padding: isMobile ? '14px 16px' : '16px 18px', marginBottom: 20 }}>
+            <div style={{ background: PANEL_BG, border: '0.5px solid rgba(235,230,218,0.14)', borderRadius: 2, padding: isMobile ? '14px 16px' : '16px 18px', marginBottom: 20 }}>
               <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>{t.fps_source_title}</div>
               <div style={{ ...sans, fontSize: 12, color: MUTED, fontWeight: 300, lineHeight: 1.6, marginBottom: showFpsPicker ? 14 : 0 }}>{fpsSourceDesc}</div>
               {showFpsPicker && (
@@ -807,7 +807,7 @@ export default function BenchmarksPage() {
                       <select
                         value={manualGpuId}
                         onChange={(e) => setManualGpuId(e.target.value)}
-                        style={{ width: '100%', padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 12, background: PAGE_BG, color: INK, ...sans }}
+                        style={{ width: '100%', padding: '8px 10px', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, fontSize: 12, background: PAGE_BG, color: INK, ...sans }}
                       >
                         {GPU_PARTS.map((g) => (
                           <option key={g.id} value={g.id}>
@@ -823,7 +823,7 @@ export default function BenchmarksPage() {
                       <select
                         value={manualCpuId}
                         onChange={(e) => setManualCpuId(e.target.value)}
-                        style={{ width: '100%', padding: '8px 10px', border: '0.5px solid rgba(28,28,26,0.2)', borderRadius: 2, fontSize: 12, background: PAGE_BG, color: INK, ...sans }}
+                        style={{ width: '100%', padding: '8px 10px', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 2, fontSize: 12, background: PAGE_BG, color: INK, ...sans }}
                       >
                         {CPU_PARTS.map((c) => (
                           <option key={c.id} value={c.id}>

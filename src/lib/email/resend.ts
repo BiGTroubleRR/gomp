@@ -13,7 +13,6 @@
 // RESEND_FROM_EMAIL pointing at it.
 import { Resend } from 'resend';
 import type { Lang } from '@/lib/gomp-storage';
-import { MAROON, GOLD, PAGE_BG, PANEL_BG, INK, MUTED } from '@/lib/design-tokens';
 
 const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL || 'GOMP <onboarding@resend.dev>';
 
@@ -66,11 +65,16 @@ const T = {
   },
 } as const;
 
-// Colors are shared with the rest of the site via src/lib/design-tokens.ts. Fonts stay local,
-// deliberately NOT imported from there — email HTML can't pull in next/font or resolve CSS
-// custom properties, so every font here has to be a literal, web-safe stack email clients
-// (Outlook included) can render on their own, standing in for the site's actual Nova Square /
-// DM Sans faces.
+// The confirmation email keeps its OWN literal light palette — deliberately NOT imported from
+// src/lib/design-tokens.ts, which is the dark site scheme. An inbox can't load next/font or resolve
+// CSS custom properties, and a light card reads correctly in every mail client regardless of the
+// site theme. Fonts are web-safe stacks standing in for Nova Square / DM Sans.
+const MAROON = '#6E1423';
+const GOLD = '#C4A35A';
+const PAGE_BG = '#F5F0E6';
+const PANEL_BG = '#FDFAF4';
+const INK = '#1C1C1A';
+const MUTED = '#7A7469';
 const SERIF = "Georgia, 'Times New Roman', serif";
 const SANS = 'Arial, Helvetica, sans-serif';
 

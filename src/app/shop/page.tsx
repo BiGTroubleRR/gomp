@@ -1,16 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
-import { passmarkLookup, tierFromPassmark, TIER_COLORS, type Tier } from '@/lib/passmark';
+import { TIER_COLORS, type Tier } from '@/lib/passmark';
+import { resolvePassmark, type PassmarkDisplay } from '@/lib/build-passmark';
 import { useIsMobile } from '@/lib/use-media-query';
 import { pick } from '@/lib/i18n';
 import { fetchPrebuilts } from '@/lib/supabase/prebuilts';
 import { fetchComponentDb, getCachedComponentDb } from '@/lib/supabase/components';
-import { computeBuildTotalGross, computeBuildTier, defaultComponentDb, gpuModelFor, type Build, type ComponentDb } from '@/lib/component-db-seed';
+import { computeBuildTotalGross, computeBuildTier, defaultComponentDb, type Build, type ComponentDb } from '@/lib/component-db-seed';
 import TierBadge from '@/components/TierBadge';
 
 type FilterId = 'all' | 'flagship' | 'performance' | 'midrange' | 'entry';
@@ -142,43 +144,8 @@ const FILTER_DEFS: { id: FilterId; key: StringKey }[] = [
   { id: 'entry', key: 'filter_entry' },
 ];
 
-const ACTIVE_COLOR = '#6E1423';
-const INACTIVE_COLOR = '#7A7469';
-
-type PassmarkDisplay = { score: number; tier: Tier; url?: string };
-
-// A chip with a real score but no curated permalink (most CPUs, and any GPU chip passmark.ts
-// hasn't hand-curated) still deserves a working "Verify" link rather than none at all — this
-// points at PassMark's own search for that chip name instead of a specific cached page/id, since
-// we don't have a verified permalink for it.
-function fallbackPassmarkUrl(name: string, isGpu: boolean): string {
-  const base = isGpu ? 'https://www.videocardbenchmark.net/gpu.php' : 'https://www.cpubenchmark.net/cpu.php';
-  const param = isGpu ? 'gpu' : 'cpu';
-  return `${base}?${param}=${encodeURIComponent(name)}`;
-}
-
-// Resolves a display PassMark for any GPU/CPU name, not just the ~25 canonical chips
-// passmark.ts curates aliases for. A board-partner SKU ("MSI GeForce RTX 5080 16G GAMING TRIO
-// OC GDDR7") never appears in that curated alias list itself, so this first tries the same
-// chip-model extraction /build's own GPU picker already uses (gpuModelFor) to resolve it to its
-// chip's curated score — that also gives a real, verified permalink. Failing that (no curated
-// entry for this chip at all, e.g. most CPUs), it falls back to whatever passmark/tier the
-// catalog row itself already carries (real data from the eD import), with a best-effort search
-// link standing in for a verified permalink we don't have.
-function resolvePassmark(name: string, isGpu: boolean, compDb: ComponentDb): PassmarkDisplay | null {
-  const key = isGpu ? (gpuModelFor(name) ?? name) : name;
-  const curated = passmarkLookup(key);
-  if (curated) return { score: curated.score, tier: tierFromPassmark(isGpu, curated.score), url: curated.url };
-  const stored = (compDb[isGpu ? 'gpu' : 'cpu'] || []).find((c) => c.name === name);
-  if (stored?.passmark != null) {
-    return {
-      score: stored.passmark,
-      tier: stored.tier ?? tierFromPassmark(isGpu, stored.passmark),
-      url: stored.passmarkUrl ?? fallbackPassmarkUrl(key, isGpu),
-    };
-  }
-  return null;
-}
+const ACTIVE_COLOR = '#3FAE74';
+const INACTIVE_COLOR = '#98A39D';
 
 function SpecRow({
   label,
@@ -203,14 +170,14 @@ function SpecRow({
           justifyContent: 'space-between',
           gap: 16,
           padding: '10px 0',
-          borderBottom: last ? 'none' : '0.5px solid rgba(28,28,26,0.07)',
+          borderBottom: last ? 'none' : '0.5px solid rgba(235,230,218,0.07)',
         }}
       >
         <span
           style={{
             fontFamily: 'var(--font-sans)',
             fontSize: 10,
-            color: '#6E1423',
+            color: '#3FAE74',
             fontWeight: 700,
             textTransform: 'uppercase',
             letterSpacing: 1,
@@ -219,7 +186,7 @@ function SpecRow({
         >
           {label}
         </span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#1C1C1A', textAlign: 'right', flex: 1, minWidth: 0 }}>{value}</span>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#EBE6DA', textAlign: 'right', flex: 1, minWidth: 0 }}>{value}</span>
       </div>
       {passmark && (
         <div
@@ -228,7 +195,7 @@ function SpecRow({
             justifyContent: 'space-between',
             alignItems: 'center',
             padding: '6px 0',
-            borderBottom: '0.5px solid rgba(28,28,26,0.07)',
+            borderBottom: '0.5px solid rgba(235,230,218,0.07)',
           }}
         >
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: tierColor ?? undefined, fontWeight: 600 }}>
@@ -239,7 +206,7 @@ function SpecRow({
               href={passmark.url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6E1423', textDecoration: 'none', fontWeight: 500 }}
+              style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#3FAE74', textDecoration: 'none', fontWeight: 500 }}
             >
               {verifyLabel}
             </a>
@@ -250,10 +217,28 @@ function SpecRow({
   );
 }
 
-export default function Shop() {
+// /shop's filters live in the URL (?cat= / ?tier= / ?q=) so the header's search box and KATEGÓRIE menu
+// (and any shared link) can drive them; the chips below write back to the same params.
+const CAT_IDS = ['flagship', 'performance', 'midrange', 'entry'] as const;
+
+function ShopInner() {
   const { lang, currency, setLang, setCurrency, fmt, vatRatePct } = useSite();
-  const [filter, setFilter] = useState<FilterId>('all');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlCat = searchParams.get('cat');
+  const filter: FilterId = (CAT_IDS as readonly string[]).includes(urlCat ?? '') ? (urlCat as FilterId) : 'all';
+  const q = (searchParams.get('q') || '').trim();
+  const urlTier = searchParams.get('tier');
+  const tierFilter: Tier | null = urlTier === 'S' || urlTier === 'A' || urlTier === 'B' ? urlTier : null;
   const isMobile = useIsMobile();
+
+  function setParam(key: 'cat' | 'tier' | 'q', value: string | null) {
+    const p = new URLSearchParams(searchParams.toString());
+    if (value) p.set(key, value);
+    else p.delete(key);
+    const qs = p.toString();
+    router.replace(qs ? `/shop?${qs}` : '/shop', { scroll: false });
+  }
 
   // One-time fetch, backed by fetchPrebuilts' own short-TTL cache — no Realtime subscription on
   // this public page (see the same reasoning in src/app/page.tsx). Admin keeps its subscription.
@@ -283,40 +268,33 @@ export default function Shop() {
 
   const t = TRANSLATIONS[lang];
   const live = products.filter((p) => p.isLive);
-  const filtered = filter === 'all' ? live : live.filter((p) => p.cat === filter);
+  const filtered = useMemo(() => {
+    const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
+    return live.filter((p) => {
+      if (filter !== 'all' && p.cat !== filter) return false;
+      if (tierFilter && computeBuildTier(p, compDb) !== tierFilter) return false;
+      if (tokens.length) {
+        const hay = [p.name, p.taglineEn, p.taglineSk, p.taglineCz, p.gpu, p.cpu, p.ram, p.storage, p.cooler, p.mobo, p.psu, p.case].join(' ').toLowerCase();
+        if (!tokens.every((tk) => hay.includes(tk))) return false;
+      }
+      return true;
+    });
+  }, [live, filter, q, tierFilter, compDb]);
 
   return (
-    <div style={{ position: 'relative', zIndex: 2, background: '#F5F0E6', minHeight: '100vh' }}>
+    <div style={{ position: 'relative', zIndex: 2, background: '#0D0D0C', minHeight: '100vh' }}>
       {/* Nav */}
-      <SiteNav
-        cta={
-          <TransitionLink
-            href="/build"
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 13,
-              fontWeight: 500,
-              color: '#FDFAF4',
-              background: '#6E1423',
-              textDecoration: 'none',
-              padding: '9px 22px',
-              borderRadius: 2,
-            }}
-          >
-            {t.nav_startbuilding}
-          </TransitionLink>
-        }
-      />
+      <SiteNav />
 
       {/* Header + filter bar */}
-      <div style={{ padding: isMobile ? '70px 24px 0' : '110px 60px 0', borderBottom: '0.5px solid rgba(28,28,26,0.12)' }}>
+      <div style={{ padding: isMobile ? '30px 24px 0' : '50px 60px 0', borderBottom: '0.5px solid rgba(235,230,218,0.12)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div
             style={{
               fontFamily: 'var(--font-sans)',
               fontSize: 11,
               fontWeight: 500,
-              color: '#7A7469',
+              color: '#98A39D',
               letterSpacing: 2.5,
               textTransform: 'uppercase',
               marginBottom: 12,
@@ -340,30 +318,30 @@ export default function Shop() {
                 fontSize: isMobile ? 38 : 64,
                 fontWeight: 600,
                 letterSpacing: -2,
-                color: '#1C1C1A',
+                color: '#EBE6DA',
                 margin: 0,
                 lineHeight: 0.95,
               }}
             >
               {t.title}
             </h1>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', fontWeight: 300, marginBottom: isMobile ? 0 : 4 }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', fontWeight: 300, marginBottom: isMobile ? 0 : 4 }}>
               {t.showing(filtered.length)}
             </div>
           </div>
           <div style={{ overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch' as const }}>
-            <div style={{ display: 'flex', gap: 0, borderTop: '0.5px solid rgba(28,28,26,0.12)' }}>
+            <div style={{ display: 'flex', gap: 0, borderTop: '0.5px solid rgba(235,230,218,0.12)' }}>
               {FILTER_DEFS.map((fd) => {
                 const isActive = filter === fd.id;
                 return (
                   <button
                     key={fd.id}
-                    onClick={() => setFilter(fd.id)}
+                    onClick={() => setParam('cat', fd.id === 'all' ? null : fd.id)}
                     style={{
-                      background: isActive ? '#6E1423' : 'transparent',
-                      color: isActive ? '#FDFAF4' : '#7A7469',
+                      background: isActive ? '#1F8A55' : 'transparent',
+                      color: isActive ? '#FDFAF4' : '#98A39D',
                       border: 'none',
-                      borderRight: '0.5px solid rgba(28,28,26,0.1)',
+                      borderRight: '0.5px solid rgba(235,230,218,0.1)',
                       fontFamily: 'var(--font-sans)',
                       fontSize: 12,
                       fontWeight: isActive ? 500 : 400,
@@ -387,7 +365,34 @@ export default function Shop() {
       {/* Product grid */}
       <div style={{ padding: isMobile ? '0 24px 50px' : '0 60px 100px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', borderLeft: '0.5px solid rgba(28,28,26,0.12)' }}>
+          {(q || tierFilter) && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '18px 0' }}>
+              {[
+                q ? { key: 'q' as const, label: pick(lang, { en: `Search: “${q}”`, sk: `Hľadanie: „${q}“`, cz: `Hledání: „${q}“` }) } : null,
+                tierFilter ? { key: 'tier' as const, label: pick(lang, { en: `Class ${tierFilter}`, sk: `Trieda ${tierFilter}`, cz: `Třída ${tierFilter}` }) } : null,
+              ]
+                .filter((c): c is { key: 'q' | 'tier'; label: string } => c !== null)
+                .map((c) => (
+                  <button
+                    key={c.key}
+                    onClick={() => setParam(c.key, null)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(63,174,116,0.12)', color: '#3FAE74', border: '1px solid rgba(63,174,116,0.4)', borderRadius: 20, padding: '6px 14px', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    {c.label} <span aria-hidden>✕</span>
+                  </button>
+                ))}
+            </div>
+          )}
+          {filtered.length === 0 && (
+            <div style={{ padding: '60px 0', textAlign: 'center', fontFamily: 'var(--font-sans)', fontSize: 15, color: '#98A39D' }}>
+              {pick(lang, {
+                en: 'No builds match your search.',
+                sk: 'Vášmu hľadaniu nezodpovedá žiadna zostava.',
+                cz: 'Vašemu hledání neodpovídá žádná sestava.',
+              })}
+            </div>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', borderLeft: '0.5px solid rgba(235,230,218,0.12)' }}>
             <AnimatePresence initial={false}>
               {filtered.map((prod, i) => (
                 <motion.div
@@ -398,10 +403,10 @@ export default function Shop() {
                   exit={{ opacity: 0, scale: 0.97 }}
                   transition={{ duration: 0.4, delay: Math.min(i, 5) * 0.05, ease: [0.16, 1, 0.3, 1] }}
                   style={{
-                    borderRight: '0.5px solid rgba(28,28,26,0.12)',
-                    borderBottom: '0.5px solid rgba(28,28,26,0.12)',
+                    borderRight: '0.5px solid rgba(235,230,218,0.12)',
+                    borderBottom: '0.5px solid rgba(235,230,218,0.12)',
                     padding: isMobile ? '28px 20px' : '36px 32px',
-                    background: '#FDFAF4',
+                    background: '#131A17',
                     display: 'flex',
                     flexDirection: 'column',
                   }}
@@ -412,7 +417,7 @@ export default function Shop() {
                       fontFamily: 'var(--font-sans)',
                       fontSize: 10,
                       fontWeight: 600,
-                      color: '#7A7469',
+                      color: '#98A39D',
                       letterSpacing: 2,
                       textTransform: 'uppercase',
                     }}
@@ -421,7 +426,7 @@ export default function Shop() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <TierBadge tier={computeBuildTier(prod, compDb)} small />
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#7A7469' }}>{prod.rating.toFixed(1)} / 5</div>
+                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#98A39D' }}>{prod.rating.toFixed(1)} / 5</div>
                   </div>
                 </div>
                 <div
@@ -429,7 +434,7 @@ export default function Shop() {
                     fontFamily: 'var(--font-serif)',
                     fontSize: 26,
                     fontWeight: 600,
-                    color: '#1C1C1A',
+                    color: '#EBE6DA',
                     letterSpacing: -0.4,
                     marginBottom: 4,
                     lineHeight: 1.1,
@@ -437,10 +442,10 @@ export default function Shop() {
                 >
                   {prod.name}
                 </div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#7A7469', marginBottom: 28, fontWeight: 300 }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', marginBottom: 28, fontWeight: 300 }}>
                   {pick(lang, { en: prod.taglineEn, sk: prod.taglineSk, cz: prod.taglineCz })}
                 </div>
-                <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.1)', flex: 1, marginBottom: 24 }}>
+                <div style={{ borderTop: '0.5px solid rgba(235,230,218,0.1)', flex: 1, marginBottom: 24 }}>
                   <SpecRow label="GPU" value={prod.gpu} passmark={resolvePassmark(prod.gpu, true, compDb)} verifyLabel={t.verify_passmark} />
                   <SpecRow label="CPU" value={prod.cpu} passmark={resolvePassmark(prod.cpu, false, compDb)} verifyLabel={t.verify_passmark} />
                   <SpecRow label="RAM" value={prod.ram} />
@@ -448,7 +453,7 @@ export default function Shop() {
                 </div>
                 <div
                   style={{
-                    borderTop: '0.5px solid rgba(28,28,26,0.14)',
+                    borderTop: '0.5px solid rgba(235,230,218,0.14)',
                     paddingTop: 20,
                     display: 'flex',
                     alignItems: 'flex-end',
@@ -462,14 +467,14 @@ export default function Shop() {
                         fontFamily: 'var(--font-serif)',
                         fontSize: 26,
                         fontWeight: 500,
-                        color: '#1C1C1A',
+                        color: '#EBE6DA',
                         letterSpacing: -0.5,
                         lineHeight: 1,
                       }}
                     >
                       {fmt(computeBuildTotalGross(prod, compDb, vatRatePct))}
                     </div>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#7A7469', marginTop: 3, fontWeight: 300 }}>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', marginTop: 3, fontWeight: 300 }}>
                       {t.vat_included}
                     </div>
                   </div>
@@ -480,7 +485,7 @@ export default function Shop() {
                       fontSize: 12,
                       fontWeight: 500,
                       color: '#FDFAF4',
-                      background: '#6E1423',
+                      background: '#1F8A55',
                       padding: '9px 16px',
                       borderRadius: 2,
                       textDecoration: 'none',
@@ -497,7 +502,7 @@ export default function Shop() {
       </div>
 
       {/* Custom prompt CTA */}
-      <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.12)', background: '#FDFAF4', padding: isMobile ? '36px 24px' : '72px 60px' }}>
+      <div style={{ borderTop: '0.5px solid rgba(235,230,218,0.12)', background: '#131A17', padding: isMobile ? '36px 24px' : '72px 60px' }}>
         <div
           style={{
             maxWidth: 1280,
@@ -516,14 +521,14 @@ export default function Shop() {
                 fontSize: isMobile ? 26 : 40,
                 fontWeight: 600,
                 letterSpacing: -0.8,
-                color: '#1C1C1A',
+                color: '#EBE6DA',
                 marginBottom: 12,
                 lineHeight: 1.1,
               }}
             >
               {t.need_specific}
             </div>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 15, color: '#7A7469', fontWeight: 300, maxWidth: 500, lineHeight: 1.7 }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 15, color: '#98A39D', fontWeight: 300, maxWidth: 500, lineHeight: 1.7 }}>
               {t.need_specific_desc}
             </div>
           </div>
@@ -534,7 +539,7 @@ export default function Shop() {
               fontSize: 13,
               fontWeight: 500,
               color: '#FDFAF4',
-              background: '#6E1423',
+              background: '#1F8A55',
               padding: '14px 28px',
               borderRadius: 2,
               textDecoration: 'none',
@@ -548,7 +553,7 @@ export default function Shop() {
       </div>
 
       {/* Footer */}
-      <footer style={{ background: '#1C1C1A', padding: isMobile ? 24 : 60, borderTop: '0.5px solid rgba(28,28,26,0.3)' }}>
+      <footer style={{ background: '#1A231F', padding: isMobile ? 24 : 60, borderTop: '0.5px solid rgba(235,230,218,0.3)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div
             style={{
@@ -565,46 +570,55 @@ export default function Shop() {
             <div style={{ display: 'flex', gap: 28, flexWrap: isMobile ? 'wrap' : undefined }}>
               <TransitionLink
                 href="/"
-                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}
+                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(235,230,218,0.4)', textDecoration: 'none', fontWeight: 300 }}
               >
                 {t.nav_home}
               </TransitionLink>
               <TransitionLink
                 href="/build"
-                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}
+                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(235,230,218,0.4)', textDecoration: 'none', fontWeight: 300 }}
               >
                 {t.nav_build}
               </TransitionLink>
               <TransitionLink
                 href="/about"
-                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}
+                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(235,230,218,0.4)', textDecoration: 'none', fontWeight: 300 }}
               >
                 {t.nav_about}
               </TransitionLink>
               <TransitionLink
                 href="/terms"
-                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}
+                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(235,230,218,0.4)', textDecoration: 'none', fontWeight: 300 }}
               >
                 {t.footer_terms}
               </TransitionLink>
               <TransitionLink
                 href="/privacy"
-                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(245,240,230,0.4)', textDecoration: 'none', fontWeight: 300 }}
+                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(235,230,218,0.4)', textDecoration: 'none', fontWeight: 300 }}
               >
                 {t.footer_privacy}
               </TransitionLink>
             </div>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(245,240,230,0.3)', fontWeight: 300 }}>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(235,230,218,0.3)', fontWeight: 300 }}>
               © 2026 GOMP · Prague, CZ
             </span>
           </div>
-          <div style={{ borderTop: '0.5px solid rgba(245,240,230,0.08)', marginTop: 24, paddingTop: 20 }}>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(245,240,230,0.28)', fontWeight: 300, lineHeight: 1.6 }}>
+          <div style={{ borderTop: '0.5px solid rgba(235,230,218,0.08)', marginTop: 24, paddingTop: 20 }}>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(235,230,218,0.28)', fontWeight: 300, lineHeight: 1.6 }}>
               {t.footer_disclaimer}
             </span>
           </div>
         </div>
       </footer>
     </div>
+  );
+}
+
+// useSearchParams() needs a Suspense boundary for the page to prerender statically.
+export default function Shop() {
+  return (
+    <Suspense fallback={null}>
+      <ShopInner />
+    </Suspense>
   );
 }

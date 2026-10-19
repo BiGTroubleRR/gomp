@@ -6,7 +6,7 @@ import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import { useIsMobile } from '@/lib/use-media-query';
-import { MAROON, INK, MUTED, PAGE_BG, PANEL_BG } from '@/lib/design-tokens';
+import { INK, MUTED, PAGE_BG, ACCENT } from '@/lib/design-tokens';
 
 const serif: CSSProperties = { fontFamily: 'var(--font-serif)' };
 const sans: CSSProperties = { fontFamily: 'var(--font-sans)' };
@@ -380,19 +380,10 @@ export default function TermsPage() {
 
   return (
     <div style={{ position: 'relative', zIndex: 2, background: PAGE_BG, minHeight: '100vh' }}>
-      <SiteNav
-        cta={
-          <TransitionLink
-            href="/build"
-            style={{ ...sans, fontSize: 13, fontWeight: 500, color: PANEL_BG, background: MAROON, textDecoration: 'none', padding: '9px 22px', borderRadius: 2 }}
-          >
-            {t.nav_startbuilding}
-          </TransitionLink>
-        }
-      />
+      <SiteNav />
 
       {/* Header */}
-      <section style={{ padding: isMobile ? '70px 24px 40px' : '140px 60px 60px', borderBottom: '0.5px solid rgba(28,28,26,0.12)' }}>
+      <section style={{ padding: isMobile ? '30px 24px 40px' : '80px 60px 60px', borderBottom: '0.5px solid rgba(235,230,218,0.12)' }}>
         <div style={{ maxWidth: 860, margin: '0 auto' }}>
           <div style={{ ...sans, fontSize: 11, fontWeight: 500, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: isMobile ? 20 : 32 }}>
             {t.eyebrow}
@@ -400,7 +391,7 @@ export default function TermsPage() {
           <h1 style={{ ...serif, fontSize: isMobile ? 38 : 64, fontWeight: 600, letterSpacing: isMobile ? '-1px' : '-2px', color: INK, margin: '0 0 8px', lineHeight: 1 }}>
             {t.title}
           </h1>
-          <div style={{ ...sans, fontSize: 15, fontStyle: 'italic', color: MAROON, marginBottom: 20 }}>{t.subtitle}</div>
+          <div style={{ ...sans, fontSize: 15, fontStyle: 'italic', color: ACCENT, marginBottom: 20 }}>{t.subtitle}</div>
           <div style={{ ...sans, fontSize: 12, color: MUTED, marginBottom: 24 }}>{t.updated}</div>
           <p style={{ ...sans, fontSize: 15, lineHeight: 1.8, color: MUTED, margin: 0, fontWeight: 300, maxWidth: 700 }}>{t.intro}</p>
         </div>
@@ -411,7 +402,7 @@ export default function TermsPage() {
         <div style={{ maxWidth: 860, margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '200px 1fr', gap: isMobile ? 32 : 56, alignItems: 'start' }}>
           {/* Table of contents */}
           {!isMobile && (
-            <nav style={{ position: 'sticky', top: 84 }}>
+            <nav style={{ position: 'sticky', top: 'calc(var(--gomp-bar-h) + 24px)' }}>
               <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
                 {t.toc_label}
               </div>
@@ -427,7 +418,7 @@ export default function TermsPage() {
 
           <div>
             {sections.map((s) => (
-              <div key={s.id} id={s.id} style={{ marginBottom: 40, scrollMarginTop: 84 }}>
+              <div key={s.id} id={s.id} style={{ marginBottom: 40, scrollMarginTop: 'calc(var(--gomp-bar-h) + 24px)' }}>
                 <h2 style={{ ...serif, fontSize: isMobile ? 22 : 26, fontWeight: 600, color: INK, letterSpacing: '-0.4px', margin: '0 0 16px' }}>
                   {s.title}
                 </h2>
@@ -437,10 +428,10 @@ export default function TermsPage() {
               </div>
             ))}
 
-            <div style={{ borderTop: '0.5px solid rgba(28,28,26,0.12)', paddingTop: 24, marginTop: 24 }}>
+            <div style={{ borderTop: '0.5px solid rgba(235,230,218,0.12)', paddingTop: 24, marginTop: 24 }}>
               <p style={{ ...sans, fontSize: 13, color: MUTED, fontWeight: 300, margin: 0 }}>
                 {t.privacy_note}{' '}
-                <TransitionLink href="/privacy" style={{ color: MAROON, textDecoration: 'underline' }}>
+                <TransitionLink href="/privacy" style={{ color: ACCENT, textDecoration: 'underline' }}>
                   {t.privacy_link}
                 </TransitionLink>
                 .

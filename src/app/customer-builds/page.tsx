@@ -13,7 +13,7 @@ import type { CustomerBuild } from '@/lib/supabase/customer-build-mapping';
 import { fetchComponentDb, getCachedComponentDb } from '@/lib/supabase/components';
 import { defaultComponentDb, computeBuildTier, type ComponentDb } from '@/lib/component-db-seed';
 import TierBadge from '@/components/TierBadge';
-import { INK, MUTED, MAROON, PAGE_BG, PANEL_BG as PANEL } from '@/lib/design-tokens';
+import { INK, MUTED, PAGE_BG, PANEL_BG as PANEL, ACCENT, ON_ACCENT, ACCENT_FILL } from '@/lib/design-tokens';
 
 // Spec lines are free admin-typed text ("Procesor: Intel Core i9-14900K"), not structured
 // {label, value} data — split on the first ':' so the label can be colored/bolded separately
@@ -114,21 +114,21 @@ function SpecBubble({
         gap: 8,
         padding: '8px 14px',
         borderRadius: 30,
-        background: panelTone ? 'rgba(253,250,244,0.94)' : 'rgba(110,20,35,0.95)',
+        background: panelTone ? 'rgba(19,26,23,0.94)' : 'rgba(63,174,116,0.95)',
         backdropFilter: panelTone ? 'blur(6px)' : undefined,
-        border: panelTone ? '0.5px solid rgba(28,28,26,0.14)' : '0.5px solid rgba(255,255,255,0.18)',
-        boxShadow: '0 16px 32px -14px rgba(28,28,26,0.22)',
+        border: panelTone ? '0.5px solid rgba(235,230,218,0.14)' : '0.5px solid rgba(255,255,255,0.18)',
+        boxShadow: '0 16px 32px -14px rgba(0,0,0,0.22)',
         zIndex: 5,
         width: 'max-content',
       }}
     >
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: panelTone ? MAROON : '#E8A9B4', flexShrink: 0 }} />
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: panelTone ? ACCENT : ON_ACCENT, flexShrink: 0 }} />
       <span
         style={{
           fontFamily: 'var(--font-mono)',
           fontSize: 11,
           letterSpacing: 0.5,
-          color: panelTone ? MAROON : PAGE_BG,
+          color: panelTone ? ACCENT : ON_ACCENT,
           whiteSpace: 'nowrap',
         }}
       >
@@ -221,7 +221,7 @@ function PhotoStack({
                   maxWidth: '78%',
                   maxHeight: '78%',
                   objectFit: 'contain',
-                  filter: i === 0 ? 'drop-shadow(0 12px 20px rgba(28,28,26,0.25))' : 'drop-shadow(0 6px 12px rgba(28,28,26,0.18))',
+                  filter: i === 0 ? 'drop-shadow(0 12px 20px rgba(0,0,0,0.25))' : 'drop-shadow(0 6px 12px rgba(0,0,0,0.18))',
                 }}
               />
             </motion.div>
@@ -236,8 +236,8 @@ function PhotoStack({
             zIndex: 11,
             padding: '2px 7px',
             borderRadius: 10,
-            background: MAROON,
-            color: PANEL,
+            background: ACCENT_FILL,
+            color: ON_ACCENT,
             fontFamily: 'var(--font-mono)',
             fontSize: 10.5,
             fontWeight: 700,
@@ -275,9 +275,9 @@ function PhotoGallery({
     width: 44,
     height: 44,
     borderRadius: '50%',
-    border: '0.5px solid rgba(253,250,244,0.35)',
-    background: 'rgba(253,250,244,0.08)',
-    color: PANEL,
+    border: '0.5px solid rgba(235,230,218,0.35)',
+    background: 'rgba(19,26,23,0.08)',
+    color: ON_ACCENT,
     fontSize: 20,
     cursor: 'pointer',
     display: 'flex',
@@ -296,7 +296,7 @@ function PhotoGallery({
         position: 'fixed',
         inset: 0,
         zIndex: 200,
-        background: 'rgba(28,28,26,0.92)',
+        background: 'rgba(235,230,218,0.92)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -316,9 +316,9 @@ function PhotoGallery({
           width: 36,
           height: 36,
           borderRadius: '50%',
-          border: '0.5px solid rgba(253,250,244,0.35)',
-          background: 'rgba(253,250,244,0.08)',
-          color: PANEL,
+          border: '0.5px solid rgba(235,230,218,0.35)',
+          background: 'rgba(19,26,23,0.08)',
+          color: ON_ACCENT,
           fontSize: 15,
           cursor: 'pointer',
         }}
@@ -449,9 +449,9 @@ export default function CustomerBuildsPage() {
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
       <SiteNav />
 
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '56px 20px 60px' : '84px 32px 90px' }}>
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '28px 20px 60px' : '44px 32px 90px' }}>
         <Reveal>
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600, color: MAROON, letterSpacing: 1.5, marginBottom: 12 }}>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600, color: ACCENT, letterSpacing: 1.5, marginBottom: 12 }}>
             {t.eyebrow}
           </div>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 30 : 42, color: INK, margin: '0 0 14px', lineHeight: 1.1 }}>
@@ -476,7 +476,7 @@ export default function CustomerBuildsPage() {
                   style={{
                     position: 'relative',
                     background: PANEL,
-                    border: '0.5px solid rgba(28,28,26,0.12)',
+                    border: '0.5px solid rgba(235,230,218,0.12)',
                     borderRadius: 2,
                     padding: isMobile ? 20 : 28,
                     display: 'flex',
@@ -523,17 +523,17 @@ export default function CustomerBuildsPage() {
                                     color: INK,
                                     marginBottom: 6,
                                     ...(isStandout && {
-                                      background: 'rgba(110,20,35,0.07)',
-                                      border: '1px solid rgba(110,20,35,0.18)',
+                                      background: 'rgba(63,174,116,0.07)',
+                                      border: '1px solid rgba(63,174,116,0.18)',
                                       borderRadius: 6,
                                       padding: '4px 8px',
                                     }),
                                   }}
                                 >
-                                  <span style={{ width: 3, height: 3, borderRadius: '50%', background: MAROON, flexShrink: 0 }} />
+                                  <span style={{ width: 3, height: 3, borderRadius: '50%', background: ACCENT_FILL, flexShrink: 0 }} />
                                   {parsed ? (
                                     <span>
-                                      <span style={{ color: MAROON, fontWeight: 700 }}>{parsed.label}:</span> {parsed.value}
+                                      <span style={{ color: ACCENT, fontWeight: 700 }}>{parsed.label}:</span> {parsed.value}
                                     </span>
                                   ) : (
                                     s
@@ -547,10 +547,10 @@ export default function CustomerBuildsPage() {
                     )}
                     {b.priceEur != null && (
                       <div style={{ marginTop: 12 }}>
-                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, color: MAROON, fontWeight: 600 }}>
+                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, color: ACCENT, fontWeight: 600 }}>
                           {fmtGross(b.priceEur)}
                         </div>
-                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#A09890', marginTop: 2 }}>
+                        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6B7570', marginTop: 2 }}>
                           {t.vatIncluded} ({vatRatePct}%)
                         </div>
                       </div>

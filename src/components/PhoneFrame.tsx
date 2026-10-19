@@ -21,8 +21,8 @@ export default function PhoneFrame({ children }: { children: ReactNode }) {
         minHeight: '100vh',
         position: 'relative',
         transform: 'translateZ(0)',
-        boxShadow: '0 0 0 1px rgba(28,28,26,0.1), 0 40px 100px rgba(0,0,0,0.28)',
-        background: '#F5F0E6',
+        boxShadow: '0 0 0 1px rgba(0,0,0,0.1), 0 40px 100px rgba(0,0,0,0.28)',
+        background: '#0D0D0C',
       }}
     >
       {children}
