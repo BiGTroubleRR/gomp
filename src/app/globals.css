@@ -84,14 +84,15 @@ a {
   text-decoration: none;
 }
 
-/* ---- Nav-link hover affordance, shared across every page's plain nav links ---- */
-a[data-gomp-nav]:not([style*='background']) {
+/* ---- Nav-link hover affordance, shared across every page's plain nav links ----
+   The homepage body (.gomp-home) styles its own buttons, banners and links, so it is exempt. */
+a[data-gomp-nav]:not([style*='background'], .gomp-home *) {
   padding: 7px 11px;
   margin: -7px -11px;
   border-radius: 3px;
   transition: background-color 0.15s ease;
 }
-a[data-gomp-nav]:not([style*='background']):hover {
+a[data-gomp-nav]:not([style*='background'], .gomp-home *):hover {
   background-color: rgba(63, 174, 116, 0.1);
 }
 
