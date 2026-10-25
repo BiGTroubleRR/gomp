@@ -1,5 +1,5 @@
-/* GOMP homepage design — scoped under .gomp-home so it never leaks into other pages.
-   Fonts come from the root layout (next/font): --font-sans (DM Sans). */
+/* GOMP homepage body — scoped under .gomp-home so it never leaks into other pages. The header and
+   footer are the shared SiteNav / SiteFooter. Fonts come from the root layout (next/font). */
 .gomp-home{
   --bg:#0c110f; --panel:#131a17; --ink:#ebe6da; --muted:#98a39d; --faint:#6b7570;
   --green:#0f5c3a; --green-2:#0a4129; --green-hi:#5fb98a; --gold:#c9a95e; --line:#24302a; --tint:#1a231f;
@@ -11,55 +11,18 @@
   color-scheme:dark;
 }
 .gomp-home *{box-sizing:border-box}
-.gomp-home{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+.gomp-home{margin:0;background:transparent;color:var(--ink);font:15px/1.55 var(--body);-webkit-font-smoothing:antialiased}
 .gomp-home a{color:inherit;text-decoration:none}
 .gomp-home button{font:inherit;color:inherit;cursor:pointer}
 .gomp-home :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-.gomp-home .wrap{max-width:1180px;margin:0 auto;padding-inline:20px}
+.gomp-home .wrap{max-width:1280px;margin:0 auto;padding-inline:clamp(20px,4.5vw,60px)}
 .gomp-home .mono{font-family:var(--mono)}
 .gomp-home .eyebrow{font:500 11px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
 .gomp-home .num{font-variant-numeric:tabular-nums}
 .gomp-home h1,.gomp-home h2,.gomp-home h3{font-family:var(--display);font-weight:700;letter-spacing:-.02em;margin:0;text-wrap:balance;line-height:1.08}
 
-/* ---------- top bar ---------- */
-.gomp-home .topbar{border-bottom:1px solid var(--line);font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.gomp-home .topbar .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:40px;flex-wrap:wrap}
-.gomp-home .topbar .right{display:flex;gap:18px;align-items:center}
-.gomp-home .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.gomp-home .seg button{border:0;background:none;padding:5px 8px;font:inherit;letter-spacing:inherit;color:var(--muted)}
-.gomp-home .seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
 
-/* ---------- header ---------- */
-.gomp-home .header .wrap{display:grid;grid-template-columns:auto auto 1fr auto;align-items:center;gap:32px;padding-block:26px}
-.gomp-home .logo{font:700 32px/1 var(--logo);color:var(--gold);letter-spacing:.04em;display:flex;align-items:center;gap:10px}
-.gomp-home .logo i{width:12px;height:12px;background:var(--gold);transform:rotate(45deg);display:block}
-.gomp-home .support{display:flex;gap:10px;align-items:center}
-.gomp-home .support svg{width:34px;height:34px;color:var(--green-hi)}
-.gomp-home .support small{display:block;font-size:12px;color:var(--muted)}
-.gomp-home .support b{font:600 15px/1.2 var(--body)}
-.gomp-home .search{display:flex;border:1.5px solid var(--line);border-radius:8px;background:var(--panel);min-width:0}
-.gomp-home .search input{flex:1;min-width:0;border:0;background:none;padding:13px 14px;font:inherit;outline:none}
-.gomp-home .search select{border:0;border-left:1px solid var(--line);background:none;padding:0 12px;font:inherit;color:var(--muted)}
-.gomp-home .search button{border:0;background:var(--green);color:var(--on);width:54px;display:grid;place-items:center;border-radius:0 6px 6px 0}
-.gomp-home .search:focus-within{border-color:var(--gold)}
-.gomp-home .cart{display:flex;gap:10px;align-items:center}
-.gomp-home .cart .ic{width:46px;height:46px;border-radius:8px;background:var(--green);color:var(--on);display:grid;place-items:center}
-.gomp-home .cart small{display:block;font-size:12px;color:var(--muted)}
-.gomp-home .cart b{font:600 17px/1.2 var(--body)}
 
-/* ---------- nav ---------- */
-.gomp-home .nav{background:var(--green);color:var(--on);position:sticky;top:env(safe-area-inset-top,0px);z-index:20}
-.gomp-home .nav .wrap{display:flex;align-items:stretch}
-.gomp-home .cats{position:relative}
-.gomp-home .cats>button{background:var(--green-2);border:0;color:var(--on);display:flex;gap:12px;align-items:center;height:56px;padding:0 22px;font:600 14px/1 var(--body);letter-spacing:.06em;text-transform:uppercase;min-width:240px}
-.gomp-home .cats ul{position:absolute;left:0;top:100%;width:100%;margin:0;padding:6px 0;list-style:none;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-top:0;box-shadow:0 14px 30px -12px rgba(28,28,26,.25)}
-.gomp-home .cats li a{display:flex;justify-content:space-between;padding:10px 20px;font-size:14px}
-.gomp-home .cats li a:hover{background:var(--tint);color:var(--green-hi)}
-.gomp-home .cats li a span{font:500 11px/1.9 var(--mono);color:var(--faint)}
-.gomp-home .links{display:flex;overflow-x:auto;scrollbar-width:none}
-.gomp-home .links a{display:flex;align-items:center;padding:0 20px;height:56px;font:600 14px/1 var(--body);white-space:nowrap;border-left:1px solid rgba(253,250,244,.14)}
-.gomp-home .links a:hover,.gomp-home .links a[aria-current]{background:var(--green-2)}
-.gomp-home .links a.hl{color:var(--gold)}
 
 /* ---------- hero ---------- */
 .gomp-home .hero{display:grid;grid-template-columns:2fr 1fr;gap:22px;padding-block:26px}
@@ -226,17 +189,6 @@
 .gomp-home .brands span{font:700 16px/1 var(--mono);letter-spacing:.12em;color:var(--faint);transition:color .2s}
 .gomp-home .brands span:hover{color:var(--ink)}
 
-/* ---------- footer ---------- */
-.gomp-home footer{background:var(--deep);color:var(--bg);padding-block:56px 30px}
-.gomp-home .fgrid{display:grid;grid-template-columns:1.6fr repeat(4,1fr);gap:30px}
-.gomp-home .fgrid .logo{color:var(--gold);font-size:28px}
-.gomp-home .fgrid p{color:rgba(245,240,230,.55);font-size:14px;max-width:32ch}
-.gomp-home .fgrid h4{margin:0 0 14px;font:600 11px/1 var(--mono);letter-spacing:.14em;color:var(--gold)}
-.gomp-home .fgrid ul{list-style:none;margin:0;padding:0;display:grid;gap:9px;font-size:14px}
-.gomp-home .fgrid a{color:rgba(245,240,230,.55)}
-.gomp-home .fgrid a:hover{color:var(--bg)}
-.gomp-home .legal{border-top:1px solid rgba(245,240,230,.1);margin-top:40px;padding-top:22px;font-size:12px;color:rgba(245,240,230,.4);display:grid;gap:6px}
-.gomp-home .legal b{color:rgba(245,240,230,.7);font-weight:500}
 
 
 
@@ -249,18 +201,11 @@
 .gomp-home .item img.snap{width:66px;height:80px;justify-self:center}
 
 /* ---------- 8px corners everywhere ---------- */
-.gomp-home .slider,.gomp-home .slide,.gomp-home .banner,.gomp-home .spot-main,.gomp-home .thumb,.gomp-home .promo,.gomp-home .v,.gomp-home .cats ul,.gomp-home .seg,.gomp-home .search,.gomp-home .btn,.gomp-home .cart .ic,.gomp-home .score-l,.gomp-home .item svg,.gomp-home .thumb svg,.gomp-home .spot-img svg,.gomp-home .links a,.gomp-home .cats>button,.gomp-home .feature,.gomp-home .values .stats{border-radius:8px}
+.gomp-home .slider,.gomp-home .slide,.gomp-home .banner,.gomp-home .spot-main,.gomp-home .thumb,.gomp-home .promo,.gomp-home .v,.gomp-home .btn,.gomp-home .score-l,.gomp-home .item svg,.gomp-home .thumb svg,.gomp-home .spot-img svg,.gomp-home .feature,.gomp-home .values .stats{border-radius:8px}
 .gomp-home .slider,.gomp-home .banner,.gomp-home .promo,.gomp-home .thumb,.gomp-home .spot-main{overflow:hidden}
-.gomp-home .nav .wrap{padding-block:6px;gap:6px}
-.gomp-home .cats>button,.gomp-home .links a{height:44px}
-.gomp-home .links{gap:4px}
-.gomp-home .links a{border-left:0;padding:0 14px}
 
 /* ---------- responsive ---------- */
-.gomp-home .menu-btn{display:none}
 @media (max-width:1060px){
-  .gomp-home .header .wrap{grid-template-columns:auto 1fr auto;gap:20px}
-  .gomp-home .support{display:none}
   .gomp-home .hero{grid-template-columns:1fr}
   .gomp-home .side{grid-template-rows:none;grid-template-columns:repeat(3,1fr)}
   .gomp-home .spot{grid-template-columns:1fr}
@@ -268,15 +213,8 @@
   .gomp-home .thumb[aria-pressed="true"]:before{display:none}
   .gomp-home .features{grid-template-columns:repeat(3,1fr);row-gap:28px}
   .gomp-home .vgrid{grid-template-columns:repeat(2,1fr)}
-  .gomp-home .fgrid{grid-template-columns:repeat(3,1fr)}
-  .gomp-home .fgrid>div:first-child{grid-column:1/-1}
 }
 @media (max-width:760px){
-  .gomp-home .header .wrap{grid-template-columns:1fr auto;padding-block:18px}
-  .gomp-home .search{grid-column:1/-1;order:3}
-  .gomp-home .search select{display:none}
-  .gomp-home .cats>button{min-width:0;padding:0 16px}
-  .gomp-home .cats>button .t{display:none}
   .gomp-home .slider{min-height:620px}
   .gomp-home .slide{grid-template-columns:1fr;padding:30px 24px 50px;align-content:start}
   .gomp-home .slide .pc{max-width:170px;grid-row:1}
@@ -299,9 +237,6 @@
   .gomp-home .promo.light svg{display:none}
   .gomp-home .features{grid-template-columns:repeat(2,1fr)}
   .gomp-home .vgrid,.gomp-home .stats{grid-template-columns:1fr}
-  .gomp-home .fgrid{grid-template-columns:1fr 1fr}
-  .gomp-home .topbar .left{display:none}
-  .gomp-home .topbar .wrap{justify-content:flex-end}
 }
 @media (prefers-reduced-motion:reduce){.gomp-home *{transition:none!important;animation:none!important}}
 
@@ -312,4 +247,3 @@
 .gomp-home .v3d-fallback{background:var(--tint)}
 .gomp-home .btn.btn-gold{border-color:var(--gold);background:var(--gold);color:var(--deep)}
 .gomp-home .btn.btn-gold:hover{filter:brightness(1.08)}
-.gomp-home .cats ul[hidden]{display:none}
