@@ -6,6 +6,8 @@ import { useSite } from '@/contexts/SiteContext';
 import { applyVat } from '@/lib/component-db-seed';
 import { pick } from '@/lib/i18n';
 import type { Pc3DSpec, Pc3DViewer } from '@/lib/pc3d';
+import GompFooter from './GompFooter';
+import GompHeader from './GompHeader';
 import { guessPc3DSpec } from './home-data';
 import { MIN_CONFIG_NET_CZK, useHomeBuilds, type HomeBuild, type L3 } from './home-shared';
 import './gomp-home.css';
@@ -256,7 +258,9 @@ export default function GompHome({ onStartBuilding }: { onStartBuilding: () => v
 
   return (
     <div className="gomp-home">
-      <div className="wrap">
+      <GompHeader />
+
+      <main className="wrap">
         {/* HERO */}
         <section className="hero">
           <div className="slider">
@@ -537,7 +541,7 @@ export default function GompHome({ onStartBuilding }: { onStartBuilding: () => v
             ))}
           </section>
         )}
-      </div>
+      </main>
 
       {/* VALUES */}
       <section className="values">
@@ -572,6 +576,8 @@ export default function GompHome({ onStartBuilding }: { onStartBuilding: () => v
           ))}
         </div>
       </section>
+
+      <GompFooter />
     </div>
   );
 }
