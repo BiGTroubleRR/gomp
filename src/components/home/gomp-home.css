@@ -1,0 +1,249 @@
+/* GOMP homepage body — scoped under .gomp-home so it never leaks into other pages. The header and
+   footer are the shared SiteNav / SiteFooter. Fonts come from the root layout (next/font). */
+.gomp-home{
+  --bg:#0c110f; --panel:#131a17; --ink:#ebe6da; --muted:#98a39d; --faint:#6b7570;
+  --green:#0f5c3a; --green-2:#0a4129; --green-hi:#5fb98a; --gold:#c9a95e; --line:#24302a; --tint:#1a231f;
+  --on:#f3efe4; --deep:#070b09;
+  --display:var(--font-sans,"DM Sans"),system-ui,-apple-system,"Segoe UI",sans-serif;
+  --logo:var(--font-sans,"DM Sans"),system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:var(--font-sans,"DM Sans"),system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:var(--font-sans,"DM Sans"),system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+.gomp-home *{box-sizing:border-box}
+.gomp-home{margin:0;background:transparent;color:var(--ink);font:15px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+.gomp-home a{color:inherit;text-decoration:none}
+.gomp-home button{font:inherit;color:inherit;cursor:pointer}
+.gomp-home :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.gomp-home .wrap{max-width:1280px;margin:0 auto;padding-inline:clamp(20px,4.5vw,60px)}
+.gomp-home .mono{font-family:var(--mono)}
+.gomp-home .eyebrow{font:500 11px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.gomp-home .num{font-variant-numeric:tabular-nums}
+.gomp-home h1,.gomp-home h2,.gomp-home h3{font-family:var(--display);font-weight:700;letter-spacing:-.02em;margin:0;text-wrap:balance;line-height:1.08}
+
+
+
+
+/* ---------- hero ---------- */
+.gomp-home .hero{display:grid;grid-template-columns:2fr 1fr;gap:22px;padding-block:26px}
+.gomp-home .slider{position:relative;background:var(--panel);border:1px solid var(--line);overflow:hidden;min-height:470px}
+.gomp-home .slide{position:absolute;inset:0;display:grid;grid-template-columns:1.1fr 1fr;align-items:center;padding:48px 52px;gap:10px;opacity:0;visibility:hidden;transition:opacity .6s}
+.gomp-home .slide.on{opacity:1;visibility:visible}
+.gomp-home .slide h1{font-size:clamp(34px,4.4vw,54px);margin:14px 0 14px}
+.gomp-home .slide h1 em{font-style:normal;color:var(--green-hi)}
+.gomp-home .slide p{color:var(--muted);margin:0 0 6px;max-width:34ch}
+.gomp-home .slide .price{font:500 15px var(--body);margin:14px 0 26px}
+.gomp-home .slide .price b{font:700 24px var(--display);color:var(--green-hi)}
+.gomp-home .pill{display:inline-flex;gap:8px;align-items:center;border:1px solid rgba(95,185,138,.35);background:rgba(95,185,138,.08);border-radius:99px;padding:6px 12px;font:500 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.gomp-home .pill:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--green-hi)}
+.gomp-home .btn{display:inline-flex;align-items:center;gap:10px;background:var(--green);color:var(--on);padding:14px 26px;border-radius:8px;font:600 13px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;border:1.5px solid var(--green);transition:background .2s}
+.gomp-home .btn:hover{background:var(--green-2)}
+.gomp-home .btn.ghost{background:none;color:var(--ink);border-color:var(--line)}
+.gomp-home .btn.ghost:hover{border-color:var(--ink)}
+.gomp-home .btns{display:flex;gap:10px;flex-wrap:wrap}
+.gomp-home .slide .pc{width:100%;max-width:320px;justify-self:center}
+.gomp-home .dots{position:absolute;bottom:18px;left:52px;display:flex;gap:8px;z-index:2}
+.gomp-home .dots button{width:34px;height:3px;border:0;background:var(--line);padding:0}
+.gomp-home .dots button[aria-current="true"]{background:var(--gold)}
+.gomp-home .side{display:grid;gap:22px;grid-template-rows:repeat(3,1fr)}
+.gomp-home .banner{background:var(--panel);border:1px solid var(--line);display:grid;grid-template-columns:1fr 92px;align-items:center;gap:10px;padding:18px 22px;transition:border-color .2s}
+.gomp-home .banner:hover{border-color:var(--gold)}
+.gomp-home .banner small{display:block;font:500 10.5px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.gomp-home .banner h3{font-size:19px}
+.gomp-home .banner h3 em{font-style:normal;color:var(--green-hi)}
+.gomp-home .banner .sub{display:block;font-size:13px;color:var(--muted);margin-top:6px}
+.gomp-home .banner svg{width:92px;height:auto}
+.gomp-home .banner .big{font:700 40px/1 var(--display);color:var(--green-hi);text-align:center}
+
+
+/* photo slides */
+.gomp-home .slider{background:#070b09;border-color:#070b09}
+.gomp-home .slide.photo{grid-template-columns:minmax(0,560px);background-color:#070b09;background-size:cover;background-repeat:no-repeat;color:#fdfaf4}
+.gomp-home .slide.photo:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,11,9,.94) 0%,rgba(7,11,9,.8) 38%,rgba(7,11,9,.15) 72%,rgba(7,11,9,0) 100%)}
+.gomp-home .slide.photo>div{position:relative}
+.gomp-home .slide.photo .eyebrow{color:var(--gold)}
+.gomp-home .slide.photo h1 em{color:var(--gold)}
+.gomp-home .slide.photo p{color:rgba(253,250,244,.78)}
+.gomp-home .slide.photo .price b{color:var(--gold)}
+.gomp-home .slide.photo .vat{color:rgba(253,250,244,.55)}
+.gomp-home .slide.photo .pill{background:rgba(196,163,90,.14);border-color:rgba(196,163,90,.45);color:#fdfaf4}
+.gomp-home .slide.photo .pill:before{background:var(--gold)}
+.gomp-home .slide.photo .btn.ghost{color:#fdfaf4;border-color:rgba(253,250,244,.35)}
+.gomp-home .slide.photo .btn.ghost:hover{border-color:#fdfaf4}
+.gomp-home .slide.photo h1{margin-top:18px}
+.gomp-home .dots button{background:rgba(253,250,244,.3)}
+.gomp-home .dots button[aria-current="true"]{background:var(--gold)}
+.gomp-home .banner{overflow:hidden;grid-template-columns:1fr 118px;padding:0 0 0 22px}
+.gomp-home .banner>div:first-child{padding-block:18px}
+.gomp-home .banner img{width:118px;height:100%;min-height:130px;object-fit:cover;display:block}
+.gomp-home .banner .big{padding-right:22px;width:auto}
+
+.gomp-home .banner.photo{position:relative;background-color:#070b09;background-size:cover;background-position:right center;padding:18px 22px;border-color:#070b09;color:#fdfaf4;padding-right:22px}
+.gomp-home .banner.photo:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,11,9,.92) 0%,rgba(7,11,9,.7) 55%,rgba(7,11,9,.35) 100%)}
+.gomp-home .banner.photo>*{position:relative}
+.gomp-home .banner.photo>div:first-child{padding-block:0}
+.gomp-home .banner.photo small,.gomp-home .banner.photo .sub{color:rgba(253,250,244,.65)}
+.gomp-home .banner.photo h3 em,.gomp-home .banner.photo .big{color:var(--gold)}
+.gomp-home .banner.photo:hover{border-color:var(--gold)}
+/* ---------- features ---------- */
+.gomp-home .features{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding-block:34px 44px;text-align:center}
+.gomp-home .feature svg{width:40px;height:40px;color:var(--green-hi);margin-bottom:12px}
+.gomp-home .feature b{display:block;font:600 13px/1.3 var(--body);letter-spacing:.06em;text-transform:uppercase}
+.gomp-home .feature span{display:block;font-size:13.5px;color:var(--muted);margin-top:4px}
+
+/* ---------- section head ---------- */
+.gomp-home .shead{display:flex;justify-content:space-between;align-items:end;gap:16px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:22px;flex-wrap:wrap}
+.gomp-home .shead h2{font-size:26px}
+.gomp-home .shead .eyebrow{margin-bottom:6px}
+.gomp-home .more{font:600 13px/1 var(--body);color:var(--green-hi)}
+.gomp-home .more:hover{text-decoration:underline}
+
+/* ---------- deal / spotlight ---------- */
+.gomp-home .spot{display:grid;grid-template-columns:1fr 330px;gap:26px;padding-bottom:56px}
+.gomp-home .spot-main{background:var(--panel);border:1px solid var(--line);display:grid;grid-template-columns:96px 1fr 1.25fr;gap:22px;padding:32px 30px;align-items:center}
+.gomp-home .scores{display:grid;gap:16px;justify-items:center}
+.gomp-home .score{width:66px;height:66px;border-radius:50%;background:var(--tint);display:grid;place-items:center;text-align:center}
+.gomp-home .score b{font:700 20px/1 var(--display);display:block}
+.gomp-home .score.tier{background:var(--deep);color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold)}
+.gomp-home .score.tier b{font-size:28px}
+.gomp-home .score-l{font:500 10px/1.3 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:center;margin-top:-10px}
+.gomp-home .spot-img svg{width:100%;max-width:280px;display:block;margin:auto}
+.gomp-home .spot-info h3{font-size:26px;word-break:break-word}
+.gomp-home .spot-info .tag{color:var(--muted);margin:4px 0 10px}
+.gomp-home .stars{color:var(--gold);letter-spacing:2px;font-size:15px}
+.gomp-home .stars span{color:var(--muted);letter-spacing:0;font:500 12px var(--mono);margin-left:6px}
+.gomp-home .spot-price{font:700 30px/1 var(--display);color:var(--green-hi);margin:14px 0 4px}
+.gomp-home .vat{font-size:12px;color:var(--faint)}
+.gomp-home .specs{margin:16px 0;padding:0;list-style:none;display:grid;gap:7px;font-size:13.5px}
+.gomp-home .specs li{display:grid;grid-template-columns:84px 1fr;gap:10px}
+.gomp-home .specs li span:first-child{font:600 10.5px/1.9 var(--mono);letter-spacing:.1em;color:var(--green-hi)}
+.gomp-home .bench{display:grid;gap:10px;margin:6px 0 20px}
+.gomp-home .bench-row{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.gomp-home .bench-row b{font-family:var(--mono);font-weight:500}
+.gomp-home .bar{height:8px;border-radius:99px;background:var(--tint);overflow:hidden}
+.gomp-home .bar i{display:block;height:100%;background:var(--green-hi);border-radius:99px;transition:width .5s}
+.gomp-home .bar.cpu i{background:var(--gold)}
+.gomp-home .pn{display:flex;gap:24px;margin-top:22px;font-weight:500}
+.gomp-home .pn button{border:0;background:none;padding:0}
+.gomp-home .pn button:hover{color:var(--green-hi)}
+.gomp-home .thumbs{display:grid;gap:12px;align-content:start;max-height:640px;overflow:auto;padding-right:2px}
+.gomp-home .thumb{display:grid;grid-template-columns:70px 1fr auto;gap:14px;align-items:center;background:var(--panel);border:1px solid var(--line);padding:12px 14px;text-align:left;position:relative;opacity:.65;transition:opacity .2s,border-color .2s}
+.gomp-home .thumb:hover{opacity:1}
+.gomp-home .thumb[aria-pressed="true"]{opacity:1;border-color:var(--green-hi)}
+.gomp-home .thumb[aria-pressed="true"]:before{content:"";position:absolute;left:-7px;top:50%;margin-top:-6px;border:6px solid transparent;border-left:0;border-right-color:var(--green-hi)}
+.gomp-home .thumb svg{width:70px}
+.gomp-home .thumb b{display:block;font:700 13px/1.25 var(--display);word-break:break-word}
+.gomp-home .thumb small{display:block;color:var(--muted);font-size:12.5px;margin-top:3px}
+.gomp-home .badge{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font:700 17px/1 var(--display);background:var(--deep);color:var(--gold);box-shadow:inset 0 0 0 1px rgba(201,169,94,.5)}
+.gomp-home .badge.A{background:var(--green);color:var(--on);box-shadow:none}
+.gomp-home .badge.B{background:var(--gold);color:var(--deep);box-shadow:none}
+
+/* ---------- promos ---------- */
+.gomp-home .promos{display:grid;grid-template-columns:1fr 2fr;gap:22px;padding-bottom:56px}
+.gomp-home .promo{position:relative;overflow:hidden;padding:34px 36px;min-height:230px;display:flex;flex-direction:column;justify-content:center;border:1px solid var(--line)}
+.gomp-home .promo.dark{background:var(--deep);color:var(--on);border-color:var(--line)}
+.gomp-home .promo.light{background:var(--panel)}
+.gomp-home .promo h3{font-size:30px}
+.gomp-home .promo h3 em{font-style:normal;color:var(--gold)}
+.gomp-home .promo p{margin:10px 0 18px;max-width:38ch;color:var(--muted)}
+.gomp-home .promo.dark p{color:rgba(245,240,230,.65)}
+.gomp-home .promo .grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(196,163,90,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(196,163,90,.12) 1px,transparent 1px);background-size:26px 26px;mask-image:linear-gradient(90deg,transparent 30%,#000);pointer-events:none}
+.gomp-home .promo>*{position:relative}
+.gomp-home .promo.light{display:grid;grid-template-columns:1fr auto;align-items:center;gap:20px}
+.gomp-home .promo .from{font:700 44px/1 var(--display);color:var(--green-hi);margin:8px 0 4px}
+.gomp-home .promo ul{list-style:none;padding:0;margin:14px 0 0;font-size:14px;color:var(--muted);display:grid;gap:4px}
+.gomp-home .promo.light svg{width:170px}
+
+.gomp-home .promo.dark.photo{background-color:#070b09;background-size:cover;background-position:right 70%;min-height:280px}
+.gomp-home .promo.dark.photo:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(7,11,9,.95) 0%,rgba(7,11,9,.82) 45%,rgba(7,11,9,.2) 100%)}
+/* ---------- lists ---------- */
+.gomp-home .lists{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;padding-bottom:64px}
+.gomp-home .list h2{font-size:21px}
+.gomp-home .item{display:grid;grid-template-columns:78px 1fr;gap:16px;align-items:center;padding:14px 0}
+.gomp-home .item+.item{border-top:1px dashed var(--line)}
+.gomp-home .item svg{width:66px;justify-self:center}
+.gomp-home .item b{display:block;font:700 14.5px/1.3 var(--display);word-break:break-word}
+.gomp-home .item b:hover{color:var(--green-hi)}
+.gomp-home .item .stars{font-size:12px}
+.gomp-home .item .p{font:600 15px var(--body);margin-top:3px}
+.gomp-home .item .p small{font:500 12px var(--mono);color:var(--muted);margin-left:6px}
+
+/* ---------- values ---------- */
+.gomp-home .values{background:var(--deep);color:var(--on);border-block:1px solid var(--line);padding-block:64px}
+.gomp-home .values .shead{border-color:rgba(245,240,230,.15)}
+.gomp-home .values .eyebrow{color:var(--gold)}
+.gomp-home .values .shead .rated{font:500 13px var(--mono);color:var(--gold)}
+.gomp-home .vgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.gomp-home .v{background:rgba(245,240,230,.04);border:1px solid rgba(245,240,230,.1);padding:26px 24px}
+.gomp-home .v .n{font:700 30px/1 var(--display);color:var(--gold)}
+.gomp-home .v h3{font-size:18px;margin:18px 0 10px}
+.gomp-home .v p{margin:0;font-size:14px;color:rgba(245,240,230,.62)}
+.gomp-home .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px;border-top:1px solid rgba(245,240,230,.15);padding-top:32px}
+.gomp-home .stat b{font:700 44px/1 var(--display);color:var(--on)}
+.gomp-home .stat span{display:block;color:rgba(245,240,230,.55);font-size:14px;margin-top:6px}
+
+/* ---------- brands ---------- */
+.gomp-home .brands{border-bottom:1px solid var(--line)}
+.gomp-home .brands .wrap{display:flex;justify-content:space-between;align-items:center;gap:18px 30px;flex-wrap:wrap;padding-block:30px}
+.gomp-home .brands .eyebrow{flex-basis:100%;text-align:center}
+.gomp-home .brands span{font:700 16px/1 var(--mono);letter-spacing:.12em;color:var(--faint);transition:color .2s}
+.gomp-home .brands span:hover{color:var(--ink)}
+
+
+
+
+/* ---------- 3D viewer ---------- */
+.gomp-home .v3d{position:relative;width:100%;max-width:340px;aspect-ratio:4/5;margin:auto;border-radius:8px;overflow:hidden;cursor:grab;touch-action:pan-y}
+.gomp-home .v3d:active{cursor:grabbing}
+.gomp-home .v3d canvas{display:block;width:100%!important;height:100%!important}
+.gomp-home .v3d .hint{position:absolute;left:0;right:0;bottom:10px;text-align:center;font:500 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);pointer-events:none}
+.gomp-home img.snap{display:block;width:70px;height:84px;object-fit:contain}
+.gomp-home .item img.snap{width:66px;height:80px;justify-self:center}
+
+/* ---------- 8px corners everywhere ---------- */
+.gomp-home .slider,.gomp-home .slide,.gomp-home .banner,.gomp-home .spot-main,.gomp-home .thumb,.gomp-home .promo,.gomp-home .v,.gomp-home .btn,.gomp-home .score-l,.gomp-home .item svg,.gomp-home .thumb svg,.gomp-home .spot-img svg,.gomp-home .feature,.gomp-home .values .stats{border-radius:8px}
+.gomp-home .slider,.gomp-home .banner,.gomp-home .promo,.gomp-home .thumb,.gomp-home .spot-main{overflow:hidden}
+
+/* ---------- responsive ---------- */
+@media (max-width:1060px){
+  .gomp-home .hero{grid-template-columns:1fr}
+  .gomp-home .side{grid-template-rows:none;grid-template-columns:repeat(3,1fr)}
+  .gomp-home .spot{grid-template-columns:1fr}
+  .gomp-home .thumbs{grid-template-columns:repeat(3,1fr);max-height:none}
+  .gomp-home .thumb[aria-pressed="true"]:before{display:none}
+  .gomp-home .features{grid-template-columns:repeat(3,1fr);row-gap:28px}
+  .gomp-home .vgrid{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:760px){
+  .gomp-home .slider{min-height:620px}
+  .gomp-home .slide{grid-template-columns:1fr;padding:30px 24px 50px;align-content:start}
+  .gomp-home .slide .pc{max-width:170px;grid-row:1}
+  .gomp-home .slide>div{grid-row:2}
+  .gomp-home .dots{left:24px}
+  .gomp-home .slide.photo{background-position:70% center!important}
+  .gomp-home .slide.photo:before{background:linear-gradient(180deg,rgba(7,11,9,.25) 0%,rgba(7,11,9,.85) 45%,rgba(7,11,9,.96) 100%)}
+  .gomp-home .slide.photo{align-content:end;padding-bottom:54px}
+  .gomp-home .slider{min-height:560px}
+  .gomp-home .side{grid-template-columns:1fr}
+  .gomp-home .spot-main{grid-template-columns:1fr;padding:24px}
+  .gomp-home .scores{display:none}
+  .gomp-home .spot-img svg{max-width:200px}
+  .gomp-home .thumbs{grid-template-columns:1fr 1fr;gap:8px}
+  .gomp-home .thumb{grid-template-columns:1fr auto;padding:10px}
+  .gomp-home .thumb svg{display:none}
+  .gomp-home .badge{width:32px;height:32px;font-size:14px}
+  .gomp-home .promos,.gomp-home .lists{grid-template-columns:1fr}
+  .gomp-home .promo.light{grid-template-columns:1fr}
+  .gomp-home .promo.light svg{display:none}
+  .gomp-home .features{grid-template-columns:repeat(2,1fr)}
+  .gomp-home .vgrid,.gomp-home .stats{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){.gomp-home *{transition:none!important;animation:none!important}}
+
+/* ---------- React port extras ---------- */
+.gomp-home .snap{display:block;width:70px;height:84px;object-fit:contain}
+.gomp-home .item .snap{width:66px;height:80px;justify-self:center}
+.gomp-home .snap-ph{border-radius:8px;background:var(--tint)}
+.gomp-home .v3d-fallback{background:var(--tint)}
+.gomp-home .btn.btn-gold{border-color:var(--gold);background:var(--gold);color:var(--deep)}
+.gomp-home .btn.btn-gold:hover{filter:brightness(1.08)}

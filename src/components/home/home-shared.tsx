@@ -39,6 +39,7 @@ export type HomeBuild = {
   ram: string;
   storage: string;
   cooler: string;
+  caseName: string;
   gpuPm: PassmarkDisplay | null;
   cpuPm: PassmarkDisplay | null;
   href: string; // opens the configurator pre-loaded with this build
@@ -77,6 +78,7 @@ export function useHomeBuilds(): { builds: HomeBuild[]; avgRating: number } {
         ram: b.ram,
         storage: b.storage,
         cooler: b.cooler,
+        caseName: b.case,
         gpuPm: resolvePassmark(b.gpu, true, compDb),
         cpuPm: resolvePassmark(b.cpu, false, compDb),
         href: `/build?prebuilt=${b.id}`,

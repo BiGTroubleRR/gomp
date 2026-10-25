@@ -4,22 +4,18 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
-import HomeHero from '@/components/home/HomeHero';
-import { BrandStrip, ConfigBanner, FeaturedBuilds, RankedLists, TrustStrip, ValuesSection } from '@/components/home/HomeSections';
-import { useHomeBuilds } from '@/components/home/home-shared';
+import GompHome from '@/components/home/GompHome';
 import { navigateWithTransition } from '@/lib/gomp-nav';
 import { useIsMobile } from '@/lib/use-media-query';
 import { GOLD, PAGE_BG } from '@/lib/design-tokens';
 
-// The homepage follows the dark storefront concept: hero slider + three promo tiles, trust strip,
-// featured builds (selectable detail panel), price tile + 3D-config banner, three ranked lists,
-// values + stats, brand strip. All build data is live (prebuilt_pcs + the component catalog); every
-// element links somewhere real — see src/components/home/*.
+// The homepage: hero slider + promo banners, benefits, featured builds with a live 3D model, price tile +
+// 3D-config promo, three ranked lists, values + stats, brand strip — see src/components/home/GompHome.tsx.
+// All build data is live (prebuilt_pcs + the component catalog); every element links somewhere real.
 export default function Home() {
   const router = useRouter();
   const pathname = usePathname();
   const isMobile = useIsMobile();
-  const { builds, avgRating } = useHomeBuilds();
 
   const [swiping, setSwiping] = useState(false);
   const swipingRef = useRef(false);
@@ -56,13 +52,7 @@ export default function Home() {
       <div style={{ position: 'relative', zIndex: 2, background: PAGE_BG, minHeight: '100vh' }}>
         <SiteNav />
         <main>
-          <HomeHero builds={builds} isMobile={isMobile} onStartBuilding={startBuilding} />
-          <TrustStrip isMobile={isMobile} avgRating={avgRating} />
-          <FeaturedBuilds builds={builds} isMobile={isMobile} />
-          <ConfigBanner isMobile={isMobile} onStartBuilding={startBuilding} />
-          <RankedLists builds={builds} isMobile={isMobile} />
-          <ValuesSection isMobile={isMobile} avgRating={avgRating} />
-          <BrandStrip isMobile={isMobile} />
+          <GompHome onStartBuilding={startBuilding} />
         </main>
         <div style={{ height: isMobile ? 48 : 72 }} />
         <SiteFooter />
