@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
+import SiteFooter from '@/components/SiteFooter';
 import { TIER_COLORS, type Tier } from '@/lib/passmark';
 import { resolvePassmark, type PassmarkDisplay } from '@/lib/build-passmark';
 import { useIsMobile } from '@/lib/use-media-query';
@@ -552,64 +553,7 @@ function ShopInner() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer style={{ background: '#1A231F', padding: isMobile ? 24 : 60, borderTop: '0.5px solid rgba(235,230,218,0.3)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: isMobile ? 'column' : 'row',
-              alignItems: isMobile ? 'flex-start' : 'center',
-              justifyContent: 'space-between',
-              gap: isMobile ? 20 : 0,
-            }}
-          >
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 19, fontWeight: 600, color: '#C4A35A', letterSpacing: 1.5 }}>
-              GOMP
-            </div>
-            <div style={{ display: 'flex', gap: 28, flexWrap: isMobile ? 'wrap' : undefined }}>
-              <TransitionLink
-                href="/"
-                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(235,230,218,0.4)', textDecoration: 'none', fontWeight: 300 }}
-              >
-                {t.nav_home}
-              </TransitionLink>
-              <TransitionLink
-                href="/build"
-                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(235,230,218,0.4)', textDecoration: 'none', fontWeight: 300 }}
-              >
-                {t.nav_build}
-              </TransitionLink>
-              <TransitionLink
-                href="/about"
-                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(235,230,218,0.4)', textDecoration: 'none', fontWeight: 300 }}
-              >
-                {t.nav_about}
-              </TransitionLink>
-              <TransitionLink
-                href="/terms"
-                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(235,230,218,0.4)', textDecoration: 'none', fontWeight: 300 }}
-              >
-                {t.footer_terms}
-              </TransitionLink>
-              <TransitionLink
-                href="/privacy"
-                style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: 'rgba(235,230,218,0.4)', textDecoration: 'none', fontWeight: 300 }}
-              >
-                {t.footer_privacy}
-              </TransitionLink>
-            </div>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: 'rgba(235,230,218,0.3)', fontWeight: 300 }}>
-              © 2026 GOMP · Prague, CZ
-            </span>
-          </div>
-          <div style={{ borderTop: '0.5px solid rgba(235,230,218,0.08)', marginTop: 24, paddingTop: 20 }}>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(235,230,218,0.28)', fontWeight: 300, lineHeight: 1.6 }}>
-              {t.footer_disclaimer}
-            </span>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

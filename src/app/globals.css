@@ -13,11 +13,11 @@
   --gomp-on-accent: #fdfaf4;
   --gomp-gold: #c4a35a;
   --gomp-border: rgba(235, 230, 218, 0.1);
-  /* Published by SiteNav (layout effect + ResizeObserver): full header height / height of the sticky
-     part (logo row + green bar). Defaults are the measured desktop values so the first paint of a page
-     that reads them already lines up. */
-  --gomp-header-h: 158px;
-  --gomp-bar-h: 123px;
+  /* Published by GompHeader (layout effect + ResizeObserver): full header height (top bar + logo row +
+     green bar) / height of the sticky green bar. Defaults are the measured desktop values so the first
+     paint of a page that reads them already lines up. */
+  --gomp-header-h: 200px;
+  --gomp-bar-h: 56px;
 }
 
 ::selection {
