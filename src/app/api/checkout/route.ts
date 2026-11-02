@@ -15,7 +15,7 @@
 // Still no payment happens here — see checkout-intents.ts for that seam.
 import { NextResponse } from 'next/server';
 import { createAdminClient, MissingServiceRoleKeyError } from '@/lib/supabase/admin-server';
-import { createClient as createSessionClient } from '@/lib/supabase/server';
+import { auth } from '@clerk/nextjs/server';
 import { checkRateLimit, clientIpFromHeaders } from '@/lib/rate-limit';
 import { applyVat } from '@/lib/component-db-seed';
 import { sendOrderConfirmationEmail } from '@/lib/email/resend';
@@ -157,22 +157,23 @@ export async function POST(request: Request) {
   const discountEur = promoApplied ? Math.round(partsTotalEur * PROMO_DISCOUNT_RATE) : 0;
   const totalEur = partsTotalEur - discountEur + shippingEur + assemblyEur;
 
-  // Derived server-side from the request's own session cookie rather than trusted from
-  // body.userId — a client could otherwise claim any UUID as the submitting user. This matters
-  // once a signed-in customer's "My Orders" tab starts trusting user_id-linked rows as their own
-  // (see src/app/account/page.tsx). Guest checkouts (no session) still work the same as before —
-  // sessionUser is simply null.
-  const sessionSupabase = await createSessionClient();
-  const {
-    data: { user: sessionUser },
-  } = await sessionSupabase.auth.getUser();
+  // The owner is derived server-side from the request's Clerk session rather than trusted from
+  // body.userId — a client could otherwise claim any identity. "My Orders" (src/app/api/account/orders)
+  // trusts clerk_user_id as "this signed-in customer's own order". Guest checkouts (no session) still
+  // work: clerkUserId is simply null (and the order is matched to an account later by verified email).
+  let clerkUserId: string | null = null;
+  try {
+    clerkUserId = (await auth()).userId ?? null;
+  } catch {
+    // Clerk keys missing/invalid — treat as a guest rather than failing the order.
+  }
 
   const referenceCode = generateReferenceCode();
 
   const { data: inserted, error } = await supabase
     .from('checkout_intents')
     .insert({
-      user_id: sessionUser?.id ?? null,
+      clerk_user_id: clerkUserId,
       first_name: (body.firstName ?? '').trim(),
       last_name: (body.lastName ?? '').trim(),
       email,
@@ -226,8 +227,9 @@ export async function POST(request: Request) {
     discount: discountEur,
     promoCode: promoApplied ? promoCodeInput : '',
     total: totalEur,
-    // Only orders attached to an account show up under My Orders, so only they get the link.
-    ...(sessionUser ? { accountUrl: `${siteOrigin(request)}/account` } : {}),
+    // Every order gets the link: My Orders lists signed-in orders AND guest orders placed with the
+    // same verified email, so it's useful to a guest as soon as they register/sign in with that address.
+    accountUrl: `${siteOrigin(request)}/account`,
   };
   const emailResult = await sendOrderConfirmationEmail(order);
   await supabase

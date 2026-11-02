@@ -473,6 +473,7 @@ export type Database = {
         Row: {
           id: string;
           user_id: string | null;
+          clerk_user_id: string | null;
           first_name: string;
           last_name: string;
           email: string;
@@ -502,6 +503,7 @@ export type Database = {
         Insert: {
           id?: string;
           user_id?: string | null;
+          clerk_user_id?: string | null;
           first_name?: string;
           last_name?: string;
           email: string;
@@ -569,6 +571,7 @@ export type Database = {
         Row: {
           id: string;
           user_id: string | null;
+          clerk_user_id: string | null;
           first_name: string;
           last_name: string;
           email: string;
@@ -586,6 +589,7 @@ export type Database = {
         Insert: {
           id?: string;
           user_id?: string | null;
+          clerk_user_id?: string | null;
           first_name?: string;
           last_name?: string;
           email: string;

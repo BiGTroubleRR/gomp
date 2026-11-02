@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import Image from 'next/image';
+import { SignInButton, SignUpButton, useUser } from '@clerk/nextjs';
 import { useSite } from '@/contexts/SiteContext';
 import { useAuth } from '@/contexts/AuthContext';
 import TransitionLink from '@/components/TransitionLink';
@@ -9,7 +10,6 @@ import SiteNav from '@/components/SiteNav';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
 import { pick } from '@/lib/i18n';
 import { useIsMobile } from '@/lib/use-media-query';
-import { createClient } from '@/lib/supabase/client';
 import { fetchComponentDb } from '@/lib/supabase/components';
 
 type TabId = 'orders' | 'addresses' | 'profile' | 'security';
@@ -30,12 +30,6 @@ type Profile = {
   lastName: string;
   email: string;
   phone: string;
-};
-
-type PwdForm = {
-  current: string;
-  newPass: string;
-  confirm: string;
 };
 
 type OrderStatus = 'new' | 'contacted' | 'converted' | 'archived';
@@ -390,8 +384,8 @@ function TabHeader({ t, title, action, isMobile }: { t: T; title: string; action
   );
 }
 
-// Maps a Supabase `checkout_intents` row (the same table /api/checkout writes to — see that
-// route and its `checkout_intents_select_own` RLS policy) into the bilingual Order shape the
+// Maps a `checkout_intents` row (the same table /api/checkout writes to, served here by
+// /api/account/orders for the signed-in Clerk user) into the bilingual Order shape the
 // Orders tab already renders, so that JSX needed no changes at all. There's no separate
 // "build name" or confirmed ETA at this stage — it's a submitted request, not a shipped order —
 // so those fields fall back to a generic label / stay blank.
@@ -433,84 +427,27 @@ function mapCheckoutIntentRow(
   };
 }
 
-// Shown instead of the dashboard when nobody is signed in — same panel/field/button
-// primitives as the rest of the page so it doesn't look bolted on.
+// Shown instead of the dashboard when nobody is signed in. Sign-in/up is Clerk's (the same login as the
+// header), opened as a modal — same panel/button primitives as the rest of the page.
 function AuthGate({ isMobile }: { isMobile: boolean }) {
-  const { signIn, signUp } = useAuth();
   const { lang } = useSite();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
   const copy =
     lang === 'sk'
-      ? {
-          title: 'Váš účet',
-          subtitleIn: 'Prihláste sa a spravujte svoje zostavy a objednávky.',
-          subtitleUp: 'Vytvorte si účet a uložte si svoje zostavy a objednávky.',
-          email: 'E-mail',
-          password: 'Heslo',
-          first: 'Meno',
-          last: 'Priezvisko',
-          signIn: 'Prihlásiť sa',
-          signUp: 'Vytvoriť účet',
-          toSignUp: 'Nemáte účet? Zaregistrujte sa',
-          toSignIn: 'Už máte účet? Prihláste sa',
-          checkEmail: 'Skontrolujte si e-mail a potvrďte registráciu, potom sa prihláste.',
-        }
+      ? { title: 'Váš účet', subtitle: 'Prihláste sa a spravujte svoje zostavy a objednávky.', signIn: 'Prihlásiť sa', signUp: 'Vytvoriť účet' }
       : lang === 'cz'
-        ? {
-            title: 'Váš účet',
-            subtitleIn: 'Přihlaste se a spravujte své sestavy a objednávky.',
-            subtitleUp: 'Vytvořte si účet a uložte si své sestavy a objednávky.',
-            email: 'E-mail',
-            password: 'Heslo',
-            first: 'Jméno',
-            last: 'Příjmení',
-            signIn: 'Přihlásit se',
-            signUp: 'Vytvořit účet',
-            toSignUp: 'Nemáte účet? Zaregistrujte se',
-            toSignIn: 'Už máte účet? Přihlaste se',
-            checkEmail: 'Zkontrolujte si e-mail a potvrďte registraci, poté se přihlaste.',
-          }
-        : {
-            title: 'Your Account',
-            subtitleIn: 'Sign in to manage your builds and orders.',
-            subtitleUp: 'Create an account to save your builds and orders.',
-            email: 'Email',
-            password: 'Password',
-            first: 'First name',
-            last: 'Last name',
-            signIn: 'Sign in',
-            signUp: 'Create account',
-            toSignUp: "Don't have an account? Sign up",
-            toSignIn: 'Already have an account? Sign in',
-            checkEmail: 'Check your email to confirm your account, then sign in.',
-          };
+        ? { title: 'Váš účet', subtitle: 'Přihlaste se a spravujte své sestavy a objednávky.', signIn: 'Přihlásit se', signUp: 'Vytvořit účet' }
+        : { title: 'Your Account', subtitle: 'Sign in to manage your builds and orders.', signIn: 'Sign in', signUp: 'Create account' };
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setNotice(null);
-    setSubmitting(true);
-    if (mode === 'signin') {
-      const { error } = await signIn(email, password);
-      if (error) setError(error);
-    } else {
-      const { error, needsEmailConfirm } = await signUp(email, password, firstName, lastName);
-      if (error) setError(error);
-      else if (needsEmailConfirm) {
-        setNotice(copy.checkEmail);
-        setMode('signin');
-      }
-    }
-    setSubmitting(false);
-  }
+  const button: CSSProperties = {
+    padding: '13px 24px',
+    border: 'none',
+    borderRadius: 2,
+    fontFamily: 'var(--font-sans)',
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: 'pointer',
+    width: '100%',
+  };
 
   return (
     <div style={{ position: 'relative', zIndex: 2, background: '#0D0D0C', minHeight: '100vh' }}>
@@ -528,95 +465,15 @@ function AuthGate({ isMobile }: { isMobile: boolean }) {
           <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600, color: '#EBE6DA', marginBottom: 6, letterSpacing: -0.4 }}>
             {copy.title}
           </div>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', fontWeight: 300, marginBottom: 28 }}>
-            {mode === 'signin' ? copy.subtitleIn : copy.subtitleUp}
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', fontWeight: 300, marginBottom: 28 }}>{copy.subtitle}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <SignInButton mode="modal">
+              <button style={{ ...button, background: '#1F8A55', color: '#FDFAF4' }}>{copy.signIn}</button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <button style={{ ...button, background: 'transparent', color: '#EBE6DA', border: '0.5px solid rgba(235,230,218,0.25)' }}>{copy.signUp}</button>
+            </SignUpButton>
           </div>
-
-          {notice && (
-            <div
-              style={{
-                padding: '10px 14px',
-                background: 'rgba(20,83,45,0.07)',
-                border: '0.5px solid rgba(20,83,45,0.2)',
-                borderRadius: 2,
-                marginBottom: 16,
-                fontFamily: 'var(--font-sans)',
-                fontSize: 12,
-                color: '#5FB98A',
-              }}
-            >
-              {notice}
-            </div>
-          )}
-          {error && (
-            <div
-              style={{
-                padding: '10px 14px',
-                background: 'rgba(63,174,116,0.07)',
-                border: '0.5px solid rgba(63,174,116,0.2)',
-                borderRadius: 2,
-                marginBottom: 16,
-                fontFamily: 'var(--font-sans)',
-                fontSize: 12,
-                color: '#3FAE74',
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {mode === 'signup' && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <Field label={copy.first} value={firstName} onChange={setFirstName} />
-                <Field label={copy.last} value={lastName} onChange={setLastName} />
-              </div>
-            )}
-            <Field label={copy.email} value={email} onChange={setEmail} type="email" />
-            <Field label={copy.password} value={password} onChange={setPassword} type="password" />
-
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{
-                marginTop: 8,
-                padding: '13px 24px',
-                background: '#1F8A55',
-                color: '#FDFAF4',
-                border: 'none',
-                borderRadius: 2,
-                fontFamily: 'var(--font-sans)',
-                fontSize: 13,
-                fontWeight: 500,
-                cursor: submitting ? 'default' : 'pointer',
-                opacity: submitting ? 0.6 : 1,
-              }}
-            >
-              {mode === 'signin' ? copy.signIn : copy.signUp}
-            </button>
-          </form>
-
-          <button
-            onClick={() => {
-              setMode(mode === 'signin' ? 'signup' : 'signin');
-              setError(null);
-              setNotice(null);
-            }}
-            style={{
-              marginTop: 20,
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 0,
-              fontFamily: 'var(--font-sans)',
-              fontSize: 12,
-              color: '#98A39D',
-              textDecoration: 'underline',
-              textUnderlineOffset: 3,
-            }}
-          >
-            {mode === 'signin' ? copy.toSignUp : copy.toSignIn}
-          </button>
         </div>
       </div>
     </div>
@@ -627,8 +484,8 @@ export default function Account() {
   const { lang, currency, setLang, setCurrency, fmt, fmtGross } = useSite();
   const t = TRANSLATIONS[lang];
   const isMobile = useIsMobile();
-  const { user, profile: authProfile, loading: authLoading, signOut, refreshProfile } = useAuth();
-  const supabase = useMemo(() => createClient(), []);
+  const { user, profile: authProfile, loading: authLoading, signOut, openAccountSettings } = useAuth();
+  const { user: clerkUser } = useUser();
 
   const [tab, setTab] = useState<TabId>('orders');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
@@ -647,10 +504,6 @@ export default function Account() {
   const [editProfile, setEditProfile] = useState(false);
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
-
-  const [pwdForm, setPwdForm] = useState<PwdForm>({ current: '', newPass: '', confirm: '' });
-  const [passwordChanged, setPasswordChanged] = useState(false);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteInput, setDeleteInput] = useState('');
@@ -694,11 +547,9 @@ export default function Account() {
     setProfileDraft(next);
   }, [authProfile, user]);
 
-  // Fetch this user's own checkout_intents rows from Supabase — the same table /api/checkout
-  // writes to, readable here via the checkout_intents_select_own RLS policy
-  // (auth.uid() = user_id). Not the old `orders`/`order_items` tables: nothing in the app has
-  // ever written to those, so that tab would always render empty regardless of what a customer
-  // actually submitted at checkout.
+  // Orders come from /api/account/orders: it checks the Clerk session server-side and returns orders
+  // placed while signed in plus guest orders with the same verified email. (checkout_intents holds
+  // customer PII and has no public read policy, so the browser can't query it directly.)
   useEffect(() => {
     if (!user) {
       setOrders([]);
@@ -707,20 +558,22 @@ export default function Account() {
     }
     let cancelled = false;
     setOrdersLoading(true);
-    supabase
-      .from('checkout_intents')
-      .select('id, reference_code, status, total_eur, build_items, created_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
+    fetch('/api/account/orders')
+      .then((res) => (res.ok ? res.json() : { orders: [] }))
+      .then((body: { orders?: unknown[] }) => {
         if (cancelled) return;
-        setOrders((data ?? []).map((row) => mapCheckoutIntentRow(row as never)));
+        setOrders((body.orders ?? []).map((row) => mapCheckoutIntentRow(row as never)));
+        setOrdersLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setOrders([]);
         setOrdersLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [user, supabase]);
+  }, [user]);
 
   const fullName = `${profile.firstName} ${profile.lastName}`;
   const initials = `${(profile.firstName || ' ')[0]}${(profile.lastName || ' ')[0]}`.toUpperCase();
@@ -785,35 +638,25 @@ export default function Account() {
     setProfileSaved(false);
   }
 
+  // Name and phone are saved to the Clerk user (phone in unsafeMetadata — Clerk's own phone number needs
+  // SMS verification); the email is managed by Clerk and stays read-only here.
   async function saveProfile() {
-    if (!user) return;
+    if (!clerkUser) return;
     setProfileError(null);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ first_name: profileDraft.firstName, last_name: profileDraft.lastName, phone: profileDraft.phone })
-      .eq('id', user.id);
-    if (error) {
-      setProfileError(error.message);
+    try {
+      await clerkUser.update({
+        firstName: profileDraft.firstName,
+        lastName: profileDraft.lastName,
+        unsafeMetadata: { ...clerkUser.unsafeMetadata, phone: profileDraft.phone },
+      });
+    } catch (e) {
+      setProfileError(e instanceof Error ? e.message : String(e));
       return;
     }
-    await refreshProfile();
     setProfile(profileDraft);
     setEditProfile(false);
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 3000);
-  }
-
-  async function submitPassword() {
-    if (!(pwdForm.current && pwdForm.newPass && pwdForm.newPass === pwdForm.confirm)) return;
-    setPasswordError(null);
-    const { error } = await supabase.auth.updateUser({ password: pwdForm.newPass });
-    if (error) {
-      setPasswordError(error.message);
-      return;
-    }
-    setPasswordChanged(true);
-    setPwdForm({ current: '', newPass: '', confirm: '' });
-    setTimeout(() => setPasswordChanged(false), 3000);
   }
 
   function openDeleteConfirm() {
@@ -826,13 +669,18 @@ export default function Account() {
     setDeleteInput('');
   }
 
-  // Actually deleting the auth.users row requires the service-role key (never exposed to the
-  // browser), so this needs a server-side admin endpoint — left as a UI-only confirmation
-  // until that endpoint exists.
-  function executeDelete() {
-    if (deleteReady) {
+  // Deletes the Clerk account (needs "users can delete their account" enabled in the Clerk dashboard);
+  // the error is shown if it isn't.
+  async function executeDelete() {
+    if (!deleteReady || !clerkUser) return;
+    setProfileError(null);
+    try {
+      await clerkUser.delete();
       setShowDeleteConfirm(false);
       setDeleteInput('');
+      window.location.assign('/');
+    } catch (e) {
+      setProfileError(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -1544,59 +1392,8 @@ export default function Account() {
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#98A39D', fontWeight: 300, marginBottom: 24 }}>
                       {t.change_password_desc}
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24 }}>
-                      <Field
-                        label={t.current_password}
-                        value={pwdForm.current}
-                        onChange={(v) => setPwdForm((f) => ({ ...f, current: v }))}
-                        type="password"
-                      />
-                      <Field
-                        label={t.new_password}
-                        value={pwdForm.newPass}
-                        onChange={(v) => setPwdForm((f) => ({ ...f, newPass: v }))}
-                        type="password"
-                      />
-                      <Field
-                        label={t.confirm_new_password}
-                        value={pwdForm.confirm}
-                        onChange={(v) => setPwdForm((f) => ({ ...f, confirm: v }))}
-                        type="password"
-                      />
-                    </div>
-                    {passwordError && (
-                      <div
-                        style={{
-                          padding: '10px 14px',
-                          background: 'rgba(63,174,116,0.07)',
-                          border: '0.5px solid rgba(63,174,116,0.2)',
-                          borderRadius: 2,
-                          marginBottom: 14,
-                        }}
-                      >
-                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#3FAE74' }}>{passwordError}</span>
-                      </div>
-                    )}
-                    {passwordChanged && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          padding: '10px 14px',
-                          background: 'rgba(20,83,45,0.07)',
-                          border: '0.5px solid rgba(20,83,45,0.2)',
-                          borderRadius: 2,
-                          marginBottom: 16,
-                        }}
-                      >
-                        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#5FB98A', fontWeight: 500 }}>
-                          ✓ {t.password_updated}
-                        </span>
-                      </div>
-                    )}
                     <button
-                      onClick={submitPassword}
+                      onClick={openAccountSettings}
                       style={{
                         padding: '12px 24px',
                         background: '#1F8A55',
@@ -1609,7 +1406,7 @@ export default function Account() {
                         cursor: 'pointer',
                       }}
                     >
-                      {t.update_password}
+                      {t.change_password}
                     </button>
                   </div>
 

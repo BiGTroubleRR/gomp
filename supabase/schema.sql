@@ -358,6 +358,13 @@ alter table public.checkout_intents add column if not exists reference_code text
 alter table public.checkout_intents add column if not exists email_status text check (email_status in ('sent', 'failed', 'skipped'));
 alter table public.checkout_intents add column if not exists email_error text;
 
+-- Clerk is the site's one login. Clerk user ids are strings ('user_…'), not the uuids that user_id
+-- references in auth.users, so the owner of an order / request is recorded here instead (set
+-- server-side from the Clerk session in src/app/api/checkout and src/app/api/gbb — never trusted from
+-- the browser). "My Orders" reads them through src/app/api/account/orders. user_id stays for legacy rows.
+alter table public.checkout_intents add column if not exists clerk_user_id text;
+create index if not exists checkout_intents_clerk_user_id_idx on public.checkout_intents (clerk_user_id);
+
 -- Submission goes through src/app/api/checkout/route.ts, NOT a direct anon
 -- insert: the anon key has no insert policy on this table. That route rate
 -- limits by IP and recomputes parts_total_eur/shipping_eur/assembly_eur/
@@ -410,6 +417,9 @@ create table if not exists public.gbb_requests (
 );
 
 alter table public.gbb_requests enable row level security;
+
+-- Owner of the request, set server-side from the Clerk session (see the note on checkout_intents.clerk_user_id).
+alter table public.gbb_requests add column if not exists clerk_user_id text;
 
 -- Submission goes through src/app/api/gbb/route.ts (rate-limited, service-role
 -- insert) — do not add a public insert policy here.

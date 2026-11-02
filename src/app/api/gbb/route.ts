@@ -2,6 +2,7 @@
 // /api/checkout/route.ts: the anon key has no insert policy on gbb_requests, so this is the only
 // path in, and it's rate-limited by IP so a script can't flood the table.
 import { NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { createAdminClient, MissingServiceRoleKeyError } from '@/lib/supabase/admin-server';
 import { checkRateLimit, clientIpFromHeaders } from '@/lib/rate-limit';
 
@@ -48,10 +49,18 @@ export async function POST(request: Request) {
   const budgetParsed = body.budgetEur != null && body.budgetEur !== '' ? Number(body.budgetEur) : null;
   const budgetEur = budgetParsed != null && !isNaN(budgetParsed) && budgetParsed >= 0 ? budgetParsed : null;
 
+  // Owner comes from the Clerk session on the server, never from the request body.
+  let clerkUserId: string | null = null;
+  try {
+    clerkUserId = (await auth()).userId ?? null;
+  } catch {
+    // Clerk keys missing/invalid — record the request as a guest's.
+  }
+
   const { data, error } = await supabase
     .from('gbb_requests')
     .insert({
-      user_id: body.userId || null,
+      clerk_user_id: clerkUserId,
       first_name: (body.firstName ?? '').trim(),
       last_name: (body.lastName ?? '').trim(),
       email,

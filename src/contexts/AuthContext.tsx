@@ -1,9 +1,11 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import type { User } from '@supabase/supabase-js';
-import { createClient } from '@/lib/supabase/client';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { useClerk, useUser } from '@clerk/nextjs';
 
+// Clerk is the site's one login. This context is a thin adapter that keeps the `useAuth()` shape the
+// pages already use (checkout / contact / gbb prefill, the Account page) but sources it from Clerk
+// instead of the old Supabase email+password login.
 export type Profile = {
   id: string;
   first_name: string;
@@ -12,73 +14,46 @@ export type Profile = {
   phone: string;
 };
 
+type AuthUser = { id: string; email: string };
+
 type AuthContextValue = {
-  user: User | null;
+  user: AuthUser | null;
   profile: Profile | null;
   loading: boolean;
-  signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: string | null; needsEmailConfirm: boolean }>;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
+  // Clerk's own account window (password, MFA, connected accounts…).
+  openAccountSettings: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const supabase = useMemo(() => createClient(), []);
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { isLoaded, user } = useUser();
+  const clerk = useClerk();
 
-  async function loadProfile(userId: string) {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-    setProfile((data as Profile) ?? null);
-  }
+  const value = useMemo<AuthContextValue>(() => {
+    const email = user?.primaryEmailAddress?.emailAddress ?? '';
+    const metaPhone = (user?.unsafeMetadata as { phone?: unknown } | undefined)?.phone;
+    return {
+      user: user ? { id: user.id, email } : null,
+      profile: user
+        ? {
+            id: user.id,
+            first_name: user.firstName ?? '',
+            last_name: user.lastName ?? '',
+            email,
+            phone: typeof metaPhone === 'string' ? metaPhone : (user.primaryPhoneNumber?.phoneNumber ?? ''),
+          }
+        : null,
+      loading: !isLoaded,
+      signOut: async () => {
+        await clerk.signOut();
+      },
+      openAccountSettings: () => clerk.openUserProfile(),
+    };
+  }, [user, isLoaded, clerk]);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) loadProfile(session.user.id);
-      setLoading(false);
-    });
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) loadProfile(session.user.id);
-      else setProfile(null);
-    });
-
-    return () => sub.subscription.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function signUp(email: string, password: string, firstName: string, lastName: string) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { first_name: firstName, last_name: lastName } },
-    });
-    return { error: error?.message ?? null, needsEmailConfirm: !error && !data.session };
-  }
-
-  async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
-  }
-
-  async function signOut() {
-    await supabase.auth.signOut();
-  }
-
-  async function refreshProfile() {
-    if (user) await loadProfile(user.id);
-  }
-
-  return (
-    <AuthContext.Provider value={{ user, profile, loading, signUp, signIn, signOut, refreshProfile }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
