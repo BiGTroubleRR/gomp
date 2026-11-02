@@ -481,7 +481,7 @@ function AuthGate({ isMobile }: { isMobile: boolean }) {
 }
 
 export default function Account() {
-  const { lang, currency, setLang, setCurrency, fmt, fmtGross } = useSite();
+  const { lang, currency, setLang, setCurrency, fmt } = useSite();
   const t = TRANSLATIONS[lang];
   const isMobile = useIsMobile();
   const { user, profile: authProfile, loading: authLoading, signOut, openAccountSettings } = useAuth();
@@ -877,7 +877,7 @@ export default function Account() {
                               }}
                             >
                               <div style={{ fontFamily: 'var(--font-serif)', fontSize: 16, fontWeight: 500, color: '#EBE6DA', whiteSpace: 'nowrap' }}>
-                                {fmtGross(order.totalEur)}
+                                {fmt(order.totalEur)}
                               </div>
                               <div style={{ padding: '4px 11px', borderRadius: 2, background: s.bg, border: `0.5px solid ${s.border}` }}>
                                 <span
