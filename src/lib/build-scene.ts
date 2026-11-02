@@ -435,7 +435,7 @@ function buildRamStick(T: typeof THREE): THREE.Group {
   const pcbMat = getSharedMaterial('ram-pcb', { color: 0x001825, roughness: 0.6 });
   const bodyMat = getSharedMaterial('ram-body', { color: 0x2a2530, roughness: 0.28, metalness: 0.75 });
   const toothMat = getSharedMaterial('ram-tooth', { color: 0x3d3648, roughness: 0.22, metalness: 0.85 });
-  const goldMat = getSharedMaterial('ram-gold', { color: 0xc4a35a, emissive: 0xc4a35a, emissiveIntensity: 0.8 });
+  const goldMat = getSharedMaterial('ram-gold', { color: 0xc4a35a, emissive: 0xc4a35a, emissiveIntensity: 1.6 });
 
   // Bare PCB edge peeking out below the heatsink shroud.
   const pcbHeight = 0.86;
@@ -648,6 +648,13 @@ function buildComponentMesh(id: Exclude<CompId, 'case'>): THREE.Object3D {
         hub.position.set(0.285, 0, z);
         g.add(hub);
       });
+      // Green light strip along the shroud's top edge (the edge that faces the glass panel once the card is rotated in).
+      const rgbStrip = new T.Mesh(
+        new T.BoxGeometry(0.05, 0.006, 0.7),
+        new T.MeshStandardMaterial({ color: 0x1f8a55, emissive: 0x1f8a55, emissiveIntensity: 2.0, roughness: 0.4, metalness: 0.1 }),
+      );
+      rgbStrip.position.set(0.2, 0.159, 0);
+      g.add(rgbStrip);
       const bkt = new T.Mesh(new T.BoxGeometry(0.282, 0.248, 0.013), bracketMat);
       bkt.position.set(0.141, 0, -0.414);
       g.add(bkt);
@@ -797,9 +804,9 @@ function buildFanMesh(sizeMm: number): THREE.Group {
   // finish, and a scene can build a dozen+ fans (case mounts, AIO radiator), so this avoids a
   // dozen+ redundant MeshStandardMaterial allocations. Safe: nothing mutates these in place, see
   // getSharedMaterial's own comment.
-  const frameMat = getSharedMaterial('fan-frame', { color: 0x241318, roughness: 0.4, metalness: 0.45 });
+  const frameMat = getSharedMaterial('fan-frame', { color: 0x18201c, roughness: 0.4, metalness: 0.45 });
   const bezelMat = getSharedMaterial('fan-bezel', { color: 0xc4a35a, roughness: 0.25, metalness: 0.85 });
-  const bladeMat = getSharedMaterial('fan-blade', { color: 0x2e181d, roughness: 0.45, metalness: 0.3 });
+  const bladeMat = getSharedMaterial('fan-blade', { color: 0x1b2723, roughness: 0.45, metalness: 0.3 });
   const hubMat = getSharedMaterial('fan-hub', { color: 0xc4a35a, roughness: 0.2, metalness: 0.85 });
   const screwMat = getSharedMaterial('fan-screw', { color: 0x1a1a1a, roughness: 0.4, metalness: 0.6 });
 
@@ -823,6 +830,12 @@ function buildFanMesh(sizeMm: number): THREE.Group {
   // floating decoration in front of a solid wall.
   const bezel = new T.Mesh(new T.TorusGeometry(radius * 0.82, radius * 0.028, 12, 32), bezelMat);
   group.add(bezel);
+  // Thinner green emissive ring just inside the gold bezel (the fans' RGB accent).
+  const glowRing = new T.Mesh(
+    new T.TorusGeometry(radius * 0.74, radius * 0.016, 8, 48),
+    getSharedMaterial('fan-glow', { color: 0x1f8a55, emissive: 0x1f8a55, emissiveIntensity: 1.8, roughness: 0.4, metalness: 0.1 }),
+  );
+  group.add(glowRing);
 
   // Blades kept just inside the bezel's own radius so their tips never poke past the fan's
   // circular silhouette, tapering toward the tip so they read as blades rather than paddles.
@@ -1016,11 +1029,19 @@ function buildAioCoolerMesh(): THREE.Group {
   g.add(new T.Mesh(new T.BoxGeometry(0.36, 0.36, 0.38), new T.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.2, metalness: 0.85 })));
   const lcd = new T.Mesh(
     new T.CircleGeometry(0.12, 16),
-    new T.MeshStandardMaterial({ color: 0x2f9e66, emissive: 0x2f9e66, emissiveIntensity: 1.0, side: T.DoubleSide }),
+    new T.MeshStandardMaterial({ color: 0x2f9e66, emissive: 0x2f9e66, emissiveIntensity: 1.8, side: T.DoubleSide }),
   );
   lcd.rotation.y = Math.PI / 2;
   lcd.position.x = 0.185;
   g.add(lcd);
+  // Glowing ring around the pump's display.
+  const pumpRing = new T.Mesh(
+    new T.TorusGeometry(0.15, 0.011, 10, 40),
+    new T.MeshStandardMaterial({ color: 0x1f8a55, emissive: 0x1f8a55, emissiveIntensity: 2.2, roughness: 0.4, metalness: 0.1 }),
+  );
+  pumpRing.rotation.y = Math.PI / 2;
+  pumpRing.position.x = 0.187;
+  g.add(pumpRing);
 
   g.scale.setScalar(0.85);
   return g;
@@ -1200,8 +1221,11 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0c110f);
-  const camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
-  camera.position.set(7.0, 2.9, 2.6); // ~30% further back than (5.4, 2.2, 2.0), same viewing angle
+  // Same look as the homepage's 3D preview (src/lib/pc3d.ts): a narrower, more cinematic fov 32 lens,
+  // looking along (7, 2.9, 2.6). The preview uses case height x 2.0; the configurator backs off to x 2.4 so the whole case
+  // plus the side panels' overlays still fit (the case is first built 4.5 high).
+  const camera = new THREE.PerspectiveCamera(32, W / H, 0.1, 100);
+  camera.position.set(7.0, 2.9, 2.6).normalize().multiplyScalar(4.5 * 2.4);
   camera.lookAt(0, 0.2, 0);
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -1209,8 +1233,8 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   controls.dampingFactor = 0.06;
   controls.target.set(0, 0.2, 0);
   controls.enablePan = false;
-  controls.minDistance = 3;
-  controls.maxDistance = 12;
+  controls.minDistance = 4; // scaled up with the narrower fov so the zoom range covers the same framings
+  controls.maxDistance = 16;
   controls.autoRotate = !cb.oscillate;
   controls.autoRotateSpeed = 0.4;
 
@@ -1226,25 +1250,25 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     ? new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target)).theta
     : 0;
 
-  scene.add(new THREE.AmbientLight(0xe6efe9, 1.8));
-  const sun = new THREE.DirectionalLight(0xffffff, 2.5);
+  scene.add(new THREE.AmbientLight(0xf5ecd8, 1.3));
+  const sun = new THREE.DirectionalLight(0xffffff, 2.3);
   sun.position.set(5, 10, 5);
   scene.add(sun);
-  const navyLight = new THREE.PointLight(0x2f9e66, 2.4, 22);
+  const navyLight = new THREE.PointLight(0x1f8a55, 3, 24);
   navyLight.position.set(-4, 1, -3);
   scene.add(navyLight);
-  const warm = new THREE.PointLight(0xffe4c0, 0.7, 15);
+  const warm = new THREE.PointLight(0xffe4c0, 0.8, 15);
   warm.position.set(4, -2, 4);
   scene.add(warm);
 
-  const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshStandardMaterial({ color: 0x101814 }));
+  const floorMesh = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshStandardMaterial({ color: 0x0f1613 }));
   floorMesh.rotation.x = -Math.PI / 2;
   floorMesh.position.y = -2.6;
   scene.add(floorMesh);
-  const gridHelper = new THREE.GridHelper(30, 60, 0x2a3d33, 0x1c2b24);
+  const gridHelper = new THREE.GridHelper(40, 80, 0x2a3a31, 0x1c2822);
   gridHelper.position.y = floorMesh.position.y + 0.05;
   (gridHelper.material as THREE.Material).transparent = true;
-  (gridHelper.material as THREE.Material).opacity = 0.6;
+  (gridHelper.material as THREE.Material).opacity = 0.5;
   scene.add(gridHelper);
 
   // ---- Ambient decoration: 6 clusters of thin rotating rings + floating "motes" ----
@@ -1325,7 +1349,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
   scene.add(caseGroup);
   let glassMesh: THREE.Mesh | null = null;
   let glassHidden = false;
-  const GLASS_REST_OPACITY = 0.13;
+  const GLASS_REST_OPACITY = 0.08;
 
   function buildCase(w: number, h: number, d: number) {
     hoverOutlineGroup.clear();
@@ -1333,7 +1357,7 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     scene.remove(caseGroup);
     caseGroup = new THREE.Group();
     const panelMat = () =>
-      new THREE.MeshStandardMaterial({ color: 0x1e1c1a, roughness: 0.72, metalness: 0.18, side: THREE.DoubleSide, transparent: true, opacity: 0.55, depthWrite: false });
+      new THREE.MeshStandardMaterial({ color: 0x18201c, roughness: 0.72, metalness: 0.18, side: THREE.DoubleSide, transparent: true, opacity: 0.62, depthWrite: false });
     const back = new THREE.Mesh(new THREE.PlaneGeometry(d, h), panelMat());
     back.rotation.y = Math.PI / 2;
     back.position.x = -w / 2;
@@ -1358,7 +1382,12 @@ export function createBuildScene(container: HTMLDivElement, cb: SceneCallbacks =
     caseGroup.add(rear);
 
     const boxGeo = new THREE.BoxGeometry(w, h, d);
-    caseGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo, 1), new THREE.LineBasicMaterial({ color: 0x3fae74, transparent: true, opacity: 0.55 })));
+    caseGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo, 1), new THREE.LineBasicMaterial({ color: 0x1f8a55, transparent: true, opacity: 0.75 })));
+
+    // Green light at the middle of the case: the soft "glow from inside" that makes the translucent panels read as lit.
+    const innerGlow = new THREE.PointLight(0x1f8a55, 3, 5);
+    innerGlow.position.set(0, 0, 0);
+    caseGroup.add(innerGlow);
 
     glassMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(d, h),
