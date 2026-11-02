@@ -287,6 +287,12 @@ const SORT_BY_TIER_STEPS: CompId[] = ['cooler', 'storage', 'psu', 'case'];
 // count never shows the button at all.
 const SHOW_MORE_STEP = 8;
 
+// The per-position case-fan chooser (count / size / product per mount) is parked: all of its code and state
+// below stays in place, but the panel is not rendered. The case still ships with, and the 3D scene still
+// shows, its pre-installed fans (seeded into fanConfig from the case's own fanMounts) — customers just can't
+// change the number. Flip to true to bring the chooser back.
+const SHOW_FAN_CHOOSER = false;
+
 // Stage-1 grouping key for the RAM picker: brand + speed only, independent of ramFamily (which
 // is scoped to one fixed per-stick capacity, so the same brand+speed can span several ramFamily
 // values — see the plan this was built from). Works for hand-curated rows too since ramSpeedMhz
@@ -617,22 +623,38 @@ function BuildPageContent() {
   }, []);
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    const scene = createBuildScene(containerRef.current, {
+    const container = containerRef.current;
+    if (!container) return;
+    let cancelled = false;
+    let scene: BuildScene | null = null;
+    const callbacks = {
       onCompletionStart: () => {
         setCompletionRunning(true);
         setTimeout(() => setShowComplete(true), 680);
         setTimeout(() => setShowComplete(false), 680 + 4200);
       },
       onCompletionEnd: () => setCompletionRunning(false),
-    });
-    sceneRef.current = scene;
-    const size = CASE_SIZES[caseCat] || CASE_SIZES['Mid Tower'];
-    scene.updateCase(size.w, size.h, size.d);
-    setSceneReady(true);
+    };
+    const init = (make: (c: HTMLDivElement, cb: typeof callbacks) => BuildScene) => {
+      scene = make(container, callbacks);
+      sceneRef.current = scene;
+      const size = CASE_SIZES[caseCat] || CASE_SIZES['Mid Tower'];
+      scene.updateCase(size.w, size.h, size.d);
+      setSceneReady(true);
+    };
+    // /build?scene=v2 swaps in the prototype scene (src/lib/lab/scene-v2.ts — same API, homepage-model
+    // designs). Loaded on demand so the normal page never carries it.
+    if (new URLSearchParams(window.location.search).get('scene') === 'v2') {
+      import('@/lib/lab/scene-v2').then((m) => {
+        if (!cancelled) init(m.createBuildSceneV2);
+      });
+    } else {
+      init(createBuildScene);
+    }
     return () => {
+      cancelled = true;
       setSceneReady(false);
-      scene.dispose();
+      scene?.dispose();
       sceneRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2409,7 +2431,7 @@ function BuildPageContent() {
                             </div>
                           );
                         })()}
-                      {id === 'case' && comp.fanMounts && comp.fanMounts.length > 0 && (
+                      {SHOW_FAN_CHOOSER && id === 'case' && comp.fanMounts && comp.fanMounts.length > 0 && (
                         <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 12 }}>
                           <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{t.fans}</div>
                           {comp.fanMounts.map((mount) => {

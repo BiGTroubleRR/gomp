@@ -19,35 +19,38 @@ export type Pc3DSpec = {
   ramColor: number; // heatspreader colour
 };
 
-const MM = (v: number) => v / 105; // same mm-per-unit scale as the configurator
+export const MM = (v: number) => v / 105; // same mm-per-unit scale as the configurator
 const CASES = { full: { w: 2.3, h: 5.2, d: 4.6 }, mid: { w: 2.0, h: 4.5, d: 4.2 } } as const;
-const COL = { green: 0x1f8a55, gold: 0xc9a95e, bg: 0x0c110f };
+export const COL = { green: 0x1f8a55, gold: 0xc9a95e, bg: 0x0c110f };
 
-const mat = (color: number, o: THREE.MeshStandardMaterialParameters = {}) =>
+export const mat = (color: number, o: THREE.MeshStandardMaterialParameters = {}) =>
   new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.5, ...o });
-const glow = (color: number, k = 1.6) =>
+export const glow = (color: number, k = 1.6) =>
   mat(color, { emissive: color, emissiveIntensity: k, roughness: 0.4, metalness: 0.1 });
-const box = (x: number, y: number, z: number, m: THREE.Material) => new THREE.Mesh(new THREE.BoxGeometry(x, y, z), m);
+export const box = (x: number, y: number, z: number, m: THREE.Material) => new THREE.Mesh(new THREE.BoxGeometry(x, y, z), m);
 
 function prefersReducedMotion() {
   return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 // Ring lies in the XY plane and faces +Z. userData.spin is the blade group to rotate.
-function fan(r: number) {
+export function fan(r: number) {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(new THREE.TorusGeometry(r, r * 0.07, 10, 48), mat(COL.gold, { metalness: 0.85, roughness: 0.25 })));
   g.add(new THREE.Mesh(new THREE.TorusGeometry(r * 0.9, r * 0.035, 8, 48), glow(COL.green, 1.8)));
+  // One InstancedMesh for all 7 blades (was 7 separate groups + meshes per fan): a scene with a dozen fans
+  // otherwise spends ~100 draw calls on blades alone. Each instance = pivot rotation, offset out to the
+  // blade's centre, then the blade's own pitch.
   const blades = new THREE.Group();
+  const bladeMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(r * 0.74, r * 0.3, 0.015), mat(0x1b2c23, { metalness: 0.3 }), 7);
+  const rz = new THREE.Matrix4();
+  const tr = new THREE.Matrix4().makeTranslation(r * 0.46, 0, 0);
+  const rx = new THREE.Matrix4().makeRotationX(0.55);
   for (let i = 0; i < 7; i++) {
-    const piv = new THREE.Group();
-    piv.rotation.z = (i * Math.PI * 2) / 7;
-    const b = box(r * 0.74, r * 0.3, 0.015, mat(0x1b2c23, { metalness: 0.3 }));
-    b.position.x = r * 0.46;
-    b.rotation.x = 0.55;
-    piv.add(b);
-    blades.add(piv);
+    rz.makeRotationZ((i * Math.PI * 2) / 7);
+    bladeMesh.setMatrixAt(i, rz.clone().multiply(tr).multiply(rx));
   }
+  blades.add(bladeMesh);
   g.add(blades);
   const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.22, r * 0.22, 0.06, 20), mat(COL.gold, { metalness: 0.85, roughness: 0.2 }));
   hub.rotation.x = Math.PI / 2;
@@ -183,7 +186,7 @@ function buildPC(s: Pc3DSpec): PcGroup {
   return g;
 }
 
-function disposeTree(o: THREE.Object3D) {
+export function disposeTree(o: THREE.Object3D) {
   o.traverse((m) => {
     const mesh = m as THREE.Mesh;
     mesh.geometry?.dispose();

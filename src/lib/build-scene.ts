@@ -755,7 +755,7 @@ function makeCanLabelTexture(): THREE.CanvasTexture {
   return texture;
 }
 
-function buildCanMesh(): THREE.Group {
+export function buildCanMesh(): THREE.Group {
   const group = new THREE.Group();
   const radius = mmToUnits(CAN_DIAMETER_MM) / 2;
   const height = mmToUnits(CAN_HEIGHT_MM);
