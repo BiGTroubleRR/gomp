@@ -116,7 +116,7 @@ const em = (v: [string, string, string]): ReactNode => (
 );
 
 // Live, orbitable 3D model for the spotlight card. three.js is loaded on demand.
-function Spot3D({ build, label, hint }: { build: Card; label: string; hint: string }) {
+function Spot3D({ build, label, hint, focusX }: { build: Card; label: string; hint: string; focusX: number | null }) {
   const ref = useRef<HTMLDivElement>(null);
   const viewer = useRef<Pc3DViewer | null>(null);
   const [failed, setFailed] = useState(false);
@@ -125,6 +125,8 @@ function Spot3D({ build, label, hint }: { build: Card; label: string; hint: stri
   // not make the viewer re-show (and restart) the same model.
   const specKey = JSON.stringify(build.p3);
   const spec = useMemo(() => JSON.parse(specKey) as Pc3DSpec, [specKey]);
+  // Latest focus for the async viewer creation below (the effect only runs once).
+  const focusRef = useRef(focusX);
 
   useEffect(() => {
     let alive = true;
@@ -133,6 +135,7 @@ function Spot3D({ build, label, hint }: { build: Card; label: string; hint: stri
         if (!alive || !ref.current) return;
         viewer.current = createPc3DViewer(ref.current);
         viewer.current.show(spec);
+        viewer.current.focus(focusRef.current);
       })
       .catch(() => setFailed(true));
     return () => {
@@ -147,10 +150,19 @@ function Spot3D({ build, label, hint }: { build: Card; label: string; hint: stri
     viewer.current?.show(spec);
   }, [spec]);
 
+  useEffect(() => {
+    focusRef.current = focusX;
+    viewer.current?.focus(focusX);
+  }, [focusX]);
+
   if (failed) return <div className="v3d v3d-fallback" aria-hidden="true" />;
   return (
     <div className="v3d" ref={ref} role="img" aria-label={`${label} ${build.name}`} onPointerDown={() => setTouched(true)}>
-      {!touched && <div className="hint">{hint}</div>}
+      {!touched && (
+        <div className="hint" style={focusX == null ? undefined : { left: focusX - 120, right: 'auto', width: 240 }}>
+          {hint}
+        </div>
+      )}
     </div>
   );
 }
@@ -211,6 +223,9 @@ export default function GompHome({ onStartBuilding }: { onStartBuilding: () => v
   const [sel, setSel] = useState(0);
   const [slide, setSlide] = useState(0);
   const spotRef = useRef<HTMLDivElement>(null);
+  const scoresRef = useRef<HTMLDivElement>(null);
+  const infoRef = useRef<HTMLDivElement>(null);
+  const [focusX, setFocusX] = useState<number | null>(null);
 
   const ready = cards.length > 0;
   const b = cards[sel] ?? cards[0];
@@ -224,6 +239,25 @@ export default function GompHome({ onStartBuilding }: { onStartBuilding: () => v
   const fromPrice = applyVat(MIN_CONFIG_NET_CZK, vatRatePct);
   const vat = `${s('inclVat')} (${vatRatePct}%)`;
   const rated = avgRating.toFixed(1);
+
+  // Centre the 3D model in the gap between the two glass panels (null when they stack on mobile).
+  useEffect(() => {
+    const measure = () => {
+      const m = spotRef.current?.getBoundingClientRect();
+      const i = infoRef.current?.getBoundingClientRect();
+      if (!m || !i) return;
+      if (i.top > m.top + 60) {
+        setFocusX(null);
+        return;
+      }
+      const c = scoresRef.current?.getBoundingClientRect();
+      const left = c && c.width ? c.right : m.left;
+      setFocusX(Math.round((left + i.left) / 2 - m.left));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [sel, ready]);
 
   const slides = useMemo<SlideKey[]>(() => (flagship ? ['hero', 'flagship', 'undervolt'] : ['hero', 'undervolt']), [flagship]);
   const cur = slide % slides.length;
@@ -395,7 +429,7 @@ export default function GompHome({ onStartBuilding }: { onStartBuilding: () => v
             </div>
             <div className="spot">
               <div className="spot-main" ref={spotRef}>
-                <div className="scores">
+                <div className="scores glass" ref={scoresRef}>
                   <div className="score tier">
                     <b>{b.tier ?? '—'}</b>
                   </div>
@@ -406,9 +440,9 @@ export default function GompHome({ onStartBuilding }: { onStartBuilding: () => v
                   <div className="score-l">{s('rating')}</div>
                 </div>
                 <div className="spot-img">
-                  <Spot3D build={b} label={s('preview3d')} hint={s('dragHint')} />
+                  <Spot3D build={b} label={s('preview3d')} hint={s('dragHint')} focusX={focusX} />
                 </div>
-                <div className="spot-info">
+                <div className="spot-info glass" ref={infoRef}>
                   <div className="eyebrow">
                     {pick(lang, b.catLabel)} · {s('tierLower')} {b.tier ?? '—'}
                   </div>

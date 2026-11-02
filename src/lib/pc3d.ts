@@ -193,6 +193,7 @@ function disposeTree(o: THREE.Object3D) {
 }
 
 function createStage(width: number, height: number, transparent = false) {
+  const camDist = transparent ? 2.15 : 2.0; // live view sits a touch closer
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: transparent, preserveDrawingBuffer: transparent });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(width, height, false);
@@ -223,7 +224,7 @@ function createStage(width: number, height: number, transparent = false) {
     const h = pc.userData.h;
     if (floor && grid) { floor.position.y = -h / 2 - 0.09; grid.position.y = floor.position.y + 0.01; }
     const dir = new THREE.Vector3(7, 2.9, 2.6).normalize();
-    camera.position.copy(dir.multiplyScalar(h * 2.15));
+    camera.position.copy(dir.multiplyScalar(h * camDist));
     camera.lookAt(0, -0.1, 0);
   }
   function dispose() {
@@ -234,7 +235,13 @@ function createStage(width: number, height: number, transparent = false) {
   return { renderer, scene, camera, setBuild, dispose, getPc: () => pc };
 }
 
-export type Pc3DViewer = { show: (spec: Pc3DSpec) => void; dispose: () => void };
+export type Pc3DViewer = {
+  show: (spec: Pc3DSpec) => void;
+  // Horizontal pixel (from the container's left edge) the model should be centred on,
+  // e.g. the gap between two glass panels. null = centre of the canvas.
+  focus: (px: number | null) => void;
+  dispose: () => void;
+};
 
 export function createPc3DViewer(container: HTMLElement): Pc3DViewer {
   const reduced = prefersReducedMotion();
@@ -255,12 +262,20 @@ export function createPc3DViewer(container: HTMLElement): Pc3DViewer {
   controls.addEventListener('start', () => { controls.autoRotate = false; clearTimeout(resume); container.dataset.touched = '1'; });
   controls.addEventListener('end', () => { if (!reduced) resume = setTimeout(() => { controls.autoRotate = true; }, 4000); });
 
+  let focusPx: number | null = null;
+  const applyOffset = () => {
+    const r = container.getBoundingClientRect();
+    if (!r.width) return;
+    if (focusPx == null) st.camera.clearViewOffset();
+    else st.camera.setViewOffset(r.width, r.height, r.width / 2 - focusPx, 0, r.width, r.height);
+    st.camera.updateProjectionMatrix();
+  };
   const ro = new ResizeObserver(() => {
     const r = container.getBoundingClientRect();
     if (!r.width) return;
     st.renderer.setSize(r.width, r.height, false);
     st.camera.aspect = r.width / r.height;
-    st.camera.updateProjectionMatrix();
+    applyOffset();
   });
   ro.observe(container);
 
@@ -282,6 +297,10 @@ export function createPc3DViewer(container: HTMLElement): Pc3DViewer {
   raf = requestAnimationFrame(loop);
 
   return {
+    focus(px) {
+      focusPx = px;
+      applyOffset();
+    },
     show(spec) {
       st.setBuild(spec);
       controls.target.set(0, -0.1, 0);
