@@ -1,4 +1,4 @@
-// PROTOTYPE (lab). Part designs for the v2 scene, in the homepage model's design language (translucent
+// Part designs for the v2 scene, in the homepage model's design language (translucent
 // dark-green shell with green edges, gold-ringed fans with a green glow ring, glowing RAM / GPU strips, AIO
 // pump ring + tubes, fin-stack air tower with heatpipes). Unlike the production meshes these are built
 // directly at their real-mm size from the layout (no "scale a placeholder to the quoted size" step).
@@ -238,26 +238,43 @@ export function buildCooler(L: Layout, type: 'air' | 'aio', c: CaseSize): Part {
   cap.rotation.y = Math.PI / 2;
   cap.position.x = 0.087;
   g.add(cap);
+  // Radiator: front-mounted and standing like production (build-scene.ts updateAioRadiator), or under the
+  // top panel when the GPU needs the front (see layout.ts). It lives in the case frame, converted here to
+  // the pump's local frame so it flies in with the rest of the cooler.
   const rad = L.cooler.radiator;
   const rp = sub(rad.pos, anchor);
-  const radBox = box(mmToUnits(120), 0.27, rad.length, mat(0x1c1c1c, { metalness: 0.7, roughness: 0.35 }));
+  const front = rad.mount === 'front';
+  const radW = mmToUnits(120) * 0.94;
+  const radBox = front
+    ? box(radW, rad.length, rad.thickness, mat(0x1c1c1c, { metalness: 0.7, roughness: 0.35 }))
+    : box(radW, rad.thickness, rad.length, mat(0x1c1c1c, { metalness: 0.7, roughness: 0.35 }));
   at(radBox, rp);
   g.add(radBox);
-  const frontZ = rp[2] - rad.length / 2;
   for (let i = 0; i < rad.fans; i++) {
-    const f = fan(0.52);
-    f.rotation.x = Math.PI / 2;
-    f.position.set(rp[0], rp[1] - 0.2, frontZ + ((i + 0.5) * rad.length) / rad.fans);
+    const f = fan(0.52); // ring in the XY plane: faces +Z (into the case for a front radiator)
+    const along = -rad.length / 2 + ((i + 0.5) * rad.length) / rad.fans;
+    if (front) {
+      f.position.set(rp[0], rp[1] + along, rp[2] + rad.thickness / 2 + 0.07);
+    } else {
+      f.rotation.x = Math.PI / 2; // facing down, under the radiator
+      f.position.set(rp[0], rp[1] - rad.thickness / 2 - 0.07, rp[2] + along);
+    }
     g.add(f);
   }
+  // Tubes from the pump to the radiator's glass-side end.
+  const { radiusScale, spacingScale, bend } = L.cooler.tubes;
   const tubeM = mat(0x2a2a2a, { roughness: 0.6, metalness: 0.1 });
-  [-0.08, 0.08].forEach((o) => {
+  const end: V3 = front
+    ? [rp[0] + radW / 2 - 0.06, rp[1] + rad.length * 0.32, rp[2] + rad.thickness / 2 + 0.05]
+    : [rp[0] - radW / 2 + 0.06, rp[1] - rad.thickness / 2 - 0.05, rp[2] + rad.length * 0.32];
+  [-0.08, 0.08].forEach((o0) => {
+    const o = o0 * spacingScale;
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0.09, o, 0.18),
-      new THREE.Vector3(rp[0] - 0.1, (rp[1] * 0.55) + o, rp[2] * 0.4 + 0.3),
-      new THREE.Vector3(rp[0] - 0.2, rp[1] - 0.1, rp[2] + o),
+      new THREE.Vector3(0.09, o, front ? -0.12 : 0.12),
+      new THREE.Vector3(0.25 + bend[0], (end[1] + o) * 0.5 + bend[1], end[2] * 0.45 + bend[2]),
+      new THREE.Vector3(end[0], end[1] + (front ? o : 0), end[2] + (front ? 0 : o)),
     ]);
-    g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.035, 8), tubeM));
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 28, 0.035 * radiusScale, 8), tubeM));
   });
   void c;
   return { group: g, anchor };

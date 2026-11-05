@@ -642,14 +642,19 @@ function BuildPageContent() {
       scene.updateCase(size.w, size.h, size.d);
       setSceneReady(true);
     };
-    // /build?scene=v2 swaps in the prototype scene (src/lib/lab/scene-v2.ts — same API, homepage-model
-    // designs). Loaded on demand so the normal page never carries it.
-    if (new URLSearchParams(window.location.search).get('scene') === 'v2') {
-      import('@/lib/lab/scene-v2').then((m) => {
-        if (!cancelled) init(m.createBuildSceneV2);
-      });
-    } else {
+    // The v2 scene (src/lib/lab/scene-v2.ts — same API, homepage-model designs) is the default.
+    // /build?scene=v1 keeps the original scene as a fallback while v2 settles in. v2 is loaded on demand;
+    // if that chunk ever fails to load, the original scene takes over so the configurator still works.
+    if (new URLSearchParams(window.location.search).get('scene') === 'v1') {
       init(createBuildScene);
+    } else {
+      import('@/lib/lab/scene-v2')
+        .then((m) => {
+          if (!cancelled) init(m.createBuildSceneV2);
+        })
+        .catch(() => {
+          if (!cancelled) init(createBuildScene);
+        });
     }
     return () => {
       cancelled = true;
