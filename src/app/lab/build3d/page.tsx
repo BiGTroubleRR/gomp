@@ -227,7 +227,7 @@ export default function Lab3D() {
       ['toggleComponent (fly-in / out)', true], ['updateCase', true], ['toggleGlass', true], ['pickComponentAt', true], ['setHoverOutline', true],
       ['setSizeScale (real mm, air/AIO swap)', true], ['setGpuOrientation', true], ['setRamModules', true], ['setMoboRamSlots', true],
       ['setComponentDimensions', true], ['setDimensionsVisible', true], ['setFans', true], ['applyBuildSnapshot', true], ['setMotion', true],
-      ['triggerCompletion', true], ['setCanVisible', true], ['applyAlignmentTuning', false],
+      ['triggerCompletion', true], ['setCanVisible', true], ['applyAlignmentTuning (as offsets)', true],
     ] as [string, boolean][],
     [],
   );
@@ -235,8 +235,8 @@ export default function Lab3D() {
   return (
     <div style={{ background: PAGE_BG, color: INK, minHeight: '100vh', padding: 16, fontFamily: 'var(--font-sans)' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 12 }}>
-        <h1 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontSize: 22, color: GOLD }}>Lab · 3D configurator v2 (prototype)</h1>
-        <span style={{ fontSize: 12, color: MUTED }}>Same API, homepage-model designs. Left = production scene, right = v2. Not linked from the site.</span>
+        <h1 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontSize: 22, color: GOLD }}>Lab · 3D configurator v2</h1>
+        <span style={{ fontSize: 12, color: MUTED }}>Same API, homepage-model designs. Left = the original scene (still used by checkout and the Admin alignment preview), right = v2, which is the scene on /build.</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '330px 1fr', gap: 14, alignItems: 'start' }}>

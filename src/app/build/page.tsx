@@ -40,7 +40,6 @@ import {
 } from '@/lib/component-db-seed';
 import { autoBuildForBudget, BUDGET_STEPS, type AutoBuildNote } from '@/lib/auto-build';
 import {
-  createBuildScene,
   SLOTS,
   CASE_SIZES,
   mmToUnits,
@@ -642,15 +641,13 @@ function BuildPageContent() {
       scene.updateCase(size.w, size.h, size.d);
       setSceneReady(true);
     };
-    // /build?scene=v2 swaps in the prototype scene (src/lib/lab/scene-v2.ts — same API, homepage-model
-    // designs). Loaded on demand so the normal page never carries it.
-    if (new URLSearchParams(window.location.search).get('scene') === 'v2') {
-      import('@/lib/lab/scene-v2').then((m) => {
+    // The configurator's scene is v2 (src/lib/lab/scene-v2.ts — the homepage model's part designs, same API
+    // as the original createBuildScene). Loaded on demand so the page shell doesn't carry the 3D code.
+    import('@/lib/lab/scene-v2')
+      .then((m) => {
         if (!cancelled) init(m.createBuildSceneV2);
-      });
-    } else {
-      init(createBuildScene);
-    }
+      })
+      .catch((err) => console.error('3D scene failed to load', err));
     return () => {
       cancelled = true;
       setSceneReady(false);

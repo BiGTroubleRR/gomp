@@ -1,8 +1,8 @@
-// PROTOTYPE (lab). Pure layout maths for the v2 configurator scene: given the case size and each part's
+// Pure layout maths for the v2 configurator scene: given the case size and each part's
 // real-mm dimensions, returns where every part sits. No three.js / WebGL here, so it is easy to reason
 // about and to check. Frame (same as the production scene): X points from the motherboard tray (-X, the
 // solid side) toward the glass panel (+X); Y is up; the case front is -Z and the rear (I/O side) is +Z.
-import { mmToUnits, type CompId, type DimensionSpec } from '@/lib/build-scene';
+import { DEFAULT_ALIGNMENT_TUNING, mmToUnits, type AlignmentTuning, type CompId, type DimensionSpec } from '@/lib/build-scene';
 import {
   GPU_HEIGHT_MM,
   MOBO_FORM_FACTOR_SIZE_MM,
@@ -17,11 +17,27 @@ export type V3 = [number, number, number];
 export type Dims3 = { x: number; y: number; z: number };
 export type CaseSize = { w: number; h: number; d: number };
 
+// Admin's saved alignment (src/lib/supabase/alignment-tuning.ts), expressed as *offsets from the production
+// defaults*. v2 lays parts out from real-mm maths, so the production absolute values (hand-tuned for the old
+// meshes) can't be used as-is; what carries over is how far Admin moved something away from the default.
+// Zero everywhere = Admin never touched it = v2's own layout unchanged.
+export type LayoutTuning = {
+  parts: Partial<Record<'cpu' | 'cooler' | 'ram' | 'storage' | 'gpu', V3>>; // per-part nudge (gpu: flat mount only)
+  mobo: V3; // moves the board and everything mounted on it (cpu, cooler, ram, storage, flat gpu)
+  gpuVertical: V3; // vertical / riser-mounted gpu nudge
+  tubeRadiusScale: number;
+  tubeSpacingScale: number;
+  tubeBend: V3; // added to the AIO tubes' middle control point
+};
+
+export const NO_TUNING: LayoutTuning = { parts: {}, mobo: [0, 0, 0], gpuVertical: [0, 0, 0], tubeRadiusScale: 1, tubeSpacingScale: 1, tubeBend: [0, 0, 0] };
+
 export type PartInputs = {
   specs: Partial<Record<CompId, DimensionSpec[]>>;
   cooler: { type: 'air' | 'aio'; radiatorMm: number; heightMm: number };
   ram: { sticks: number; slots: number };
   gpuVertical: boolean;
+  tuning?: LayoutTuning;
 };
 
 export const DEFAULT_INPUTS: PartInputs = {
@@ -29,7 +45,13 @@ export const DEFAULT_INPUTS: PartInputs = {
   cooler: { type: 'air', radiatorMm: 360, heightMm: 158 },
   ram: { sticks: 2, slots: 4 },
   gpuVertical: false,
+  tuning: NO_TUNING,
 };
+
+// Real AIO radiator thickness and the gap to the front panel — same values as the production scene
+// (build-scene.ts: mmToUnits(27), FRONT_RADIATOR_CLEARANCE).
+export const RADIATOR_THICKNESS_MM = 27;
+const FRONT_RADIATOR_CLEARANCE = 0.02;
 
 // Size (in scene units) of a part along an axis, from the real-mm DimensionSpec for that axis.
 function axisUnits(specs: DimensionSpec[] | undefined, axis: 'x' | 'y' | 'z', fallbackMm: number): number {
@@ -50,7 +72,11 @@ export type Layout = {
     anchor: V3; // air: tower centre; aio: pump centre
     radius: number; // aio pump radius
     towerLen: number; // air tower height along X
-    radiator: { pos: V3; length: number; fans: number }; // aio, case-frame
+    // aio, case-frame. 'front' (default, as production): standing, length along Y, fans on its inner (+Z)
+    // face. 'top': lying under the top panel, length along Z, fans underneath — used when the GPU needs the
+    // front of the case (a vertical card, or a flat card long enough to reach the radiator).
+    radiator: { pos: V3; length: number; thickness: number; fans: number; mount: 'front' | 'top' };
+    tubes: { radiusScale: number; spacingScale: number; bend: V3 };
   };
   sideFanZ: number | null;
 };
@@ -115,22 +141,34 @@ export function computeLayout(c: CaseSize, inp: PartInputs): Layout {
 
   // ---- cooler
   const towerLen = mmToUnits(inp.cooler.heightMm);
-  const radLen = Math.min(mmToUnits(inp.cooler.radiatorMm), Math.max(0.6, d - 0.5));
+  const radT = mmToUnits(RADIATOR_THICKNESS_MM);
+  const RAD_FAN_DEPTH = 0.14; // fan stack in front of the radiator's inner face
+  const radInnerZ = -d / 2 + FRONT_RADIATOR_CLEARANCE + radT + RAD_FAN_DEPTH;
+  const gpuFrontZ = inp.gpuVertical ? gpuPos[2] - gThick / 2 : gpuPos[2] - gLen / 2;
+  const radMount: 'front' | 'top' = gpuFrontZ < radInnerZ + 0.02 ? 'top' : 'front';
+  const radLen = Math.min(mmToUnits(inp.cooler.radiatorMm), Math.max(0.6, radMount === 'front' ? h - 0.3 : d - 0.5));
+  const radPos: V3 = radMount === 'front' ? [0, 0, -d / 2 + FRONT_RADIATOR_CLEARANCE + radT / 2] : [0.2, h / 2 - 0.06 - radT / 2, -d / 2 + 0.25 + radLen / 2];
   const aioFans = Math.max(1, Math.round(inp.cooler.radiatorMm / 120));
   const coolerAnchor: V3 = inp.cooler.type === 'aio' ? [cpuPos[0] + 0.03 + 0.08 + 0.02, cy, cz] : [cpuPos[0] + 0.03 + 0.02 + towerLen / 2, cy, cz];
 
+  // ---- Admin alignment offsets (all zero unless Admin moved something)
+  const t = inp.tuning ?? NO_TUNING;
+  const add = (p: V3, ...o: (V3 | undefined)[]): V3 => o.reduce<V3>((a, v) => (v ? [a[0] + v[0], a[1] + v[1], a[2] + v[2]] : a), p);
+  const onBoard = t.mobo;
+
   return {
-    mobo: { pos: [moboX, moboY, moboZ], dims: moboDims, slotZ },
-    cpu: { pos: cpuPos, dims: cpuDims },
-    ram: { dims: ramDims, pos: ramPos, filled },
-    gpu: { pos: gpuPos, dims: gpuDims, vertical: inp.gpuVertical },
-    storage: { pos: stoPos, dims: stoDims },
+    mobo: { pos: add([moboX, moboY, moboZ], onBoard), dims: moboDims, slotZ: slotZ.map((z) => z + onBoard[2]) },
+    cpu: { pos: add(cpuPos, onBoard, t.parts.cpu), dims: cpuDims },
+    ram: { dims: ramDims, pos: ramPos.map((p) => add(p, onBoard, t.parts.ram)), filled },
+    gpu: { pos: inp.gpuVertical ? add(gpuPos, t.gpuVertical) : add(gpuPos, onBoard, t.parts.gpu), dims: gpuDims, vertical: inp.gpuVertical },
+    storage: { pos: add(stoPos, onBoard, t.parts.storage), dims: stoDims },
     psu: { pos: psuPos, dims: psuDims },
     cooler: {
-      anchor: coolerAnchor,
+      anchor: add(coolerAnchor, onBoard, t.parts.cooler),
       radius: 0.24,
       towerLen,
-      radiator: { pos: [0.2, h / 2 - 0.2, -d / 2 + 0.25 + radLen / 2], length: radLen, fans: aioFans },
+      radiator: { pos: radPos, length: radLen, thickness: radT, fans: Math.max(1, Math.min(aioFans, Math.floor(radLen / mmToUnits(120) + 0.15))), mount: radMount },
+      tubes: { radiusScale: t.tubeRadiusScale, spacingScale: t.tubeSpacingScale, bend: t.tubeBend },
     },
     sideFanZ: frontGapMidZ,
   };
@@ -166,4 +204,26 @@ export function fanTransform(
       return { pos: [-w / 2 + size * 0.105 + gap, along(h), sideCenterZ ?? -d / 2 + size / 2 + gap], rot: [0, Math.PI / 2, 0] };
     }
   }
+}
+
+// Production alignment (absolute values, as saved by Admin per motherboard form factor) -> v2 offsets.
+// Same frame as production: X toward the glass, Y up, -Z front. Larger moboRearClearance pulls the board
+// away from the rear wall (-Z); larger moboSideClearance pushes it off the tray (+X); larger gpuSideClearance
+// moves a vertical card away from the glass (-X); larger gpuVerticalBottomClearance lifts it (+Y).
+export function tuningFromAlignment(a: AlignmentTuning): LayoutTuning {
+  const D = DEFAULT_ALIGNMENT_TUNING;
+  const delta = (v: [number, number, number], base: [number, number, number]): V3 => [v[0] - base[0], v[1] - base[1], v[2] - base[2]];
+  const parts: LayoutTuning['parts'] = {};
+  (['cpu', 'cooler', 'ram', 'storage', 'gpu'] as const).forEach((id) => {
+    const d = delta(a.basePos[id], D.basePos[id]);
+    if (d[0] || d[1] || d[2]) parts[id] = d;
+  });
+  return {
+    parts,
+    mobo: [a.moboSideClearance - D.moboSideClearance, 0, -(a.moboRearClearance - D.moboRearClearance)],
+    gpuVertical: [-(a.gpuSideClearance - D.gpuSideClearance), a.gpuVerticalBottomClearance - D.gpuVerticalBottomClearance, 0],
+    tubeRadiusScale: D.aioTubeRadius ? a.aioTubeRadius / D.aioTubeRadius : 1,
+    tubeSpacingScale: D.aioTubeSpacing ? a.aioTubeSpacing / D.aioTubeSpacing : 1,
+    tubeBend: [a.aioBendOffset[0], a.aioBendOffset[1], a.aioBendOffset[2]],
+  };
 }

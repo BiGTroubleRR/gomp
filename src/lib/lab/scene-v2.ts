@@ -1,18 +1,20 @@
-// PROTOTYPE (lab). createBuildSceneV2: the configurator's scene controller re-implemented on top of the
-// homepage model's part designs. It keeps the SAME method names and semantics as createBuildScene in
-// src/lib/build-scene.ts so a page can drive either one with identical calls (the lab page does, and
-// /build?scene=v2 swaps it in); only the meshes (parts.ts) and the layout (layout.ts) are new.
+// createBuildSceneV2: the configurator's scene controller re-implemented on top of the homepage model's
+// part designs. It keeps the SAME method names and semantics as createBuildScene in src/lib/build-scene.ts
+// so a page can drive either one with identical calls. /build uses it by default (/build?scene=v1 falls
+// back to the original scene); the lab page shows both side by side. Only the meshes (parts.ts) and the
+// layout (layout.ts) are new.
 //
 // Implemented: part fly-in/out + selection glow, case swap, real-mm sizing, air/AIO variants, RAM sticks /
 // slots, GPU horizontal/vertical (with automatic vertical for tiny cases and cards too long to lie flat),
 // case fans, glass, hover pick + hull outline, dimension labels, reference can, completion animation,
-// ambient decoration + motion toggle, off-screen render pause.
-// Still stubbed: applyAlignmentTuning (Admin's saved offsets are ignored — see `tuning` note in layout.ts).
-// Known differences kept for later: AIO radiator is top-mounted (production mounts it at the front).
+// ambient decoration + motion toggle, off-screen render pause, front-mounted AIO radiator (as production),
+// Admin alignment tuning (applied as offsets from the production defaults — see tuningFromAlignment).
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
   buildCanMesh,
+  DEFAULT_ALIGNMENT_TUNING,
+  type AlignmentTuning,
   CAN_DIAMETER_MM,
   CAN_HEIGHT_MM,
   caseUnitsFor,
@@ -30,7 +32,7 @@ import {
 } from '@/lib/build-scene';
 import type { Component, FanMountPosition } from '@/lib/component-db-seed';
 import { COL, disposeTree } from '@/lib/pc3d';
-import { computeLayout, DEFAULT_INPUTS, type CaseSize, type PartInputs, type V3 } from './layout';
+import { computeLayout, DEFAULT_INPUTS, tuningFromAlignment, type CaseSize, type PartInputs, type V3 } from './layout';
 import { buildCooler, buildCpu, buildFanMounts, buildGpu, buildMobo, buildPsu, buildRam, buildShell, buildStorage, gpuFansFor, type Part } from './parts';
 
 type PartId = Exclude<CompId, 'case'>;
@@ -534,7 +536,10 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
       rebuildFans();
     } else {
       rebuild(id);
-      if (id === 'gpu') rebuild('mobo');
+      if (id === 'gpu') {
+        rebuild('mobo');
+        if (inputs.cooler.type === 'aio') rebuild('cooler'); // the card's length decides front vs top radiator
+      }
     }
   }
 
@@ -558,6 +563,7 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
     syncGpuInputs();
     rebuild('gpu');
     rebuild('mobo');
+    if (inputs.cooler.type === 'aio') rebuild('cooler');
   }
 
   function setRamModules(count: number) {
@@ -793,8 +799,34 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
     },
     getCaseSizeFor: (category: string) => SIZES[category] || SIZES['Mid Tower'],
     isCompletionRunning: () => completionRunning,
-    // Stub: v2 lays parts out itself (layout.ts) instead of reading Admin's saved alignment_tuning.
-    applyAlignmentTuning() {},
+    // Admin's saved alignment for the current motherboard form factor (see /build's resolveAlignmentTuning).
+    // Each call is the complete override set for that form factor, so it is applied on top of the
+    // production defaults rather than merged into whatever the previous form factor had saved.
+    applyAlignmentTuning(partial: Partial<AlignmentTuning> = {}) {
+      const D = DEFAULT_ALIGNMENT_TUNING;
+      const v3 = (v: [number, number, number]): [number, number, number] => [v[0], v[1], v[2]];
+      const full: AlignmentTuning = {
+        basePos: {
+          cpu: v3(partial.basePos?.cpu ?? D.basePos.cpu),
+          cooler: v3(partial.basePos?.cooler ?? D.basePos.cooler),
+          ram: v3(partial.basePos?.ram ?? D.basePos.ram),
+          storage: v3(partial.basePos?.storage ?? D.basePos.storage),
+          gpu: v3(partial.basePos?.gpu ?? D.basePos.gpu),
+        },
+        moboRearClearance: partial.moboRearClearance ?? D.moboRearClearance,
+        moboSideClearance: partial.moboSideClearance ?? D.moboSideClearance,
+        gpuSideClearance: partial.gpuSideClearance ?? D.gpuSideClearance,
+        gpuVerticalBottomClearance: partial.gpuVerticalBottomClearance ?? D.gpuVerticalBottomClearance,
+        aioTubeSpacing: partial.aioTubeSpacing ?? D.aioTubeSpacing,
+        aioTubeRadius: partial.aioTubeRadius ?? D.aioTubeRadius,
+        aioBendOffset: v3(partial.aioBendOffset ?? D.aioBendOffset),
+      };
+      const next = tuningFromAlignment(full);
+      if (JSON.stringify(next) === JSON.stringify(inputs.tuning)) return; // nothing moved: skip the rebuild
+      inputs.tuning = next;
+      rebuildAllParts();
+      rebuildFans();
+    },
     // ---- lab-only helpers ----
     info: () => ({ calls: renderer.info.render.calls, triangles: renderer.info.render.triangles }),
     getGpuVertical: () => inputs.gpuVertical,
