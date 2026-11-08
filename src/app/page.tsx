@@ -2,11 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import SiteNav from '@/components/SiteNav';
-import SiteFooter from '@/components/SiteFooter';
 import GompHome from '@/components/home/GompHome';
 import { navigateWithTransition } from '@/lib/gomp-nav';
-import { useIsMobile } from '@/lib/use-media-query';
 import { GOLD, PAGE_BG } from '@/lib/design-tokens';
 
 // The homepage: hero slider + promo banners, benefits, featured builds with a live 3D model, price tile +
@@ -15,7 +12,6 @@ import { GOLD, PAGE_BG } from '@/lib/design-tokens';
 export default function Home() {
   const router = useRouter();
   const pathname = usePathname();
-  const isMobile = useIsMobile();
 
   const [swiping, setSwiping] = useState(false);
   const swipingRef = useRef(false);
@@ -50,12 +46,7 @@ export default function Home() {
       `}</style>
 
       <div style={{ position: 'relative', zIndex: 2, background: PAGE_BG, minHeight: '100vh' }}>
-        <SiteNav />
-        <main>
-          <GompHome onStartBuilding={startBuilding} />
-        </main>
-        <div style={{ height: isMobile ? 48 : 72 }} />
-        <SiteFooter />
+        <GompHome onStartBuilding={startBuilding} />
 
         {/* ---- Swipe overlay ---- */}
         {swiping && (
