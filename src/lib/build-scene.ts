@@ -294,13 +294,22 @@ const DIM_COLOR = 0xc4a35a; // GOMP gold — matches the site's accent color
 // oversized text and added to the overall "wall of numbers" feel. Clamped so a tiny part's
 // label never becomes unreadable and a huge case's label never gets comically large; readers
 // are expected to zoom in on small parts rather than have every label pinned to one size.
+// Canvas text can't read a CSS variable, so this resolves the site's one typeface (--font-sans, DM Sans via
+// next/font in layout.tsx) to its real family list for ctx.font. The page has already used that font by the
+// time a scene draws labels, so it is loaded; before that (or outside a page) it falls back to system sans.
+export function sceneLabelFont(): string {
+  if (typeof document === 'undefined') return 'sans-serif';
+  const family = getComputedStyle(document.documentElement).getPropertyValue('--font-sans').trim();
+  return family ? `${family}, sans-serif` : 'sans-serif';
+}
+
 function makeTextSprite(text: string, targetHeight: number): THREE.Sprite {
   const canvas = document.createElement('canvas');
   const scale = 4; // supersample so the label stays crisp when the camera zooms in
   canvas.width = 220 * scale;
   canvas.height = 56 * scale;
   const ctx = canvas.getContext('2d')!;
-  ctx.font = `${34 * scale}px "JetBrains Mono", monospace`;
+  ctx.font = `600 ${34 * scale}px ${sceneLabelFont()}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineWidth = 8 * scale;

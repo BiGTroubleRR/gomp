@@ -5,7 +5,8 @@
 // matching `--gomp-*` custom properties in src/app/globals.css, which cannot import from TS).
 //
 // The font values are the CSS custom properties next/font/google registers in src/app/layout.tsx
-// (Nova Square / DM Sans / JetBrains Mono) — they only resolve inside this app's rendered pages.
+// (DM Sans — the one typeface; --font-serif and --font-mono are aliases of it, see globals.css) — they only
+// resolve inside this app's rendered pages.
 // src/lib/email/resend.ts deliberately keeps its own literal light palette and web-safe fonts: an
 // inbox can't load next/font, and the confirmation email must stay readable on a light mail client.
 
@@ -35,9 +36,9 @@ export const GOLD_LIGHT = '#E3C47F'; // gold highlight / gradient end
 export const BORDER = 'rgba(235,230,218,0.10)'; // hairline border — cream at 10% opacity
 export const BORDER_STRONG = 'rgba(235,230,218,0.20)';
 
-export const FONT_SERIF = 'var(--font-serif)'; // Nova Square — display/headings
+export const FONT_SERIF = 'var(--font-serif)'; // display/headings — DM Sans (alias)
 export const FONT_SANS = 'var(--font-sans)'; // DM Sans — body text
-export const FONT_MONO = 'var(--font-mono)'; // JetBrains Mono — numerals, reference codes, technical labels
+export const FONT_MONO = 'var(--font-mono)'; // numerals, reference codes, technical labels — DM Sans (alias)
 
 // Many places hand-type tinted shadows/glows as their own rgba() literal — this derives the same
 // color from a token at a given alpha instead, so it can't drift out of sync with the palette.

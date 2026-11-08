@@ -18,6 +18,10 @@
      paint of a page that reads them already lines up. */
   --gomp-header-h: 200px;
   --gomp-bar-h: 56px;
+  /* One typeface site-wide (DM Sans, as on the homepage). --font-sans is set by next/font in layout.tsx;
+     the display and monospace names are kept as aliases because many call sites still read them. */
+  --font-serif: var(--font-sans);
+  --font-mono: var(--font-sans);
 }
 
 ::selection {

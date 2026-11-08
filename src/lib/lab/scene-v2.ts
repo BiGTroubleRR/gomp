@@ -24,6 +24,7 @@ import {
   mmToUnits,
   moboRamSlotCount,
   ramModuleCount,
+  sceneLabelFont,
   SIZES,
   SLOTS,
   type CompId,
@@ -62,7 +63,7 @@ function labelSprite(text: string): THREE.Sprite {
   canvas.width = 256;
   canvas.height = 64;
   const ctx = canvas.getContext('2d')!;
-  ctx.font = '600 30px ui-monospace, Menlo, monospace';
+  ctx.font = `600 30px ${sceneLabelFont()}`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineWidth = 6;
