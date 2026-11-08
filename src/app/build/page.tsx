@@ -40,7 +40,6 @@ import {
 } from '@/lib/component-db-seed';
 import { autoBuildForBudget, BUDGET_STEPS, type AutoBuildNote } from '@/lib/auto-build';
 import {
-  createBuildScene,
   SLOTS,
   CASE_SIZES,
   mmToUnits,
@@ -642,20 +641,13 @@ function BuildPageContent() {
       scene.updateCase(size.w, size.h, size.d);
       setSceneReady(true);
     };
-    // The v2 scene (src/lib/lab/scene-v2.ts — same API, homepage-model designs) is the default.
-    // /build?scene=v1 keeps the original scene as a fallback while v2 settles in. v2 is loaded on demand;
-    // if that chunk ever fails to load, the original scene takes over so the configurator still works.
-    if (new URLSearchParams(window.location.search).get('scene') === 'v1') {
-      init(createBuildScene);
-    } else {
-      import('@/lib/lab/scene-v2')
-        .then((m) => {
-          if (!cancelled) init(m.createBuildSceneV2);
-        })
-        .catch(() => {
-          if (!cancelled) init(createBuildScene);
-        });
-    }
+    // The configurator's scene is v2 (src/lib/lab/scene-v2.ts — the homepage model's part designs, same API
+    // as the original createBuildScene). Loaded on demand so the page shell doesn't carry the 3D code.
+    import('@/lib/lab/scene-v2')
+      .then((m) => {
+        if (!cancelled) init(m.createBuildSceneV2);
+      })
+      .catch((err) => console.error('3D scene failed to load', err));
     return () => {
       cancelled = true;
       setSceneReady(false);

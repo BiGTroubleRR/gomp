@@ -236,7 +236,7 @@ export default function Lab3D() {
     <div style={{ background: PAGE_BG, color: INK, minHeight: '100vh', padding: 16, fontFamily: 'var(--font-sans)' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 12 }}>
         <h1 style={{ margin: 0, fontFamily: 'var(--font-serif)', fontSize: 22, color: GOLD }}>Lab · 3D configurator v2</h1>
-        <span style={{ fontSize: 12, color: MUTED }}>Same API, homepage-model designs. Left = production scene, right = v2. v2 is the default on /build (?scene=v1 = old scene).</span>
+        <span style={{ fontSize: 12, color: MUTED }}>Same API, homepage-model designs. Left = the original scene (still used by checkout and the Admin alignment preview), right = v2, which is the scene on /build.</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '330px 1fr', gap: 14, alignItems: 'start' }}>
