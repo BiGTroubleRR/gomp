@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { createBuildScene, type CompId } from '@/lib/build-scene';
+import type { BuildScene, CompId } from '@/lib/build-scene';
 import type { Component } from '@/lib/component-db-seed';
 import { INK, MUTED, PANEL_BG, ACCENT } from '@/lib/design-tokens';
 
@@ -29,14 +29,14 @@ const CAT_LABEL: Record<CompId, string> = {
 };
 
 // Renders the saved build using the exact same engine as the Build page's live configurator
-// (build-scene.ts's createBuildScene + applyBuildSnapshot) instead of a separate simplified
-// stand-in, so what the customer sees at checkout matches what they actually assembled. Wired
+// (the v2 scene, lib/lab/scene-v2.ts's createBuildSceneV2 + applyBuildSnapshot) instead of a separate
+// simplified stand-in, so what the customer sees at checkout matches what they actually assembled. Wired
 // up once from a finished snapshot rather than driven incrementally — checkout has no per-part
 // UI to call toggleComponent/setSizeScale/etc. as the user picks things, it just has the final
 // (selected, selections, compDb) state to render as-is.
 export default function Case3DViewer({ config }: { config: Config | null }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<ReturnType<typeof createBuildScene> | null>(null);
+  const sceneRef = useRef<BuildScene | null>(null);
   const [hoverId, setHoverId] = useState<CompId | null>(null);
   // Viewport-fixed coordinates (clientX/clientY), not container-relative — the tooltip is
   // portaled to document.body (see the return below) specifically to escape checkout/page.tsx's
@@ -49,13 +49,25 @@ export default function Case3DViewer({ config }: { config: Config | null }) {
 
     // oscillate: true — a slow, bounded back-and-forth sway instead of /build's continuous
     // auto-rotate, so the case shows every angle without spinning forever next to a form someone's
-    // filling in (see the oscillate branch in build-scene.ts's tick()).
-    const scene = createBuildScene(container, { oscillate: true });
-    scene.applyBuildSnapshot(config.compDb, config.selected, config.selections);
-    sceneRef.current = scene;
+    // filling in (see the oscillate branch in the scene's tick()). The v2 scene loads on demand, so the
+    // effect may be torn down (config change, unmount) before it arrives — `cancelled` covers that.
+    let cancelled = false;
+    let scene: BuildScene | null = null;
+    import('@/lib/lab/scene-v2')
+      .then(({ createBuildSceneV2 }) => {
+        if (cancelled) return;
+        scene = createBuildSceneV2(container, { oscillate: true });
+        // v2 draws the blueprint-style measurement labels as part of applying a build (the original scene
+        // only drew them when /build asked); this is a read-only order recap, so keep them off.
+        scene.setDimensionsVisible(false);
+        scene.applyBuildSnapshot(config.compDb, config.selected, config.selections);
+        sceneRef.current = scene;
+      })
+      .catch((err) => console.error('3D scene failed to load', err));
 
     return () => {
-      scene.dispose();
+      cancelled = true;
+      scene?.dispose();
       sceneRef.current = null;
       setHoverId(null);
       setHoverPos(null);
