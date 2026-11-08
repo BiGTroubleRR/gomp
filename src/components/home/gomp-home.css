@@ -237,6 +237,8 @@
 .gomp-home .fgrid a:hover{color:var(--bg)}
 .gomp-home .legal{border-top:1px solid rgba(245,240,230,.1);margin-top:40px;padding-top:22px;font-size:12px;color:rgba(245,240,230,.4);display:grid;gap:6px}
 .gomp-home .legal b{color:rgba(245,240,230,.7);font-weight:500}
+.gomp-home .legal a{color:rgba(245,240,230,.7);text-decoration:underline;text-underline-offset:3px;transition:color .2s}
+.gomp-home .legal a:hover{color:var(--gold)}
 
 
 

@@ -50,6 +50,7 @@ const T = {
   },
   rights: { en: 'All rights reserved.', sk: 'Všetky práva vyhradené.', cz: 'Všechna práva vyhrazena.' },
   madein: { en: 'Hand-built in Prague, CZ', sk: 'Ručne vyrábané v Prahe, ČR', cz: 'Ručně vyrobeno v Praze, ČR' },
+  coop: { en: 'In cooperation with', sk: 'V spolupráci s', cz: 'Ve spolupráci s' },
   disclaimer: {
     en: 'Prices are shown in CZK (Kč); the € figure is an approximate conversion (1 € ≈ 24.30 Kč, reference Jul 2026). Final price confirmed at checkout.',
     sk: 'Ceny sú uvedené v Kč; suma v € je približný prepočet (1 € ≈ 24,30 Kč, referenčný júl 2026). Konečná cena bude potvrdená pri objednávke.',
@@ -85,6 +86,10 @@ export default function GompFooter() {
         </div>
         <div className="legal">
           <div><b>© 2026 GOMP. {s('rights')}</b> {s('madein')}</div>
+          <div>
+            {s('coop')}{' '}
+            <a href="https://www.alexadam.sk" target="_blank" rel="noopener noreferrer">www.alexadam.sk</a>
+          </div>
           <div>{vatNote(lang, vatRatePct)} {s('disclaimer')}</div>
           <div>{s('tiers')}</div>
         </div>
