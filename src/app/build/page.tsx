@@ -53,7 +53,6 @@ import {
   type CompId,
 } from '@/lib/build-scene';
 import { useIsMobile } from '@/lib/use-media-query';
-import { setDustCursorVisible, isDustEnabled } from '@/lib/cursor-dust';
 import { fetchAlignmentTuningConfig, subscribeAlignmentTuning, resolveAlignmentTuning, type AlignmentTuningConfig } from '@/lib/supabase/alignment-tuning';
 import { PAGE_BG as BG, PANEL_BG as PANEL, INK, MUTED, GOLD, ACCENT, ACCENT_FILL } from '@/lib/design-tokens';
 
@@ -762,13 +761,6 @@ function BuildPageContent() {
       setTimeout(() => selectCard(id, name, false), 600 + i * 90);
     });
   }, [compDb, rawComponentDb, searchParams, prebuiltPcs]);
-
-  // Swaps the native cursor for the same gold dot used on nav-link hovers whenever the
-  // pointer is over a built component in the 3D view (see handleViewportPointerMove below).
-  useEffect(() => {
-    setDustCursorVisible(!!hoverId);
-    return () => setDustCursorVisible(false);
-  }, [hoverId]);
 
   // Fans aren't a SLOTS category (there's no single "pick one" the way every other part works —
   // see FanConfig/defaultFanConfigForCase above), so their price/wattage contribution is computed
@@ -2126,7 +2118,6 @@ function BuildPageContent() {
             minHeight: isMobile ? 320 : undefined,
             order: isMobile ? 0 : 1,
             position: 'relative',
-            cursor: hoverId && isDustEnabled() ? 'none' : undefined,
           }}
         >
           <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />

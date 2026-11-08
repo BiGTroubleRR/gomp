@@ -1,13 +1,11 @@
-// Shared cursor-dust effect for primary nav links, ported from gomp-cursor-dust.js. Scoped to
-// elements carrying [data-gomp-nav] (the TransitionLink component sets this attribute) so
-// everything else keeps the normal system cursor.
+// Click animation for primary nav links, ported from gomp-cursor-dust.js: on click, gold/green dust
+// converges from the pointer into the clicked element (burstDust), then navigation continues. It used to
+// also replace the system cursor with a glowing dot while hovering a link; that was removed — the cursor is
+// never changed, only the click animation remains.
 'use client';
-
-const NAV_SEL = '[data-gomp-nav]';
 
 let canvas: HTMLCanvasElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
-let dot: HTMLDivElement | null = null;
 let ready = false;
 let enabled = true;
 const dpr = typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1;
@@ -28,10 +26,6 @@ export function initCursorDust() {
   if (reduced) return;
   ready = true;
 
-  const style = document.createElement('style');
-  style.textContent = 'a.gomp-dust-active, a.gomp-dust-active * { cursor: none !important; }';
-  document.head.appendChild(style);
-
   canvas = document.createElement('canvas');
   canvas.id = 'gomp-dust-canvas';
   canvas.style.cssText = 'position:fixed;inset:0;z-index:2147483646;pointer-events:none;';
@@ -39,48 +33,6 @@ export function initCursorDust() {
   ctx = canvas.getContext('2d');
   resize();
   window.addEventListener('resize', resize);
-
-  dot = document.createElement('div');
-  dot.id = 'gomp-dust-cursor';
-  dot.style.cssText =
-    'position:fixed;top:0;left:0;width:10px;height:10px;margin:-5px 0 0 -5px;' +
-    'border-radius:50%;background:radial-gradient(circle,rgba(196,163,90,0.95),rgba(196,163,90,0) 70%);' +
-    'pointer-events:none;z-index:2147483647;display:none;box-shadow:0 0 8px 2px rgba(196,163,90,0.45);';
-  document.body.appendChild(dot);
-
-  document.addEventListener(
-    'mousemove',
-    (e) => {
-      if (!dot) return;
-      dot.style.left = e.clientX + 'px';
-      dot.style.top = e.clientY + 'px';
-    },
-    true,
-  );
-  document.addEventListener(
-    'mouseover',
-    (e) => {
-      const target = e.target as Element;
-      const a = target.closest && target.closest(NAV_SEL);
-      if (a && dot) {
-        a.classList.add('gomp-dust-active');
-        dot.style.display = 'block';
-      }
-    },
-    true,
-  );
-  document.addEventListener(
-    'mouseout',
-    (e) => {
-      const target = e.target as Element;
-      const a = target.closest && target.closest(NAV_SEL);
-      if (a && dot && !(e.relatedTarget && a.contains(e.relatedTarget as Node))) {
-        a.classList.remove('gomp-dust-active');
-        dot.style.display = 'none';
-      }
-    },
-    true,
-  );
 }
 
 const COLORS = ['#C4A35A', '#C4A35A', '#3FAE74'];
@@ -96,7 +48,6 @@ export function burstDust(e: MouseEvent, targetEl: HTMLElement, done: () => void
     done();
     return;
   }
-  if (dot) dot.style.display = 'none';
   const cx = e.clientX;
   const cy = e.clientY;
   const rect = targetEl.getBoundingClientRect();
@@ -160,14 +111,4 @@ export function burstDust(e: MouseEvent, targetEl: HTMLElement, done: () => void
 
 export function isDustEnabled() {
   return enabled;
-}
-
-// Imperative show/hide for the same gold dot, for hover targets that aren't plain DOM anchors
-// (e.g. a canvas where "hovering a component" is resolved via raycasting, not native :hover) —
-// the dot's position is already kept in sync by the global mousemove listener above, so this
-// only needs to toggle visibility.
-export function setDustCursorVisible(visible: boolean) {
-  initCursorDust();
-  if (!dot || !enabled) return;
-  dot.style.display = visible ? 'block' : 'none';
 }
