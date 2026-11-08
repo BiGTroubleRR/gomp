@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useSite } from '@/contexts/SiteContext';
 import { pick } from '@/lib/i18n';
+import { GompLogo } from '@/components/brand/GompLogo';
 import type { L3 } from './home-shared';
 import './gomp-home.css';
 
@@ -74,7 +75,7 @@ export default function GompFooter() {
       <div className="wrap">
         <div className="fgrid">
           <div>
-            <div className="logo"><i />GOMP</div>
+            <GompLogo height={26} />
             <p>{s('blurb')}</p>
           </div>
           {COLS.map((c) => (

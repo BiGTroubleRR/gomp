@@ -1,0 +1,29 @@
+/*
+ * GOMP – doplnok k existujúcim premenným --gomp-* (bg, panel, ink, muted, accent, gold… ostávajú ako sú).
+ * Importuj raz, napr. v globals.css:  @import "./gomp-brand.css";
+ */
+:root {
+  /* odznaky hodnotenia S / A / B */
+  --gomp-rating-s: #c4a35a; /* plné zlato */
+  --gomp-rating-a: #3fae74; /* plná zelená */
+  --gomp-rating-b: #98a39d; /* obrys, sivá */
+
+  /* malý text na zelenom podklade (pod ~19 px tučne): #1F8A55 má len 4,2 : 1, táto má 7,7 : 1 */
+  --gomp-accent-label-bg: #0f5c3a;
+
+  /* logo: ochranná zóna = výška písmen; pod 24 px používaj hrubší ťah znaku (strokeWidth 13) */
+  --gomp-logo-min-h: 24px;
+}
+
+/* Voliteľné: odkaz s logom v hlavičke */
+.gomp-logo-link {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  padding: 4px 0; /* ochranná zóna, aby sa k logu nič nelepilo */
+}
+.gomp-logo-link:focus-visible {
+  outline: 2px solid var(--gomp-accent, #3fae74);
+  outline-offset: 4px;
+  border-radius: 4px;
+}

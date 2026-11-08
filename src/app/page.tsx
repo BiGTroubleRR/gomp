@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { GompLogo } from '@/components/brand/GompLogo';
 import GompHome from '@/components/home/GompHome';
 import { navigateWithTransition } from '@/lib/gomp-nav';
 import { GOLD, PAGE_BG } from '@/lib/design-tokens';
@@ -75,12 +76,8 @@ export default function Home() {
               <div style={{ position: 'absolute', top: '32%', left: '14%', width: 4, height: 4, borderRadius: '50%', background: GOLD, boxShadow: '0 0 8px 2px rgba(196,163,90,0.5)', animation: 'gompEmberRise 1.7s 0.5s ease-out infinite' }} />
               <div style={{ position: 'absolute', top: '28%', left: '86%', width: 5, height: 5, borderRadius: '50%', background: '#9FE0BC', animation: 'gompEmberRise 1.5s 0.25s ease-out infinite' }} />
             </div>
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 38, fontWeight: 600, letterSpacing: 2, color: GOLD, display: 'flex', perspective: 400, position: 'relative', zIndex: 1 }}>
-              {['G', 'O', 'M', 'P'].map((ch, i) => (
-                <span key={ch} style={{ display: 'inline-block', animation: `gompLetterSpin 0.42s ${0.05 + i * 0.08}s cubic-bezier(0.34,1.56,0.64,1) both` }}>
-                  {ch}
-                </span>
-              ))}
+            <div style={{ display: 'flex', perspective: 400, position: 'relative', zIndex: 1 }}>
+              <GompLogo height={48} style={{ display: 'block', animation: 'gompLetterSpin 0.5s 0.05s cubic-bezier(0.34,1.56,0.64,1) both' }} />
             </div>
           </div>
         )}

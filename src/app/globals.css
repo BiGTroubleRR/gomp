@@ -1,3 +1,4 @@
+@import '../styles/gomp-brand.css';
 /* Mirrors src/lib/design-tokens.ts (CSS can't import TS) — keep the two in sync. */
 :root {
   color-scheme: dark;

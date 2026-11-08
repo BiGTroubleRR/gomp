@@ -138,6 +138,18 @@ function renderHtml(d: OrderTicketData): string {
         </tr>`
     : '';
 
+  // Brand logo: a PNG next to the site (email apps such as Gmail don't render SVG), addressed absolutely from
+  // the account link's origin, which the checkout route builds from SITE_URL or the request. Without it the
+  // old text wordmark is used.
+  let logoUrl: string | null = null;
+  try {
+    if (d.accountUrl) logoUrl = new URL('/brand/gomp-email-logo.png', d.accountUrl).toString();
+  } catch {
+    logoUrl = null; // malformed link: keep the text wordmark rather than failing the email
+  }
+  const logoHtml = logoUrl
+    ? `<img src="${esc(logoUrl)}" width="160" height="31" alt="GOMP" style="display:block;margin:0 auto;border:0;outline:none;height:auto;max-width:160px;font-family:${SERIF};font-weight:700;letter-spacing:4px;font-size:22px;color:${GOLD};">`
+    : `<span style="font-family:${SERIF};font-weight:700;letter-spacing:4px;font-size:22px;color:${GOLD};">${'\u25C6'} GOMP</span>`;
   const addressHtml = [d.customerName, ...d.addressLines, d.email].filter(Boolean).map(esc).join('<br>');
 
   return `<!doctype html>
@@ -155,7 +167,7 @@ function renderHtml(d: OrderTicketData): string {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${PANEL_BG}" style="max-width:480px;background:${PANEL_BG};border:1px solid ${ACCENT_DEEP};border-radius:16px;">
         <tr>
           <td align="center" bgcolor="${SURFACE_ALT}" style="background:${SURFACE_ALT};padding:20px 28px;border-radius:15px 15px 0 0;border-bottom:3px solid ${ACCENT_DEEP};">
-            <span style="font-family:${SERIF};font-weight:700;letter-spacing:4px;font-size:22px;color:${GOLD};">◆ GOMP</span>
+            ${logoHtml}
           </td>
         </tr>
         <tr>
