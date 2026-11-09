@@ -2,6 +2,7 @@
 
 import { CSSProperties, useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
+import { GompLogo, LOGO_HEIGHT } from '@/components/brand/GompLogo';
 import { useSite } from '@/contexts/SiteContext';
 import { useIsMobile } from '@/lib/use-media-query';
 import TransitionLink from '@/components/TransitionLink';
@@ -1517,9 +1518,7 @@ export default function AdminPage() {
         }}
       >
         <div style={{ background: '#131A17', borderRadius: 2, padding: isMobile ? 28 : 52, width: isMobile ? '100%' : 400, maxWidth: 400, boxSizing: 'border-box', border: '0.5px solid rgba(235,230,218,0.1)' }}>
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 17, fontWeight: 600, letterSpacing: 1.5, color: '#C4A35A', marginBottom: 6 }}>
-            GOMP
-          </div>
+          <GompLogo height={LOGO_HEIGHT.adminLogin} style={{ display: 'block', marginBottom: 14 }} />
           <div style={{ fontFamily: 'var(--font-sans)', fontSize: 26, fontWeight: 600, color: '#EBE6DA', marginBottom: 6, letterSpacing: -0.5 }}>
             {t.admin_panel}
           </div>
@@ -1581,9 +1580,10 @@ export default function AdminPage() {
       >
         <TransitionLink
           href="/"
-          style={{ fontFamily: 'var(--font-serif)', fontSize: 16, fontWeight: 600, color: '#C4A35A', textDecoration: 'none', letterSpacing: 1.5, marginRight: 14 }}
+          aria-label="GOMP"
+          style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', marginRight: 14 }}
         >
-          GOMP
+          <GompLogo height={LOGO_HEIGHT.adminBar} style={{ display: 'block' }} />
         </TransitionLink>
         <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(235,230,218,0.28)', letterSpacing: 2, textTransform: 'uppercase', marginRight: 'auto', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           / {t.admin_crumb}

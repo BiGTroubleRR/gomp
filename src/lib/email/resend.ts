@@ -149,7 +149,7 @@ function renderHtml(d: OrderTicketData): string {
   }
   const logoHtml = logoUrl
     ? `<img src="${esc(logoUrl)}" width="160" height="31" alt="GOMP" style="display:block;margin:0 auto;border:0;outline:none;height:auto;max-width:160px;font-family:${SERIF};font-weight:700;letter-spacing:4px;font-size:22px;color:${GOLD};">`
-    : `<span style="font-family:${SERIF};font-weight:700;letter-spacing:4px;font-size:22px;color:${GOLD};">${'\u25C6'} GOMP</span>`;
+    : `<span style="font-family:${SERIF};font-weight:700;letter-spacing:4px;font-size:22px;color:${GOLD};">GOMP</span>`;
   const addressHtml = [d.customerName, ...d.addressLines, d.email].filter(Boolean).map(esc).join('<br>');
 
   return `<!doctype html>

@@ -22,7 +22,7 @@ const dmSans = DM_Sans({
 });
 export const metadata: Metadata = {
   title: 'GOMP',
-  description: 'Hand-built gaming PCs configured to your exact specifications.',
+  description: 'Gaming PCs built for you, to your exact specifications.',
 };
 
 // Explicit rather than relying on the App Router's implicit default (which is the same

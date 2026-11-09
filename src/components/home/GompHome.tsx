@@ -23,7 +23,7 @@ type L3Hl = { en: [string, string, string]; sk: [string, string, string]; cz: [s
 const T = {
   heroEyebrow: { en: 'Custom gaming PCs', sk: 'Herné PC na mieru', cz: 'Herní PC na míru' },
   heroTitle: { en: ['Build your ', 'Legend.', ''], sk: ['Postav si svoju ', 'Legendu.', ''], cz: ['Postav si svou ', 'Legendu.', ''] } as L3Hl,
-  heroSub: { en: 'Dreamed up, hand-built, tested, yours.', sk: 'Vysnený, ručne stavaný, testovaný, tvoj.', cz: 'Vysněný, ručně stavěný, testovaný, tvůj.' },
+  heroSub: { en: 'Dreamed up, tested, yours.', sk: 'Vysnený, testovaný, tvoj.', cz: 'Vysněný, testovaný, tvůj.' },
   pricesFrom: { en: 'Prices from', sk: 'Ceny od', cz: 'Ceny od' },
   cfg3d: { en: 'GOMP 3D Config', sk: 'GOMP 3D Config', cz: 'GOMP 3D Config' },
   prebuilt: { en: 'Prebuilt builds', sk: 'Prebuilt zostavy', cz: 'Prebuilt sestavy' },

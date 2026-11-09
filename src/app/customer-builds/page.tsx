@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import Image from 'next/image';
 import { useSite } from '@/contexts/SiteContext';
 import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
@@ -29,25 +28,22 @@ const STANDOUT_LABEL_RE = /procesor|cpu|processor|grafi|gpu|videokart|graphics/i
 
 const T = {
   en: {
-    eyebrow: 'ZÁKAZNÍCKE GOMPY',
-    title: 'Real builds, already delivered.',
-    intro: 'A look at PCs we’ve already put together for real customers — the exact parts, the exact specs.',
+    title: 'Our customers’ builds',
+    intro: 'A look at PCs we’ve already put together for real customers.',
     empty: 'No builds to show yet — check back soon.',
     close: 'Close',
     vatIncluded: 'Price includes VAT',
   },
   sk: {
-    eyebrow: 'ZÁKAZNÍCKE GOMPY',
-    title: 'Reálne zostavy, ktoré už bežia.',
-    intro: 'Pohľad na počítače, ktoré sme už poskladali pre skutočných zákazníkov — presné súčiastky, presné parametre.',
+    title: 'Zostavy našich zákazníkov',
+    intro: 'Pohľad na počítače, ktoré sme už poskladali pre skutočných zákazníkov.',
     empty: 'Zatiaľ tu nie sú žiadne zostavy — pozrite sa neskôr.',
     close: 'Zavrieť',
     vatIncluded: 'Cena vrátane DPH',
   },
   cz: {
-    eyebrow: 'ZÁKAZNICKÉ GOMPY',
-    title: 'Reálné sestavy, které už běží.',
-    intro: 'Pohled na počítače, které jsme už poskládali pro skutečné zákazníky — přesné součástky, přesné parametry.',
+    title: 'Sestavy našich zákazníků',
+    intro: 'Pohled na počítače, které jsme už poskládali pro skutečné zákazníky.',
     empty: 'Zatím tu nejsou žádné sestavy — zkuste to prosím později.',
     close: 'Zavřít',
     vatIncluded: 'Cena včetně DPH',
@@ -164,16 +160,24 @@ function PhotoStack({
 
   if (imageUrls.length === 1) {
     return (
-      <div style={{ flexShrink: 0, width: isMobile ? '100%' : 220, display: 'flex', justifyContent: 'center' }}>
-        <Image
-          src={imageUrls[0]}
-          alt={title}
-          width={220}
-          height={200}
-          className="gomp-float-photo"
-          style={{ maxWidth: '100%', maxHeight: 200, width: 'auto', height: 'auto', objectFit: 'contain' }}
-        />
-      </div>
+      <motion.div
+        onClick={onOpen}
+        whileHover={{ y: -4 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
+        style={{ flexShrink: 0, width: isMobile ? '100%' : 220, display: 'flex', justifyContent: 'center', cursor: 'pointer' }}
+      >
+        {/* The float animation lives on a wrapper so it doesn't fight the shared-layout transform of the photo. */}
+        <div className="gomp-float-photo" style={{ display: 'flex', justifyContent: 'center', maxWidth: '100%' }}>
+          <motion.img
+            layoutId={`cbphoto-${buildId}`}
+            src={imageUrls[0]}
+            alt={title}
+            width={220}
+            height={200}
+            style={{ maxWidth: '100%', maxHeight: 200, width: 'auto', height: 'auto', objectFit: 'contain' }}
+          />
+        </div>
+      </motion.div>
     );
   }
 
@@ -276,7 +280,7 @@ function PhotoGallery({
     height: 44,
     borderRadius: '50%',
     border: '0.5px solid rgba(235,230,218,0.35)',
-    background: 'rgba(19,26,23,0.08)',
+    background: 'rgba(253,250,244,0.08)',
     color: ON_ACCENT,
     fontSize: 20,
     cursor: 'pointer',
@@ -296,7 +300,9 @@ function PhotoGallery({
         position: 'fixed',
         inset: 0,
         zIndex: 200,
-        background: 'rgba(235,230,218,0.92)',
+        background: 'rgba(235,230,218,0.06)',
+        backdropFilter: 'blur(18px) saturate(1.1)',
+        WebkitBackdropFilter: 'blur(18px) saturate(1.1)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -317,7 +323,7 @@ function PhotoGallery({
           height: 36,
           borderRadius: '50%',
           border: '0.5px solid rgba(235,230,218,0.35)',
-          background: 'rgba(19,26,23,0.08)',
+          background: 'rgba(253,250,244,0.08)',
           color: ON_ACCENT,
           fontSize: 15,
           cursor: 'pointer',
@@ -451,9 +457,6 @@ export default function CustomerBuildsPage() {
 
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '28px 20px 60px' : '44px 32px 90px' }}>
         <Reveal>
-          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600, color: ACCENT, letterSpacing: 1.5, marginBottom: 12 }}>
-            {t.eyebrow}
-          </div>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 30 : 42, color: INK, margin: '0 0 14px', lineHeight: 1.1 }}>
             {t.title}
           </h1>

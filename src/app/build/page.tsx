@@ -8,6 +8,7 @@ import { fetchPrebuilts } from '@/lib/supabase/prebuilts';
 import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
+import InfoTip from '@/components/InfoTip';
 import { navigateWithTransition } from '@/lib/gomp-nav';
 import { writeJSON } from '@/lib/gomp-storage';
 import { fetchComponentDb, getCachedComponentDb } from '@/lib/supabase/components';
@@ -1371,15 +1372,20 @@ function BuildPageContent() {
           }}
         >
             <div style={{ padding: isMobile ? '20px 20px 10px' : '20px 20px 14px' }}>
-              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase' }}>{t.pc_builder}</div>
-              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: '#6B7570', marginTop: 4 }}>{t.select_components}</div>
+              <div style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase' }}>
+                {t.pc_builder}
+                <InfoTip text={t.select_components} label={t.pc_builder} />
+              </div>
             </div>
             {/* ---- Budget slider — snaps to common breakpoints (see BUDGET_STEPS), same
                 convention as the RAM min-speed slider below. Drives "Build Complete PC"'s
                 automatic pick; has no effect on manual per-part selection. ---- */}
             <div style={{ padding: isMobile ? '0 20px 14px' : '0 20px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.budget}</span>
+                <span style={{ ...textPop, display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                  {t.budget}
+                  <InfoTip text={t.budget_hint} label={t.budget} />
+                </span>
                 <span style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 14, color: ACCENT, fontWeight: 600 }}>{fmt(BUDGET_STEPS[budgetIdx])}</span>
               </div>
               <input
@@ -1392,7 +1398,6 @@ function BuildPageContent() {
                 onChange={(e) => setBudgetIdx(Number(e.target.value))}
                 style={{ width: '100%', display: 'block', ...sliderFillStyle(budgetIdx, BUDGET_STEPS.length - 1) }}
               />
-              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6B7570', marginTop: 4, lineHeight: 1.4 }}>{t.budget_hint}</div>
             </div>
             <div style={{ flex: isMobile ? 'none' : 1, overflowY: isMobile ? 'visible' : 'auto', padding: '0 20px 16px' }}>
               {/* ---- Step pills — free-jump between categories, green/checked once picked ---- */}
@@ -1425,8 +1430,10 @@ function BuildPageContent() {
 
               {/* ---- Active category ---- */}
               <div style={{ marginBottom: 12 }}>
-                <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 20, color: INK }}>{t.cat_names[activeStep]}</div>
-                <p style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginTop: 4, lineHeight: 1.4 }}>{t.cat_desc[activeStep]}</p>
+                <div style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'var(--font-serif)', fontSize: 20, color: INK }}>
+                  {t.cat_names[activeStep]}
+                  <InfoTip text={t.cat_desc[activeStep]} label={t.cat_names[activeStep]} size={16} />
+                </div>
               </div>
 
               {activeStep === 'mobo' && (moboSockets.length > 1 || moboFormFactors.length > 1) && (
@@ -2327,7 +2334,10 @@ function BuildPageContent() {
                         <>
                           <div onClick={toggleExpanded} style={{ cursor: 'pointer' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>{t.cat_names[id]}</div>
+                              <div style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                                {t.cat_names[id]}
+                                <InfoTip text={t.cat_desc[id]} label={t.cat_names[id]} size={13} />
+                              </div>
                               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: MUTED, width: 14, textAlign: 'center', userSelect: 'none' }}>−</div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
@@ -2361,7 +2371,6 @@ function BuildPageContent() {
                               {partAvailability(id) === 'hidden' ? t.part_unavailable : t.part_missing}
                             </div>
                           )}
-                          <p style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: MUTED, marginTop: 10, lineHeight: 1.5 }}>{t.cat_desc[id]}</p>
                           <div style={{ marginTop: 12 }}>
                             {(comp.specs || '').split(' · ').map((s, i) => (
                               <div key={i} style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: INK, marginBottom: 4 }}>

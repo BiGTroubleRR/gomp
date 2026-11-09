@@ -1,4 +1,4 @@
-import type { SVGProps } from "react";
+import { useId, type SVGProps } from "react";
 
 /**
  * GOMP logo – inline SVG, žiadna závislosť na fonte ani na obrázkoch.
@@ -31,7 +31,18 @@ const LETTERS: ReadonlyArray<readonly [number, string]> = [
   [263, "M0 70 L0 0 L38 0 L52 14 L52 32 L38 46 L0 46"], // P
 ];
 
-const CLIP_ID = "gomp-cap-clip";
+/**
+ * Povolené výšky horizontálneho loga (px). Vyberaj z tejto sady, nie voľné čísla, nech je logo všade rovnaké.
+ *   header 30 · bar 24 (minimum znaku) · footer 30 · overlay 48 · admin 24 (lišta) / 30 (prihlásenie)
+ */
+export const LOGO_HEIGHT = {
+  header: 30,
+  bar: 24,
+  footer: 30,
+  overlay: 48,
+  adminBar: 24,
+  adminLogin: 30,
+} as const;
 
 function MarkShape({ color, strokeWidth = 10 }: { color: string; strokeWidth?: number }) {
   return (
@@ -47,9 +58,9 @@ function MarkShape({ color, strokeWidth = 10 }: { color: string; strokeWidth?: n
   );
 }
 
-function WordShape({ color }: { color: string }) {
+function WordShape({ color, clipId }: { color: string; clipId: string }) {
   return (
-    <g clipPath={`url(#${CLIP_ID})`}>
+    <g clipPath={`url(#${clipId})`}>
       {LETTERS.map(([x, d]) => (
         <path
           key={x}
@@ -67,9 +78,9 @@ function WordShape({ color }: { color: string }) {
   );
 }
 
-const Defs = () => (
+const Defs = ({ clipId }: { clipId: string }) => (
   <defs>
-    <clipPath id={CLIP_ID}>
+    <clipPath id={clipId}>
       <rect x={-10} y={-5} width={340} height={80} />
     </clipPath>
   </defs>
@@ -92,6 +103,8 @@ export function GompLogo({
   title = "GOMP",
   ...rest
 }: GompLogoProps) {
+  // Unikátne id na každú inštanciu — hlavička + pätička sa vykreslia naraz a duplicitné id by sa bili.
+  const clipId = `gomp-cap-clip-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
   const c = TONES[tone];
   const stacked = variant === "stacked";
   const vb = stacked ? "-2 -2 324 243" : "-2 -7 438 84";
@@ -114,14 +127,14 @@ export function GompLogo({
       {...rest}
     >
       <title>{title}</title>
-      <Defs />
+      <Defs clipId={clipId} />
       {stacked ? (
         <>
           <g transform="translate(97.5 0) scale(1.25)">
             <MarkShape color={c.mark} />
           </g>
           <g transform="translate(0 164)">
-            <WordShape color={c.word} />
+            <WordShape color={c.word} clipId={clipId} />
           </g>
         </>
       ) : (
@@ -130,7 +143,7 @@ export function GompLogo({
             <MarkShape color={c.mark} />
           </g>
           <g transform="translate(114 0)">
-            <WordShape color={c.word} />
+            <WordShape color={c.word} clipId={clipId} />
           </g>
         </>
       )}

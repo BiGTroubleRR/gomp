@@ -26,11 +26,11 @@ const translations = {
     origin_p1:
       "Every pre-built we had ever bought came with corners cut we couldn't see until it mattered — thermal paste slapped on, stock coolers running at limits, PSUs rated for worse days.",
     origin_p2:
-      'So in 2019, three friends in Prague stopped buying and started building. Today GOMP has shipped over 12,000 builds. Every single one stress-tested at load for 24 hours before it ships.',
+      'So in 2025, three friends in Prague stopped buying and started building. Today GOMP has shipped over 30 builds. Every single one stress-tested at load for 24 hours before it ships.',
     founded: 'Founded',
     builds_shipped: 'Builds shipped',
     hq_workshop: 'HQ & workshop',
-    pull_quote: '"We don’t build PCs to a price. We build them to a standard."',
+    pull_quote: '"We don’t build PCs to be cheap, but to handle what you ask of them."',
     quote_author: 'Jakub G. — Founder',
     origin_p3:
       "That standard means a printed benchmark sheet with every build. It means 24-hour stress testing. It means using the same PSU we'd put in our own machines, not a budget unit because the margin looks better.",
@@ -40,7 +40,7 @@ const translations = {
     the_team: 'The team',
     ready_title: 'Ready to build yours?',
     ready_desc:
-      'Configure your dream machine, part by part. Every GOMP build is hand-assembled and tested before it ships.',
+      'Configure your dream machine, part by part. Every GOMP build is assembled for you and tested before it ships.',
     browse_builds: 'Browse builds',
     watermark_line1: 'Build',
     watermark_line2: 'your',
@@ -61,11 +61,11 @@ const translations = {
     origin_p1:
       'Každý hotový počítač, ktorý sme si kedy kúpili, mal skryté kompromisy, ktoré sa prejavili až vo chvíli, keď na tom najviac záležalo... nedbalo nanesená teplovodivá pasta, sériové chladiče na hranici limitov, zdroje dimenzované na horšie dni.',
     origin_p2:
-      'Preto sme v roku 2019, traja priatelia z Prahy, prestali nakupovať a začali stavať. Dnes má GOMP na konte viac ako 12 000 zostáv. Každú z nich pred expedíciou 24 hodín záťažovo testujeme.',
+      'Preto sme v roku 2025, traja priatelia z Prahy, prestali nakupovať a začali stavať. Dnes má GOMP na konte viac ako 30 zostáv. Každú z nich pred expedíciou 24 hodín záťažovo testujeme.',
     founded: 'Založené',
     builds_shipped: 'Expedovaných zostáv',
     hq_workshop: 'Sídlo a dielňa',
-    pull_quote: '„Počítače nestaviame na cenu. Staviame ich pre štandard.“',
+    pull_quote: '„Počítače nestaviame, aby boli lacné, ale aby zvládli to, čo od nich chcete.“',
     quote_author: 'Jakub G. — zakladateľ',
     origin_p3:
       'Tento štandard znamená tlačený protokol o benchmarkoch pri každej zostave. Znamená rigorózne záťažové testovanie. Znamená použitie takého zdroja, aký by sme dali do vlastného počítača, nie lacnejšieho kus len preto, že sa tým zlepší marža.',
@@ -75,7 +75,7 @@ const translations = {
     the_team: 'Tím',
     ready_title: 'Pripravení postaviť si vlastný?',
     ready_desc:
-      'Zostavte si vysnívaný počítač po jednotlivých dieloch. Každý GOMP stroj je ručne zostavený a otestovaný pred expedíciou.',
+      'Zostavte si vysnívaný počítač po jednotlivých dieloch. Každý GOMP stroj je zostavený pre vás a otestovaný pred expedíciou.',
     browse_builds: 'Prehliadať zostavy',
     watermark_line1: 'Postav si',
     watermark_line2: 'svoju',
@@ -96,11 +96,11 @@ const translations = {
     origin_p1:
       'Každý hotový počítač, který jsme si kdy koupili, měl skryté kompromisy, které se projevily až ve chvíli, kdy na tom nejvíc záleželo... nedbale nanesená teplovodivá pasta, sériové chladiče na hranici limitů, zdroje dimenzované na horší dny.',
     origin_p2:
-      'Proto jsme v roce 2019, tři kamarádi z Prahy, přestali nakupovat a začali stavět. Dnes má GOMP na kontě přes 12 000 sestav. Každou z nich před expedicí 24 hodin zátěžově testujeme.',
+      'Proto jsme v roce 2025, tři kamarádi z Prahy, přestali nakupovat a začali stavět. Dnes má GOMP na kontě přes 30 sestav. Každou z nich před expedicí 24 hodin zátěžově testujeme.',
     founded: 'Založeno',
     builds_shipped: 'Expedovaných sestav',
     hq_workshop: 'Sídlo a dílna',
-    pull_quote: '„Počítače nestavíme na cenu. Stavíme je podle standardu.“',
+    pull_quote: '„Počítače nestavíme proto, aby byly levné, ale aby zvládly to, co od nich chcete.“',
     quote_author: 'Jakub G. — zakladatel',
     origin_p3:
       'Tento standard znamená tištěný protokol o benchmarcích u každé sestavy. Znamená důkladné 24hodinové zátěžové testování. Znamená použití takového zdroje, jaký bychom dali do vlastního počítače, ne levnějšího kusu jen proto, že se tím zlepší marže.',
@@ -110,7 +110,7 @@ const translations = {
     the_team: 'Tým',
     ready_title: 'Připraveni postavit si vlastní?',
     ready_desc:
-      'Sestavte si vysněný počítač po jednotlivých dílech. Každý stroj GOMP je ručně sestavený a otestovaný před expedicí.',
+      'Sestavte si vysněný počítač po jednotlivých dílech. Každý stroj GOMP je sestavený pro vás a otestovaný před expedicí.',
     browse_builds: 'Procházet sestavy',
     watermark_line1: 'Postav si',
     watermark_line2: 'svou',
@@ -277,8 +277,8 @@ export default function AboutPage() {
               }}
             >
               {[
-                { value: '2019', label: t.founded },
-                { value: '12K+', label: t.builds_shipped },
+                { value: '2025', label: t.founded },
+                { value: '30+', label: t.builds_shipped },
                 { value: 'Praha', label: t.hq_workshop },
               ].map((stat, i) => (
                 <Reveal

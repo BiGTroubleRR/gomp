@@ -6,7 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useSite } from '@/contexts/SiteContext';
 import { pick } from '@/lib/i18n';
 import { useCartSummary } from '@/lib/use-cart-summary';
-import { GompLogo } from '@/components/brand/GompLogo';
+import { GompLogo, LOGO_HEIGHT } from '@/components/brand/GompLogo';
 import type { L3 } from './home-shared';
 import './gomp-home.css';
 
@@ -39,7 +39,7 @@ const CAT_OPTIONS: { value: string; label: L3 }[] = [
 
 const T = {
   home: { en: 'GOMP – home', sk: 'GOMP – domov', cz: 'GOMP – domů' },
-  tagline: { en: 'Hand-built gaming PCs · Prague, CZ', sk: 'Ručne stavané herné PC · Praha, ČR', cz: 'Ručně stavěná herní PC · Praha, ČR' },
+  tagline: { en: 'PCs built for you', sk: 'PC stavané pre vás', cz: 'PC stavěná pro vás' },
   language: { en: 'Language', sk: 'Jazyk', cz: 'Jazyk' },
   currency: { en: 'Currency', sk: 'Mena', cz: 'Měna' },
   account: { en: 'Account', sk: 'Účet', cz: 'Účet' },
@@ -154,7 +154,7 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
     return (
       <nav className="nav nav-compact" ref={navRef} aria-label={s('mainNav')}>
         <div className="wrap">
-          <Link className="gomp-logo-link nav-logo" href="/" aria-label={s('home')}><GompLogo height={24} tone="white" /></Link>
+          <Link className="gomp-logo-link nav-logo" href="/" aria-label={s('home')}><GompLogo height={LOGO_HEIGHT.bar} tone="white" /></Link>
           {catsMenu}
           {navLinks}
           <div className="right">
@@ -183,7 +183,7 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
 
       <header className="header" ref={headRef}>
         <div className="wrap">
-          <Link className="gomp-logo-link" href="/" aria-label={s('home')}><GompLogo height={30} /></Link>
+          <Link className="gomp-logo-link" href="/" aria-label={s('home')}><GompLogo height={LOGO_HEIGHT.header} /></Link>
           <Link className="support" href="/contact">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2" /><rect x="3" y="13" width="4" height="6" rx="1.5" /><rect x="17" y="13" width="4" height="6" rx="1.5" /><path d="M19 19c0 1.5-2 2.5-5 2.5" /></svg>
             <span><small>{s('personal')}</small><b>{s('support')}</b></span>

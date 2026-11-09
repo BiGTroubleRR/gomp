@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useSite } from '@/contexts/SiteContext';
 import { pick } from '@/lib/i18n';
-import { GompLogo } from '@/components/brand/GompLogo';
+import { GompLogo, LOGO_HEIGHT } from '@/components/brand/GompLogo';
 import type { L3 } from './home-shared';
 import './gomp-home.css';
 
@@ -45,12 +45,11 @@ const COLS: { title: L3; links: ({ href: string } & L3)[] }[] = [
 
 const T = {
   blurb: {
-    en: 'Hand-built gaming PCs configured to your exact specifications. Built by gamers, for gamers.',
-    sk: 'Ručne stavané herné počítače presne podľa vašich požiadaviek. Staviame ich hráči pre hráčov.',
-    cz: 'Ručně stavěné herní počítače přesně podle vašich požadavků. Stavíme je hráči pro hráče.',
+    en: 'Gaming PCs built for you, to your exact specifications.',
+    sk: 'Herné počítače stavané pre vás presne podľa vašich požiadaviek.',
+    cz: 'Herní počítače stavěné pro vás přesně podle vašich požadavků.',
   },
   rights: { en: 'All rights reserved.', sk: 'Všetky práva vyhradené.', cz: 'Všechna práva vyhrazena.' },
-  madein: { en: 'Hand-built in Prague, CZ', sk: 'Ručne vyrábané v Prahe, ČR', cz: 'Ručně vyrobeno v Praze, ČR' },
   coop: { en: 'In cooperation with', sk: 'V spolupráci s', cz: 'Ve spolupráci s' },
   disclaimer: {
     en: 'Prices are shown in CZK (Kč); the € figure is an approximate conversion (1 € ≈ 24.30 Kč, reference Jul 2026). Final price confirmed at checkout.',
@@ -75,7 +74,7 @@ export default function GompFooter() {
       <div className="wrap">
         <div className="fgrid">
           <div>
-            <GompLogo height={26} />
+            <GompLogo height={LOGO_HEIGHT.footer} />
             <p>{s('blurb')}</p>
           </div>
           {COLS.map((c) => (
@@ -86,7 +85,7 @@ export default function GompFooter() {
           ))}
         </div>
         <div className="legal">
-          <div><b>© 2026 GOMP. {s('rights')}</b> {s('madein')}</div>
+          <div><b>© 2026 GOMP. {s('rights')}</b></div>
           <div>
             {s('coop')}{' '}
             <a href="https://www.alexadam.sk" target="_blank" rel="noopener noreferrer">www.alexadam.sk</a>
