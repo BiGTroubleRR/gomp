@@ -66,15 +66,16 @@ export function buildShell(c: CaseSize): THREE.Group {
 }
 
 // ---- case fans (front / top / rear / bottom / side mounts) -------------------------------------------
-export function buildFanMounts(config: Partial<Record<FanMountPosition, { count: number; sizeMm: number }>>, c: CaseSize, sideCenterZ?: number): THREE.Group {
+export function buildFanMounts(config: Partial<Record<FanMountPosition, { count: number; sizeMm: number }>>, c: CaseSize, sideRange?: [number, number] | null): THREE.Group {
   const g = new THREE.Group();
   g.userData.caseFans = true;
   (Object.keys(config) as FanMountPosition[]).forEach((position) => {
     const cfg = config[position];
     if (!cfg || cfg.count <= 0) return;
     for (let i = 0; i < cfg.count; i++) {
-      const f = fan(mmToUnits(cfg.sizeMm) / 2);
-      const { pos, rot } = fanTransform(position, i, cfg.count, c, cfg.sizeMm, position === 'side' ? sideCenterZ : undefined);
+      const { pos, rot, diameter } = fanTransform(position, i, cfg.count, c, cfg.sizeMm, position === 'side' ? sideRange : undefined);
+      if (diameter <= 0) continue;
+      const f = fan(diameter / 2);
       f.position.set(...pos);
       f.rotation.set(...rot);
       g.add(f);
@@ -150,8 +151,9 @@ export function buildGpu(L: Layout, fanCount: 0 | 2 | 3): Part {
   put(inner, box(gW, 0.03, gL, mat(0x262a30, { metalness: 0.95, roughness: 0.13 })), [0, gT / 2 - 0.015, 0]);
   put(inner, box(0.02, 0.05, gL * 0.78, glow(COL.green, 2)), [gW / 2 + 0.011, gT * 0.2, 0]);
   put(inner, box(0.021, 0.06, 0.3, glow(COL.gold, 1)), [gW / 2 + 0.012, -gT * 0.15, -gL * 0.25]);
-  // I/O bracket at the rear end of the card
-  put(inner, box(gW, gT * 0.9, 0.02, mat(0x888078, { metalness: 0.94, roughness: 0.2 })), [0, 0, -gL / 2 - 0.01]);
+  // I/O bracket at the end of the card that faces the rear panel: +Z when flat (the card extends from the
+  // rear toward the front), the bottom end when standing (it rotates -90 deg about X, so local -Z ends up down).
+  put(inner, box(gW, gT * 0.9, 0.02, mat(0x888078, { metalness: 0.94, roughness: 0.2 })), [0, 0, vertical ? -gL / 2 - 0.01 : gL / 2 + 0.01]);
   if (fanCount) {
     const r = Math.min(0.5, gL / (2 * fanCount) - 0.04);
     for (let i = 0; i < fanCount; i++) {

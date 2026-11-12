@@ -79,6 +79,9 @@ export type Layout = {
     tubes: { radiusScale: number; spacingScale: number; bend: V3 };
   };
   sideFanZ: number | null;
+  // Free depth range (z0..z1) beside the board, in front of it AND in front of a flat card's nose, where side
+  // fans can sit without cutting through the GPU. Null when there is none to speak of.
+  sideFanRange: [number, number] | null;
 };
 
 export function computeLayout(c: CaseSize, inp: PartInputs): Layout {
@@ -124,10 +127,12 @@ export function computeLayout(c: CaseSize, inp: PartInputs): Layout {
   const gLen = axisUnits(inp.specs.gpu, inp.gpuVertical ? 'y' : 'z', 300);
   const gThick = axisUnits(inp.specs.gpu, inp.gpuVertical ? 'z' : 'y', 2.5 * PCIE_SLOT_PITCH_MM);
   const gpuDims: Dims3 = inp.gpuVertical ? { x: gH, y: gLen, z: gThick } : { x: gH, y: gThick, z: gLen };
-  const frontGapMidZ = (-d / 2 + (moboZ - moboDims.z / 2)) / 2;
+  const boardFrontZ = moboZ - moboDims.z / 2;
+  const frontGapMidZ = (-d / 2 + boardFrontZ) / 2;
+  const ramBottom = ramY - ramDims.y / 2; // a flat card must clear the DIMMs on short boards
   const gpuPos: V3 = inp.gpuVertical
     ? [w / 2 - 0.08 - gH / 2, Math.min(-h / 2 + 0.15 + gLen / 2, h / 2 - gLen / 2 - 0.1), Math.max(-d / 2 + gThick / 2 + 0.05, frontGapMidZ)]
-    : [face + 0.03 + gH / 2, moboY - 0.155 * moboDims.y - gThick / 2, d / 2 - 0.12 - gLen / 2];
+    : [face + 0.03 + gH / 2, Math.min(moboY - 0.155 * moboDims.y - gThick / 2, ramBottom - 0.02 - gThick / 2), d / 2 - 0.12 - gLen / 2];
 
   // ---- storage (M.2 stick on the board) and PSU (basement, rear)
   const stoDims: Dims3 = { x: 0.04, y: axisUnits(inp.specs.storage, 'y', STORAGE_M2_SIZE_MM.width), z: axisUnits(inp.specs.storage, 'z', STORAGE_M2_SIZE_MM.length) };
@@ -171,6 +176,7 @@ export function computeLayout(c: CaseSize, inp: PartInputs): Layout {
       tubes: { radiusScale: t.tubeRadiusScale, spacingScale: t.tubeSpacingScale, bend: t.tubeBend },
     },
     sideFanZ: frontGapMidZ,
+    sideFanRange: [-d / 2 + 0.04, Math.min(boardFrontZ, inp.gpuVertical ? Infinity : gpuPos[2] - gLen / 2) - 0.03],
   };
 }
 
@@ -182,26 +188,43 @@ export function fanTransform(
   count: number,
   c: CaseSize,
   sizeMm: number,
-  sideCenterZ?: number,
-): { pos: V3; rot: V3 } {
+  sideRange?: [number, number] | null,
+): { pos: V3; rot: V3; diameter: number } {
   const { w, h, d } = c;
   const gap = 0.04;
-  const along = (span: number) => {
-    const step = span / (count + 1);
-    return span / 2 - step * (index + 1);
+  const size = mmToUnits(sizeMm);
+  // Fans sit edge to edge (pitch = one fan diameter) in a column centred on the panel — like real stacked
+  // 120/140 mm fans. If the catalogue lists more / bigger fans than the panel can take, the fans shrink to
+  // fit instead of overlapping each other or hanging off the case.
+  const spanOf = (span: number) => {
+    const diameter = Math.min(size, span / count);
+    return { diameter, along: ((count - 1) / 2 - index) * diameter };
   };
   switch (position) {
-    case 'front':
-      return { pos: [0, along(h), -d / 2 - gap], rot: [0, Math.PI, 0] };
-    case 'rear':
-      return { pos: [0, along(h), d / 2 + gap], rot: [0, 0, 0] };
-    case 'top':
-      return { pos: [0, h / 2 + gap, along(d)], rot: [-Math.PI / 2, 0, 0] };
-    case 'bottom':
-      return { pos: [0, -h / 2 - gap, along(d)], rot: [Math.PI / 2, 0, 0] };
+    case 'front': {
+      const s = spanOf(h);
+      return { pos: [0, s.along, -d / 2 - gap], rot: [0, Math.PI, 0], diameter: s.diameter };
+    }
+    case 'rear': {
+      const s = spanOf(h);
+      return { pos: [0, s.along, d / 2 + gap], rot: [0, 0, 0], diameter: s.diameter };
+    }
+    case 'top': {
+      const s = spanOf(d);
+      return { pos: [0, h / 2 + gap, s.along], rot: [-Math.PI / 2, 0, 0], diameter: s.diameter };
+    }
+    case 'bottom': {
+      const s = spanOf(d);
+      return { pos: [0, -h / 2 - gap, s.along], rot: [Math.PI / 2, 0, 0], diameter: s.diameter };
+    }
     case 'side': {
-      const size = mmToUnits(sizeMm);
-      return { pos: [-w / 2 + size * 0.105 + gap, along(h), sideCenterZ ?? -d / 2 + size / 2 + gap], rot: [0, Math.PI / 2, 0] };
+      const s = spanOf(h);
+      if (!sideRange) return { pos: [-w / 2 + s.diameter * 0.105 + gap, s.along, -d / 2 + s.diameter / 2 + gap], rot: [0, Math.PI / 2, 0], diameter: s.diameter };
+      // Fit between the front panel and whatever is in the way (board front / a flat card's nose); too little room = no fan.
+      const room = sideRange[1] - sideRange[0];
+      const diameter = room < 0.45 ? 0 : Math.min(s.diameter, room);
+      const along = ((count - 1) / 2 - index) * diameter;
+      return { pos: [-w / 2 + diameter * 0.105 + gap, along, (sideRange[0] + sideRange[1]) / 2], rot: [0, Math.PI / 2, 0], diameter };
     }
   }
 }

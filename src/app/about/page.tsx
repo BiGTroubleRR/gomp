@@ -26,7 +26,7 @@ const translations = {
     origin_p1:
       "Every pre-built we had ever bought came with corners cut we couldn't see until it mattered — thermal paste slapped on, stock coolers running at limits, PSUs rated for worse days.",
     origin_p2:
-      'So in 2025, three friends in Prague stopped buying and started building. Today GOMP has shipped over 30 builds. Every single one stress-tested at load for 24 hours before it ships.',
+      'So in 2025, two friends in Prague stopped buying and started building. Today GOMP has shipped over 20 builds. Every single one stress-tested at load for 24 hours before it ships.',
     founded: 'Founded',
     builds_shipped: 'Builds shipped',
     hq_workshop: 'HQ & workshop',
@@ -61,7 +61,7 @@ const translations = {
     origin_p1:
       'Každý hotový počítač, ktorý sme si kedy kúpili, mal skryté kompromisy, ktoré sa prejavili až vo chvíli, keď na tom najviac záležalo... nedbalo nanesená teplovodivá pasta, sériové chladiče na hranici limitov, zdroje dimenzované na horšie dni.',
     origin_p2:
-      'Preto sme v roku 2025, traja priatelia z Prahy, prestali nakupovať a začali stavať. Dnes má GOMP na konte viac ako 30 zostáv. Každú z nich pred expedíciou 24 hodín záťažovo testujeme.',
+      'Preto sme v roku 2025, dvaja priatelia z Prahy, prestali nakupovať a začali stavať. Dnes má GOMP na konte viac ako 20 zostáv. Každú z nich pred expedíciou 24 hodín záťažovo testujeme.',
     founded: 'Založené',
     builds_shipped: 'Expedovaných zostáv',
     hq_workshop: 'Sídlo a dielňa',
@@ -96,7 +96,7 @@ const translations = {
     origin_p1:
       'Každý hotový počítač, který jsme si kdy koupili, měl skryté kompromisy, které se projevily až ve chvíli, kdy na tom nejvíc záleželo... nedbale nanesená teplovodivá pasta, sériové chladiče na hranici limitů, zdroje dimenzované na horší dny.',
     origin_p2:
-      'Proto jsme v roce 2025, tři kamarádi z Prahy, přestali nakupovat a začali stavět. Dnes má GOMP na kontě přes 30 sestav. Každou z nich před expedicí 24 hodin zátěžově testujeme.',
+      'Proto jsme v roce 2025, dva kamarádi z Prahy, přestali nakupovat a začali stavět. Dnes má GOMP na kontě přes 20 sestav. Každou z nich před expedicí 24 hodin zátěžově testujeme.',
     founded: 'Založeno',
     builds_shipped: 'Expedovaných sestav',
     hq_workshop: 'Sídlo a dílna',
@@ -278,7 +278,7 @@ export default function AboutPage() {
             >
               {[
                 { value: '2025', label: t.founded },
-                { value: '30+', label: t.builds_shipped },
+                { value: '20+', label: t.builds_shipped },
                 { value: 'Praha', label: t.hq_workshop },
               ].map((stat, i) => (
                 <Reveal

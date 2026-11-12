@@ -330,8 +330,13 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
     hoverClear();
     caseRec.group.remove(fans);
     disposeTree(fans);
-    const sideZ = slots.mobo?.selected ? layout().sideFanZ ?? undefined : undefined;
-    fans = buildFanMounts(fanConfig, caseSize, sideZ);
+    const L = layout();
+    const sideZ = slots.mobo?.selected ? L.sideFanRange : null;
+    // An AIO radiator takes the place of the case fans on the face it is mounted to (its own fans replace them),
+    // so those case fans are not drawn on top of it.
+    const cfg: FanConfig = { ...fanConfig };
+    if (slots.cooler?.selected && inputs.cooler.type === 'aio') delete cfg[L.cooler.radiator.mount];
+    fans = buildFanMounts(cfg, caseSize, sideZ);
     tag(fans, 'case');
     caseRec.group.add(fans);
     collectSpinners();
@@ -490,7 +495,7 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
       rec.group.scale.setScalar(0.001);
     }
     startMove(rec, nextSelected ? new THREE.Vector3(...rec.anchor) : start, nextSelected ? 1 : 0.001, nextSelected, delayMs, !nextSelected);
-    if (id === 'mobo') rebuildFans();
+    if (id === 'mobo' || id === 'cooler') rebuildFans();
     controls.autoRotate = false;
   }
 
@@ -541,6 +546,7 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
         rebuild('mobo');
         if (inputs.cooler.type === 'aio') rebuild('cooler'); // the card's length decides front vs top radiator
       }
+      if (id === 'gpu' || id === 'cooler') rebuildFans(); // which face the radiator takes decides which case fans show
     }
   }
 
@@ -565,6 +571,7 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
     rebuild('gpu');
     rebuild('mobo');
     if (inputs.cooler.type === 'aio') rebuild('cooler');
+    rebuildFans();
   }
 
   function setRamModules(count: number) {
