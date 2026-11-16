@@ -34,6 +34,7 @@ import {
 import type { Component, FanMountPosition } from '@/lib/component-db-seed';
 import { COL, disposeTree } from '@/lib/pc3d';
 import { radiatorMountsFor } from './fit';
+import { createSpace } from './space';
 import { computeLayout, DEFAULT_INPUTS, tuningFromAlignment, type CaseSize, type PartInputs, type V3 } from './layout';
 import { buildCooler, buildCpu, buildFanMounts, buildGpu, buildMobo, buildPsu, buildRam, buildShell, buildStorage, gpuFansFor, type Part } from './parts';
 
@@ -94,7 +95,7 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(COL.bg);
-  const camera = new THREE.PerspectiveCamera(32, W / H, 0.1, 100);
+  const camera = new THREE.PerspectiveCamera(32, W / H, 0.1, 400);
   camera.position.set(7.0, 2.9, 2.6).normalize().multiplyScalar(4.5 * 2.4);
   camera.lookAt(0, 0.2, 0);
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -115,13 +116,31 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
   const sideLight = new THREE.PointLight(0x1f8a55, 3, 24);
   sideLight.position.set(-4, 1, -3);
   scene.add(sideLight);
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshStandardMaterial({ color: 0x0f1613 }));
+  // The floor fades out toward its edges (radial alpha map) so the PC stage dissolves into the surrounding space
+  // instead of ending in a hard square slab.
+  const floorFade = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 256;
+    const g = c.getContext('2d')!;
+    const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+    grad.addColorStop(0, '#fff');
+    grad.addColorStop(0.42, '#fff');
+    grad.addColorStop(0.95, '#000');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 256, 256);
+    return new THREE.CanvasTexture(c);
+  })();
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshStandardMaterial({ color: 0x0f1613, transparent: true, alphaMap: floorFade, depthWrite: false }));
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);
   const grid = new THREE.GridHelper(40, 80, 0x2a3a31, 0x1c2822);
   (grid.material as THREE.Material).transparent = true;
   (grid.material as THREE.Material).opacity = 0.5;
   scene.add(grid);
+
+  // ---- deep space around the configurator: stars, a Milky-Way band, nebulae and a distant planet ----
+  const space = createSpace(renderer.getPixelRatio());
+  scene.add(space.group);
 
   // ---- ambient decoration (same rings / motes as the production scene) ------------------------------
   const ambientGroup = new THREE.Group();
@@ -779,6 +798,7 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
       camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(sph));
     }
     controls.update();
+    space.update(camera, t, motionOn);
     renderer.render(scene, camera);
   }
   tick();
@@ -858,6 +878,7 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
     },
     dispose() {
       running = false;
+      space.dispose();
       resizeObserver.disconnect();
       visibilityObserver.disconnect();
       hoverClear();
