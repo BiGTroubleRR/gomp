@@ -6,9 +6,10 @@
 // box, and checks: parts outside the case, parts penetrating each other, fan stacks colliding, GPU I/O end, ...
 // Results are grouped by rule + parts and exposed as window.__auditResult for scripted reading.
 import { useEffect, useState } from 'react';
+import * as THREE from 'three';
 import { caseUnitsFor, dimensionSpecsFor, MM_PER_UNIT, mmToUnits, moboRamSlotCount, ramModuleCount, type DimensionSpec } from '@/lib/build-scene';
 import { caseFitsFormFactor, caseHasVerticalGpuMount, fitsInCase, type Component, type ComponentDb, type FanMountPosition, type FormFactor } from '@/lib/component-db-seed';
-import { computeLayout, fanTransform, DEFAULT_INPUTS, type CaseSize, type PartInputs, type V3 } from '@/lib/lab/layout';
+import { aioHose, computeLayout, fanTransform, DEFAULT_INPUTS, type CaseSize, type PartInputs, type V3 } from '@/lib/lab/layout';
 import { fetchComponentDb } from '@/lib/supabase/components';
 
 type Box = { part: string; group: string; lo: V3; hi: V3 };
@@ -106,6 +107,8 @@ function analyse(caseComp: Component, mobo: Component, gpu: Component, cooler: C
 
   // ---- boxes (case frame, units)
   const boxes: Box[] = [];
+  const lo0: V3 = [-cs.w / 2, -cs.h / 2, -cs.d / 2];
+  const hi0: V3 = [cs.w / 2, cs.h / 2, cs.d / 2];
   boxes.push(boxC('mobo', 'mobo', L.mobo.pos, [L.mobo.dims.x, L.mobo.dims.y, L.mobo.dims.z]));
   boxes.push(boxC('cpu', 'cpu', L.cpu.pos, [L.cpu.dims.x, L.cpu.dims.y, L.cpu.dims.z]));
   L.ram.filled.forEach((i) => boxes.push(boxC('ram', `ram${i}`, L.ram.pos[i], [L.ram.dims.x, L.ram.dims.y, L.ram.dims.z])));
@@ -160,9 +163,30 @@ function analyse(caseComp: Component, mobo: Component, gpu: Component, cooler: C
     }
   });
 
+  // ---- AIO hoses: realistic length, and not cutting through other parts or the case
+  if (aio) {
+    const hose = aioHose(L);
+    hose.paths.forEach((path, k) => {
+      const curve = new THREE.CatmullRomCurve3(path.map((p) => new THREE.Vector3(...p)));
+      const lenMm = mm(curve.getLength());
+      if (lenMm < 200 || lenMm > 480) add('hose-length', 'hose', 'pump-radiator', Math.abs(lenMm - (lenMm < 200 ? 200 : 480)) / MM_PER_UNIT, `hose is ${lenMm} mm (real AIO hoses are ~310-400 mm)`);
+      void k;
+      const pts = curve.getPoints(60);
+      const hit = new Set<string>();
+      pts.forEach((p) => {
+        boxes.forEach((b) => {
+          if (!['gpu', 'ram', 'cpu', 'storage', 'psu', 'cooler-tower'].includes(b.part)) return;
+          const inside = [0, 1, 2].every((i) => p.getComponent(i) > b.lo[i] + 0.03 && p.getComponent(i) < b.hi[i] - 0.03);
+          if (inside) hit.add(b.part);
+        });
+        for (let i = 0; i < 3; i++) { if (p.getComponent(i) < lo0[i] - TOL) hit.add('case-' + 'xyz'[i] + '-low'); if (p.getComponent(i) > hi0[i] + TOL) hit.add('case-' + 'xyz'[i] + '-high'); }
+      });
+      hit.forEach((part) => add('hose', 'hose', part, 0.05, part.startsWith('case') ? 'hose leaves the case' : 'hose passes through the part'));
+    });
+  }
   // ---- R1 containment (parts that must be inside the shell; outside-mounted case fans excluded except side fans)
-  const lo: V3 = [-cs.w / 2, -cs.h / 2, -cs.d / 2];
-  const hi: V3 = [cs.w / 2, cs.h / 2, cs.d / 2];
+  const lo: V3 = lo0;
+  const hi: V3 = hi0;
   const axisName = ['width (toward glass/tray)', 'height', 'depth'];
   boxes.forEach((b) => {
     if (b.part.startsWith('case-fans:') && b.part !== 'case-fans:side') return;

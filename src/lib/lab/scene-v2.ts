@@ -114,9 +114,6 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
   const sideLight = new THREE.PointLight(0x1f8a55, 3, 24);
   sideLight.position.set(-4, 1, -3);
   scene.add(sideLight);
-  const warm = new THREE.PointLight(0xffe4c0, 0.8, 15);
-  warm.position.set(4, -2, 4);
-  scene.add(warm);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshStandardMaterial({ color: 0x0f1613 }));
   floor.rotation.x = -Math.PI / 2;
   scene.add(floor);

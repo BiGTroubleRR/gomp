@@ -51,6 +51,8 @@ export const DEFAULT_INPUTS: PartInputs = {
 // Real AIO radiator thickness and the gap to the front panel — same values as the production scene
 // (build-scene.ts: mmToUnits(27), FRONT_RADIATOR_CLEARANCE).
 export const RADIATOR_THICKNESS_MM = 27;
+// Radiator width (one 120 mm fan wide, a little narrower than the fan frame) — shared with the part builder.
+export const RADIATOR_WIDTH = mmToUnits(120) * 0.94;
 const FRONT_RADIATOR_CLEARANCE = 0.02;
 
 // Size (in scene units) of a part along an axis, from the real-mm DimensionSpec for that axis.
@@ -62,6 +64,7 @@ function axisUnits(specs: DimensionSpec[] | undefined, axis: 'x' | 'y' | 'z', fa
 export const MOBO_T = 0.05; // board thickness (units) — not a catalog dimension
 
 export type Layout = {
+  caseSize: CaseSize; // needed to keep hoses inside the case
   mobo: { pos: V3; dims: Dims3; slotZ: number[] };
   cpu: { pos: V3; dims: Dims3 };
   ram: { dims: Dims3; pos: V3[]; filled: number[] };
@@ -162,6 +165,7 @@ export function computeLayout(c: CaseSize, inp: PartInputs): Layout {
   const onBoard = t.mobo;
 
   return {
+    caseSize: c,
     mobo: { pos: add([moboX, moboY, moboZ], onBoard), dims: moboDims, slotZ: slotZ.map((z) => z + onBoard[2]) },
     cpu: { pos: add(cpuPos, onBoard, t.parts.cpu), dims: cpuDims },
     ram: { dims: ramDims, pos: ramPos.map((p) => add(p, onBoard, t.parts.ram)), filled },
@@ -178,6 +182,51 @@ export function computeLayout(c: CaseSize, inp: PartInputs): Layout {
     sideFanZ: frontGapMidZ,
     sideFanRange: [-d / 2 + 0.04, Math.min(boardFrontZ, inp.gpuVertical ? Infinity : gpuPos[2] - gLen / 2) - 0.03],
   };
+}
+
+// AIO hoses: where they leave the radiator and the path they take to the pump. Real radiators have the two
+// hose fittings on an END tank (a short end of the radiator), side by side across its thickness, on the edge
+// that faces the board — never in the middle of the radiator. A standing (front) radiator uses its top end when
+// that is above the pump (keeps the pump below the highest point of the loop), otherwise its bottom end; a radiator
+// lying under the top panel uses the rear end, the one that faces the CPU. Everything here is in the case frame.
+export type AioHose = { dir: V3; ports: [V3, V3]; paths: [V3[], V3[]] };
+export function aioHose(L: Layout): AioHose {
+  const r = L.cooler.radiator;
+  const a = L.cooler.anchor;
+  const t = L.cooler.tubes;
+  const sp = 0.055 * t.spacingScale; // half the gap between the two fittings
+  const xPort = r.pos[0] - RADIATOR_WIDTH / 2 + 0.22; // toward the board side of the end tank
+  let dir: V3;
+  let ports: [V3, V3];
+  if (r.mount === 'front') {
+    const up = r.pos[1] + r.length / 2 > a[1] + 0.3 ? 1 : -1;
+    const y = r.pos[1] + (up * r.length) / 2;
+    dir = [0, up, 0];
+    ports = [[xPort, y, r.pos[2] - sp], [xPort, y, r.pos[2] + sp]];
+  } else {
+    const z = r.pos[2] + r.length / 2;
+    dir = [0, 0, 1];
+    ports = [[xPort, r.pos[1] - sp, z], [xPort, r.pos[1] + sp, z]];
+  }
+  const pumpZ = r.mount === 'front' ? -0.12 : 0.12;
+  const paths = [0, 1].map((k) => {
+    const o = (k === 0 ? -0.08 : 0.08) * t.spacingScale;
+    const p0: V3 = [a[0] + 0.09, a[1] + o, a[2] + pumpZ];
+    const e = ports[k];
+    // straight run out of the end tank, shortened when the radiator end is close to the case wall
+    const room = dir[1] > 0 ? L.caseSize.h / 2 - e[1] : dir[1] < 0 ? e[1] + L.caseSize.h / 2 : L.caseSize.d / 2 - e[2];
+    const stub = Math.max(0.05, Math.min(0.35, room - 0.08));
+    const s: V3 = [e[0] + dir[0] * stub, e[1] + dir[1] * stub, e[2] + dir[2] * stub];
+    // The hoses rise off the pump toward the glass first, so they pass in FRONT of the RAM and a flat graphics card
+    // (as in real builds) instead of through them, and stay inside the case.
+    const ramTop = L.ram.pos[0][0] + L.ram.dims.x / 2;
+    const gpuTop = L.gpu.vertical ? -Infinity : L.gpu.pos[0] + L.gpu.dims.x / 2;
+    const xHigh = Math.min(Math.max(p0[0] + 0.35, ramTop + 0.12, gpuTop + 0.12 + k * 0.1), L.caseSize.w / 2 - 0.2);
+    const q: V3 = [xHigh, p0[1], p0[2]];
+    const m: V3 = [xHigh + t.bend[0], (p0[1] + s[1]) / 2 + t.bend[1], (p0[2] + s[2]) / 2 + t.bend[2]];
+    return [p0, q, m, s, e];
+  }) as [V3[], V3[]];
+  return { dir, ports, paths };
 }
 
 // Fan-mount position -> placement (same rules as the production scene's fanTransform): fans sit just

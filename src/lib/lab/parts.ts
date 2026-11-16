@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { box, COL, fan, glow, mat } from '@/lib/pc3d';
 import { mmToUnits } from '@/lib/build-scene';
 import type { FanMountPosition } from '@/lib/component-db-seed';
-import { fanTransform, type CaseSize, type Layout, type V3 } from './layout';
+import { aioHose, fanTransform, RADIATOR_WIDTH, type CaseSize, type Layout, type V3 } from './layout';
 
 export type Part = { group: THREE.Group; anchor: V3 };
 
@@ -246,7 +246,7 @@ export function buildCooler(L: Layout, type: 'air' | 'aio', c: CaseSize): Part {
   const rad = L.cooler.radiator;
   const rp = sub(rad.pos, anchor);
   const front = rad.mount === 'front';
-  const radW = mmToUnits(120) * 0.94;
+  const radW = RADIATOR_WIDTH;
   const radBox = front
     ? box(radW, rad.length, rad.thickness, mat(0x1c1c1c, { metalness: 0.7, roughness: 0.35 }))
     : box(radW, rad.thickness, rad.length, mat(0x1c1c1c, { metalness: 0.7, roughness: 0.35 }));
@@ -263,20 +263,20 @@ export function buildCooler(L: Layout, type: 'air' | 'aio', c: CaseSize): Part {
     }
     g.add(f);
   }
-  // Tubes from the pump to the radiator's glass-side end.
-  const { radiusScale, spacingScale, bend } = L.cooler.tubes;
+  // Hoses: from the pump to the two fittings on the radiator's end tank (see aioHose in layout.ts), plus the
+  // short metal fittings themselves. The path is in the case frame, converted here to the pump's local frame.
+  const { radiusScale } = L.cooler.tubes;
+  const hose = aioHose(L);
   const tubeM = mat(0x2a2a2a, { roughness: 0.6, metalness: 0.1 });
-  const end: V3 = front
-    ? [rp[0] + radW / 2 - 0.06, rp[1] + rad.length * 0.32, rp[2] + rad.thickness / 2 + 0.05]
-    : [rp[0] - radW / 2 + 0.06, rp[1] - rad.thickness / 2 - 0.05, rp[2] + rad.length * 0.32];
-  [-0.08, 0.08].forEach((o0) => {
-    const o = o0 * spacingScale;
-    const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0.09, o, front ? -0.12 : 0.12),
-      new THREE.Vector3(0.25 + bend[0], (end[1] + o) * 0.5 + bend[1], end[2] * 0.45 + bend[2]),
-      new THREE.Vector3(end[0], end[1] + (front ? o : 0), end[2] + (front ? 0 : o)),
-    ]);
-    g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 28, 0.035 * radiusScale, 8), tubeM));
+  const fitM = mat(0x8a8a90, { metalness: 0.85, roughness: 0.3 });
+  hose.paths.forEach((path, k) => {
+    const curve = new THREE.CatmullRomCurve3(path.map((p) => new THREE.Vector3(...sub(p, anchor))));
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 36, 0.035 * radiusScale, 8), tubeM));
+    const fit = new THREE.Mesh(new THREE.CylinderGeometry(0.05 * radiusScale, 0.05 * radiusScale, 0.1, 12), fitM);
+    const e = sub(hose.ports[k], anchor);
+    fit.position.set(e[0] + hose.dir[0] * 0.04, e[1] + hose.dir[1] * 0.04, e[2] + hose.dir[2] * 0.04);
+    if (hose.dir[1] === 0) fit.rotation.x = Math.PI / 2; // lying along Z
+    g.add(fit);
   });
   void c;
   return { group: g, anchor };
