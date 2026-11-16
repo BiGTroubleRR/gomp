@@ -40,6 +40,14 @@ export const FONT_SERIF = 'var(--font-serif)'; // display/headings — DM Sans (
 export const FONT_SANS = 'var(--font-sans)'; // DM Sans — body text
 export const FONT_MONO = 'var(--font-mono)'; // numerals, reference codes, technical labels — DM Sans (alias)
 
+// Full-screen photo overlays (customer-build lightbox, component-photo hover in /build): an almost clear milky
+// tint with a strong blur of the page behind, so the photo floats instead of sitting on a washed-out sheet.
+export const LIGHTBOX_BACKDROP = {
+  background: 'rgba(235,230,218,0.06)',
+  backdropFilter: 'blur(18px) saturate(1.1)',
+  WebkitBackdropFilter: 'blur(18px) saturate(1.1)',
+} as const;
+
 // Many places hand-type tinted shadows/glows as their own rgba() literal — this derives the same
 // color from a token at a given alpha instead, so it can't drift out of sync with the palette.
 export function hexToRgba(hex: string, alpha: number): string {

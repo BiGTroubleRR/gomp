@@ -12,7 +12,7 @@ import type { CustomerBuild } from '@/lib/supabase/customer-build-mapping';
 import { fetchComponentDb, getCachedComponentDb } from '@/lib/supabase/components';
 import { defaultComponentDb, computeBuildTier, type ComponentDb } from '@/lib/component-db-seed';
 import TierBadge from '@/components/TierBadge';
-import { INK, MUTED, PAGE_BG, PANEL_BG as PANEL, ACCENT, ON_ACCENT, ACCENT_FILL } from '@/lib/design-tokens';
+import { INK, MUTED, PAGE_BG, PANEL_BG as PANEL, ACCENT, ON_ACCENT, ACCENT_FILL, LIGHTBOX_BACKDROP } from '@/lib/design-tokens';
 
 // Spec lines are free admin-typed text ("Procesor: Intel Core i9-14900K"), not structured
 // {label, value} data — split on the first ':' so the label can be colored/bolded separately
@@ -300,9 +300,7 @@ function PhotoGallery({
         position: 'fixed',
         inset: 0,
         zIndex: 200,
-        background: 'rgba(235,230,218,0.06)',
-        backdropFilter: 'blur(18px) saturate(1.1)',
-        WebkitBackdropFilter: 'blur(18px) saturate(1.1)',
+        ...LIGHTBOX_BACKDROP,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

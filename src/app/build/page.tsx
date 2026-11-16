@@ -55,7 +55,7 @@ import {
 } from '@/lib/build-scene';
 import { useIsMobile } from '@/lib/use-media-query';
 import { fetchAlignmentTuningConfig, subscribeAlignmentTuning, resolveAlignmentTuning, type AlignmentTuningConfig } from '@/lib/supabase/alignment-tuning';
-import { PAGE_BG as BG, PANEL_BG as PANEL, INK, MUTED, GOLD, ACCENT, ACCENT_FILL } from '@/lib/design-tokens';
+import { PAGE_BG as BG, PANEL_BG as PANEL, INK, MUTED, GOLD, ACCENT, ACCENT_FILL, LIGHTBOX_BACKDROP } from '@/lib/design-tokens';
 
 const T = {
   en: {
@@ -2599,7 +2599,7 @@ function BuildPageContent() {
               position: 'fixed', inset: 0, zIndex: 999,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               pointerEvents: 'none',
-              background: 'rgba(235,230,218,0.35)',
+              ...LIGHTBOX_BACKDROP,
             }}
           >
             {/* No card behind the photo — the source PNGs already carry their own alpha
