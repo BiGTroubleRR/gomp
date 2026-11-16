@@ -33,6 +33,7 @@ import {
 } from '@/lib/build-scene';
 import type { Component, FanMountPosition } from '@/lib/component-db-seed';
 import { COL, disposeTree } from '@/lib/pc3d';
+import { radiatorMountsFor } from './fit';
 import { computeLayout, DEFAULT_INPUTS, tuningFromAlignment, type CaseSize, type PartInputs, type V3 } from './layout';
 import { buildCooler, buildCpu, buildFanMounts, buildGpu, buildMobo, buildPsu, buildRam, buildShell, buildStorage, gpuFansFor, type Part } from './parts';
 
@@ -516,6 +517,7 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
       if (comp) comps.case = comp;
       dimSpecs.case = specs;
       refreshDimensions('case');
+      syncRadiatorMounts();
       return;
     }
     if (comp) comps[id] = comp;
@@ -533,6 +535,7 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
         radiatorMm: comp.coolerRadiatorMm ?? DEFAULT_INPUTS.cooler.radiatorMm,
         heightMm: specs.find((s) => s.axis === 'x')?.mm ?? comp.coolerHeightMm ?? DEFAULT_INPUTS.cooler.heightMm,
       };
+      inputs.radiatorMounts = radiatorMountsFor(comps.case, inputs.cooler.radiatorMm);
     }
     if (id === 'mobo') {
       rebuildAllParts();
@@ -545,6 +548,15 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
       }
       if (id === 'gpu' || id === 'cooler') rebuildFans(); // which face the radiator takes decides which case fans show
     }
+  }
+
+  // Which mount the AIO radiator prefers depends on the case's fan mounts (and the radiator's size).
+  function syncRadiatorMounts() {
+    const next = radiatorMountsFor(comps.case, inputs.cooler.radiatorMm);
+    if (JSON.stringify(next) === JSON.stringify(inputs.radiatorMounts)) return;
+    inputs.radiatorMounts = next;
+    if (inputs.cooler.type === 'aio') rebuild('cooler');
+    rebuildFans();
   }
 
   function setComponentDimensions(id: CompId, specs: DimensionSpec[]) {

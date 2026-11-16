@@ -246,10 +246,14 @@ export function buildCooler(L: Layout, type: 'air' | 'aio', c: CaseSize): Part {
   const rad = L.cooler.radiator;
   const rp = sub(rad.pos, anchor);
   const front = rad.mount === 'front';
+  const side = rad.mount === 'side';
   const radW = RADIATOR_WIDTH;
+  const radMat = mat(0x1c1c1c, { metalness: 0.7, roughness: 0.35 });
   const radBox = front
-    ? box(radW, rad.length, rad.thickness, mat(0x1c1c1c, { metalness: 0.7, roughness: 0.35 }))
-    : box(radW, rad.thickness, rad.length, mat(0x1c1c1c, { metalness: 0.7, roughness: 0.35 }));
+    ? box(radW, rad.length, rad.thickness, radMat)
+    : side
+      ? box(rad.thickness, rad.length, radW, radMat) // standing against the tray wall: thickness along X
+      : box(radW, rad.thickness, rad.length, radMat);
   at(radBox, rp);
   g.add(radBox);
   for (let i = 0; i < rad.fans; i++) {
@@ -257,6 +261,9 @@ export function buildCooler(L: Layout, type: 'air' | 'aio', c: CaseSize): Part {
     const along = -rad.length / 2 + ((i + 0.5) * rad.length) / rad.fans;
     if (front) {
       f.position.set(rp[0], rp[1] + along, rp[2] + rad.thickness / 2 + 0.07);
+    } else if (side) {
+      f.rotation.y = Math.PI / 2; // facing the glass (+X)
+      f.position.set(rp[0] + rad.thickness / 2 + 0.07, rp[1] + along, rp[2]);
     } else {
       f.rotation.x = Math.PI / 2; // facing down, under the radiator
       f.position.set(rp[0], rp[1] - rad.thickness / 2 - 0.07, rp[2] + along);

@@ -32,11 +32,16 @@ export type LayoutTuning = {
 
 export const NO_TUNING: LayoutTuning = { parts: {}, mobo: [0, 0, 0], gpuVertical: [0, 0, 0], tubeRadiusScale: 1, tubeSpacingScale: 1, tubeBend: [0, 0, 0] };
 
+// Where the case lets an AIO radiator stand, in order of preference (see radiatorMountsFor in fit.ts). 'top' is always
+// the last resort when the preferred mount is blocked.
+export type RadiatorMount = 'front' | 'side' | 'top';
+
 export type PartInputs = {
   specs: Partial<Record<CompId, DimensionSpec[]>>;
   cooler: { type: 'air' | 'aio'; radiatorMm: number; heightMm: number };
   ram: { sticks: number; slots: number };
   gpuVertical: boolean;
+  radiatorMounts?: RadiatorMount[];
   tuning?: LayoutTuning;
 };
 
@@ -78,7 +83,7 @@ export type Layout = {
     // aio, case-frame. 'front' (default, as production): standing, length along Y, fans on its inner (+Z)
     // face. 'top': lying under the top panel, length along Z, fans underneath — used when the GPU needs the
     // front of the case (a vertical card, or a flat card long enough to reach the radiator).
-    radiator: { pos: V3; length: number; thickness: number; fans: number; mount: 'front' | 'top' };
+    radiator: { pos: V3; length: number; thickness: number; fans: number; mount: RadiatorMount };
     tubes: { radiusScale: number; spacingScale: number; bend: V3 };
   };
   sideFanZ: number | null;
@@ -153,9 +158,20 @@ export function computeLayout(c: CaseSize, inp: PartInputs): Layout {
   const RAD_FAN_DEPTH = 0.14; // fan stack in front of the radiator's inner face
   const radInnerZ = -d / 2 + FRONT_RADIATOR_CLEARANCE + radT + RAD_FAN_DEPTH;
   const gpuFrontZ = inp.gpuVertical ? gpuPos[2] - gThick / 2 : gpuPos[2] - gLen / 2;
-  const radMount: 'front' | 'top' = gpuFrontZ < radInnerZ + 0.02 ? 'top' : 'front';
-  const radLen = Math.min(mmToUnits(inp.cooler.radiatorMm), Math.max(0.6, radMount === 'front' ? h - 0.3 : d - 0.5));
-  const radPos: V3 = radMount === 'front' ? [0, 0, -d / 2 + FRONT_RADIATOR_CLEARANCE + radT / 2] : [0.2, h / 2 - 0.06 - radT / 2, -d / 2 + 0.25 + radLen / 2];
+  // 'side': standing against the tray wall in the free gap in front of the board and a flat card's nose, where cases
+  // with a side fan column (e.g. Cooler Master Elite 600, Lian Li O11D) mount a radiator in place of those fans.
+  const sideRange: [number, number] = [-d / 2 + 0.04, Math.min(boardFrontZ, inp.gpuVertical ? Infinity : gpuPos[2] - gLen / 2) - 0.03];
+  const sideFits = sideRange[1] - sideRange[0] >= RADIATOR_WIDTH + 0.1;
+  const frontFits = gpuFrontZ >= radInnerZ + 0.02;
+  const radMount: RadiatorMount =
+    (inp.radiatorMounts ?? ['front']).find((m) => (m === 'front' ? frontFits : m === 'side' ? sideFits : true)) ?? 'top';
+  const radLen = Math.min(mmToUnits(inp.cooler.radiatorMm), Math.max(0.6, radMount === 'top' ? d - 0.5 : h - 0.3));
+  const radPos: V3 =
+    radMount === 'front'
+      ? [0, 0, -d / 2 + FRONT_RADIATOR_CLEARANCE + radT / 2]
+      : radMount === 'side'
+        ? [-w / 2 + 0.04 + radT / 2, 0, (sideRange[0] + sideRange[1]) / 2]
+        : [0.2, h / 2 - 0.06 - radT / 2, -d / 2 + 0.25 + radLen / 2];
   const aioFans = Math.max(1, Math.round(inp.cooler.radiatorMm / 120));
   const coolerAnchor: V3 = inp.cooler.type === 'aio' ? [cpuPos[0] + 0.03 + 0.08 + 0.02, cy, cz] : [cpuPos[0] + 0.03 + 0.02 + towerLen / 2, cy, cz];
 
@@ -180,7 +196,7 @@ export function computeLayout(c: CaseSize, inp: PartInputs): Layout {
       tubes: { radiusScale: t.tubeRadiusScale, spacingScale: t.tubeSpacingScale, bend: t.tubeBend },
     },
     sideFanZ: frontGapMidZ,
-    sideFanRange: [-d / 2 + 0.04, Math.min(boardFrontZ, inp.gpuVertical ? Infinity : gpuPos[2] - gLen / 2) - 0.03],
+    sideFanRange: sideRange,
   };
 }
 
@@ -194,23 +210,29 @@ export function aioHose(L: Layout): AioHose {
   const r = L.cooler.radiator;
   const a = L.cooler.anchor;
   const t = L.cooler.tubes;
-  const sp = 0.055 * t.spacingScale; // half the gap between the two fittings
-  const xPort = r.pos[0] - RADIATOR_WIDTH / 2 + 0.22; // toward the board side of the end tank
+  // The two fittings sit well apart on the end tank (~36 mm between centres), along the radiator's width and not
+  // across its thin side, so the hoses do not run touching each other.
+  const sp = 0.17 * t.spacingScale; // half the gap between the two fittings
+  const xc = r.pos[0] - RADIATOR_WIDTH / 2 + 0.42; // toward the board side of the end tank
   let dir: V3;
   let ports: [V3, V3];
-  if (r.mount === 'front') {
+  if (r.mount === 'front' || r.mount === 'side') {
     const up = r.pos[1] + r.length / 2 > a[1] + 0.3 ? 1 : -1;
     const y = r.pos[1] + (up * r.length) / 2;
     dir = [0, up, 0];
-    ports = [[xPort, y, r.pos[2] - sp], [xPort, y, r.pos[2] + sp]];
+    if (r.mount === 'front') ports = [[xc - sp, y, r.pos[2]], [xc + sp, y, r.pos[2]]];
+    else {
+      const zc = r.pos[2] + RADIATOR_WIDTH / 2 - 0.42; // toward the pump (rear) side of the end tank
+      ports = [[r.pos[0], y, zc - sp], [r.pos[0], y, zc + sp]];
+    }
   } else {
     const z = r.pos[2] + r.length / 2;
     dir = [0, 0, 1];
-    ports = [[xPort, r.pos[1] - sp, z], [xPort, r.pos[1] + sp, z]];
+    ports = [[xc - sp, r.pos[1], z], [xc + sp, r.pos[1], z]];
   }
-  const pumpZ = r.mount === 'front' ? -0.12 : 0.12;
+  const pumpZ = r.mount === 'top' ? 0.12 : -0.12;
   const paths = [0, 1].map((k) => {
-    const o = (k === 0 ? -0.08 : 0.08) * t.spacingScale;
+    const o = (k === 0 ? -0.17 : 0.17) * t.spacingScale;
     const p0: V3 = [a[0] + 0.09, a[1] + o, a[2] + pumpZ];
     const e = ports[k];
     // straight run out of the end tank, shortened when the radiator end is close to the case wall
@@ -223,7 +245,8 @@ export function aioHose(L: Layout): AioHose {
     const gpuTop = L.gpu.vertical ? -Infinity : L.gpu.pos[0] + L.gpu.dims.x / 2;
     const xHigh = Math.min(Math.max(p0[0] + 0.35, ramTop + 0.12, gpuTop + 0.12 + k * 0.1), L.caseSize.w / 2 - 0.2);
     const q: V3 = [xHigh, p0[1], p0[2]];
-    const m: V3 = [xHigh + t.bend[0], (p0[1] + s[1]) / 2 + t.bend[1], (p0[2] + s[2]) / 2 + t.bend[2]];
+    const apart = (k === 0 ? -0.1 : 0.1) * t.spacingScale; // keeps the two hoses clearly separate along the whole run
+    const m: V3 = [xHigh + t.bend[0], (p0[1] + s[1]) / 2 + apart + t.bend[1], (p0[2] + s[2]) / 2 + t.bend[2]];
     return [p0, q, m, s, e];
   }) as [V3[], V3[]];
   return { dir, ports, paths };

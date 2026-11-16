@@ -11,6 +11,7 @@ import { caseUnitsFor, dimensionSpecsFor, MM_PER_UNIT, mmToUnits, moboRamSlotCou
 import { caseFitsFormFactor, caseHasVerticalGpuMount, fitsInCase, type Component, type ComponentDb, type FanMountPosition, type FormFactor } from '@/lib/component-db-seed';
 import { aioHose, computeLayout, fanTransform, DEFAULT_INPUTS, type CaseSize, type PartInputs, type V3 } from '@/lib/lab/layout';
 import { fetchComponentDb } from '@/lib/supabase/components';
+import { radiatorMountsFor } from '@/lib/lab/fit';
 
 type Box = { part: string; group: string; lo: V3; hi: V3 };
 type FanCfg = Partial<Record<FanMountPosition, { count: number; sizeMm: number }>>;
@@ -98,6 +99,7 @@ function analyse(caseComp: Component, mobo: Component, gpu: Component, cooler: C
     cooler: { type: aio ? 'aio' : 'air', radiatorMm: cooler.coolerRadiatorMm ?? DEFAULT_INPUTS.cooler.radiatorMm, heightMm: coolerSpecs.find((s) => s.axis === 'x')?.mm ?? cooler.coolerHeightMm ?? DEFAULT_INPUTS.cooler.heightMm },
     ram: { sticks: ramModuleCount(ram), slots: moboRamSlotCount(mobo) },
     gpuVertical: vertical,
+    radiatorMounts: radiatorMountsFor(caseComp, cooler.coolerRadiatorMm ?? DEFAULT_INPUTS.cooler.radiatorMm),
   };
   const L = computeLayout(cs, inp);
   // same as scene-v2 rebuildFans: an AIO radiator replaces the case fans on the face it is mounted to
@@ -124,13 +126,16 @@ function analyse(caseComp: Component, mobo: Component, gpu: Component, cooler: C
     const r = L.cooler.radiator;
     const radW = mmToUnits(120) * 0.94;
     const front = r.mount === 'front';
-    boxes.push(boxC('radiator', 'rad', r.pos, front ? [radW, r.length, r.thickness] : [radW, r.thickness, r.length]));
+    const side = r.mount === 'side';
+    boxes.push(boxC('radiator', 'rad', r.pos, front ? [radW, r.length, r.thickness] : side ? [r.thickness, r.length, radW] : [radW, r.thickness, r.length]));
     for (let i = 0; i < r.fans; i++) {
       const along = -r.length / 2 + ((i + 0.5) * r.length) / r.fans;
       boxes.push(
         front
           ? boxC('radiator-fan', `radfan${i}`, [r.pos[0], r.pos[1] + along, r.pos[2] + r.thickness / 2 + 0.07], [2 * RAD_FAN_R, 2 * RAD_FAN_R, FAN_T])
-          : boxC('radiator-fan', `radfan${i}`, [r.pos[0], r.pos[1] - r.thickness / 2 - 0.07, r.pos[2] + along], [2 * RAD_FAN_R, FAN_T, 2 * RAD_FAN_R]),
+          : side
+            ? boxC('radiator-fan', `radfan${i}`, [r.pos[0] + r.thickness / 2 + 0.07, r.pos[1] + along, r.pos[2]], [FAN_T, 2 * RAD_FAN_R, 2 * RAD_FAN_R])
+            : boxC('radiator-fan', `radfan${i}`, [r.pos[0], r.pos[1] - r.thickness / 2 - 0.07, r.pos[2] + along], [2 * RAD_FAN_R, FAN_T, 2 * RAD_FAN_R]),
       );
     }
   }
@@ -166,6 +171,14 @@ function analyse(caseComp: Component, mobo: Component, gpu: Component, cooler: C
   // ---- AIO hoses: realistic length, and not cutting through other parts or the case
   if (aio) {
     const hose = aioHose(L);
+    {
+      const c0 = new THREE.CatmullRomCurve3(hose.paths[0].map((p) => new THREE.Vector3(...p))).getPoints(60);
+      const c1 = new THREE.CatmullRomCurve3(hose.paths[1].map((p) => new THREE.Vector3(...p))).getPoints(60);
+      // compare along the radiator-side half of the run, where the hoses used to nearly touch
+      let minD = Infinity;
+      for (let i = 30; i < c0.length; i++) minD = Math.min(minD, c0[i].distanceTo(c1[i]));
+      if (minD < 0.2) add('hose-spacing', 'hose', 'hose', 0.2 - minD, `hoses only ${mm(minD)} mm apart near the radiator`);
+    }
     hose.paths.forEach((path, k) => {
       const curve = new THREE.CatmullRomCurve3(path.map((p) => new THREE.Vector3(...p)));
       const lenMm = mm(curve.getLength());

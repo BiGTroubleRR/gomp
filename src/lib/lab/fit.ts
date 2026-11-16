@@ -8,6 +8,7 @@
 //     long to lie flat in the case but does fit standing up. The 3D scene applies the same geometric
 //     rule internally (see effectiveGpuVertical in scene-v2.ts) so a page never has to remember it.
 import { caseHasVerticalGpuMount, fitsInCase, type Category, type Component } from '@/lib/component-db-seed';
+import type { RadiatorMount } from './layout';
 
 export { caseHasVerticalGpuMount, fitsInCase };
 
@@ -27,6 +28,19 @@ export function fitProblem(category: Category, comp: Component, caseComp: Compon
   if (category === 'psu') return `${comp.psuLengthMm} mm PSU, case takes ${caseComp.maxPsuLengthMm} mm`;
   if (category === 'mobo') return `${comp.formFactor ?? 'board'} doesn't fit a ${caseComp.category ?? 'this'} case`;
   return 'does not fit';
+}
+
+// Where this case lets an AIO radiator stand, in order of preference. Driven purely by the case's own fan mounts, so
+// new cases of any layout work without code: a front mount that can hold the radiator's fans wins (the radiator takes
+// the front fans' place); otherwise a side mount (the fan column beside the board, e.g. Cooler Master Elite 600, Lian Li
+// O11D), where the radiator replaces those fans; otherwise today's default (front, then the roof as a fallback in layout.ts).
+export function radiatorMountsFor(caseComp: Component | undefined, radiatorMm: number): RadiatorMount[] {
+  const mounts = caseComp?.fanMounts ?? [];
+  const need = Math.max(1, Math.round(radiatorMm / 120));
+  const holds = (position: string) => mounts.some((m) => m.position === position && m.maxCount >= need);
+  if (holds('front')) return ['front'];
+  if (holds('side')) return ['side'];
+  return ['front'];
 }
 
 export function gpuMountFor(caseComp: Component | undefined, gpuComp: Component | undefined): 'horizontal' | 'vertical' {
