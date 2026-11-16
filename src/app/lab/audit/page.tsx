@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { caseUnitsFor, dimensionSpecsFor, MM_PER_UNIT, mmToUnits, moboRamSlotCount, ramModuleCount, type DimensionSpec } from '@/lib/build-scene';
 import { caseFitsFormFactor, caseHasVerticalGpuMount, fitsInCase, type Component, type ComponentDb, type FanMountPosition, type FormFactor } from '@/lib/component-db-seed';
-import { aioHose, computeLayout, fanTransform, DEFAULT_INPUTS, type CaseSize, type PartInputs, type V3 } from '@/lib/lab/layout';
+import { aioHose, aioHoseDistance, aioHoseReachUnits, computeLayout, fanTransform, DEFAULT_INPUTS, type CaseSize, type PartInputs, type V3 } from '@/lib/lab/layout';
 import { fetchComponentDb } from '@/lib/supabase/components';
 import { radiatorMountsFor } from '@/lib/lab/fit';
 
@@ -179,10 +179,15 @@ function analyse(caseComp: Component, mobo: Component, gpu: Component, cooler: C
       for (let i = 30; i < c0.length; i++) minD = Math.min(minD, c0[i].distanceTo(c1[i]));
       if (minD < 0.2) add('hose-spacing', 'hose', 'hose', 0.2 - minD, `hoses only ${mm(minD)} mm apart near the radiator`);
     }
+    {
+      const dist = aioHoseDistance(L);
+      const reach = aioHoseReachUnits(cooler.coolerRadiatorMm ?? DEFAULT_INPUTS.cooler.radiatorMm);
+      if (dist > reach) add('hose-reach', 'hose', 'pump-radiator', dist - reach, `pump to radiator fittings is ${mm(dist)} mm, hoses reach ~${mm(reach)} mm (mount: ${L.cooler.radiator.mount})`);
+    }
     hose.paths.forEach((path, k) => {
       const curve = new THREE.CatmullRomCurve3(path.map((p) => new THREE.Vector3(...p)));
       const lenMm = mm(curve.getLength());
-      if (lenMm < 200 || lenMm > 480) add('hose-length', 'hose', 'pump-radiator', Math.abs(lenMm - (lenMm < 200 ? 200 : 480)) / MM_PER_UNIT, `hose is ${lenMm} mm (real AIO hoses are ~310-400 mm)`);
+      void lenMm;
       void k;
       const pts = curve.getPoints(60);
       const hit = new Set<string>();

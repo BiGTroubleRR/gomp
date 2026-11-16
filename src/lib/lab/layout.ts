@@ -92,7 +92,48 @@ export type Layout = {
   sideFanRange: [number, number] | null;
 };
 
+// Real AIO hoses are about 400 mm (240 mm and larger) or ~300 mm (120 / 140 mm units); the pump has to reach the
+// radiator's fittings in a straight-ish line with a little slack for the bend, so ~95 % of the hose length is the
+// farthest the fittings can be from the pump.
+export function aioHoseReachUnits(radiatorMm: number): number {
+  return mmToUnits((radiatorMm >= 240 ? 400 : 300) * 0.95);
+}
+
+// Straight distance from the pump to the radiator fittings (the middle of the two ports).
+export function aioHoseDistance(L: Layout): number {
+  const { ports } = aioHose(L);
+  const a = L.cooler.anchor;
+  const mid: V3 = [(ports[0][0] + ports[1][0]) / 2, (ports[0][1] + ports[1][1]) / 2, (ports[0][2] + ports[1][2]) / 2];
+  return Math.hypot(mid[0] - a[0], mid[1] - a[1], mid[2] - a[2]);
+}
+
+// Public entry: lays the parts out. For an AIO, if the hoses could not reach the radiator at the mount the case
+// prefers (a big case: the front radiator is too far from the CPU), the radiator moves to the next mount the case can
+// take and finally under the roof, above the board, where the hoses are short — as people do in real builds.
 export function computeLayout(c: CaseSize, inp: PartInputs): Layout {
+  const first = layoutFor(c, inp);
+  if (inp.cooler.type !== 'aio') return first;
+  const reach = aioHoseReachUnits(inp.cooler.radiatorMm);
+  if (aioHoseDistance(first) <= reach) return first;
+  const tried = new Set<RadiatorMount>([first.cooler.radiator.mount]);
+  let best = first;
+  let bestD = aioHoseDistance(first);
+  for (const m of [...(inp.radiatorMounts ?? ['front']), 'top'] as RadiatorMount[]) {
+    const L = layoutFor(c, inp, m);
+    const mount = L.cooler.radiator.mount;
+    if (tried.has(mount)) continue;
+    tried.add(mount);
+    const d = aioHoseDistance(L);
+    if (d <= reach) return L;
+    if (d < bestD) {
+      best = L;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
+function layoutFor(c: CaseSize, inp: PartInputs, forceMount?: RadiatorMount): Layout {
   const { w, h, d } = c;
   const atx = MOBO_FORM_FACTOR_SIZE_MM.ATX;
 
@@ -164,7 +205,7 @@ export function computeLayout(c: CaseSize, inp: PartInputs): Layout {
   const sideFits = sideRange[1] - sideRange[0] >= RADIATOR_WIDTH + 0.1;
   const frontFits = gpuFrontZ >= radInnerZ + 0.02;
   const radMount: RadiatorMount =
-    (inp.radiatorMounts ?? ['front']).find((m) => (m === 'front' ? frontFits : m === 'side' ? sideFits : true)) ?? 'top';
+    [...(forceMount ? [forceMount] : []), ...(inp.radiatorMounts ?? ['front'])].find((m) => (m === 'front' ? frontFits : m === 'side' ? sideFits : true)) ?? 'top';
   const radLen = Math.min(mmToUnits(inp.cooler.radiatorMm), Math.max(0.6, radMount === 'top' ? d - 0.5 : h - 0.3));
   const radPos: V3 =
     radMount === 'front'
