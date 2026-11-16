@@ -38,8 +38,7 @@ const TRANSLATIONS = {
     nav_about: 'About',
     nav_account: 'Account',
     nav_startbuilding: 'Start Building →',
-    eyebrow: 'Prebuilt PCs',
-    title: 'Pick your build.',
+    title: 'Not sure where to start? Get inspired!',
     configure_arrow: 'Configure →',
     need_specific: 'Need something specific?',
     need_specific_desc:
@@ -47,8 +46,6 @@ const TRANSLATIONS = {
     open_3d: 'Open 3D Builder →',
     footer_terms: 'Terms & Conditions',
     footer_privacy: 'Privacy Policy',
-    footer_disclaimer:
-      'Prices are shown in CZK (Kč); the € figure is an approximate conversion (1 € ≈ 24.30 Kč, reference Jul 2026). Final price confirmed at checkout.',
     filter_all: 'All',
     filter_flagship: 'Flagship',
     filter_performance: 'Performance',
@@ -61,7 +58,6 @@ const TRANSLATIONS = {
     verify_passmark: 'Verify ↗',
     vat_included: 'Price includes VAT',
     spec_storage: 'SSD',
-    showing: (n: number) => `Showing ${n} configurations`,
   },
   sk: {
     nav_home: 'Domov',
@@ -70,8 +66,7 @@ const TRANSLATIONS = {
     nav_about: 'O nás',
     nav_account: 'Účet',
     nav_startbuilding: 'Začať stavať →',
-    eyebrow: 'Hotové zostavy',
-    title: 'Vyberte si zostavu.',
+    title: 'Neviete ako začať? Inšpirujte sa!',
     configure_arrow: 'Konfigurovať →',
     need_specific: 'Nie sú PREBUILT podľa Vašej chuti?',
     need_specific_desc:
@@ -79,8 +74,6 @@ const TRANSLATIONS = {
     open_3d: 'Otvoriť 3D konfigurátor →',
     footer_terms: 'Obchodné podmienky',
     footer_privacy: 'Ochrana osobných údajov',
-    footer_disclaimer:
-      'Ceny sú uvedené v Kč; suma v € je približný prepočet (1 € ≈ 24,30 Kč, referenčný júl 2026). Konečná cena bude potvrdená pri objednávke.',
     filter_all: 'Všetky',
     filter_flagship: 'Vlajkové',
     filter_performance: 'Výkonné',
@@ -93,7 +86,6 @@ const TRANSLATIONS = {
     verify_passmark: 'Overiť ↗',
     vat_included: 'Cena vrátane DPH',
     spec_storage: 'SSD',
-    showing: (n: number) => `Zobrazených ${n} konfigurácií`,
   },
   cz: {
     nav_home: 'Domů',
@@ -102,8 +94,7 @@ const TRANSLATIONS = {
     nav_about: 'O nás',
     nav_account: 'Účet',
     nav_startbuilding: 'Začít stavět →',
-    eyebrow: 'Hotové sestavy',
-    title: 'Vyberte si sestavu.',
+    title: 'Nevíte, jak začít? Inspirujte se!',
     configure_arrow: 'Konfigurovat →',
     need_specific: 'Potřebujete něco konkrétního?',
     need_specific_desc:
@@ -111,8 +102,6 @@ const TRANSLATIONS = {
     open_3d: 'Otevřít 3D konfigurátor →',
     footer_terms: 'Obchodní podmínky',
     footer_privacy: 'Ochrana osobních údajů',
-    footer_disclaimer:
-      'Ceny jsou uvedeny v Kč; částka v € je přibližný přepočet (1 € ≈ 24,30 Kč, referenční červenec 2026). Konečná cena bude potvrzena při objednávce.',
     filter_all: 'Všechny',
     filter_flagship: 'Vlajkové',
     filter_performance: 'Výkonné',
@@ -125,17 +114,10 @@ const TRANSLATIONS = {
     verify_passmark: 'Ověřit ↗',
     vat_included: 'Cena včetně DPH',
     spec_storage: 'SSD',
-    showing: (n: number) => {
-      const mod10 = n % 10;
-      const mod100 = n % 100;
-      if (mod10 === 1 && mod100 !== 11) return `Zobrazena ${n} konfigurace`;
-      if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) return `Zobrazeny ${n} konfigurace`;
-      return `Zobrazeno ${n} konfigurací`;
-    },
   },
 } as const;
 
-type StringKey = Exclude<keyof typeof TRANSLATIONS.en, 'showing'>;
+type StringKey = keyof typeof TRANSLATIONS.en;
 
 const FILTER_DEFS: { id: FilterId; key: StringKey }[] = [
   { id: 'all', key: 'filter_all' },
@@ -292,19 +274,6 @@ function ShopInner() {
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div
             style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 11,
-              fontWeight: 500,
-              color: '#98A39D',
-              letterSpacing: 2.5,
-              textTransform: 'uppercase',
-              marginBottom: 12,
-            }}
-          >
-            {t.eyebrow}
-          </div>
-          <div
-            style={{
               display: 'flex',
               flexDirection: isMobile ? 'column' : 'row',
               alignItems: isMobile ? 'flex-start' : 'flex-end',
@@ -326,9 +295,6 @@ function ShopInner() {
             >
               {t.title}
             </h1>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', fontWeight: 300, marginBottom: isMobile ? 0 : 4 }}>
-              {t.showing(filtered.length)}
-            </div>
           </div>
           <div style={{ overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch' as const }}>
             <div style={{ display: 'flex', gap: 0, borderTop: '0.5px solid rgba(235,230,218,0.12)' }}>

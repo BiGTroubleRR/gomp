@@ -51,23 +51,10 @@ const T = {
   },
   rights: { en: 'All rights reserved.', sk: 'Všetky práva vyhradené.', cz: 'Všechna práva vyhrazena.' },
   coop: { en: 'In cooperation with', sk: 'V spolupráci s', cz: 'Ve spolupráci s' },
-  disclaimer: {
-    en: 'Prices are shown in CZK (Kč); the € figure is an approximate conversion (1 € ≈ 24.30 Kč, reference Jul 2026). Final price confirmed at checkout.',
-    sk: 'Ceny sú uvedené v Kč; suma v € je približný prepočet (1 € ≈ 24,30 Kč, referenčný júl 2026). Konečná cena bude potvrdená pri objednávke.',
-    cz: 'Ceny jsou uvedeny v Kč; částka v € je přibližný přepočet (1 € ≈ 24,30 Kč, referenční červenec 2026). Konečná cena bude potvrzena při objednávce.',
-  },
-  tiers: {
-    en: 'Every GOMP is rated on a tier scale from S (top) down to B (entry-level), calculated as the average tier of its individual components.',
-    sk: 'Každý GOMP má hodnotenie na škále S (najvyššie) až B (základné), vypočítané ako priemer úrovní jeho jednotlivých komponentov.',
-    cz: 'Každý GOMP má hodnocení na škále S (nejvyšší) až B (základní), vypočítané jako průměr úrovní jeho jednotlivých komponentů.',
-  },
 } satisfies Record<string, L3>;
 
-const vatNote = (lang: 'en' | 'sk' | 'cz', pct: number) =>
-  pick(lang, { en: `All prices include VAT (${pct}%).`, sk: `Všetky ceny obsahujú DPH (${pct}%).`, cz: `Všechny ceny zahrnují DPH (${pct}%).` });
-
 export default function GompFooter() {
-  const { lang, vatRatePct } = useSite();
+  const { lang } = useSite();
   const s = (k: keyof typeof T) => pick(lang, T[k]);
   return (
     <footer>
@@ -90,8 +77,6 @@ export default function GompFooter() {
             {s('coop')}{' '}
             <a href="https://www.alexadam.sk" target="_blank" rel="noopener noreferrer">www.alexadam.sk</a>
           </div>
-          <div>{vatNote(lang, vatRatePct)} {s('disclaimer')}</div>
-          <div>{s('tiers')}</div>
         </div>
       </div>
     </footer>

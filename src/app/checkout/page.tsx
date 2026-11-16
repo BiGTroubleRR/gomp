@@ -112,8 +112,6 @@ const TRANSLATIONS = {
     total: 'Total',
     vat_included: 'Price includes VAT',
     estimated_delivery: 'Estimated Delivery',
-    price_disclaimer:
-      'Prices include statutory VAT. Shown in CZK, converted to EUR at an approximate market rate (1 € ≈ 24.30 Kč, reference Jul 2026). Informative only — final price is confirmed at checkout.',
     shipping_details: 'Shipping Details',
     shipping_details_desc: 'Where should we deliver your build?',
     saved_addresses: 'Saved Addresses',
@@ -170,8 +168,6 @@ const TRANSLATIONS = {
     total: 'Spolu',
     vat_included: 'Cena vrátane DPH',
     estimated_delivery: 'Predpokladané doručenie',
-    price_disclaimer:
-      'Ceny obsahujú zákonnú DPH. Uvedené v CZK, prepočet na EUR približným trhovým kurzom (1 € ≈ 24,30 Kč, referenčný júl 2026). Slúži len na orientáciu — konečná cena je potvrdená pri pokladni.',
     shipping_details: 'Údaje o doručení',
     shipping_details_desc: 'Kam máme doručiť vašu zostavu?',
     saved_addresses: 'Uložené adresy',
@@ -225,8 +221,6 @@ const TRANSLATIONS = {
     total: 'Celkem',
     vat_included: 'Cena včetně DPH',
     estimated_delivery: 'Předpokládané doručení',
-    price_disclaimer:
-      'Ceny obsahují zákonnou DPH. Uvedeny v CZK, přepočet na EUR přibližným tržním kurzem (1 € ≈ 24,30 Kč, referenční červenec 2026). Slouží pouze pro orientaci — konečná cena je potvrzena při pokladně.',
     shipping_details: 'Údaje o doručení',
     shipping_details_desc: 'Kam máme doručit vaši sestavu?',
     saved_addresses: 'Uložené adresy',
@@ -610,7 +604,6 @@ export default function CheckoutPage() {
             </div>
             <div style={{ ...serif, fontSize: 18, fontWeight: 500, color: INK }}>{deliveryDate}</div>
           </div>
-          <div style={{ ...sans, fontSize: 10, color: MUTED, fontWeight: 300, lineHeight: 1.6 }}>{t.price_disclaimer}</div>
         </div>
 
         {/* Main step content */}
