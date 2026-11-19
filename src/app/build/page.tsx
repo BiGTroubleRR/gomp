@@ -62,7 +62,7 @@ const T = {
   en: {
     nav_home: 'Home', nav_shop: 'Shop', nav_build: 'Build', nav_about: 'About', nav_account: 'Account',
     pc_builder: 'PC Builder', select_components: 'Select components to add', build_complete: 'Build Complete PC',
-    clear_all: 'Clear All', drag_to_orbit: '🖱️ Drag to orbit  ·  🔍 Scroll to zoom', drag_to_orbit_touch: '👆 Drag to rotate  ·  🤏 Pinch to zoom', hide_panel: 'Hide Side Panel',
+    clear_all: 'Clear All', drag_to_orbit: 'Drag to orbit  ·  Scroll to zoom', drag_to_orbit_touch: 'Drag to rotate  ·  Pinch to zoom', hide_panel: 'Hide Side Panel',
     show_panel: 'Show Side Panel', complete: 'Complete', your_build: 'Your Build', selected_part: 'Selected Part',
     build_total: 'Build Total', passmark_score: 'PassMark Score', verify_passmark: 'Verify on PassMark ↗', dimensions: 'Dimensions',
     vat_included: 'Price includes VAT',
@@ -132,7 +132,7 @@ const T = {
   sk: {
     nav_home: 'Domov', nav_shop: 'Obchod', nav_build: 'Zostaviť', nav_about: 'O nás', nav_account: 'Účet',
     pc_builder: 'Konfigurátor PC', select_components: 'Vyberte komponenty na pridanie', build_complete: 'Zostaviť kompletné PC',
-    clear_all: 'Vymazať všetko', drag_to_orbit: '🖱️ Ťahaním otoč  ·  🔍 Kolieskom priblíž', drag_to_orbit_touch: '👆 Ťahaním otoč  ·  🤏 Dvoma prstami priblíž', hide_panel: 'Skryť bočný panel',
+    clear_all: 'Vymazať všetko', drag_to_orbit: 'Ťahaním otoč  ·  Kolieskom priblíž', drag_to_orbit_touch: 'Ťahaním otoč  ·  Dvoma prstami priblíž', hide_panel: 'Skryť bočný panel',
     show_panel: 'Zobraziť bočný panel', complete: 'Dokončené', your_build: 'Vaša zostava', selected_part: 'Vybraný diel',
     build_total: 'Celková cena', passmark_score: 'Skóre PassMark', verify_passmark: 'Overiť na PassMark ↗', dimensions: 'Rozmery',
     vat_included: 'Cena vrátane DPH',
@@ -202,7 +202,7 @@ const T = {
   cz: {
     nav_home: 'Domů', nav_shop: 'Obchod', nav_build: 'Sestavit', nav_about: 'O nás', nav_account: 'Účet',
     pc_builder: 'Konfigurátor PC', select_components: 'Vyberte komponenty k přidání', build_complete: 'Sestavit kompletní PC',
-    clear_all: 'Vymazat vše', drag_to_orbit: '🖱️ Tažením otoč  ·  🔍 Kolečkem přibliž', drag_to_orbit_touch: '👆 Tažením otoč  ·  🤏 Dvěma prsty přibliž', hide_panel: 'Skrýt boční panel',
+    clear_all: 'Vymazat vše', drag_to_orbit: 'Tažením otoč  ·  Kolečkem přibliž', drag_to_orbit_touch: 'Tažením otoč  ·  Dvěma prsty přibliž', hide_panel: 'Skrýt boční panel',
     show_panel: 'Zobrazit boční panel', complete: 'Dokončeno', your_build: 'Vaše sestava', selected_part: 'Vybraný díl',
     build_total: 'Celková cena', passmark_score: 'Skóre PassMark', verify_passmark: 'Ověřit na PassMark ↗', dimensions: 'Rozměry',
     vat_included: 'Cena včetně DPH',

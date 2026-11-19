@@ -12,6 +12,7 @@ import type { CustomerBuild } from '@/lib/supabase/customer-build-mapping';
 import { fetchComponentDb, getCachedComponentDb } from '@/lib/supabase/components';
 import { defaultComponentDb, computeBuildTier, type ComponentDb } from '@/lib/component-db-seed';
 import TierBadge from '@/components/TierBadge';
+import TierGlowOrb from '@/components/TierGlowOrb';
 import { INK, MUTED, PAGE_BG, PANEL_BG as PANEL, ACCENT, ON_ACCENT, ACCENT_FILL, LIGHTBOX_BACKDROP } from '@/lib/design-tokens';
 
 // Spec lines are free admin-typed text ("Procesor: Intel Core i9-14900K"), not structured
@@ -420,6 +421,7 @@ export default function CustomerBuildsPage() {
   const live = builds.filter((b) => b.isLive);
 
   const [gallery, setGallery] = useState<{ buildId: string; index: number } | null>(null);
+  const [hoveredBuild, setHoveredBuild] = useState<string | null>(null);
   const [direction, setDirection] = useState(1);
   const galleryBuild = gallery ? live.find((b) => b.id === gallery.buildId) ?? null : null;
 
@@ -474,8 +476,11 @@ export default function CustomerBuildsPage() {
             return (
               <Reveal key={b.id} delay={Math.min(i, 4) * 60}>
                 <div
+                  onMouseEnter={() => setHoveredBuild(b.id)}
+                  onMouseLeave={() => setHoveredBuild((id) => (id === b.id ? null : id))}
                   style={{
                     position: 'relative',
+                    zIndex: 0,
                     background: PANEL,
                     border: '0.5px solid rgba(235,230,218,0.12)',
                     borderRadius: 2,
@@ -486,6 +491,9 @@ export default function CustomerBuildsPage() {
                     flexWrap: isMobile ? 'wrap' : 'nowrap',
                   }}
                 >
+                  <div aria-hidden style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 2, pointerEvents: 'none' }}>
+                    <TierGlowOrb tier={computeBuildTier(b, compDb)} width={isMobile ? 280 : 360} intense={hoveredBuild === b.id} />
+                  </div>
                   {gpu && <SpecBubble value={gpu.value} tone="panel" edge="top" seed={`${b.id}-gpu`} isMobile={isMobile} />}
                   {cpu && <SpecBubble value={cpu.value} tone="maroon" edge="bottom" seed={`${b.id}-cpu`} isMobile={isMobile} />}
                   <PhotoStack
@@ -498,7 +506,7 @@ export default function CustomerBuildsPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ fontFamily: 'var(--font-sans)', fontSize: 18, fontWeight: 600, color: INK }}>{b.title}</div>
-                      <TierBadge tier={computeBuildTier(b, compDb)} small />
+                      <TierBadge tier={computeBuildTier(b, compDb)} size={34} />
                     </div>
                     {b.customerLabel && (
                       <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: MUTED, marginTop: 3 }}>{b.customerLabel}</div>

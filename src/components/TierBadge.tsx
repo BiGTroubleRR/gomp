@@ -3,16 +3,17 @@
 // privately inside src/app/build/page.tsx, extracted here so those other pages don't duplicate it.
 import { TIER_COLORS, type Tier } from '@/lib/passmark';
 
-export default function TierBadge({ tier, small }: { tier?: Tier; small?: boolean }) {
+// `size` (px) overrides small/normal for places where the tier is a headline fact (the build listings).
+export default function TierBadge({ tier, small, size }: { tier?: Tier; small?: boolean; size?: number }) {
   if (!tier) return null;
   const c = TIER_COLORS[tier];
-  const sz = small ? 18 : 22;
+  const sz = size ?? (small ? 18 : 22);
   return (
     <div
       style={{
         width: sz, height: sz, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: c.bg, color: c.text, border: `1.5px solid ${c.border}`, borderRadius: 3,
-        fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: small ? 11 : 12,
+        background: c.bg, color: c.text, border: `${size ? 2 : 1.5}px solid ${c.border}`, borderRadius: size ? 5 : 3,
+        fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: size ? Math.round(size * 0.52) : small ? 11 : 12,
       }}
     >
       {tier}

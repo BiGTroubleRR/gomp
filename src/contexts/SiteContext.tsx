@@ -22,10 +22,11 @@ type SiteContextValue = {
 
 const SiteContext = createContext<SiteContextValue | null>(null);
 
-export function SiteProvider({ children }: { children: React.ReactNode }) {
+export function SiteProvider({ children, initialLang = 'sk' }: { children: React.ReactNode; initialLang?: Lang }) {
   // Defaults match the original site's getLang()/getCurrency() fallbacks. Real values are
   // adopted from localStorage on mount (client-only) to avoid an SSR/client markup mismatch.
-  const [lang, setLangState] = useState<Lang>('sk');
+  // initialLang comes from the domain on the server (gomp.cz -> cz), so the first paint is already in the right language.
+  const [lang, setLangState] = useState<Lang>(initialLang);
   const [currency, setCurrencyState] = useState<Currency>('czk');
   const [vatRatePct, setVatRatePct] = useState<number>(DEFAULT_VAT_RATE_PCT);
 

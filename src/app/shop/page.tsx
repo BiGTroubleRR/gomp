@@ -15,16 +15,10 @@ import { fetchPrebuilts } from '@/lib/supabase/prebuilts';
 import { fetchComponentDb, getCachedComponentDb } from '@/lib/supabase/components';
 import { computeBuildTotalGross, computeBuildTier, defaultComponentDb, type Build, type ComponentDb } from '@/lib/component-db-seed';
 import TierBadge from '@/components/TierBadge';
+import TierGlowOrb from '@/components/TierGlowOrb';
+import CardSpace from '@/components/CardSpace';
 
 type FilterId = 'all' | 'flagship' | 'performance' | 'midrange' | 'entry';
-
-type TierKey = 'tier_flagship' | 'tier_performance' | 'tier_midrange' | 'tier_entry';
-const CAT_TIER_KEY: Record<Build['cat'], TierKey> = {
-  flagship: 'tier_flagship',
-  performance: 'tier_performance',
-  midrange: 'tier_midrange',
-  entry: 'tier_entry',
-};
 
 // Product data now lives in the `prebuilt_pcs` Supabase table (see src/lib/supabase/prebuilts.ts)
 // so an Admin edit reaches this page, the homepage hero, and the /build carry-over live — see
@@ -51,10 +45,6 @@ const TRANSLATIONS = {
     filter_performance: 'Performance',
     filter_midrange: 'Mid-Range',
     filter_entry: 'Entry',
-    tier_flagship: 'Flagship',
-    tier_performance: 'Performance',
-    tier_midrange: 'Mid-Range',
-    tier_entry: 'Entry',
     verify_passmark: 'Verify ↗',
     vat_included: 'Price includes VAT',
     spec_storage: 'SSD',
@@ -79,10 +69,6 @@ const TRANSLATIONS = {
     filter_performance: 'Výkonné',
     filter_midrange: 'Stredná trieda',
     filter_entry: 'Základné',
-    tier_flagship: 'Vlajková loď',
-    tier_performance: 'Výkonnostná',
-    tier_midrange: 'Stredná trieda',
-    tier_entry: 'Základná',
     verify_passmark: 'Overiť ↗',
     vat_included: 'Cena vrátane DPH',
     spec_storage: 'SSD',
@@ -107,10 +93,6 @@ const TRANSLATIONS = {
     filter_performance: 'Výkonné',
     filter_midrange: 'Střední třída',
     filter_entry: 'Základní',
-    tier_flagship: 'Vlajková loď',
-    tier_performance: 'Výkonnostní',
-    tier_midrange: 'Střední třída',
-    tier_entry: 'Základní',
     verify_passmark: 'Ověřit ↗',
     vat_included: 'Cena včetně DPH',
     spec_storage: 'SSD',
@@ -152,7 +134,7 @@ function SpecRow({
           display: 'flex',
           justifyContent: 'space-between',
           gap: 16,
-          padding: '10px 0',
+          padding: '7px 0',
           borderBottom: last ? 'none' : '0.5px solid rgba(235,230,218,0.07)',
         }}
       >
@@ -226,6 +208,7 @@ function ShopInner() {
   // One-time fetch, backed by fetchPrebuilts' own short-TTL cache — no Realtime subscription on
   // this public page (see the same reasoning in src/app/page.tsx). Admin keeps its subscription.
   const [products, setProducts] = useState<Build[]>([]);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     fetchPrebuilts().then((data) => {
@@ -369,50 +352,39 @@ function ShopInner() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.97 }}
                   transition={{ duration: 0.4, delay: Math.min(i, 5) * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                  onMouseEnter={() => setHoveredId(prod.id)}
+                  onMouseLeave={() => setHoveredId((id) => (id === prod.id ? null : id))}
                   style={{
+                    position: 'relative',
+                    zIndex: 0,
+                    overflow: 'hidden',
                     borderRight: '0.5px solid rgba(235,230,218,0.12)',
                     borderBottom: '0.5px solid rgba(235,230,218,0.12)',
-                    padding: isMobile ? '28px 20px' : '36px 32px',
+                    padding: isMobile ? '22px 18px' : '26px 24px',
                     background: '#131A17',
                     display: 'flex',
                     flexDirection: 'column',
                   }}
                 >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <TierGlowOrb tier={computeBuildTier(prod, compDb)} width={isMobile ? 280 : 340} intense={hoveredId === prod.id} />
+                <CardSpace color={TIER_COLORS[computeBuildTier(prod, compDb) ?? 'B'].border} active={hoveredId === prod.id} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 18 }}>
                   <div
                     style={{
-                      fontFamily: 'var(--font-sans)',
-                      fontSize: 11,
+                      fontFamily: 'var(--font-serif)',
+                      fontSize: 24,
                       fontWeight: 600,
-                      color: '#98A39D',
-                      letterSpacing: 2,
-                      textTransform: 'uppercase',
+                      color: '#EBE6DA',
+                      letterSpacing: -0.4,
+                      lineHeight: 1.1,
+                      minWidth: 0,
                     }}
                   >
-                    {t[CAT_TIER_KEY[prod.cat]]}
+                    {prod.name}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <TierBadge tier={computeBuildTier(prod, compDb)} small />
-                    <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: '#98A39D' }}>{prod.rating.toFixed(1)} / 5</div>
-                  </div>
+                  <TierBadge tier={computeBuildTier(prod, compDb)} size={44} />
                 </div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-serif)',
-                    fontSize: 26,
-                    fontWeight: 600,
-                    color: '#EBE6DA',
-                    letterSpacing: -0.4,
-                    marginBottom: 4,
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {prod.name}
-                </div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#98A39D', marginBottom: 28, fontWeight: 300 }}>
-                  {pick(lang, { en: prod.taglineEn, sk: prod.taglineSk, cz: prod.taglineCz })}
-                </div>
-                <div style={{ borderTop: '0.5px solid rgba(235,230,218,0.1)', flex: 1, marginBottom: 24 }}>
+                <div style={{ borderTop: '0.5px solid rgba(235,230,218,0.1)', flex: 1, marginBottom: 18 }}>
                   <SpecRow label="GPU" value={prod.gpu} passmark={resolvePassmark(prod.gpu, true, compDb)} verifyLabel={t.verify_passmark} />
                   <SpecRow label="CPU" value={prod.cpu} passmark={resolvePassmark(prod.cpu, false, compDb)} verifyLabel={t.verify_passmark} />
                   <SpecRow label="RAM" value={prod.ram} />
@@ -421,7 +393,7 @@ function ShopInner() {
                 <div
                   style={{
                     borderTop: '0.5px solid rgba(235,230,218,0.14)',
-                    paddingTop: 20,
+                    paddingTop: 16,
                     display: 'flex',
                     alignItems: 'flex-end',
                     justifyContent: 'space-between',
@@ -432,7 +404,7 @@ function ShopInner() {
                     <div
                       style={{
                         fontFamily: 'var(--font-serif)',
-                        fontSize: 26,
+                        fontSize: 24,
                         fontWeight: 500,
                         color: '#EBE6DA',
                         letterSpacing: -0.5,

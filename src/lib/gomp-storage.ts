@@ -4,12 +4,22 @@ export type Currency = 'eur' | 'czk';
 const LANG_KEY = 'gomp_lang';
 const CURRENCY_KEY = 'gomp_currency';
 
+// The two storefront domains each have their own default language: gomp.cz is Czech, gomp.sk is Slovak. Any other
+// host (the vercel.app address, localhost) has no default of its own. Accepts a Host header value or a hostname.
+export function langForHost(host: string | null | undefined): Lang | null {
+  const h = (host ?? '').toLowerCase().replace(/:\d+$/, '').replace(/^www\./, '');
+  if (h === 'gomp.cz') return 'cz';
+  if (h === 'gomp.sk') return 'sk';
+  return null;
+}
+
+// What the visitor picked themselves (language switch) wins; otherwise the domain decides; otherwise Slovak.
 export function getLang(): Lang {
   if (typeof window === 'undefined') return 'sk';
   try {
-    return (localStorage.getItem(LANG_KEY) as Lang) || 'sk';
+    return (localStorage.getItem(LANG_KEY) as Lang) || langForHost(window.location.hostname) || 'sk';
   } catch {
-    return 'sk';
+    return langForHost(window.location.hostname) || 'sk';
   }
 }
 

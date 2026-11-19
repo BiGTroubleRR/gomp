@@ -238,7 +238,7 @@ export function dimensionSpecsFor(id: CompId, comp: Component | undefined, gpuVe
     // detection only when coolerType is unset (pre-migration rows, or a cooler nobody has switched
     // yet).
     const isAio = comp.coolerType ? comp.coolerType === 'aio' : !!comp.coolerRadiatorMm;
-    if (isAio && comp.coolerRadiatorMm) return [{ axis: 'x', mm: comp.coolerRadiatorMm, label: `Ø ${cm(comp.coolerRadiatorMm)}`, scalesMesh: false, lineLengthMm: 40 }];
+    if (isAio && comp.coolerRadiatorMm) return [{ axis: 'x', mm: comp.coolerRadiatorMm, label: `Ø ${cm(comp.coolerRadiatorMm)}`, scalesMesh: false, lineLengthMm: 40, annotate: false }];
     // 'x', not 'y' — buildAirCoolerMesh() builds its height (base-to-fin-stack) along local X now,
     // matching the file-wide "X = away from the motherboard face" convention (see that function's
     // own comment for why). sizeScaleFromSpecs is axis-generic, so this one label is what actually
