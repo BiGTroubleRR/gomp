@@ -1358,7 +1358,8 @@ function BuildPageContent() {
             solid panel instead. */}
         <div
           style={{
-            width: isMobile ? '100%' : 264,
+            // Scales with the screen (320px up to 420px) so component names and specs have room; was a fixed 264.
+            width: isMobile ? '100%' : 'clamp(320px, 27vw, 420px)',
             order: isMobile ? 2 : 0,
             position: isMobile ? 'static' : 'absolute',
             top: isMobile ? undefined : 'var(--gomp-bar-h)',
