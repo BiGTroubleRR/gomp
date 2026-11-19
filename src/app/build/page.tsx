@@ -41,6 +41,7 @@ import {
   type Build,
 } from '@/lib/component-db-seed';
 import { autoBuildForBudget, BUDGET_STEPS, type AutoBuildNote } from '@/lib/auto-build';
+import { searchComponents, budgetCapFor, applyBudgetCap, type Picks } from '@/lib/build-filter';
 import {
   SLOTS,
   CASE_SIZES,
@@ -123,6 +124,17 @@ const T = {
     psu_insufficient: 'Over your PSU’s rated capacity — pick a higher-wattage unit.',
     budget: 'Budget',
     budget_hint: 'Drag, then Build Complete PC picks the best value for this amount.',
+    search_placeholder: 'Search parts…',
+    search_clear: 'Clear search',
+    search_none: (q: string) => `No parts match “${q}”.`,
+    results: (n: number) => `${n} ${n === 1 ? 'result' : 'results'}`,
+    budget_limit: 'Only show parts within budget',
+    budget_limit_hint: 'Hides parts that would push the build over your budget. The cheapest compatible part is reserved for every category you have not filled yet.',
+    budget_spent: (spent: string, budget: string) => `${spent} of ${budget}`,
+    budget_over: (amount: string) => `Over budget by ${amount}`,
+    budget_hidden: (n: number) => `${n} over budget hidden`,
+    budget_show_all: 'Show all',
+    budget_none: 'Nothing fits the remaining budget. Raise the budget or show all parts.',
     auto_build_note_psu_over_budget: 'Picked a pricier PSU than this budget’s share to keep power delivery safe.',
     auto_build_note_case_over_budget: 'Picked a pricier case than this budget’s share so everything actually fits.',
     auto_build_note_no_psu_sufficient: 'No PSU in the catalog comfortably covers this build’s power draw — picked the highest-wattage one available.',
@@ -193,6 +205,17 @@ const T = {
     psu_insufficient: 'Nad menovitú kapacitu vášho zdroja — zvoľte silnejší zdroj.',
     budget: 'Rozpočet',
     budget_hint: 'Potiahnite a „Zostaviť kompletné PC“ vyberie najlepší pomer ceny a výkonu za túto sumu.',
+    search_placeholder: 'Hľadať diely…',
+    search_clear: 'Vymazať hľadanie',
+    search_none: (q: string) => `Žiadne diely nezodpovedajú „${q}“.`,
+    results: (n: number) => `${n} ${n === 1 ? 'výsledok' : n >= 2 && n <= 4 ? 'výsledky' : 'výsledkov'}`,
+    budget_limit: 'Zobraziť len diely v rámci rozpočtu',
+    budget_limit_hint: 'Skryje diely, po ktorých by zostava prekročila rozpočet. Pre každú zatiaľ prázdnu kategóriu sa rezervuje cena najlacnejšieho kompatibilného dielu.',
+    budget_spent: (spent: string, budget: string) => `${spent} z ${budget}`,
+    budget_over: (amount: string) => `Nad rozpočet o ${amount}`,
+    budget_hidden: (n: number) => `Skryté kvôli rozpočtu: ${n}`,
+    budget_show_all: 'Zobraziť všetko',
+    budget_none: 'Do zvyšného rozpočtu sa nevojde žiadny diel. Zvýšte rozpočet alebo zobrazte všetky diely.',
     auto_build_note_psu_over_budget: 'Vybraný drahší zdroj, než by pripadalo na tento rozpočet — pre bezpečné napájanie.',
     auto_build_note_case_over_budget: 'Vybraná drahšia skriňa, než by pripadalo na tento rozpočet — aby sa všetko naozaj zmestilo.',
     auto_build_note_no_psu_sufficient: 'Žiadny zdroj v katalógu s rezervou nepokryje príkon tejto zostavy — vybraný najsilnejší dostupný.',
@@ -263,6 +286,17 @@ const T = {
     psu_insufficient: 'Nad jmenovitou kapacitu vašeho zdroje — zvolte silnější zdroj.',
     budget: 'Rozpočet',
     budget_hint: 'Přetáhněte a „Sestavit kompletní PC“ vybere nejlepší poměr ceny a výkonu za tuto částku.',
+    search_placeholder: 'Hledat součástky…',
+    search_clear: 'Smazat hledání',
+    search_none: (q: string) => `Žádné součástky neodpovídají „${q}“.`,
+    results: (n: number) => `${n} ${n === 1 ? 'výsledek' : n >= 2 && n <= 4 ? 'výsledky' : 'výsledků'}`,
+    budget_limit: 'Zobrazit jen součástky v rámci rozpočtu',
+    budget_limit_hint: 'Skryje součástky, po jejichž výběru by sestava překročila rozpočet. Pro každou zatím prázdnou kategorii se rezervuje cena nejlevnější kompatibilní součástky.',
+    budget_spent: (spent: string, budget: string) => `${spent} z ${budget}`,
+    budget_over: (amount: string) => `Přes rozpočet o ${amount}`,
+    budget_hidden: (n: number) => `Skryto kvůli rozpočtu: ${n}`,
+    budget_show_all: 'Zobrazit vše',
+    budget_none: 'Do zbývajícího rozpočtu se nevejde žádná součástka. Zvyšte rozpočet nebo zobrazte všechny součástky.',
     auto_build_note_psu_over_budget: 'Vybrán dražší zdroj, než by připadalo na tento rozpočet — pro bezpečné napájení.',
     auto_build_note_case_over_budget: 'Vybrána dražší skříň, než by připadalo na tento rozpočet — aby se vše skutečně vešlo.',
     auto_build_note_no_psu_sufficient: 'Žádný zdroj v katalogu s rezervou nepokryje příkon této sestavy — vybrán nejsilnější dostupný.',
@@ -549,6 +583,11 @@ function BuildPageContent() {
   // stays expanded if you leave and come back to it, but a freshly-opened one starts capped.
   const [showAllByStep, setShowAllByStep] = useState<Partial<Record<CompId, boolean>>>({});
   const [budgetIdx, setBudgetIdx] = useState(Math.floor(BUDGET_STEPS.length / 2)); // index into BUDGET_STEPS
+  // Budget filter for the picker lists (off by default): when on, parts that would push the build over the
+  // slider's budget are hidden — see viewFilter below and src/lib/build-filter.ts.
+  const [budgetLimit, setBudgetLimit] = useState(false);
+  // Search text per category — each picker keeps its own query so switching steps doesn't carry it over.
+  const [searchByStep, setSearchByStep] = useState<Partial<Record<CompId, string>>>({});
   const [autoBuildNotes, setAutoBuildNotes] = useState<AutoBuildNote[]>([]);
   // Set while buildAll is waiting for an existing build's clear-out to actually finish before
   // rebuilding fresh — see the effect below for why this can't just be a setTimeout.
@@ -818,6 +857,36 @@ function BuildPageContent() {
     });
     return sum;
   }, [selected, selections, compDb, fanTotals.priceGross, vatRatePct]);
+
+  // The parts really picked so far (no list[0] fallback like the totals above) — what the budget filter
+  // subtracts from the budget before deciding what is still affordable.
+  const budgetPicks = useMemo(() => {
+    const out: Picks = {};
+    SLOTS.forEach((id) => {
+      if (!selected[id]) return;
+      const comp = (compDb[id] || []).find((c) => c.name === selections[id]);
+      if (comp) out[id] = comp;
+    });
+    return out;
+  }, [selected, selections, compDb]);
+  const budgetGross = BUDGET_STEPS[budgetIdx];
+
+  // Applies the search box and (when switched on) the budget cap to a category's list. The cap reserves the
+  // cheapest compatible part for every still-empty category, so an early pick can't use up the budget the
+  // rest of the build needs; the part that is already picked always stays visible.
+  function viewFilter<T extends Component>(id: CompId, base: T[]) {
+    const query = (searchByStep[id] ?? '').trim();
+    let list = searchComponents(base, query);
+    let hidden = 0;
+    if (budgetLimit) {
+      const cap = budgetCapFor(id, { budgetGross, catalog: compDb, picks: budgetPicks, vatRatePct, extraSpendGross: fanTotals.priceGross });
+      const pickedName = selected[id] ? selections[id] : undefined;
+      const r = applyBudgetCap(list, cap, vatRatePct, (c) => c.name === pickedName);
+      list = r.shown;
+      hidden = r.hidden;
+    }
+    return { list, hidden, query };
+  }
 
   // Estimated system draw vs. the selected PSU's rated wattage — a buildcores-style "will this
   // PSU handle it" gut-check, not a precise measurement (see BASE_WATTS/extractWatts above).
@@ -1255,12 +1324,10 @@ function BuildPageContent() {
       const comp = (compDb[id] || []).find((c) => c.name === selections[id]);
       if (comp) locked[id] = comp;
     });
-    // The slider's own number is always what the customer wants to actually pay (gross) — convert
-    // it down to an equivalent pre-tax ceiling before matching, since every stored component price
-    // (and this matcher's own math) is pre-tax; otherwise the resulting build's real, VAT-inclusive
-    // cost would land above the budget the customer thought they were setting.
-    const netBudget = BUDGET_STEPS[budgetIdx] / (1 + vatRatePct / 100);
-    const { selections: picks, notes } = autoBuildForBudget(netBudget, compDb, locked);
+    // The slider's number is what the customer wants to actually pay (gross), so match on the same
+    // customer-facing price the cards and the budget filter use (effectiveSitePriceCzk, which honours an
+    // Admin price override) instead of converting the budget down to a net figure.
+    const { selections: picks, notes } = autoBuildForBudget(BUDGET_STEPS[budgetIdx], compDb, locked, (c) => effectiveSitePriceCzk(c, vatRatePct));
     setAutoBuildNotes(notes);
     // Staggering these via setTimeout used to mean 8 separate macrotasks, each triggering its own
     // full page re-render (and a Framer layout pass on the growing sidebar list) — with all 8
@@ -1402,6 +1469,23 @@ function BuildPageContent() {
                 onChange={(e) => setBudgetIdx(Number(e.target.value))}
                 style={{ width: '100%', display: 'block', ...sliderFillStyle(budgetIdx, BUDGET_STEPS.length - 1) }}
               />
+              {/* ---- Budget filter: hides picker parts that would blow the budget (off by default).
+                  The meter shows what the current picks cost against the slider. ---- */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, cursor: 'pointer', width: 'fit-content' }}>
+                <input type="checkbox" checked={budgetLimit} onChange={(e) => setBudgetLimit(e.target.checked)} />
+                <span style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED }}>{t.budget_limit}</span>
+                <InfoTip text={t.budget_limit_hint} label={t.budget_limit} />
+              </label>
+              {budgetLimit && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ height: 4, borderRadius: 2, background: 'rgba(235,230,218,0.12)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${Math.min(100, (totalPriceGross / budgetGross) * 100)}%`, background: totalPriceGross > budgetGross ? '#D9534F' : ACCENT, transition: 'width 0.25s ease' }} />
+                  </div>
+                  <div style={{ ...textPop, marginTop: 4, fontFamily: 'var(--font-mono)', fontSize: 11, color: totalPriceGross > budgetGross ? '#D9534F' : MUTED }}>
+                    {totalPriceGross > budgetGross ? t.budget_over(fmt(totalPriceGross - budgetGross)) : t.budget_spent(fmt(totalPriceGross), fmt(budgetGross))}
+                  </div>
+                </div>
+              )}
             </div>
             <div style={{ flex: isMobile ? 'none' : 1, overflowY: isMobile ? 'visible' : 'auto', padding: '0 20px 16px' }}>
               {/* ---- Step pills — free-jump between categories, green/checked once picked ---- */}
@@ -1438,6 +1522,35 @@ function BuildPageContent() {
                   {t.cat_names[activeStep]}
                   <InfoTip text={t.cat_desc[activeStep]} label={t.cat_names[activeStep]} size={16} />
                 </div>
+              </div>
+
+              {/* ---- Search — this category only; matches name, specs, socket, DDR generation/speed ---- */}
+              <div style={{ position: 'relative', marginBottom: 12 }}>
+                <input
+                  type="text"
+                  value={searchByStep[activeStep] ?? ''}
+                  onChange={(e) => { const v = e.target.value; setSearchByStep((m) => ({ ...m, [activeStep]: v })); }}
+                  placeholder={t.search_placeholder}
+                  aria-label={t.search_placeholder}
+                  autoComplete="off"
+                  spellCheck={false}
+                  style={{
+                    width: '100%', boxSizing: 'border-box', padding: '8px 30px 8px 10px', borderRadius: 6,
+                    border: '1px solid rgba(235,230,218,0.2)', background: 'rgba(235,230,218,0.05)', color: INK,
+                    fontFamily: 'var(--font-sans)', fontSize: 12,
+                  }}
+                />
+                {(searchByStep[activeStep] ?? '') !== '' && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchByStep((m) => ({ ...m, [activeStep]: '' }))}
+                    aria-label={t.search_clear}
+                    title={t.search_clear}
+                    style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', width: 24, height: 24, border: 'none', background: 'transparent', color: MUTED, fontSize: 16, lineHeight: 1, cursor: 'pointer' }}
+                  >
+                    ×
+                  </button>
+                )}
               </div>
 
               {activeStep === 'mobo' && (moboSockets.length > 1 || moboFormFactors.length > 1) && (
@@ -1545,6 +1658,42 @@ function BuildPageContent() {
                 const selectedCpu = selected.cpu ? (compDb.cpu || []).find((c) => c.name === selections.cpu) : undefined;
                 const selectedCase = selected.case ? (compDb.case || []).find((c) => c.name === selections.case) : undefined;
 
+                // Shared by every list below: the empty state after search/budget filtering, and the small
+                // line above the cards (result count while searching, how many parts the budget hid).
+                const emptyBox = (msg: string) => (
+                  <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570', padding: '12px 0' }}>{msg}</div>
+                );
+                const showAllButton = (
+                  <button
+                    type="button"
+                    onClick={() => setBudgetLimit(false)}
+                    style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: ACCENT, fontFamily: 'var(--font-sans)', fontSize: 11, textDecoration: 'underline' }}
+                  >
+                    {t.budget_show_all}
+                  </button>
+                );
+                const filteredEmpty = (vf: { hidden: number; query: string }) =>
+                  vf.hidden > 0 ? (
+                    <div>
+                      {emptyBox(t.budget_none)}
+                      {showAllButton}
+                    </div>
+                  ) : (
+                    emptyBox(t.search_none(vf.query))
+                  );
+                const renderMeta = (vf: { hidden: number; query: string }, count?: number) =>
+                  (vf.query && count != null) || vf.hidden > 0 ? (
+                    <div style={{ ...textPop, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginBottom: 10 }}>
+                      {vf.query && count != null && <span>{t.results(count)}</span>}
+                      {vf.hidden > 0 && (
+                        <>
+                          <span>{t.budget_hidden(vf.hidden)}</span>
+                          {showAllButton}
+                        </>
+                      )}
+                    </div>
+                  ) : null;
+
                 // GPU gets its own two-stage picker too, same shape as RAM below: stage 1 groups
                 // by chip model (parsed from the name via gpuModelFor, since GPUs have no
                 // structured model field), stage 2 shows that model's manufacturer variants.
@@ -1554,12 +1703,18 @@ function BuildPageContent() {
                 // to every variant card in the group; see gpuModelFor's own comment for why that's
                 // a reasonable simplification here.
                 if (activeStep === 'gpu') {
-                  let gpuList = compDb.gpu || [];
-                  if (selectedCase) gpuList = gpuList.filter((c) => fitsInCase('gpu', c, selectedCase));
-                  if (gpuList.length === 0) {
+                  let gpuBase = compDb.gpu || [];
+                  if (selectedCase) gpuBase = gpuBase.filter((c) => fitsInCase('gpu', c, selectedCase));
+                  if (gpuBase.length === 0) {
                     const reason = selectedCase ? t.no_part_fit(selectedCase.name) : t.none_add_admin;
                     return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570', padding: '12px 0' }}>{reason}</div>;
                   }
+
+                  // Search and budget apply to the individual variants, so a model card shows up when any of its
+                  // variants matches and its "from" price is the cheapest one still visible.
+                  const gpuView = viewFilter('gpu', gpuBase);
+                  const gpuList = gpuView.list;
+                  if (gpuList.length === 0) return filteredEmpty(gpuView);
 
                   const modelGroups = new Map<string, Component[]>();
                   gpuList.forEach((c) => {
@@ -1581,6 +1736,8 @@ function BuildPageContent() {
                       })
                       .sort((a, b) => TIER_ORDER.indexOf(a.tier ?? '') - TIER_ORDER.indexOf(b.tier ?? '') || a.cheapest.price - b.cheapest.price);
                     return (
+                      <>
+                      {renderMeta(gpuView, groups.length)}
                       <AnimatePresence initial={false} key="gpu-model">
                         {groups.map((g) => (
                           <motion.div
@@ -1610,6 +1767,7 @@ function BuildPageContent() {
                           </motion.div>
                         ))}
                       </AnimatePresence>
+                      </>
                     );
                   }
 
@@ -1634,6 +1792,7 @@ function BuildPageContent() {
                       <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                         {t.gpu_choose_variant}
                       </div>
+                      {renderMeta(gpuView)}
                       <AnimatePresence initial={false} key={`gpu-variant-${selectedGpuModel}`}>
                         {variantRows.map((c) => {
                           const isThisSelected = selected.gpu && selections.gpu === c.name;
@@ -1711,16 +1870,20 @@ function BuildPageContent() {
                 // filter (with a capacity sub-row only when a count maps to more than one
                 // per-stick capacity). See ramBrandSpeedKey/ramStage/selectedBrandSpeedKey.
                 if (activeStep === 'ram') {
-                  let ramList = compDb.ram || [];
-                  if (ramGenFilter) ramList = ramList.filter((c) => c.ramGeneration === ramGenFilter);
+                  let ramBase = compDb.ram || [];
+                  if (ramGenFilter) ramBase = ramBase.filter((c) => c.ramGeneration === ramGenFilter);
                   if (ramMinSpeedIdx > 0) {
                     const threshold = ramSpeedSteps[Math.min(ramMinSpeedIdx, ramSpeedSteps.length - 1)];
-                    if (threshold != null) ramList = ramList.filter((c) => (c.ramSpeedMhz ?? 0) >= threshold);
+                    if (threshold != null) ramBase = ramBase.filter((c) => (c.ramSpeedMhz ?? 0) >= threshold);
                   }
-                  if (ramList.length === 0) {
+                  if (ramBase.length === 0) {
                     const reason = ramGenFilter || ramMinSpeedIdx > 0 ? t.no_ram_match : t.none_add_admin;
                     return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570', padding: '12px 0' }}>{reason}</div>;
                   }
+
+                  const ramView = viewFilter('ram', ramBase);
+                  const ramList = ramView.list;
+                  if (ramList.length === 0) return filteredEmpty(ramView);
 
                   const brandSpeedGroups = new Map<string, Component[]>();
                   ramList.forEach((c) => {
@@ -1738,6 +1901,7 @@ function BuildPageContent() {
                       .sort((a, b) => a.brand.localeCompare(b.brand) || (a.speed ?? 0) - (b.speed ?? 0));
                     return (
                       <>
+                        {renderMeta(ramView, groups.length)}
                         <AnimatePresence initial={false} key="ram-brand-speed">
                           {groups.map((g) => (
                             <motion.div
@@ -1816,6 +1980,7 @@ function BuildPageContent() {
 
                   return (
                     <div>
+                      {renderMeta(ramView)}
                       <button
                         onClick={() => { setRamStage('brandSpeed'); setExpandedStickCount(null); }}
                         style={{
@@ -1942,10 +2107,15 @@ function BuildPageContent() {
                                       : t.none_add_admin;
                   return <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570', padding: '12px 0' }}>{reason}</div>;
                 }
-                const showAll = showAllByStep[activeStep] ?? false;
+                const view = viewFilter(activeStep, list);
+                list = view.list;
+                if (list.length === 0) return filteredEmpty(view);
+                // While searching, every match is listed (the "show more" cap would hide hits).
+                const showAll = (showAllByStep[activeStep] ?? false) || view.query !== '';
                 const visibleList = showAll ? list : list.slice(0, SHOW_MORE_STEP);
                 return (
                   <>
+                  {renderMeta(view, list.length)}
                   {/* Keyed by activeStep so switching categories remounts this AnimatePresence
                       outright (a normal React unmount, tearing down any in-flight animation)
                       instead of asking it to exit-animate the old category's ~20+ cards while
@@ -2046,7 +2216,7 @@ function BuildPageContent() {
                       );
                     })}
                   </AnimatePresence>
-                  {(showAll ? list.length > SHOW_MORE_STEP : list.length > visibleList.length) && (
+                  {view.query === '' && (showAll ? list.length > SHOW_MORE_STEP : list.length > visibleList.length) && (
                     <button
                       onClick={() => setShowAllByStep((s) => ({ ...s, [activeStep]: !showAll }))}
                       style={{

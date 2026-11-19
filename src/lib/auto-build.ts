@@ -76,30 +76,32 @@ function candidateRank(id: Category, comp: Component): { metric: number | null; 
   return { metric, tier: comp.tier ? TIER_RANK[comp.tier] ?? null : null };
 }
 
-function compareCandidates(id: Category, a: Component, b: Component): number {
+type PriceOf = (c: Component) => number;
+
+function compareCandidates(id: Category, a: Component, b: Component, priceOf: PriceOf): number {
   const ra = candidateRank(id, a);
   const rb = candidateRank(id, b);
   if (ra.metric != null || rb.metric != null) return (rb.metric ?? -Infinity) - (ra.metric ?? -Infinity);
   if (ra.tier != null || rb.tier != null) return (rb.tier ?? -Infinity) - (ra.tier ?? -Infinity);
   // No signal at all: within one category, a pricier SKU is the best available guess at "better".
-  return b.price - a.price;
+  return priceOf(b) - priceOf(a);
 }
 
 // Picks the best-ranked candidate affordable within `budget`; if nothing at all fits, relaxes
 // to the full candidate list rather than leaving the slot empty (a tiny budget still needs a
 // working PC, just flagged as having gone over its slice).
-function pickBest(id: Category, candidates: Component[], budget: number): { pick: Component | null; wentOverBudget: boolean } {
+function pickBest(id: Category, candidates: Component[], budget: number, priceOf: PriceOf): { pick: Component | null; wentOverBudget: boolean } {
   if (!candidates.length) return { pick: null, wentOverBudget: false };
-  const affordable = candidates.filter((c) => c.price <= budget);
+  const affordable = candidates.filter((c) => priceOf(c) <= budget);
   if (affordable.length) {
-    const sorted = [...affordable].sort((a, b) => compareCandidates(id, a, b));
+    const sorted = [...affordable].sort((a, b) => compareCandidates(id, a, b, priceOf));
     return { pick: sorted[0] ?? null, wentOverBudget: false };
   }
   // Nothing in this category fits the slice at all (a very tight budget, or a category with a
   // high price floor) — take the *cheapest* option on file rather than "the best regardless of
   // price": ranking the full, unfiltered list by performance would hand a tiny budget its most
   // expensive flagship part, which is the opposite of what going over budget should mean here.
-  const cheapest = [...candidates].sort((a, b) => a.price - b.price)[0];
+  const cheapest = [...candidates].sort((a, b) => priceOf(a) - priceOf(b))[0];
   return { pick: cheapest ?? null, wentOverBudget: true };
 }
 
@@ -110,12 +112,15 @@ export function autoBuildForBudget(
   // (e.g. an already-chosen CPU's socket drives the motherboard pick) and excluded from both
   // the output and the budget split, so re-running this never disturbs a manual choice.
   locked: Partial<Record<Category, Component>> = {},
+  // How a part is priced for the budget math (default: the stored net price). /build passes the
+  // customer-facing gross price together with a gross budget, so the build matches the cards and slider.
+  priceOf: PriceOf = (c) => c.price,
 ): AutoBuildResult {
   const notes: AutoBuildNote[] = [];
   const picks: Partial<Record<Category, Component>> = { ...locked };
 
   const emptyIds = (Object.keys(BUDGET_SPLIT) as Category[]).filter((id) => !locked[id]);
-  const lockedSpend = Object.values(locked).reduce((sum, c) => sum + (c?.price ?? 0), 0);
+  const lockedSpend = Object.values(locked).reduce((sum, c) => sum + (c ? priceOf(c) : 0), 0);
   const remainingBudget = Math.max(0, budgetEur - lockedSpend);
   const emptySplitTotal = emptyIds.reduce((sum, id) => sum + BUDGET_SPLIT[id], 0) || 1;
   function budgetFor(id: Category): number {
@@ -140,7 +145,7 @@ export function autoBuildForBudget(
   if (need('cpu')) {
     const list = compDb.cpu || [];
     if (!list.length) notes.push({ code: 'category_empty', category: 'cpu' });
-    const { pick } = pickBest('cpu', list, budgetFor('cpu'));
+    const { pick } = pickBest('cpu', list, budgetFor('cpu'), priceOf);
     if (pick) picks.cpu = pick;
   }
 
@@ -151,7 +156,7 @@ export function autoBuildForBudget(
     const compatible = socket ? list.filter((c) => c.socket === socket) : list;
     const pool = narrowToLockedCase('mobo', compatible.length ? compatible : list);
     if (!pool.length) notes.push({ code: 'category_empty', category: 'mobo' });
-    const { pick } = pickBest('mobo', pool, budgetFor('mobo'));
+    const { pick } = pickBest('mobo', pool, budgetFor('mobo'), priceOf);
     if (pick) picks.mobo = pick;
   }
 
@@ -162,7 +167,7 @@ export function autoBuildForBudget(
     const compatible = gen ? list.filter((c) => c.ramGeneration === gen) : list;
     const pool = compatible.length ? compatible : list;
     if (!pool.length) notes.push({ code: 'category_empty', category: 'ram' });
-    const { pick } = pickBest('ram', pool, budgetFor('ram'));
+    const { pick } = pickBest('ram', pool, budgetFor('ram'), priceOf);
     if (pick) picks.ram = pick;
   }
 
@@ -172,7 +177,7 @@ export function autoBuildForBudget(
     const list = compDb.gpu || [];
     const pool = narrowToLockedCase('gpu', list);
     if (!pool.length) notes.push({ code: 'category_empty', category: 'gpu' });
-    const { pick } = pickBest('gpu', pool, budgetFor('gpu'));
+    const { pick } = pickBest('gpu', pool, budgetFor('gpu'), priceOf);
     if (pick) picks.gpu = pick;
   }
 
@@ -185,7 +190,7 @@ export function autoBuildForBudget(
     const compatible = socket ? list.filter((c) => c.specs.includes(socket)) : [];
     const pool = narrowToLockedCase('cooler', compatible.length ? compatible : list);
     if (!pool.length) notes.push({ code: 'category_empty', category: 'cooler' });
-    const { pick } = pickBest('cooler', pool, budgetFor('cooler'));
+    const { pick } = pickBest('cooler', pool, budgetFor('cooler'), priceOf);
     if (pick) picks.cooler = pick;
   }
 
@@ -212,7 +217,7 @@ export function autoBuildForBudget(
       if (highest) picks.psu = highest;
     } else {
       const pool = narrowToLockedCase('psu', sufficient);
-      const { pick, wentOverBudget } = pickBest('psu', pool, budgetFor('psu'));
+      const { pick, wentOverBudget } = pickBest('psu', pool, budgetFor('psu'), priceOf);
       if (wentOverBudget) notes.push({ code: 'psu_over_budget' });
       if (pick) picks.psu = pick;
     }
@@ -238,7 +243,7 @@ export function autoBuildForBudget(
       const roomiest = [...list].sort((a, b) => (b.maxGpuLengthMm ?? 0) - (a.maxGpuLengthMm ?? 0))[0];
       if (roomiest) picks.case = roomiest;
     } else {
-      const { pick, wentOverBudget } = pickBest('case', fitting, budgetFor('case'));
+      const { pick, wentOverBudget } = pickBest('case', fitting, budgetFor('case'), priceOf);
       if (wentOverBudget) notes.push({ code: 'case_over_budget' });
       if (pick) picks.case = pick;
     }
@@ -248,7 +253,7 @@ export function autoBuildForBudget(
   if (need('storage')) {
     const list = compDb.storage || [];
     if (!list.length) notes.push({ code: 'category_empty', category: 'storage' });
-    const { pick } = pickBest('storage', list, budgetFor('storage'));
+    const { pick } = pickBest('storage', list, budgetFor('storage'), priceOf);
     if (pick) picks.storage = pick;
   }
 
@@ -258,7 +263,7 @@ export function autoBuildForBudget(
     const comp = picks[id];
     if (!comp) return;
     selections[id] = comp.name;
-    totalPrice += comp.price;
+    totalPrice += priceOf(comp);
   });
 
   return { selections, totalPrice, notes };
