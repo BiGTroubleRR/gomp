@@ -9,6 +9,8 @@ import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
 import InfoTip from '@/components/InfoTip';
+import AnimatedDropdown from '@/components/AnimatedDropdown';
+import ToggleSwitch from '@/components/ToggleSwitch';
 import PageTitle from '@/components/PageTitle';
 import { navigateWithTransition } from '@/lib/gomp-nav';
 import { writeJSON } from '@/lib/gomp-storage';
@@ -111,6 +113,9 @@ const T = {
     gpu_choose_variant: 'Choose manufacturer',
     ram_choose_capacity: 'Capacity per RAM',
     filter_all: 'All',
+    filter_socket: 'Socket',
+    filter_form_factor: 'Form factor',
+    category_label: 'Category',
     show_more: (n: number) => `Show ${n} more`, show_less: 'Show less',
     no_mobo_match: 'No motherboards match this filter — try a different socket or form factor.',
     no_socket_match_mobo: (socket: string) => `No motherboards match the ${socket} socket of your selected CPU — pick a different CPU, or check Admin.`,
@@ -192,6 +197,9 @@ const T = {
     gpu_choose_variant: 'Vyberte výrobcu',
     ram_choose_capacity: 'Kapacita na RAM',
     filter_all: 'Všetky',
+    filter_socket: 'Pätica',
+    filter_form_factor: 'Formát',
+    category_label: 'Kategória',
     show_more: (n: number) => `Zobraziť ďalších ${n}`, show_less: 'Zobraziť menej',
     no_mobo_match: 'Žiadna základná doska nevyhovuje tomuto filtru — skúste inú pätici alebo formát.',
     no_socket_match_mobo: (socket: string) => `Žiadna základná doska nesedí na pätici ${socket} vybraného CPU — zvoľte iné CPU, alebo skontrolujte Admin.`,
@@ -273,6 +281,9 @@ const T = {
     gpu_choose_variant: 'Vyberte výrobce',
     ram_choose_capacity: 'Kapacita na modul',
     filter_all: 'Všechny',
+    filter_socket: 'Patice',
+    filter_form_factor: 'Formát',
+    category_label: 'Kategorie',
     show_more: (n: number) => `Zobrazit dalších ${n}`, show_less: 'Zobrazit méně',
     no_mobo_match: 'Žádná základní deska nevyhovuje tomuto filtru — zkuste jinou patici nebo formát.',
     no_socket_match_mobo: (socket: string) => `Žádná základní deska nesedí na patici ${socket} vybraného CPU — zvolte jiné CPU, nebo zkontrolujte Admin.`,
@@ -1474,11 +1485,11 @@ function BuildPageContent() {
               />
               {/* ---- Budget filter: hides picker parts that would blow the budget (off by default).
                   The meter shows what the current picks cost against the slider. ---- */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, cursor: 'pointer', width: 'fit-content' }}>
-                <input type="checkbox" checked={budgetLimit} onChange={(e) => setBudgetLimit(e.target.checked)} />
-                <span style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED }}>{t.budget_limit}</span>
-                <InfoTip text={t.budget_limit_hint} label={t.budget_limit} />
-              </label>
+              <div style={{ marginTop: 14 }}>
+                <ToggleSwitch checked={budgetLimit} onChange={setBudgetLimit} label={t.budget_limit} labelStyle={textPop}>
+                  <InfoTip text={t.budget_limit_hint} label={t.budget_limit} />
+                </ToggleSwitch>
+              </div>
               {budgetLimit && (
                 <div style={{ marginTop: 8 }}>
                   <div style={{ height: 4, borderRadius: 2, background: 'rgba(235,230,218,0.12)', overflow: 'hidden' }}>
@@ -1495,29 +1506,14 @@ function BuildPageContent() {
               <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: MUTED, letterSpacing: 1, marginBottom: 8 }}>
                 {t.step_of(SLOTS.indexOf(activeStep) + 1)}
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
-                {SLOTS.map((id) => {
-                  const done = !!selected[id];
-                  const isActive = id === activeStep;
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => setActiveStep(id)}
-                      style={{
-                        ...(isActive ? {} : textPop),
-                        display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 20,
-                        border: `1px solid ${isActive ? ACCENT : done ? 'rgba(63,174,116,0.4)' : 'rgba(235,230,218,0.2)'}`,
-                        background: isActive ? ACCENT_FILL : done ? 'rgba(63,174,116,0.08)' : 'transparent',
-                        color: isActive ? '#FDFAF4' : done ? ACCENT : MUTED,
-                        fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: isActive ? 600 : 500, cursor: 'pointer',
-                      }}
-                    >
-                      {done && !isActive && <span style={{ fontSize: 9 }}>✓</span>}
-                      {t.cat_names[id]}
-                    </button>
-                  );
-                })}
-              </div>
+              <AnimatedDropdown
+                value={activeStep}
+                ariaLabel={t.category_label}
+                options={SLOTS.map((id) => ({ value: id, label: t.cat_names[id], done: !!selected[id] }))}
+                onChange={(v) => setActiveStep(v as CompId)}
+                maxMenuHeight={340}
+                style={{ marginBottom: 16 }}
+              />
 
               {/* ---- Active category ---- */}
               <div style={{ marginBottom: 12 }}>
@@ -1557,22 +1553,24 @@ function BuildPageContent() {
               </div>
 
               {activeStep === 'mobo' && (moboSockets.length > 1 || moboFormFactors.length > 1) && (
-                <div style={{ marginBottom: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: moboSockets.length > 1 && moboFormFactors.length > 1 ? '1fr 1fr' : '1fr', gap: 8, marginBottom: 12 }}>
                   {moboSockets.length > 1 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: moboFormFactors.length > 1 ? 6 : 0 }}>
-                      <FilterChip active={!moboSocketFilter} label={t.filter_all} onClick={() => setMoboSocketFilter('')} />
-                      {moboSockets.map((s) => (
-                        <FilterChip key={s} active={moboSocketFilter === s} label={s} onClick={() => setMoboSocketFilter(s)} />
-                      ))}
-                    </div>
+                    <AnimatedDropdown
+                      value={moboSocketFilter}
+                      ariaLabel={t.filter_socket}
+                      caption={t.filter_socket}
+                      options={[{ value: '', label: t.filter_all }, ...moboSockets.map((x) => ({ value: x, label: x }))]}
+                      onChange={setMoboSocketFilter}
+                    />
                   )}
                   {moboFormFactors.length > 1 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      <FilterChip active={!moboFormFactorFilter} label={t.filter_all} onClick={() => setMoboFormFactorFilter('')} />
-                      {moboFormFactors.map((f) => (
-                        <FilterChip key={f} active={moboFormFactorFilter === f} label={f} onClick={() => setMoboFormFactorFilter(f)} />
-                      ))}
-                    </div>
+                    <AnimatedDropdown
+                      value={moboFormFactorFilter}
+                      ariaLabel={t.filter_form_factor}
+                      caption={t.filter_form_factor}
+                      options={[{ value: '', label: t.filter_all }, ...moboFormFactors.map((x) => ({ value: x, label: x }))]}
+                      onChange={setMoboFormFactorFilter}
+                    />
                   )}
                 </div>
               )}
