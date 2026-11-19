@@ -17,21 +17,21 @@ const translations = {
     nav_build: 'Build',
     nav_about: 'About',
     nav_account: 'Account',
-    nav_startbuilding: 'Start Building →',
+    nav_startbuilding: 'Start Building',
     about_gomp: 'About GOMP',
     hero_line1: 'Built by',
     hero_line2: 'gamers. For',
     hero_line3: 'gamers.',
     the_origin: 'The Origin',
     origin_p1:
-      "Every pre-built we had ever bought came with corners cut we couldn't see until it mattered — thermal paste slapped on, stock coolers running at limits, PSUs rated for worse days.",
+      "Every pre-built we had ever bought came with corners cut we couldn't see until it mattered. Thermal paste slapped on, stock coolers running at limits, PSUs rated for worse days.",
     origin_p2:
       'So in 2025, two friends in Prague stopped buying and started building. Today GOMP has shipped over 20 builds. Every single one stress-tested at load for 24 hours before it ships.',
     founded: 'Founded',
     builds_shipped: 'Builds shipped',
     hq_workshop: 'HQ & workshop',
     pull_quote: '"We don’t build PCs to be cheap, but to handle what you ask of them."',
-    quote_author: 'Jakub G. — Founder',
+    quote_author: 'Jakub G., Founder',
     origin_p3:
       "That standard means a printed benchmark sheet with every build. It means 24-hour stress testing. It means using the same PSU we'd put in our own machines, not a budget unit because the margin looks better.",
     what_we_stand: 'What we stand for',
@@ -52,7 +52,7 @@ const translations = {
     nav_build: 'Zostaviť',
     nav_about: 'O nás',
     nav_account: 'Účet',
-    nav_startbuilding: 'Začať stavať →',
+    nav_startbuilding: 'Začať stavať',
     about_gomp: 'O spoločnosti GOMP',
     hero_line1: 'Stavajú ho',
     hero_line2: 'hráči. Pre',
@@ -66,7 +66,7 @@ const translations = {
     builds_shipped: 'Expedovaných zostáv',
     hq_workshop: 'Sídlo a dielňa',
     pull_quote: '„Počítače nestaviame, aby boli lacné, ale aby zvládli to, čo od nich chcete.“',
-    quote_author: 'Jakub G. — zakladateľ',
+    quote_author: 'Jakub G., zakladateľ',
     origin_p3:
       'Tento štandard znamená tlačený protokol o benchmarkoch pri každej zostave. Znamená rigorózne záťažové testovanie. Znamená použitie takého zdroja, aký by sme dali do vlastného počítača, nie lacnejšieho kus len preto, že sa tým zlepší marža.',
     what_we_stand: 'Za čím si stojíme',
@@ -87,7 +87,7 @@ const translations = {
     nav_build: 'Sestavit',
     nav_about: 'O nás',
     nav_account: 'Účet',
-    nav_startbuilding: 'Začít stavět →',
+    nav_startbuilding: 'Začít stavět',
     about_gomp: 'O společnosti GOMP',
     hero_line1: 'Stavějí ho',
     hero_line2: 'hráči. Pro',
@@ -101,7 +101,7 @@ const translations = {
     builds_shipped: 'Expedovaných sestav',
     hq_workshop: 'Sídlo a dílna',
     pull_quote: '„Počítače nestavíme proto, aby byly levné, ale aby zvládly to, co od nich chcete.“',
-    quote_author: 'Jakub G. — zakladatel',
+    quote_author: 'Jakub G., zakladatel',
     origin_p3:
       'Tento standard znamená tištěný protokol o benchmarcích u každé sestavy. Znamená důkladné 24hodinové zátěžové testování. Znamená použití takového zdroje, jaký bychom dali do vlastního počítače, ne levnějšího kusu jen proto, že se tím zlepší marže.',
     what_we_stand: 'Za čím si stojíme',
@@ -128,12 +128,12 @@ const values = {
     {
       num: '02',
       title: 'No Hidden Compromises',
-      desc: 'Cheap PSUs. Barely-there coolers. Proprietary connectors. We have seen every trick in the book — and we don’t use any of them. Every spec is exactly what we publish.',
+      desc: 'Cheap PSUs. Barely-there coolers. Proprietary connectors. We have seen every trick in the book, and we don’t use any of them. Every spec is exactly what we publish.',
     },
     {
       num: '03',
       title: 'Owned Responsibility',
-      desc: 'When something goes wrong — and occasionally it does — we fix it. No runarounds, no pointing at component manufacturers. GOMP owns the outcome, always.',
+      desc: 'When something goes wrong, and occasionally it does, we fix it. No runarounds, no pointing at component manufacturers. GOMP owns the outcome, always.',
     },
   ],
   sk: [
@@ -145,12 +145,12 @@ const values = {
     {
       num: '02',
       title: 'Žiadne skryté kompromisy',
-      desc: 'Lacné zdroje. Sotva postačujúce chladiče. Proprietárne konektory. Poznáme každý trik v knihe — a nepoužívame ani jeden z nich. Každá špecifikácia je presne taká, akú uvádzame.',
+      desc: 'Lacné zdroje. Sotva postačujúce chladiče. Proprietárne konektory. Poznáme každý trik v knihe, a nepoužívame ani jeden z nich. Každá špecifikácia je presne taká, akú uvádzame.',
     },
     {
       num: '03',
       title: 'Prevzatá zodpovednosť',
-      desc: 'Keď sa niečo pokazí — a občas sa to stane — opravíme to. Bez zbytočných prieťahov, bez ukazovania na výrobcov komponentov. GOMP si za výsledok stojí vždy.',
+      desc: 'Keď sa niečo pokazí, a občas sa to stane, opravíme to. Bez zbytočných prieťahov, bez ukazovania na výrobcov komponentov. GOMP si za výsledok stojí vždy.',
     },
   ],
   cz: [
@@ -162,12 +162,12 @@ const values = {
     {
       num: '02',
       title: 'Žádné skryté kompromisy',
-      desc: 'Levné zdroje. Sotva dostačující chladiče. Proprietární konektory. Známe každý trik v knize — a nepoužíváme ani jeden z nich. Každá specifikace je přesně taková, jakou uvádíme.',
+      desc: 'Levné zdroje. Sotva dostačující chladiče. Proprietární konektory. Známe každý trik v knize, a nepoužíváme ani jeden z nich. Každá specifikace je přesně taková, jakou uvádíme.',
     },
     {
       num: '03',
       title: 'Převzatá odpovědnost',
-      desc: 'Když se něco pokazí — a občas se to stane — opravíme to. Bez zbytečných průtahů, bez ukazování na výrobce komponent. GOMP si za výsledek stojí vždy.',
+      desc: 'Když se něco pokazí, a občas se to stane, opravíme to. Bez zbytečných průtahů, bez ukazování na výrobce komponent. GOMP si za výsledek stojí vždy.',
     },
   ],
 } as const;
@@ -207,8 +207,8 @@ export default function AboutPage() {
               fontSize: 11,
               fontWeight: 500,
               color: MUTED,
-              letterSpacing: 2.5,
-              textTransform: 'uppercase',
+              
+              
               marginBottom: isMobile ? 24 : 40,
             }}
           >
@@ -253,8 +253,8 @@ export default function AboutPage() {
                 fontSize: 11,
                 fontWeight: 500,
                 color: MUTED,
-                letterSpacing: 2.5,
-                textTransform: 'uppercase',
+                
+                
                 marginBottom: 24,
               }}
             >
@@ -299,7 +299,7 @@ export default function AboutPage() {
             </div>
           </div>
           <div style={{ paddingTop: isMobile ? 0 : 8 }}>
-            <div style={{ borderLeft: `2px solid ${ACCENT}`, paddingLeft: isMobile ? 20 : 36, marginBottom: isMobile ? 32 : 48 }}>
+            <div style={{ marginBottom: isMobile ? 32 : 48 }}>
               <div style={{ ...serif, fontSize: isMobile ? 22 : 32, fontWeight: 600, color: INK, lineHeight: 1.3, marginBottom: 24 }}>
                 {t.pull_quote}
               </div>
@@ -320,8 +320,8 @@ export default function AboutPage() {
                 fontSize: 11,
                 fontWeight: 500,
                 color: MUTED,
-                letterSpacing: 2.5,
-                textTransform: 'uppercase',
+                
+                
                 marginBottom: 12,
               }}
             >
@@ -380,8 +380,8 @@ export default function AboutPage() {
                 fontSize: 11,
                 fontWeight: 500,
                 color: MUTED,
-                letterSpacing: 2.5,
-                textTransform: 'uppercase',
+                
+                
                 marginBottom: 12,
               }}
             >

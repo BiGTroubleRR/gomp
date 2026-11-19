@@ -103,7 +103,7 @@ function TearLine() {
 
 function Label({ children }: { children: ReactNode }) {
   return (
-    <div style={{ fontFamily: FONT_SANS, fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', color: MUTED, marginBottom: 4 }}>{children}</div>
+    <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: MUTED, marginBottom: 4 }}>{children}</div>
   );
 }
 
@@ -255,7 +255,7 @@ export default function OrderTicket({ order }: { order: OrderTicketData }) {
                 }}
               >
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontFamily: FONT_SANS, fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase', color: MUTED, marginBottom: 2 }}>{item.category}</div>
+                  <div style={{ fontFamily: FONT_SANS, fontSize: 10, color: MUTED, marginBottom: 2 }}>{item.category}</div>
                   <div style={{ fontFamily: FONT_SANS, fontSize: 13, color: INK }}>{item.name}</div>
                 </div>
                 <div style={{ fontFamily: FONT_SERIF, fontSize: 13, color: INK, whiteSpace: 'nowrap' }}>{money(item.price)}</div>
@@ -288,7 +288,7 @@ export default function OrderTicket({ order }: { order: OrderTicketData }) {
               href="/account"
               style={{ display: 'inline-block', padding: '13px 26px', background: ACCENT_GRADIENT, color: ON_ACCENT, borderRadius: 6, fontFamily: FONT_SANS, fontSize: 14, fontWeight: 700, textDecoration: 'none' }}
             >
-              {t.viewInAccount} →
+              {t.viewInAccount}
             </TransitionLink>
           </div>
         )}

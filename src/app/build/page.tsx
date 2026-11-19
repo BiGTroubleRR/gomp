@@ -70,24 +70,24 @@ const T = {
     show_panel: 'Show Side Panel', complete: 'Complete', your_build: 'Your Build', selected_part: 'Selected Part',
     build_total: 'Build Total', passmark_score: 'PassMark Score', verify_passmark: 'Verify on PassMark ↗', dimensions: 'Dimensions',
     vat_included: 'Price includes VAT',
-    part_unavailable: 'Currently unavailable', part_missing: 'No longer available — please choose a replacement',
+    part_unavailable: 'Currently unavailable', part_missing: 'No longer available. Please choose a replacement',
     passmark_title: (score: number) => `PassMark: ${score.toLocaleString()}`,
     fans: 'Case Fans',
     fan_positions: { front: 'Front', top: 'Top', rear: 'Rear', bottom: 'Bottom', side: 'Side' },
     fan_generic: 'Generic (unbranded)', fan_included: 'included',
     show_can: 'Add Can for Scale', hide_can: 'Remove Can', show_dims: 'Show Dimensions', hide_dims: 'Hide Dimensions',
-    continue_benchmarks: 'Continue to Benchmarks →', save_build: 'Save Build', preparing_order: 'Booting up your legend...',
-    no_components: '(no components — add in Admin)', none_add_admin: '(none — add in Admin)',
+    continue_benchmarks: 'Continue to Benchmarks', save_build: 'Save Build', preparing_order: 'Booting up your legend...',
+    no_components: '(no components, add in Admin)', none_add_admin: '(none, add in Admin)',
     cat_names: { mobo: 'Motherboard', cpu: 'CPU', cooler: 'CPU Cooler', ram: 'RAM', gpu: 'GPU', storage: 'SSD', psu: 'PSU', case: 'Case' },
     cat_desc: {
-      mobo: 'The foundation of your build — defines CPU compatibility, expansion options, and overclocking potential.',
+      mobo: 'The foundation of your build: defines CPU compatibility, expansion options, and overclocking potential.',
       cpu: 'The brain of your system, handling all compute tasks from gaming to content creation.',
       cooler: 'Keeps your CPU running cool and quiet under sustained load.',
       ram: 'High-speed memory for snappy multitasking and improved frame rates.',
       gpu: 'Drives your gaming visuals and accelerates creative workloads.',
       storage: 'Fast NVMe storage for quick boot times and near-instant load times.',
       psu: 'Stable, efficient power delivery for your entire system.',
-      case: 'The enclosure that defines your form factor, airflow, and aesthetics — and scales the 3D preview live.',
+      case: 'The enclosure that defines your form factor, airflow, and aesthetics, and scales the 3D preview live.',
     },
     case_cats: [
       { id: 'Full Tower', label: 'Full Tower  (55–75 cm)' },
@@ -99,17 +99,17 @@ const T = {
     ofComponents: (n: number) => `${n} of 8 components`,
     step_of: (n: number) => `Step ${n} of 8`,
     back: 'Back', next: 'Next', size: 'Size',
-    no_socket_match: (socket: string) => `No CPUs match the ${socket} socket of your selected motherboard — pick a different motherboard, or check Admin.`,
-    no_case_fit: (formFactor: string) => `No cases fit a ${formFactor} motherboard at this size — try a larger size, or a smaller motherboard.`,
-    no_mobo_fit_case: (caseCategory: string) => `No motherboards fit a ${caseCategory} case — try a larger case, or a smaller motherboard.`,
-    no_part_fit: (caseName: string) => `Nothing here fits inside the ${caseName} — pick a bigger case, or a smaller part.`,
-    no_case_fit_part: 'No cases at this size fit everything you already picked — try a larger size, or remove a part.',
-    no_ram_match: 'No RAM kits match this filter — try a lower minimum speed, or a different DDR generation.',
+    no_socket_match: (socket: string) => `No CPUs match the ${socket} socket of your selected motherboard. Pick a different motherboard, or check Admin.`,
+    no_case_fit: (formFactor: string) => `No cases fit a ${formFactor} motherboard at this size. Try a larger size, or a smaller motherboard.`,
+    no_mobo_fit_case: (caseCategory: string) => `No motherboards fit a ${caseCategory} case. Try a larger case, or a smaller motherboard.`,
+    no_part_fit: (caseName: string) => `Nothing here fits inside the ${caseName}. Pick a bigger case, or a smaller part.`,
+    no_case_fit_part: 'No cases at this size fit everything you already picked. Try a larger size, or remove a part.',
+    no_ram_match: 'No RAM kits match this filter. Try a lower minimum speed, or a different DDR generation.',
     ram_gen_all: 'All', ram_min_speed: 'Minimum speed', ram_min_speed_any: 'Any',
     ram_from_price: (price: string) => `from ${price}`,
-    ram_back_to_brand_speed: '← Brand & speed',
+    ram_back_to_brand_speed: 'Brand & speed',
     ram_choose_sticks: 'RAM count',
-    gpu_back_to_models: '← GPU models',
+    gpu_back_to_models: 'GPU models',
     gpu_choose_variant: 'Choose manufacturer',
     ram_choose_capacity: 'Capacity per RAM',
     filter_all: 'All',
@@ -117,17 +117,17 @@ const T = {
     filter_form_factor: 'Form factor',
     category_label: 'Category',
     show_more: (n: number) => `Show ${n} more`, show_less: 'Show less',
-    no_mobo_match: 'No motherboards match this filter — try a different socket or form factor.',
-    no_socket_match_mobo: (socket: string) => `No motherboards match the ${socket} socket of your selected CPU — pick a different CPU, or check Admin.`,
+    no_mobo_match: 'No motherboards match this filter. Try a different socket or form factor.',
+    no_socket_match_mobo: (socket: string) => `No motherboards match the ${socket} socket of your selected CPU. Pick a different CPU, or check Admin.`,
     no_cpu_mfr_match: (mfr: string) => `No ${mfr} CPUs match your other filters.`,
-    no_storage_match: 'No storage drives match this filter — try a different PCIe generation.',
+    no_storage_match: 'No storage drives match this filter. Try a different PCIe generation.',
     storage_pcie_capped_title: 'Bottlenecked',
     storage_pcie_capped: (ssdGen: number, moboGen: number) =>
-      `This is a PCIe ${ssdGen}.0 drive, but the selected motherboard's fastest M.2 slot is PCIe ${moboGen}.0 — it'll run, just capped to Gen ${moboGen} speed.`,
+      `This is a PCIe ${ssdGen}.0 drive, but the selected motherboard's fastest M.2 slot is PCIe ${moboGen}.0. It'll run, just capped to Gen ${moboGen} speed.`,
     sort_by_tier: 'Sort by tier',
     power_draw: 'Estimated power draw',
     psu_ok: 'Comfortably within your PSU’s capacity.',
-    psu_insufficient: 'Over your PSU’s rated capacity — pick a higher-wattage unit.',
+    psu_insufficient: 'Over your PSU’s rated capacity. Pick a higher-wattage unit.',
     budget: 'Budget',
     budget_hint: 'Drag, then Build Complete PC picks the best value for this amount.',
     search_placeholder: 'Search parts…',
@@ -143,8 +143,8 @@ const T = {
     budget_none: 'Nothing fits the remaining budget. Raise the budget or show all parts.',
     auto_build_note_psu_over_budget: 'Picked a pricier PSU than this budget’s share to keep power delivery safe.',
     auto_build_note_case_over_budget: 'Picked a pricier case than this budget’s share so everything actually fits.',
-    auto_build_note_no_psu_sufficient: 'No PSU in the catalog comfortably covers this build’s power draw — picked the highest-wattage one available.',
-    auto_build_note_no_case_fits: 'No case fits every picked part at once — picked the roomiest one available.',
+    auto_build_note_no_psu_sufficient: 'No PSU in the catalog comfortably covers this build’s power draw. Picked the highest-wattage one available.',
+    auto_build_note_no_case_fits: 'No case fits every picked part at once. Picked the roomiest one available.',
     auto_build_note_category_empty: (cat: string) => `No ${cat} available in the catalog yet.`,
   },
   sk: {
@@ -154,24 +154,24 @@ const T = {
     show_panel: 'Zobraziť bočný panel', complete: 'Dokončené', your_build: 'Vaša zostava', selected_part: 'Vybraný diel',
     build_total: 'Celková cena', passmark_score: 'Skóre PassMark', verify_passmark: 'Overiť na PassMark ↗', dimensions: 'Rozmery',
     vat_included: 'Cena vrátane DPH',
-    part_unavailable: 'Momentálne nedostupné', part_missing: 'Už nie je dostupné — vyberte prosím náhradu',
+    part_unavailable: 'Momentálne nedostupné', part_missing: 'Už nie je dostupné. Vyberte prosím náhradu',
     passmark_title: (score: number) => `PassMark: ${score.toLocaleString()}`,
     fans: 'Ventilátory skrine',
     fan_positions: { front: 'Predné', top: 'Horné', rear: 'Zadné', bottom: 'Spodné', side: 'Bočné' },
     fan_generic: 'Bez značky', fan_included: 'v cene',
     show_can: 'Vložiť plechovku pre mierku', hide_can: 'Odstrániť plechovku', show_dims: 'Zobraziť rozmery', hide_dims: 'Skryť rozmery',
-    continue_benchmarks: 'Pokračovať na benchmarky →', save_build: 'Uložiť zostavu', preparing_order: 'Spúšťame vašu legendu...',
-    no_components: '(žiadne komponenty — pridajte v Admine)', none_add_admin: '(žiadne — pridajte v Admine)',
+    continue_benchmarks: 'Pokračovať na benchmarky', save_build: 'Uložiť zostavu', preparing_order: 'Spúšťame vašu legendu...',
+    no_components: '(žiadne komponenty, pridajte v Admine)', none_add_admin: '(žiadne, pridajte v Admine)',
     cat_names: { mobo: 'Základná doska', cpu: 'CPU', cooler: 'Chladič CPU', ram: 'RAM', gpu: 'GPU', storage: 'SSD', psu: 'Zdroj', case: 'Skriňa' },
     cat_desc: {
-      mobo: 'Základ vašej zostavy — určuje kompatibilitu s CPU, možnosti rozšírenia a potenciál na pretaktovanie.',
+      mobo: 'Základ vašej zostavy: určuje kompatibilitu s CPU, možnosti rozšírenia a potenciál na pretaktovanie.',
       cpu: 'Mozog vášho systému, ktorý zvláda všetky výpočtové úlohy od hrania po tvorbu obsahu.',
       cooler: 'Udržiava váš CPU chladný a tichý aj pri dlhodobej záťaži.',
       ram: 'Vysokorýchlostná pamäť pre plynulý multitasking a lepšie snímkové frekvencie.',
       gpu: 'Poháňa herné vizuály a urýchľuje kreatívne úlohy.',
       storage: 'Rýchle NVMe úložisko pre okamžité spustenie a takmer bezprostredné načítanie.',
       psu: 'Stabilné a efektívne napájanie pre celý váš systém.',
-      case: 'Skriňa určuje formát, prúdenie vzduchu a estetiku — a naživo mení mierku 3D náhľadu.',
+      case: 'Skriňa určuje formát, prúdenie vzduchu a estetiku, a naživo mení mierku 3D náhľadu.',
     },
     case_cats: [
       { id: 'Full Tower', label: 'Veľká skriňa  (55–75 cm)' },
@@ -183,17 +183,17 @@ const T = {
     ofComponents: (n: number) => `${n} z 8 komponentov`,
     step_of: (n: number) => `Krok ${n} z 8`,
     back: 'Späť', next: 'Ďalej', size: 'Veľkosť',
-    no_socket_match: (socket: string) => `Žiadne CPU nesedí na pätici ${socket} vybranej základnej dosky — zvoľte inú dosku, alebo skontrolujte Admin.`,
-    no_case_fit: (formFactor: string) => `Žiadna skriňa tejto veľkosti neposkytne miesto pre dosku ${formFactor} — skúste väčšiu veľkosť alebo menšiu dosku.`,
-    no_mobo_fit_case: (caseCategory: string) => `Žiadna základná doska sa nezmestí do skrine ${caseCategory} — skúste väčšiu skriňu alebo menšiu dosku.`,
-    no_part_fit: (caseName: string) => `Nič tu sa nezmestí do skrine ${caseName} — zvoľte väčšiu skriňu alebo menší diel.`,
-    no_case_fit_part: 'Žiadna skriňa tejto veľkosti neposkytne miesto pre všetko, čo ste už vybrali — skúste väčšiu veľkosť alebo odstráňte diel.',
-    no_ram_match: 'Žiadna sada RAM nevyhovuje tomuto filtru — skúste nižšiu minimálnu rýchlosť alebo inú generáciu DDR.',
+    no_socket_match: (socket: string) => `Žiadne CPU nesedí na pätici ${socket} vybranej základnej dosky. Zvoľte inú dosku, alebo skontrolujte Admin.`,
+    no_case_fit: (formFactor: string) => `Žiadna skriňa tejto veľkosti neposkytne miesto pre dosku ${formFactor}. Skúste väčšiu veľkosť alebo menšiu dosku.`,
+    no_mobo_fit_case: (caseCategory: string) => `Žiadna základná doska sa nezmestí do skrine ${caseCategory}. Skúste väčšiu skriňu alebo menšiu dosku.`,
+    no_part_fit: (caseName: string) => `Nič tu sa nezmestí do skrine ${caseName}. Zvoľte väčšiu skriňu alebo menší diel.`,
+    no_case_fit_part: 'Žiadna skriňa tejto veľkosti neposkytne miesto pre všetko, čo ste už vybrali. Skúste väčšiu veľkosť alebo odstráňte diel.',
+    no_ram_match: 'Žiadna sada RAM nevyhovuje tomuto filtru. Skúste nižšiu minimálnu rýchlosť alebo inú generáciu DDR.',
     ram_gen_all: 'Všetky', ram_min_speed: 'Minimálna rýchlosť', ram_min_speed_any: 'Ľubovoľná',
     ram_from_price: (price: string) => `od ${price}`,
-    ram_back_to_brand_speed: '← Značka a rýchlosť',
+    ram_back_to_brand_speed: 'Značka a rýchlosť',
     ram_choose_sticks: 'Počet RAM',
-    gpu_back_to_models: '← Modely GPU',
+    gpu_back_to_models: 'Modely GPU',
     gpu_choose_variant: 'Vyberte výrobcu',
     ram_choose_capacity: 'Kapacita na RAM',
     filter_all: 'Všetky',
@@ -201,17 +201,17 @@ const T = {
     filter_form_factor: 'Formát',
     category_label: 'Kategória',
     show_more: (n: number) => `Zobraziť ďalších ${n}`, show_less: 'Zobraziť menej',
-    no_mobo_match: 'Žiadna základná doska nevyhovuje tomuto filtru — skúste inú pätici alebo formát.',
-    no_socket_match_mobo: (socket: string) => `Žiadna základná doska nesedí na pätici ${socket} vybraného CPU — zvoľte iné CPU, alebo skontrolujte Admin.`,
+    no_mobo_match: 'Žiadna základná doska nevyhovuje tomuto filtru. Skúste inú pätici alebo formát.',
+    no_socket_match_mobo: (socket: string) => `Žiadna základná doska nesedí na pätici ${socket} vybraného CPU. Zvoľte iné CPU, alebo skontrolujte Admin.`,
     no_cpu_mfr_match: (mfr: string) => `Žiadne CPU značky ${mfr} nevyhovuje ostatným filtrom.`,
-    no_storage_match: 'Žiadne úložisko nevyhovuje tomuto filtru — skúste inú generáciu PCIe.',
+    no_storage_match: 'Žiadne úložisko nevyhovuje tomuto filtru. Skúste inú generáciu PCIe.',
     storage_pcie_capped_title: 'Obmedzená rýchlosť',
     storage_pcie_capped: (ssdGen: number, moboGen: number) =>
-      `Toto je disk PCIe ${ssdGen}.0, ale najrýchlejší M.2 slot vybranej základnej dosky je PCIe ${moboGen}.0 — bude fungovať, len obmedzený na rýchlosť Gen ${moboGen}.`,
+      `Toto je disk PCIe ${ssdGen}.0, ale najrýchlejší M.2 slot vybranej základnej dosky je PCIe ${moboGen}.0. Bude fungovať, len obmedzený na rýchlosť Gen ${moboGen}.`,
     sort_by_tier: 'Zoradiť podľa triedy',
     power_draw: 'Odhadovaný príkon',
     psu_ok: 'S rezervou v rámci kapacity vášho zdroja.',
-    psu_insufficient: 'Nad menovitú kapacitu vášho zdroja — zvoľte silnejší zdroj.',
+    psu_insufficient: 'Nad menovitú kapacitu vášho zdroja. Zvoľte silnejší zdroj.',
     budget: 'Rozpočet',
     budget_hint: 'Potiahnite a „Zostaviť kompletné PC“ vyberie najlepší pomer ceny a výkonu za túto sumu.',
     search_placeholder: 'Hľadať diely…',
@@ -225,10 +225,10 @@ const T = {
     budget_hidden: (n: number) => `Skryté kvôli rozpočtu: ${n}`,
     budget_show_all: 'Zobraziť všetko',
     budget_none: 'Do zvyšného rozpočtu sa nevojde žiadny diel. Zvýšte rozpočet alebo zobrazte všetky diely.',
-    auto_build_note_psu_over_budget: 'Vybraný drahší zdroj, než by pripadalo na tento rozpočet — pre bezpečné napájanie.',
-    auto_build_note_case_over_budget: 'Vybraná drahšia skriňa, než by pripadalo na tento rozpočet — aby sa všetko naozaj zmestilo.',
-    auto_build_note_no_psu_sufficient: 'Žiadny zdroj v katalógu s rezervou nepokryje príkon tejto zostavy — vybraný najsilnejší dostupný.',
-    auto_build_note_no_case_fits: 'Žiadna skriňa nepojme všetky vybrané diely naraz — vybraná najpriestrannejšia dostupná.',
+    auto_build_note_psu_over_budget: 'Vybraný drahší zdroj, než by pripadalo na tento rozpočet, pre bezpečné napájanie.',
+    auto_build_note_case_over_budget: 'Vybraná drahšia skriňa, než by pripadalo na tento rozpočet, aby sa všetko naozaj zmestilo.',
+    auto_build_note_no_psu_sufficient: 'Žiadny zdroj v katalógu s rezervou nepokryje príkon tejto zostavy. Vybraný najsilnejší dostupný.',
+    auto_build_note_no_case_fits: 'Žiadna skriňa nepojme všetky vybrané diely naraz. Vybraná najpriestrannejšia dostupná.',
     auto_build_note_category_empty: (cat: string) => `V katalógu zatiaľ nie je k dispozícii žiadna kategória ${cat}.`,
   },
   cz: {
@@ -238,24 +238,24 @@ const T = {
     show_panel: 'Zobrazit boční panel', complete: 'Dokončeno', your_build: 'Vaše sestava', selected_part: 'Vybraný díl',
     build_total: 'Celková cena', passmark_score: 'Skóre PassMark', verify_passmark: 'Ověřit na PassMark ↗', dimensions: 'Rozměry',
     vat_included: 'Cena včetně DPH',
-    part_unavailable: 'Momentálně nedostupné', part_missing: 'Již není dostupné — vyberte prosím náhradu',
+    part_unavailable: 'Momentálně nedostupné', part_missing: 'Již není dostupné. Vyberte prosím náhradu',
     passmark_title: (score: number) => `PassMark: ${score.toLocaleString()}`,
     fans: 'Ventilátory skříně',
     fan_positions: { front: 'Přední', top: 'Horní', rear: 'Zadní', bottom: 'Spodní', side: 'Boční' },
     fan_generic: 'Bez značky', fan_included: 'v ceně',
     show_can: 'Vložit plechovku pro měřítko', hide_can: 'Odebrat plechovku', show_dims: 'Zobrazit rozměry', hide_dims: 'Skrýt rozměry',
-    continue_benchmarks: 'Pokračovat na benchmarky →', save_build: 'Uložit sestavu', preparing_order: 'Spouštíme vaši legendu...',
-    no_components: '(žádné komponenty — přidejte v Adminu)', none_add_admin: '(žádné — přidejte v Adminu)',
+    continue_benchmarks: 'Pokračovat na benchmarky', save_build: 'Uložit sestavu', preparing_order: 'Spouštíme vaši legendu...',
+    no_components: '(žádné komponenty, přidejte v Adminu)', none_add_admin: '(žádné, přidejte v Adminu)',
     cat_names: { mobo: 'Základní deska', cpu: 'CPU', cooler: 'Chladič CPU', ram: 'RAM', gpu: 'GPU', storage: 'SSD', psu: 'Zdroj', case: 'Skříň' },
     cat_desc: {
-      mobo: 'Základ vaší sestavy — určuje kompatibilitu s CPU, možnosti rozšíření a potenciál pro přetaktování.',
+      mobo: 'Základ vaší sestavy: určuje kompatibilitu s CPU, možnosti rozšíření a potenciál pro přetaktování.',
       cpu: 'Mozek vašeho systému, který zvládá všechny výpočetní úlohy od hraní po tvorbu obsahu.',
       cooler: 'Udržuje váš CPU chladný a tichý i při dlouhodobé zátěži.',
       ram: 'Vysokorychlostní paměť pro plynulý multitasking a lepší snímkovou frekvenci.',
       gpu: 'Pohání herní vizuály a urychluje kreativní úlohy.',
       storage: 'Rychlé NVMe úložiště pro rychlé spouštění a téměř okamžité načítání.',
       psu: 'Stabilní a efektivní napájení pro celý váš systém.',
-      case: 'Skříň určuje formát, proudění vzduchu a estetiku — a naživo mění měřítko 3D náhledu.',
+      case: 'Skříň určuje formát, proudění vzduchu a estetiku, a naživo mění měřítko 3D náhledu.',
     },
     case_cats: [
       { id: 'Full Tower', label: 'Velká skříň  (55–75 cm)' },
@@ -267,17 +267,17 @@ const T = {
     ofComponents: (n: number) => `${n} z 8 komponent`,
     step_of: (n: number) => `Krok ${n} z 8`,
     back: 'Zpět', next: 'Další', size: 'Velikost',
-    no_socket_match: (socket: string) => `Žádné CPU nesedí na patici ${socket} vybrané základní desky — zvolte jinou desku, nebo zkontrolujte Admin.`,
-    no_case_fit: (formFactor: string) => `Žádná skříň této velikosti neposkytne místo pro desku ${formFactor} — zkuste větší velikost nebo menší desku.`,
-    no_mobo_fit_case: (caseCategory: string) => `Žádná základní deska se nevejde do skříně ${caseCategory} — zkuste větší skříň nebo menší desku.`,
-    no_part_fit: (caseName: string) => `Nic z tohoto se nevejde do skříně ${caseName} — zvolte větší skříň nebo menší díl.`,
-    no_case_fit_part: 'Žádná skříň této velikosti neposkytne místo pro vše, co jste již vybrali — zkuste větší velikost nebo odeberte díl.',
-    no_ram_match: 'Žádná sada RAM nevyhovuje tomuto filtru — zkuste nižší minimální rychlost nebo jinou generaci DDR.',
+    no_socket_match: (socket: string) => `Žádné CPU nesedí na patici ${socket} vybrané základní desky. Zvolte jinou desku, nebo zkontrolujte Admin.`,
+    no_case_fit: (formFactor: string) => `Žádná skříň této velikosti neposkytne místo pro desku ${formFactor}. Zkuste větší velikost nebo menší desku.`,
+    no_mobo_fit_case: (caseCategory: string) => `Žádná základní deska se nevejde do skříně ${caseCategory}. Zkuste větší skříň nebo menší desku.`,
+    no_part_fit: (caseName: string) => `Nic z tohoto se nevejde do skříně ${caseName}. Zvolte větší skříň nebo menší díl.`,
+    no_case_fit_part: 'Žádná skříň této velikosti neposkytne místo pro vše, co jste již vybrali. Zkuste větší velikost nebo odeberte díl.',
+    no_ram_match: 'Žádná sada RAM nevyhovuje tomuto filtru. Zkuste nižší minimální rychlost nebo jinou generaci DDR.',
     ram_gen_all: 'Všechny', ram_min_speed: 'Minimální rychlost', ram_min_speed_any: 'Libovolná',
     ram_from_price: (price: string) => `od ${price}`,
-    ram_back_to_brand_speed: '← Značka a rychlost',
+    ram_back_to_brand_speed: 'Značka a rychlost',
     ram_choose_sticks: 'Počet modulů RAM',
-    gpu_back_to_models: '← Modely GPU',
+    gpu_back_to_models: 'Modely GPU',
     gpu_choose_variant: 'Vyberte výrobce',
     ram_choose_capacity: 'Kapacita na modul',
     filter_all: 'Všechny',
@@ -285,17 +285,17 @@ const T = {
     filter_form_factor: 'Formát',
     category_label: 'Kategorie',
     show_more: (n: number) => `Zobrazit dalších ${n}`, show_less: 'Zobrazit méně',
-    no_mobo_match: 'Žádná základní deska nevyhovuje tomuto filtru — zkuste jinou patici nebo formát.',
-    no_socket_match_mobo: (socket: string) => `Žádná základní deska nesedí na patici ${socket} vybraného CPU — zvolte jiné CPU, nebo zkontrolujte Admin.`,
+    no_mobo_match: 'Žádná základní deska nevyhovuje tomuto filtru. Zkuste jinou patici nebo formát.',
+    no_socket_match_mobo: (socket: string) => `Žádná základní deska nesedí na patici ${socket} vybraného CPU. Zvolte jiné CPU, nebo zkontrolujte Admin.`,
     no_cpu_mfr_match: (mfr: string) => `Žádné CPU značky ${mfr} nevyhovuje ostatním filtrům.`,
-    no_storage_match: 'Žádné úložiště nevyhovuje tomuto filtru — zkuste jinou generaci PCIe.',
+    no_storage_match: 'Žádné úložiště nevyhovuje tomuto filtru. Zkuste jinou generaci PCIe.',
     storage_pcie_capped_title: 'Omezená rychlost',
     storage_pcie_capped: (ssdGen: number, moboGen: number) =>
-      `Toto je disk PCIe ${ssdGen}.0, ale nejrychlejší M.2 slot vybrané základní desky je PCIe ${moboGen}.0 — bude fungovat, jen omezený na rychlost Gen ${moboGen}.`,
+      `Toto je disk PCIe ${ssdGen}.0, ale nejrychlejší M.2 slot vybrané základní desky je PCIe ${moboGen}.0. Bude fungovat, jen omezený na rychlost Gen ${moboGen}.`,
     sort_by_tier: 'Seřadit podle třídy',
     power_draw: 'Odhadovaný příkon',
     psu_ok: 'S rezervou v rámci kapacity vašeho zdroje.',
-    psu_insufficient: 'Nad jmenovitou kapacitu vašeho zdroje — zvolte silnější zdroj.',
+    psu_insufficient: 'Nad jmenovitou kapacitu vašeho zdroje. Zvolte silnější zdroj.',
     budget: 'Rozpočet',
     budget_hint: 'Přetáhněte a „Sestavit kompletní PC“ vybere nejlepší poměr ceny a výkonu za tuto částku.',
     search_placeholder: 'Hledat součástky…',
@@ -309,10 +309,10 @@ const T = {
     budget_hidden: (n: number) => `Skryto kvůli rozpočtu: ${n}`,
     budget_show_all: 'Zobrazit vše',
     budget_none: 'Do zbývajícího rozpočtu se nevejde žádná součástka. Zvyšte rozpočet nebo zobrazte všechny součástky.',
-    auto_build_note_psu_over_budget: 'Vybrán dražší zdroj, než by připadalo na tento rozpočet — pro bezpečné napájení.',
-    auto_build_note_case_over_budget: 'Vybrána dražší skříň, než by připadalo na tento rozpočet — aby se vše skutečně vešlo.',
-    auto_build_note_no_psu_sufficient: 'Žádný zdroj v katalogu s rezervou nepokryje příkon této sestavy — vybrán nejsilnější dostupný.',
-    auto_build_note_no_case_fits: 'Žádná skříň nepojme všechny vybrané díly najednou — vybrána nejprostornější dostupná.',
+    auto_build_note_psu_over_budget: 'Vybrán dražší zdroj, než by připadalo na tento rozpočet, pro bezpečné napájení.',
+    auto_build_note_case_over_budget: 'Vybrána dražší skříň, než by připadalo na tento rozpočet, aby se vše skutečně vešlo.',
+    auto_build_note_no_psu_sufficient: 'Žádný zdroj v katalogu s rezervou nepokryje příkon této sestavy. Vybrán nejsilnější dostupný.',
+    auto_build_note_no_case_fits: 'Žádná skříň nepojme všechny vybrané díly najednou. Vybrána nejprostornější dostupná.',
     auto_build_note_category_empty: (cat: string) => `V katalogu zatím není k dispozici žádná kategorie ${cat}.`,
   },
 } as const;
@@ -1457,7 +1457,7 @@ function BuildPageContent() {
           }}
         >
             <div style={{ padding: isMobile ? '20px 20px 10px' : '20px 20px 14px' }}>
-              <div style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase' }}>
+              <div style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MUTED,  }}>
                 {t.pc_builder}
                 <InfoTip text={t.select_components} label={t.pc_builder} />
               </div>
@@ -1467,7 +1467,7 @@ function BuildPageContent() {
                 automatic pick; has no effect on manual per-part selection. ---- */}
             <div style={{ padding: isMobile ? '0 20px 14px' : '0 20px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ ...textPop, display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                <span style={{ ...textPop, display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MUTED,  }}>
                   {t.budget}
                   <InfoTip text={t.budget_hint} label={t.budget} />
                 </span>
@@ -1790,7 +1790,7 @@ function BuildPageContent() {
                       <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: INK, marginBottom: 4 }}>
                         {selectedGpuModel}
                       </div>
-                      <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginBottom: 8,  }}>
                         {t.gpu_choose_variant}
                       </div>
                       {renderMeta(gpuView)}
@@ -1994,7 +1994,7 @@ function BuildPageContent() {
                       <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: INK, marginBottom: 10 }}>
                         {brandLabel}{genLabel && speedLabel ? ` · DDR${genLabel}-${speedLabel}` : ''}
                       </div>
-                      <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginBottom: 6,  }}>
                         {t.ram_choose_sticks}
                       </div>
                       <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
@@ -2021,7 +2021,7 @@ function BuildPageContent() {
                       </div>
                       {expandedStickCount != null && (byCount.get(expandedStickCount)?.length ?? 0) > 1 && (
                         <div>
-                          <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                          <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginBottom: 6,  }}>
                             {t.ram_choose_capacity}
                           </div>
                           <AnimatePresence initial={false} key={`ram-capacity-${expandedStickCount}`}>
@@ -2246,7 +2246,7 @@ function BuildPageContent() {
                     cursor: SLOTS.indexOf(activeStep) === 0 ? 'default' : 'pointer',
                   }}
                 >
-                  ← {t.back}
+                  {t.back}
                 </button>
                 <button
                   onClick={() => { const i = SLOTS.indexOf(activeStep); if (i < SLOTS.length - 1) setActiveStep(SLOTS[i + 1]); }}
@@ -2260,7 +2260,7 @@ function BuildPageContent() {
                     cursor: SLOTS.indexOf(activeStep) === SLOTS.length - 1 ? 'default' : 'pointer',
                   }}
                 >
-                  {t.next} →
+                  {t.next}
                 </button>
               </div>
             </div>
@@ -2365,7 +2365,7 @@ function BuildPageContent() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: 'rgba(235,230,218,0.55)', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: 'rgba(235,230,218,0.55)',  }}>
                     {t.cat_names[hoverId]}
                   </span>
                   <TierBadge tier={hoverTier} small />
@@ -2509,7 +2509,7 @@ function BuildPageContent() {
                         <>
                           <div onClick={toggleExpanded} style={{ cursor: 'pointer' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                              <div style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                              <div style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MUTED,  }}>
                                 {t.cat_names[id]}
                                 <InfoTip text={t.cat_desc[id]} label={t.cat_names[id]} size={13} />
                               </div>
@@ -2555,13 +2555,13 @@ function BuildPageContent() {
                           </div>
                           {dimensionLabel(id, comp) && (
                             <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 12 }}>
-                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.dimensions}</div>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED,  }}>{t.dimensions}</div>
                               <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: INK, fontWeight: 600 }}>{dimensionLabel(id, comp)}</div>
                             </div>
                           )}
                           {passmark && (
                             <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 12 }}>
-                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.passmark_score}</div>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED,  }}>{t.passmark_score}</div>
                               <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 16, color: tier ? TIER_COLORS[tier].text : INK, fontWeight: 600 }}>{passmark.score.toLocaleString()}</div>
                               <a href={passmark.url} target="_blank" rel="noopener noreferrer" style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: ACCENT }}>{t.verify_passmark}</a>
                             </div>
@@ -2571,7 +2571,7 @@ function BuildPageContent() {
                       ) : (
                         <div onClick={toggleExpanded} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer' }}>
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>{t.cat_names[id]}</div>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED,  }}>{t.cat_names[id]}</div>
                             <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: INK, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{comp.name}</div>
                             {partAvailability(id) !== 'live' && (
                               <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: ACCENT }}>
@@ -2594,7 +2594,7 @@ function BuildPageContent() {
                           if (!ssdGen || !moboGen || ssdGen <= moboGen) return null;
                           return (
                             <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 12 }}>
-                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: ACCENT, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: ACCENT, fontWeight: 600 }}>
                                 {t.storage_pcie_capped_title}
                               </div>
                               <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: ACCENT, marginTop: 3, lineHeight: 1.4 }}>
@@ -2605,7 +2605,7 @@ function BuildPageContent() {
                         })()}
                       {SHOW_FAN_CHOOSER && id === 'case' && comp.fanMounts && comp.fanMounts.length > 0 && (
                         <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 12 }}>
-                          <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{t.fans}</div>
+                          <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginBottom: 8 }}>{t.fans}</div>
                           {comp.fanMounts.map((mount) => {
                             const cfg = fanConfig[mount.position] || { count: 0, sizeMm: mount.sizesMm[0] };
                             // Real fan products (from the 'fan' catalog) that physically fit this mount —
@@ -2671,7 +2671,7 @@ function BuildPageContent() {
           {estimatedWatts > 0 && (
             <div style={{ padding: '16px 20px 0', borderTop: '0.5px solid rgba(235,230,218,0.1)' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.power_draw}</div>
+                <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED,  }}>{t.power_draw}</div>
                 <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: psuWatts && estimatedWatts > psuWatts ? ACCENT : INK, fontWeight: 600 }}>
                   {estimatedWatts}W{psuWatts ? ` / ${psuWatts}W` : ''}
                 </div>
@@ -2697,7 +2697,7 @@ function BuildPageContent() {
             </div>
           )}
           <div style={{ padding: 20, borderTop: estimatedWatts > 0 ? 'none' : '0.5px solid rgba(235,230,218,0.1)', marginTop: 'auto' }}>
-            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.build_total}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED,  }}>{t.build_total}</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 40, color: INK, fontWeight: 500, margin: '4px 0' }}>{fmt(totalPriceGross)}</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570' }}>{t.vat_included} ({vatRatePct}%)</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570', marginBottom: 14 }}>{t.ofComponents(installedCount)}</div>
@@ -2734,7 +2734,7 @@ function BuildPageContent() {
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.build_total}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED,  }}>{t.build_total}</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 18, color: INK, fontWeight: 600 }}>{fmt(totalPriceGross)}</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570' }}>{t.vat_included}</div>
           </div>

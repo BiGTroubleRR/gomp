@@ -24,7 +24,7 @@ export default function ComingSoon({ eyebrow, title, blurb }: { eyebrow: L3; tit
         <div aria-hidden style={{ position: 'absolute', top: '50%', left: '50%', width: 520, height: 520, marginLeft: -260, marginTop: -260, border: `0.5px solid ${BORDER_STRONG}`, borderRadius: '50%', animation: 'gompRotateSlow 120s linear infinite', pointerEvents: 'none' }} />
         <div aria-hidden style={{ position: 'absolute', top: '50%', left: '50%', width: 340, height: 340, marginLeft: -170, marginTop: -170, border: `0.5px solid rgba(196,163,90,0.22)`, borderRadius: '50%', animation: 'gompRotateSlowRev 90s linear infinite', pointerEvents: 'none' }} />
         <div style={{ position: 'relative', maxWidth: 560, textAlign: 'center', background: PANEL_BG, border: `1px solid ${BORDER_STRONG}`, padding: isMobile ? '36px 24px' : '52px 48px', borderRadius: 4 }}>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: 2.5, textTransform: 'uppercase', color: GOLD, marginBottom: 18 }}>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: GOLD, marginBottom: 18 }}>
             {pick(lang, eyebrow)} · {pick(lang, { en: 'Coming soon', sk: 'Čoskoro', cz: 'Již brzy' })}
           </div>
           <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: isMobile ? 30 : 40, fontWeight: 400, color: INK, lineHeight: 1.05, letterSpacing: -0.5, margin: '0 0 18px' }}>

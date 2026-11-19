@@ -96,7 +96,7 @@ export function SectionHead({ eyebrow, title, right }: { eyebrow?: string; title
     <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, paddingBottom: 12, borderBottom: `1px solid ${BORDER}`, marginBottom: 20 }}>
       <div>
         {eyebrow && (
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, letterSpacing: 2, textTransform: 'uppercase', color: MUTED, marginBottom: 6 }}>{eyebrow}</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, color: MUTED, marginBottom: 6 }}>{eyebrow}</div>
         )}
         <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: 26, fontWeight: 600, letterSpacing: -0.3, color: INK, margin: 0, lineHeight: 1.1 }}>{title}</h2>
       </div>

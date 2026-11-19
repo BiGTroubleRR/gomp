@@ -100,7 +100,7 @@ const TRANSLATIONS = {
     nav_account: 'Account',
     member_since: 'Member since',
     member_date: 'Jan 2026',
-    sign_out: 'Sign out →',
+    sign_out: 'Sign out',
     my_account: 'My Account',
     my_orders: 'My Orders',
     addresses: 'Addresses',
@@ -162,7 +162,7 @@ const TRANSLATIONS = {
     nav_account: 'Účet',
     member_since: 'Členom od',
     member_date: 'jan 2026',
-    sign_out: 'Odhlásiť sa →',
+    sign_out: 'Odhlásiť sa',
     my_account: 'Môj účet',
     my_orders: 'Moje objednávky',
     addresses: 'Adresy',
@@ -224,7 +224,7 @@ const TRANSLATIONS = {
     nav_account: 'Účet',
     member_since: 'Členem od',
     member_date: 'led 2026',
-    sign_out: 'Odhlásit se →',
+    sign_out: 'Odhlásit se',
     my_account: 'Můj účet',
     my_orders: 'Moje objednávky',
     addresses: 'Adresy',
@@ -290,8 +290,8 @@ const labelStyle: CSSProperties = {
   fontSize: 10,
   fontWeight: 600,
   color: '#98A39D',
-  letterSpacing: 2,
-  textTransform: 'uppercase',
+  
+  
   display: 'block',
   marginBottom: 8,
 };
@@ -359,8 +359,8 @@ function TabHeader({ t, title, action, isMobile }: { t: T; title: string; action
             fontSize: 10,
             fontWeight: 600,
             color: '#98A39D',
-            letterSpacing: 2.5,
-            textTransform: 'uppercase',
+            
+            
             marginBottom: 8,
           }}
         >
@@ -797,8 +797,8 @@ export default function Account() {
                   fontFamily: 'var(--font-sans)',
                   fontSize: 10,
                   color: '#98A39D',
-                  letterSpacing: 1.5,
-                  textTransform: 'uppercase',
+                  
+                  
                   marginBottom: 4,
                 }}
               >
@@ -888,8 +888,8 @@ export default function Account() {
                                     fontSize: 10,
                                     fontWeight: 600,
                                     color: s.color,
-                                    letterSpacing: 1.5,
-                                    textTransform: 'uppercase',
+                                    
+                                    
                                   }}
                                 >
                                   {status}
@@ -925,8 +925,8 @@ export default function Account() {
                                       fontSize: 10,
                                       fontWeight: 600,
                                       color: '#98A39D',
-                                      letterSpacing: 2,
-                                      textTransform: 'uppercase',
+                                      
+                                      
                                       marginBottom: 10,
                                     }}
                                   >
@@ -967,8 +967,8 @@ export default function Account() {
                                       fontSize: 10,
                                       fontWeight: 600,
                                       color: '#98A39D',
-                                      letterSpacing: 2,
-                                      textTransform: 'uppercase',
+                                      
+                                      
                                       marginBottom: 10,
                                     }}
                                   >
@@ -1072,7 +1072,7 @@ export default function Account() {
                               borderRadius: 2,
                             }}
                           >
-                            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: '#3FAE74', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: '#3FAE74',  }}>
                               {t.default_badge}
                             </span>
                           </div>
@@ -1083,8 +1083,8 @@ export default function Account() {
                             fontSize: 10,
                             fontWeight: 600,
                             color: '#98A39D',
-                            letterSpacing: 2,
-                            textTransform: 'uppercase',
+                            
+                            
                             marginBottom: 10,
                           }}
                         >
@@ -1310,8 +1310,8 @@ export default function Account() {
                               fontSize: 10,
                               fontWeight: 600,
                               color: '#98A39D',
-                              letterSpacing: 2,
-                              textTransform: 'uppercase',
+                              
+                              
                             }}
                           >
                             {row.label}
@@ -1419,8 +1419,8 @@ export default function Account() {
                         fontSize: 10,
                         fontWeight: 600,
                         color: '#98A39D',
-                        letterSpacing: 2,
-                        textTransform: 'uppercase',
+                        
+                        
                         marginBottom: 14,
                       }}
                     >
@@ -1452,7 +1452,7 @@ export default function Account() {
 
                   <div style={{ border: '0.5px solid rgba(176,32,32,0.18)', borderRadius: 2, overflow: 'hidden' }}>
                     <div style={{ padding: isMobile ? '12px 16px' : '13px 22px', background: 'rgba(176,32,32,0.03)', borderBottom: '0.5px solid rgba(176,32,32,0.1)' }}>
-                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: 'rgba(176,32,32,0.6)', letterSpacing: 2, textTransform: 'uppercase' }}>
+                      <span style={{ fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: 'rgba(176,32,32,0.6)',  }}>
                         {t.danger_zone}
                       </span>
                     </div>

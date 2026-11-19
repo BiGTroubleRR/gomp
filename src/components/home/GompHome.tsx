@@ -31,19 +31,18 @@ const T = {
   stress: { en: 'Stress-tested', sk: 'Záťažovo testované', cz: 'Zátěžově testované' },
   monster: { en: ['Gaming ', 'beast', ''], sk: ['Herné ', 'monštrum', ''], cz: ['Herní ', 'monstrum', ''] } as L3Hl,
   inclVat: { en: 'incl. VAT', sk: 'vrátane DPH', cz: 'včetně DPH' },
-  configureThis: { en: 'Configure this build →', sk: 'Nakonfigurovať túto zostavu →', cz: 'Nakonfigurovat tuto sestavu →' },
-  uvPill: { en: 'Every CPU & GPU undervolted', sk: 'Každý CPU & GPU undervolted', cz: 'Každý CPU & GPU undervolted' },
+  configureThis: { en: 'Configure this build', sk: 'Nakonfigurovať túto zostavu', cz: 'Nakonfigurovat tuto sestavu' },
   uvTitle: { en: ['Cooler. ', 'Quieter.', ' Just as fast.'], sk: ['Chladnejší. ', 'Tichší.', ' Rovnako rýchly.'], cz: ['Chladnější. ', 'Tišší.', ' Stejně rychlý.'] } as L3Hl,
   uvText: {
-    en: 'We undervolt every CPU and GPU wherever the platform allows it — lower temperatures, quieter fans, lower power draw, no loss of performance.',
-    sk: 'Každý CPU a GPU podvoltujeme všade, kde to platforma umožňuje — nižšie teploty, tichšie ventilátory, nižšia spotreba, bez straty výkonu.',
-    cz: 'Každý CPU a GPU podvoltujeme všude, kde to platforma umožňuje — nižší teploty, tišší ventilátory, nižší spotřeba, bez ztráty výkonu.',
+    en: 'We undervolt every CPU and GPU wherever the platform allows it. Lower temperatures, quieter fans, lower power draw, no loss of performance.',
+    sk: 'Každý CPU a GPU podvoltujeme všade, kde to platforma umožňuje. Nižšie teploty, tichšie ventilátory, nižšia spotreba, bez straty výkonu.',
+    cz: 'Každý CPU a GPU podvoltujeme všude, kde to platforma umožňuje. Nižší teploty, tišší ventilátory, nižší spotřeba, bez ztráty výkonu.',
   },
-  whyUv: { en: 'Why undervolt? →', sk: 'Prečo undervolt? →', cz: 'Proč undervolt? →' },
+  whyUv: { en: 'Why undervolt?', sk: 'Prečo undervolt?', cz: 'Proč undervolt?' },
   slide: { en: 'Slide', sk: 'Snímka', cz: 'Snímek' },
   customerBuilds: { en: 'Customer GOMPs', sk: 'Zákaznícke GOMPy', cz: 'Zákaznické GOMPy' },
   shipped: { en: ['Custom builds ', 'shipped', ''], sk: ['Expedovaných zostáv ', 'na mieru', ''], cz: ['Expedovaných sestav ', 'na míru', ''] } as L3Hl,
-  seeOthers: { en: 'See what others built →', sk: 'Pozri, čo si postavili iní →', cz: 'Podívej se, co si postavili jiní →' },
+  seeOthers: { en: 'See what others built', sk: 'Pozri, čo si postavili iní', cz: 'Podívej se, co si postavili jiní' },
   budgetTitle: { en: ['Top pick in the ', 'entry', ' class'], sk: ['Špička v ', 'základnej', ' triede'], cz: ['Špička v ', 'základní', ' třídě'] } as L3Hl,
 
   featuresLabel: { en: 'Benefits', sk: 'Výhody', cz: 'Výhody' },
@@ -60,12 +59,12 @@ const T = {
 
   spotEyebrow: { en: 'Configured for you', sk: 'Nakonfigurované pre vás', cz: 'Nakonfigurováno pro vás' },
   spotTitle: { en: 'Featured builds', sk: 'Odporúčané zostavy', cz: 'Doporučené sestavy' },
-  allPrebuilt: { en: 'All prebuilt GOMPs →', sk: 'Všetky prebuilt GOMPy →', cz: 'Všechny prebuilt GOMPy →' },
+  allPrebuilt: { en: 'All prebuilt GOMPs', sk: 'Všetky prebuilt GOMPy', cz: 'Všechny prebuilt GOMPy' },
   tier: { en: 'Class', sk: 'Trieda', cz: 'Třída' },
   tierLower: { en: 'class', sk: 'trieda', cz: 'třída' },
   rating: { en: 'Rating', sk: 'Hodnotenie', cz: 'Hodnocení' },
   priceIncl: { en: 'Price incl. VAT', sk: 'Cena vrátane DPH', cz: 'Cena včetně DPH' },
-  cooling: { en: 'COOLING', sk: 'CHLADENIE', cz: 'CHLAZENÍ' },
+  cooling: { en: 'Cooling', sk: 'Chladenie', cz: 'Chlazení' },
   prev: { en: '‹ Previous', sk: '‹ Predošlá', cz: '‹ Předchozí' },
   next: { en: 'Next ›', sk: 'Ďalšia ›', cz: 'Další ›' },
   pickBuild: { en: 'Pick a build', sk: 'Vyber zostavu', cz: 'Vyber sestavu' },
@@ -80,7 +79,7 @@ const T = {
     sk: 'Poskladajte si svoju legendu sami v našom 3D konfigurátore a sledujte, ako sa každý komponent objaví v reálnom čase.',
     cz: 'Poskládejte si svou legendu sami v našem 3D konfigurátoru a sledujte, jak se každá komponenta objeví v reálném čase.',
   },
-  promoBtn: { en: 'Open the 3D configurator →', sk: 'Otvoriť 3D konfigurátor →', cz: 'Otevřít 3D konfigurátor →' },
+  promoBtn: { en: 'Open the 3D configurator', sk: 'Otvoriť 3D konfigurátor', cz: 'Otevřít 3D konfigurátor' },
 
   listTop: { en: 'Top rated', sk: 'Najlepšie hodnotené', cz: 'Nejlépe hodnocené' },
   listGpu: { en: 'Most powerful GPUs', sk: 'Najvýkonnejšie GPU', cz: 'Nejvýkonnější GPU' },
@@ -335,7 +334,6 @@ export default function GompHome({ onStartBuilding }: { onStartBuilding: () => v
             )}
             <div className={`slide photo${on('undervolt')}`} style={bg(SLIDE_BG.undervolt.bg, SLIDE_BG.undervolt.pos)}>
               <div>
-                <span className="pill">{s('uvPill')}</span>
                 <h1>{em(h('uvTitle'))}</h1>
                 <p>{s('uvText')}</p>
                 <div className="btns" style={{ marginTop: 26 }}>

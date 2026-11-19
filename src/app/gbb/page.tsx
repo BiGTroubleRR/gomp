@@ -23,21 +23,8 @@ type BudgetId = 'b500' | 'b800' | 'b1200' | 'b2000' | 'b2000plus' | 'unsure';
 type Channel = 'email' | 'phone';
 type StepId = 'topic' | 'use' | 'budget' | 'notes' | 'contact';
 
-const TOPICS: { id: Topic; icon: string }[] = [
-  { id: 'pick', icon: '🖥️' },
-  { id: 'upgrade', icon: '⚡' },
-  { id: 'used', icon: '♻️' },
-  { id: 'check', icon: '✅' },
-  { id: 'order', icon: '📦' },
-  { id: 'other', icon: '💬' },
-];
-const USES: { id: Use; icon: string }[] = [
-  { id: 'gaming', icon: '🎮' },
-  { id: 'work', icon: '💼' },
-  { id: 'creative', icon: '🎬' },
-  { id: 'server', icon: '🗄️' },
-  { id: 'mixed', icon: '✨' },
-];
+const TOPICS: { id: Topic }[] = [{ id: 'pick' }, { id: 'upgrade' }, { id: 'used' }, { id: 'check' }, { id: 'order' }, { id: 'other' }];
+const USES: { id: Use }[] = [{ id: 'gaming' }, { id: 'work' }, { id: 'creative' }, { id: 'server' }, { id: 'mixed' }];
 // `max` is what is stored as the budget (the top of the band); the band's own wording goes into the notes.
 const BUDGETS: { id: BudgetId; max: number | null }[] = [
   { id: 'b500', max: 500 },
@@ -65,14 +52,14 @@ type Dict = {
 const T = {
   en: {
     nav_label: 'Help me',
-    eyebrow: 'HELP ME',
+    eyebrow: 'Help me',
     title: 'Not sure where to start? Let’s work it out together.',
     intro:
-      'Tap through a few quick questions and tell us how to reach you. A real person from GOMP answers — usually within 1–2 business days, with no obligation.',
+      'Tap through a few quick questions and tell us how to reach you. A real person from GOMP answers, usually within 1–2 business days, with no obligation.',
     aside_title: 'What happens next',
     aside: [
       { t: 'You tell us what you need', b: 'Two minutes, mostly taps.' },
-      { t: 'We take a real look', b: 'A person checks current parts and prices — no automated quote.' },
+      { t: 'We take a real look', b: 'A person checks current parts and prices. No automated quote.' },
       { t: 'We get back to you', b: 'By e-mail or phone, whichever you prefer.' },
     ],
     aside_badge: 'Free · No obligation',
@@ -91,10 +78,10 @@ const T = {
     first_name: 'First name', last_name: 'Last name', email: 'E-mail', phone: 'Phone', phone_needed: '(needed for a call)',
     privacy_pre: 'We only use your details to answer this request. ',
     privacy_link: 'Privacy policy',
-    back: '← Back',
-    next: 'Continue →',
-    skip: 'Skip →',
-    submit: 'Send request →',
+    back: 'Back',
+    next: 'Continue',
+    skip: 'Skip',
+    submit: 'Send request',
     submitting: 'Sending…',
     topic: {
       pick: { label: 'Pick a PC for me', sub: 'Tell us what you need and we recommend a build.' },
@@ -114,23 +101,23 @@ const T = {
       order: 'Your order number and your question.',
       other: 'Tell us what’s on your mind.',
     },
-    success_title: 'Thanks — we’ve got it.',
+    success_title: 'Thanks, we’ve got it.',
     success_email: (e: string) => `We’ll write to you at ${e}, usually within 1–2 business days.`,
     success_phone: (p: string) => `We’ll call you on ${p}, usually within 1–2 business days.`,
-    back_home: '← Back to home',
+    back_home: 'Back to home',
     again: 'Send another request',
     error_generic: 'Something went wrong. Please try again.',
   },
   sk: {
     nav_label: 'Pomôžte mi',
-    eyebrow: 'POMÔŽTE MI',
+    eyebrow: 'Pomôžte mi',
     title: 'Neviete, kde začať? Poradíme vám.',
     intro:
-      'Prekliknite sa pár rýchlymi otázkami a napíšte nám, ako vás môžeme zastihnúť. Ozve sa vám živý človek z GOMP — zvyčajne do 1–2 pracovných dní, bez záväzku.',
+      'Prekliknite sa pár rýchlymi otázkami a napíšte nám, ako vás môžeme zastihnúť. Ozve sa vám živý človek z GOMP, zvyčajne do 1–2 pracovných dní, bez záväzku.',
     aside_title: 'Čo bude nasledovať',
     aside: [
       { t: 'Poviete nám, čo potrebujete', b: 'Dve minúty, väčšinou len klikanie.' },
-      { t: 'Pozrieme sa na to', b: 'Skutočný človek skontroluje aktuálne súčiastky a ceny — žiadna automatická ponuka.' },
+      { t: 'Pozrieme sa na to', b: 'Skutočný človek skontroluje aktuálne súčiastky a ceny. Žiadna automatická ponuka.' },
       { t: 'Ozveme sa vám', b: 'E-mailom alebo telefonicky, ako vám viac vyhovuje.' },
     ],
     aside_badge: 'Zdarma · Bez záväzku',
@@ -149,10 +136,10 @@ const T = {
     first_name: 'Meno', last_name: 'Priezvisko', email: 'E-mail', phone: 'Telefón', phone_needed: '(potrebný pre telefonát)',
     privacy_pre: 'Vaše údaje použijeme len na vybavenie tejto žiadosti. ',
     privacy_link: 'Ochrana osobných údajov',
-    back: '← Späť',
-    next: 'Pokračovať →',
-    skip: 'Preskočiť →',
-    submit: 'Odoslať žiadosť →',
+    back: 'Späť',
+    next: 'Pokračovať',
+    skip: 'Preskočiť',
+    submit: 'Odoslať žiadosť',
     submitting: 'Odosielam…',
     topic: {
       pick: { label: 'Vyberte mi PC', sub: 'Povedzte nám, čo potrebujete, a odporučíme zostavu.' },
@@ -172,23 +159,23 @@ const T = {
       order: 'Číslo objednávky a vaša otázka.',
       other: 'Napíšte nám, čo máte na srdci.',
     },
-    success_title: 'Ďakujeme — máme to.',
+    success_title: 'Ďakujeme, máme to.',
     success_email: (e: string) => `Napíšeme vám na ${e}, zvyčajne do 1–2 pracovných dní.`,
     success_phone: (p: string) => `Zavoláme vám na ${p}, zvyčajne do 1–2 pracovných dní.`,
-    back_home: '← Späť na hlavnú stránku',
+    back_home: 'Späť na hlavnú stránku',
     again: 'Odoslať ďalšiu žiadosť',
     error_generic: 'Niečo sa pokazilo. Skúste to znova.',
   },
   cz: {
     nav_label: 'Pomozte mi',
-    eyebrow: 'POMOZTE MI',
+    eyebrow: 'Pomozte mi',
     title: 'Nevíte, kde začít? Poradíme vám.',
     intro:
-      'Proklikejte se několika rychlými otázkami a napište nám, jak vás můžeme zastihnout. Ozve se vám živý člověk z GOMP — obvykle do 1–2 pracovních dnů, bez závazku.',
+      'Proklikejte se několika rychlými otázkami a napište nám, jak vás můžeme zastihnout. Ozve se vám živý člověk z GOMP, obvykle do 1–2 pracovních dnů, bez závazku.',
     aside_title: 'Co bude následovat',
     aside: [
       { t: 'Řeknete nám, co potřebujete', b: 'Dvě minuty, většinou jen klikání.' },
-      { t: 'Podíváme se na to', b: 'Skutečný člověk zkontroluje aktuální součástky a ceny — žádná automatická nabídka.' },
+      { t: 'Podíváme se na to', b: 'Skutečný člověk zkontroluje aktuální součástky a ceny. Žádná automatická nabídka.' },
       { t: 'Ozveme se vám', b: 'E-mailem nebo telefonicky, jak vám více vyhovuje.' },
     ],
     aside_badge: 'Zdarma · Bez závazku',
@@ -207,10 +194,10 @@ const T = {
     first_name: 'Jméno', last_name: 'Příjmení', email: 'E-mail', phone: 'Telefon', phone_needed: '(potřebný pro telefonát)',
     privacy_pre: 'Vaše údaje použijeme jen k vyřízení této žádosti. ',
     privacy_link: 'Ochrana osobních údajů',
-    back: '← Zpět',
-    next: 'Pokračovat →',
-    skip: 'Přeskočit →',
-    submit: 'Odeslat žádost →',
+    back: 'Zpět',
+    next: 'Pokračovat',
+    skip: 'Přeskočit',
+    submit: 'Odeslat žádost',
     submitting: 'Odesílám…',
     topic: {
       pick: { label: 'Vyberte mi PC', sub: 'Řekněte nám, co potřebujete, a doporučíme sestavu.' },
@@ -230,10 +217,10 @@ const T = {
       order: 'Číslo objednávky a váš dotaz.',
       other: 'Napište nám, co máte na srdci.',
     },
-    success_title: 'Děkujeme — máme to.',
+    success_title: 'Děkujeme, máme to.',
     success_email: (e: string) => `Napíšeme vám na ${e}, obvykle do 1–2 pracovních dnů.`,
     success_phone: (p: string) => `Zavoláme vám na ${p}, obvykle do 1–2 pracovních dnů.`,
-    back_home: '← Zpět na hlavní stránku',
+    back_home: 'Zpět na hlavní stránku',
     again: 'Odeslat další žádost',
     error_generic: 'Něco se pokazilo. Zkuste to prosím znovu.',
   },
@@ -246,8 +233,8 @@ const INPUT_STYLE: CSSProperties = {
   fontSize: 15, fontFamily: 'var(--font-sans)', background: SURFACE_ALT, color: INK,
 };
 const LABEL_STYLE: CSSProperties = {
-  fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 0.8,
-  textTransform: 'uppercase', marginBottom: 6,
+  fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MUTED, 
+  marginBottom: 6,
 };
 
 const CSS = `
@@ -264,7 +251,7 @@ const CSS = `
 @media (prefers-reduced-motion: reduce) { .hm-step { animation: none; } .hm-choice, .hm-btn { transition: none; } .hm-choice:hover { transform: none; } }
 `;
 
-function Choice({ selected, onClick, icon, label, sub }: { selected: boolean; onClick: () => void; icon?: string; label: string; sub?: string }) {
+function Choice({ selected, onClick, label, sub }: { selected: boolean; onClick: () => void; label: string; sub?: string }) {
   return (
     <button
       type="button"
@@ -277,7 +264,6 @@ function Choice({ selected, onClick, icon, label, sub }: { selected: boolean; on
         fontFamily: 'var(--font-sans)',
       }}
     >
-      {icon && <span aria-hidden style={{ fontSize: 22, lineHeight: '26px' }}>{icon}</span>}
       <span style={{ display: 'block' }}>
         <span style={{ display: 'block', fontSize: 15, fontWeight: 600 }}>{label}</span>
         {sub && <span style={{ display: 'block', fontSize: 12.5, color: MUTED, fontWeight: 300, lineHeight: 1.5, marginTop: 3 }}>{sub}</span>}
@@ -475,7 +461,7 @@ export default function HelpMePage() {
             <>
               {/* progress: one segment per step */}
               <div style={{ marginBottom: 26 }}>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, letterSpacing: 1, color: FAINT, textTransform: 'uppercase', marginBottom: 8 }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: FAINT, marginBottom: 8 }}>
                   {t.step_of(stepIdx + 1, total)}
                 </div>
                 <div style={{ display: 'flex', gap: 6 }} role="presentation">
@@ -491,7 +477,7 @@ export default function HelpMePage() {
                     <h2 ref={headingRef} tabIndex={-1} style={heading}>{t.q_topic}</h2>
                     <div style={choiceGrid(2)}>
                       {TOPICS.map((o) => (
-                        <Choice key={o.id} selected={topic === o.id} onClick={() => chooseTopic(o.id)} icon={o.icon} label={t.topic[o.id].label} sub={t.topic[o.id].sub} />
+                        <Choice key={o.id} selected={topic === o.id} onClick={() => chooseTopic(o.id)} label={t.topic[o.id].label} sub={t.topic[o.id].sub} />
                       ))}
                     </div>
                     {nav({})}
@@ -503,7 +489,7 @@ export default function HelpMePage() {
                     <h2 ref={headingRef} tabIndex={-1} style={heading}>{t.q_use}</h2>
                     <div style={choiceGrid(2)}>
                       {USES.map((o) => (
-                        <Choice key={o.id} selected={use === o.id} onClick={() => { setUse(o.id); go(1); }} icon={o.icon} label={t.use[o.id]} />
+                        <Choice key={o.id} selected={use === o.id} onClick={() => { setUse(o.id); go(1); }} label={t.use[o.id]} />
                       ))}
                     </div>
                     {nav({ next: { label: t.skip, onClick: () => go(1) } })}
@@ -560,8 +546,8 @@ export default function HelpMePage() {
                     <h2 ref={headingRef} tabIndex={-1} style={heading}>{t.q_contact}</h2>
                     <div style={LABEL_STYLE}>{t.channel_label}</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
-                      <Choice selected={channel === 'email'} onClick={() => setChannel('email')} icon="✉️" label={t.channel_email} />
-                      <Choice selected={channel === 'phone'} onClick={() => setChannel('phone')} icon="📞" label={t.channel_phone} />
+                      <Choice selected={channel === 'email'} onClick={() => setChannel('email')} label={t.channel_email} />
+                      <Choice selected={channel === 'phone'} onClick={() => setChannel('phone')} label={t.channel_phone} />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
                       <label>
@@ -610,7 +596,7 @@ export default function HelpMePage() {
 
         {/* ---- What happens next ---- */}
         <aside style={{ paddingTop: isMobile ? 0 : 6 }}>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: MUTED, textTransform: 'uppercase', marginBottom: 18 }}>
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, color: MUTED, marginBottom: 18 }}>
             {t.aside_title}
           </div>
           <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 22 }}>

@@ -109,7 +109,7 @@ export default function AnimatedDropdown({
       >
         <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           {caption && (
-            <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 1, color: MUTED, textTransform: 'uppercase', lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{caption}</span>
+            <span style={{ fontSize: 9.5, fontWeight: 700, color: MUTED, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{caption}</span>
           )}
           <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {selected?.label}

@@ -170,17 +170,17 @@ const translations = {
     benchmark_suite: 'Benchmark Suite',
     selected_word: 'selected',
     no_selection_msg:
-      "No benchmarks selected yet — pick a few on the right, or skip and we'll run our default suite.",
-    continue_checkout: 'Continue to Checkout →',
+      "No benchmarks selected yet. Pick a few on the right, or skip and we'll run our default suite.",
+    continue_checkout: 'Continue to Checkout',
     skip_benchmarks: 'Skip benchmarks',
-    back_to_build: '← Back to Build',
+    back_to_build: 'Back to Build',
     step_build: 'Build',
     step_benchmarks: 'Benchmarks',
     step_checkout: 'Checkout',
     choose_title_line1: 'Choose your',
     choose_title_em: 'benchmarks.',
     choose_desc:
-      "Every GOMP build ships with a printed performance validation sheet. Pick the games and tests you want on it — we'll run them on your exact rig before it leaves the shop.",
+      "Every GOMP build ships with a printed performance validation sheet. Pick the games and tests you want on it. We'll run them on your exact rig before it leaves the shop.",
     select_recommended: 'Select Recommended',
     clear_all: 'Clear All',
     section_fps_title: 'In-Game · Competitive & FPS',
@@ -199,11 +199,11 @@ const translations = {
     fps_source_title: 'Estimated FPS (1440p)',
     fps_need_both: 'Configure a build first, or pick a GPU and CPU below to estimate FPS.',
     total_test_time: (n: number) => `~${n} min total test time`,
-    fps_from_build: (g: string, c: string) => `Estimates based on your configured build — ${g} + ${c}.`,
+    fps_from_build: (g: string, c: string) => `Estimates based on your configured build: ${g} + ${c}.`,
     // Shown when the GPU is the missing half (CPU is known from the build).
-    fps_pick_gpu: (c: string) => `Using ${c} from your build — pick a GPU below to estimate FPS.`,
+    fps_pick_gpu: (c: string) => `Using ${c} from your build. Pick a GPU below to estimate FPS.`,
     // Shown when the CPU is the missing half (GPU is known from the build).
-    fps_pick_cpu: (g: string) => `Using ${g} from your build — pick a CPU below to estimate FPS.`,
+    fps_pick_cpu: (g: string) => `Using ${g} from your build. Pick a CPU below to estimate FPS.`,
   },
   sk: {
     nav_home: 'Domov',
@@ -215,17 +215,17 @@ const translations = {
     benchmark_suite: 'Sada testov',
     selected_word: 'vybraných',
     no_selection_msg:
-      'Zatiaľ nemáte vybrané žiadne testy — vyberte niekoľko vpravo, alebo preskočte a spustíme našu východiskovú sadu.',
-    continue_checkout: 'Pokračovať na pokladňu →',
+      'Zatiaľ nemáte vybrané žiadne testy. Vyberte niekoľko vpravo, alebo preskočte a spustíme našu východiskovú sadu.',
+    continue_checkout: 'Pokračovať na pokladňu',
     skip_benchmarks: 'Preskočiť testy',
-    back_to_build: '← Späť na zostavu',
+    back_to_build: 'Späť na zostavu',
     step_build: 'Zostava',
     step_benchmarks: 'Testy',
     step_checkout: 'Pokladňa',
     choose_title_line1: 'Vyberte si',
     choose_title_em: 'testy.',
     choose_desc:
-      'Každá zostava GOMP sa dodáva s vytlačeným listom výkonu. Vyberte hry a testy, ktoré na ňom chcete mať — spustíme ich na vašom presnom stroji ešte pred odoslaním.',
+      'Každá zostava GOMP sa dodáva s vytlačeným listom výkonu. Vyberte hry a testy, ktoré na ňom chcete mať. Spustíme ich na vašom presnom stroji ešte pred odoslaním.',
     select_recommended: 'Vybrať odporúčané',
     clear_all: 'Zrušiť výber',
     section_fps_title: 'V hre · Kompetitívne a FPS',
@@ -244,9 +244,9 @@ const translations = {
     fps_source_title: 'Odhadované FPS (1440p)',
     fps_need_both: 'Najprv nakonfigurujte zostavu, alebo vyberte GPU a CPU nižšie pre odhad FPS.',
     total_test_time: (n: number) => `~${n} min celkový čas testov`,
-    fps_from_build: (g: string, c: string) => `Odhad na základe vašej zostavy — ${g} + ${c}.`,
-    fps_pick_gpu: (c: string) => `Používa sa ${c} z vašej zostavy — vyberte GPU nižšie pre odhad FPS.`,
-    fps_pick_cpu: (g: string) => `Používa sa ${g} z vašej zostavy — vyberte CPU nižšie pre odhad FPS.`,
+    fps_from_build: (g: string, c: string) => `Odhad na základe vašej zostavy: ${g} + ${c}.`,
+    fps_pick_gpu: (c: string) => `Používa sa ${c} z vašej zostavy. Vyberte GPU nižšie pre odhad FPS.`,
+    fps_pick_cpu: (g: string) => `Používa sa ${g} z vašej zostavy. Vyberte CPU nižšie pre odhad FPS.`,
   },
   cz: {
     nav_home: 'Domů',
@@ -258,17 +258,17 @@ const translations = {
     benchmark_suite: 'Sada testů',
     selected_word: 'vybraných',
     no_selection_msg:
-      'Zatím nemáte vybrané žádné testy — vyberte pár vpravo, nebo přeskočte a spustíme naši výchozí sadu.',
-    continue_checkout: 'Pokračovat k pokladně →',
+      'Zatím nemáte vybrané žádné testy. Vyberte pár vpravo, nebo přeskočte a spustíme naši výchozí sadu.',
+    continue_checkout: 'Pokračovat k pokladně',
     skip_benchmarks: 'Přeskočit testy',
-    back_to_build: '← Zpět na sestavu',
+    back_to_build: 'Zpět na sestavu',
     step_build: 'Sestava',
     step_benchmarks: 'Testy',
     step_checkout: 'Pokladna',
     choose_title_line1: 'Vyberte si',
     choose_title_em: 'testy.',
     choose_desc:
-      'Každá sestava GOMP se dodává s tištěným listem výkonu. Vyberte hry a testy, které na něm chcete mít — spustíme je na vašem přesném stroji ještě před odesláním.',
+      'Každá sestava GOMP se dodává s tištěným listem výkonu. Vyberte hry a testy, které na něm chcete mít. Spustíme je na vašem přesném stroji ještě před odesláním.',
     select_recommended: 'Vybrat doporučené',
     clear_all: 'Zrušit výběr',
     section_fps_title: 'Ve hře · Kompetitivní a FPS',
@@ -287,9 +287,9 @@ const translations = {
     fps_source_title: 'Odhadované FPS (1440p)',
     fps_need_both: 'Nejprve nakonfigurujte sestavu, nebo vyberte GPU a CPU níže pro odhad FPS.',
     total_test_time: (n: number) => `~${n} min celkový čas testů`,
-    fps_from_build: (g: string, c: string) => `Odhad na základě vaší sestavy — ${g} + ${c}.`,
-    fps_pick_gpu: (c: string) => `Používá se ${c} z vaší sestavy — vyberte GPU níže pro odhad FPS.`,
-    fps_pick_cpu: (g: string) => `Používá se ${g} z vaší sestavy — vyberte CPU níže pro odhad FPS.`,
+    fps_from_build: (g: string, c: string) => `Odhad na základě vaší sestavy: ${g} + ${c}.`,
+    fps_pick_gpu: (c: string) => `Používá se ${c} z vaší sestavy. Vyberte GPU níže pro odhad FPS.`,
+    fps_pick_cpu: (g: string) => `Používá se ${g} z vaší sestavy. Vyberte CPU níže pro odhad FPS.`,
   },
 } as const;
 
@@ -698,13 +698,13 @@ export default function BenchmarksPage() {
               flexDirection: 'column',
             }}
           >
-            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 20 }}>
+            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, marginBottom: 20 }}>
               {t.your_build}
             </div>
             <div style={{ ...serif, fontSize: 26, fontWeight: 600, color: INK, lineHeight: 1.15, marginBottom: 6 }}>{buildLabel}</div>
             <div style={{ ...sans, fontSize: 12, color: MUTED, fontWeight: 300, marginBottom: 28 }}>{buildSubline}</div>
             <div style={{ height: 0.5, background: 'rgba(235,230,218,0.15)', marginBottom: 28 }} />
-            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 12 }}>
+            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, marginBottom: 12 }}>
               {t.benchmark_suite}
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
@@ -722,7 +722,7 @@ export default function BenchmarksPage() {
                     style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderBottom: '0.5px solid rgba(235,230,218,0.08)' }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ ...sans, fontSize: 11, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>{item.groupLabel}</div>
+                      <div style={{ ...sans, fontSize: 11, color: MUTED, marginBottom: 2 }}>{item.groupLabel}</div>
                       <div style={{ ...sans, fontSize: 13, color: INK, fontWeight: 400, lineHeight: 1.4 }}>{item.name}</div>
                     </div>
                     <div style={{ ...mono, fontSize: 11, color: MUTED, flexShrink: 0, paddingTop: 2, whiteSpace: 'nowrap' }}>{item.durationLabel}</div>
@@ -796,16 +796,16 @@ export default function BenchmarksPage() {
             </div>
 
             {/* FPS section */}
-            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 4 }}>{t.section_fps_title}</div>
+            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, marginBottom: 4 }}>{t.section_fps_title}</div>
             <div style={{ ...sans, fontSize: 12, color: FAINT, fontWeight: 300, marginBottom: 16 }}>{t.section_fps_desc}</div>
             <div style={{ background: PANEL_BG, border: '0.5px solid rgba(235,230,218,0.14)', borderRadius: 2, padding: isMobile ? '14px 16px' : '16px 18px', marginBottom: 20 }}>
-              <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>{t.fps_source_title}</div>
+              <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, marginBottom: 6 }}>{t.fps_source_title}</div>
               <div style={{ ...sans, fontSize: 12, color: MUTED, fontWeight: 300, lineHeight: 1.6, marginBottom: showFpsPicker ? 14 : 0 }}>{fpsSourceDesc}</div>
               {showFpsPicker && (
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
                   {needManualGpu && (
                     <div>
-                      <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>GPU</div>
+                      <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, marginBottom: 6 }}>GPU</div>
                       <select
                         value={manualGpuId}
                         onChange={(e) => setManualGpuId(e.target.value)}
@@ -821,7 +821,7 @@ export default function BenchmarksPage() {
                   )}
                   {needManualCpu && (
                     <div>
-                      <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>CPU</div>
+                      <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, marginBottom: 6 }}>CPU</div>
                       <select
                         value={manualCpuId}
                         onChange={(e) => setManualCpuId(e.target.value)}
@@ -841,12 +841,12 @@ export default function BenchmarksPage() {
             <div style={{ ...cardGridStyle, marginBottom: 44 }}>{fpsCards.map(renderCard)}</div>
 
             {/* AAA section */}
-            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 4 }}>{t.section_aaa_title}</div>
+            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, marginBottom: 4 }}>{t.section_aaa_title}</div>
             <div style={{ ...sans, fontSize: 12, color: FAINT, fontWeight: 300, marginBottom: 16 }}>{t.section_aaa_desc}</div>
             <div style={{ ...cardGridStyle, marginBottom: 44 }}>{aaaCards.map(renderCard)}</div>
 
             {/* Synthetic section */}
-            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 4 }}>{t.section_synth_title}</div>
+            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, marginBottom: 4 }}>{t.section_synth_title}</div>
             <div style={{ ...sans, fontSize: 12, color: FAINT, fontWeight: 300, marginBottom: 16 }}>{t.section_synth_desc}</div>
             <div style={cardGridStyle}>{synthCards.map(renderCard)}</div>
           </div>

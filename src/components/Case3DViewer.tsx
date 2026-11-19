@@ -135,7 +135,7 @@ export default function Case3DViewer({ config }: { config: Config | null }) {
               maxWidth: 220,
             }}
           >
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', color: MUTED }}>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: MUTED }}>
               {CAT_LABEL[hoverId]}
             </div>
             <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, color: INK }}>{hoverComp.name}</div>

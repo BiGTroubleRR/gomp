@@ -11,40 +11,40 @@ import { INK, MUTED, PAGE_BG, PANEL_BG, ACCENT, ACCENT_FILL } from '@/lib/design
 
 const T = {
   en: {
-    eyebrow: 'CONTACT',
+    eyebrow: 'Contact',
     title: 'Get in touch.',
     intro:
-      'Question about a build, an order, or anything else — send us a message and we’ll get back to you as soon as we can.',
+      'Question about a build, an order, or anything else. Send us a message and we’ll get back to you as soon as we can.',
     form_title: 'Send a message',
     first_name: 'First name', last_name: 'Last name', email: 'Email', phone: 'Phone (optional)',
     message: 'Message', message_placeholder: 'How can we help?',
-    submit: 'Send message →', submitting: 'Sending…',
+    submit: 'Send message', submitting: 'Sending…',
     success_title: 'Message sent.',
-    success_body: 'Thanks for reaching out — we’ll get back to you by email as soon as we can.',
+    success_body: 'Thanks for reaching out. We’ll get back to you by email as soon as we can.',
     error_generic: 'Something went wrong. Please try again.',
   },
   sk: {
-    eyebrow: 'KONTAKT',
+    eyebrow: 'Kontakt',
     title: 'Ozvite sa nám.',
-    intro: 'Otázka k zostave, objednávke alebo čokoľvek iné — napíšte nám a ozveme sa čo najskôr.',
+    intro: 'Otázka k zostave, objednávke alebo čokoľvek iné. Napíšte nám a ozveme sa čo najskôr.',
     form_title: 'Odoslať správu',
     first_name: 'Meno', last_name: 'Priezvisko', email: 'E-mail', phone: 'Telefón (nepovinné)',
     message: 'Správa', message_placeholder: 'Ako vám môžeme pomôcť?',
-    submit: 'Odoslať správu →', submitting: 'Odosielam…',
+    submit: 'Odoslať správu', submitting: 'Odosielam…',
     success_title: 'Správa odoslaná.',
-    success_body: 'Ďakujeme za správu — ozveme sa vám e-mailom čo najskôr.',
+    success_body: 'Ďakujeme za správu. Ozveme sa vám e-mailom čo najskôr.',
     error_generic: 'Niečo sa pokazilo. Skúste to znova.',
   },
   cz: {
-    eyebrow: 'KONTAKT',
+    eyebrow: 'Kontakt',
     title: 'Ozvěte se nám.',
-    intro: 'Dotaz k sestavě, objednávce nebo cokoliv jiného — napište nám a ozveme se co nejdříve.',
+    intro: 'Dotaz k sestavě, objednávce nebo cokoliv jiného. Napište nám a ozveme se co nejdříve.',
     form_title: 'Odeslat zprávu',
     first_name: 'Jméno', last_name: 'Příjmení', email: 'E-mail', phone: 'Telefon (nepovinné)',
     message: 'Zpráva', message_placeholder: 'Jak vám můžeme pomoct?',
-    submit: 'Odeslat zprávu →', submitting: 'Odesílám…',
+    submit: 'Odeslat zprávu', submitting: 'Odesílám…',
     success_title: 'Zpráva odeslána.',
-    success_body: 'Děkujeme za zprávu — ozveme se vám e-mailem co nejdříve.',
+    success_body: 'Děkujeme za zprávu. Ozveme se vám e-mailem co nejdříve.',
     error_generic: 'Něco se pokazilo. Zkuste to prosím znovu.',
   },
 } as const;
@@ -54,8 +54,8 @@ const INPUT_STYLE: CSSProperties = {
   fontSize: 14, fontFamily: 'var(--font-sans)', background: PAGE_BG, color: INK, outline: 'none',
 };
 const LABEL_STYLE: CSSProperties = {
-  fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 0.8,
-  textTransform: 'uppercase', marginBottom: 6,
+  fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MUTED, 
+  marginBottom: 6,
 };
 
 export default function ContactPage() {

@@ -11,7 +11,7 @@ import './gomp-home.css';
 // at the pages that now exist.
 const COLS: { title: L3; links: ({ href: string } & L3)[] }[] = [
   {
-    title: { en: 'PRODUCTS', sk: 'PRODUKTY', cz: 'PRODUKTY' },
+    title: { en: 'Products', sk: 'Produkty', cz: 'Produkty' },
     links: [
       { href: '/shop', en: 'Prebuilt PCs', sk: 'Hotové zostavy', cz: 'Hotové sestavy' },
       { href: '/build', en: 'Custom Builder', sk: 'Vlastná konfigurácia', cz: 'Vlastní konfigurace' },
@@ -19,7 +19,7 @@ const COLS: { title: L3; links: ({ href: string } & L3)[] }[] = [
     ],
   },
   {
-    title: { en: 'COMPANY', sk: 'SPOLOČNOSŤ', cz: 'SPOLEČNOST' },
+    title: { en: 'Company', sk: 'Spoločnosť', cz: 'Společnost' },
     links: [
       { href: '/about', en: 'About Us', sk: 'O nás', cz: 'O nás' },
       { href: '/blog', en: 'Blog', sk: 'Blog', cz: 'Blog' },
@@ -27,7 +27,7 @@ const COLS: { title: L3; links: ({ href: string } & L3)[] }[] = [
     ],
   },
   {
-    title: { en: 'SUPPORT', sk: 'PODPORA', cz: 'PODPORA' },
+    title: { en: 'Support', sk: 'Podpora', cz: 'Podpora' },
     links: [
       { href: '/faq', en: 'FAQ', sk: 'FAQ', cz: 'FAQ' },
       { href: '/terms#complaints', en: 'Warranty', sk: 'Záruka', cz: 'Záruka' },
@@ -35,7 +35,7 @@ const COLS: { title: L3; links: ({ href: string } & L3)[] }[] = [
     ],
   },
   {
-    title: { en: 'LEGAL', sk: 'PRÁVNE', cz: 'PRÁVNÍ' },
+    title: { en: 'Legal', sk: 'Právne', cz: 'Právní' },
     links: [
       { href: '/terms', en: 'Terms & Conditions', sk: 'Obchodné podmienky', cz: 'Obchodní podmínky' },
       { href: '/privacy', en: 'Privacy Policy', sk: 'Ochrana osobných údajov', cz: 'Ochrana osobních údajů' },

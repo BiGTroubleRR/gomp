@@ -9,10 +9,10 @@ import { INK, MUTED, GOLD, PAGE_BG, PANEL_BG, ACCENT_FILL, ACCENT, ON_ACCENT } f
 
 const T = {
   en: {
-    eyebrow: 'GOMP UNDERVOLTING',
+    eyebrow: 'GOMP undervolting',
     title: 'Quieter. Cooler. Just as fast.',
     intro:
-      'Undervolting reduces the voltage sent to a CPU or GPU while keeping its clock speeds intact. Less voltage means less heat, which means your fans don’t have to work as hard — all without giving up a single frame of performance.',
+      'Undervolting reduces the voltage sent to a CPU or GPU while keeping its clock speeds intact. Less voltage means less heat, which means your fans don’t have to work as hard, all without giving up a single frame of performance.',
     point1_title: 'Lower Temperatures',
     point1_body: 'Less voltage means less heat generated under load, so your components run cooler even during long gaming sessions.',
     point2_title: 'Quieter Operation',
@@ -20,15 +20,15 @@ const T = {
     point3_title: 'Reduced Power Draw',
     point3_body: 'Pulling less power from the wall means a lower electricity bill and less heat pushed into the room your PC sits in.',
     closing:
-      'We undervolt every CPU and GPU wherever the specific chip and platform support it, and validate the result during the same 24-hour stress test every GOMP build already goes through — so you get all of this with zero compromise on performance.',
-    cta: 'Start Building →',
-    back_home: '← Back to home',
+      'We undervolt every CPU and GPU wherever the specific chip and platform support it, and validate the result during the same 24-hour stress test every GOMP build already goes through, so you get all of this with zero compromise on performance.',
+    cta: 'Start Building',
+    back_home: 'Back to home',
   },
   sk: {
-    eyebrow: 'GOMP UNDERVOLTING',
+    eyebrow: 'GOMP undervolting',
     title: 'Tichšie. Chladnejšie. Rovnako rýchle.',
     intro:
-      'Undervolting znižuje napätie privádzané do CPU alebo GPU, pričom si komponent zachová svoje pôvodné taktovanie. Menej napätia znamená menej tepla, a teda aj menej práce pre ventilátory — bez straty čo i len jedného snímku výkonu.',
+      'Undervolting znižuje napätie privádzané do CPU alebo GPU, pričom si komponent zachová svoje pôvodné taktovanie. Menej napätia znamená menej tepla, a teda aj menej práce pre ventilátory, bez straty čo i len jedného snímku výkonu.',
     point1_title: 'Nižšie teploty',
     point1_body: 'Menej napätia znamená menej tepla pod záťažou, takže komponenty zostávajú chladnejšie aj počas dlhého hrania.',
     point2_title: 'Tichšia prevádzka',
@@ -36,15 +36,15 @@ const T = {
     point3_title: 'Nižšia spotreba',
     point3_body: 'Nižší odber zo zásuvky znamená nižší účet za elektrinu a menej tepla vyžarovaného do miestnosti.',
     closing:
-      'Každý CPU a GPU podvoltujeme všade, kde to konkrétny čip a platforma umožňujú, a výsledok overujeme počas rovnakého 24-hodinového záťažového testu, akým prechádza každá zostava GOMP — takže toto všetko získate bez akéhokoľvek kompromisu vo výkone.',
-    cta: 'Začať stavať →',
-    back_home: '← Späť na hlavnú stránku',
+      'Každý CPU a GPU podvoltujeme všade, kde to konkrétny čip a platforma umožňujú, a výsledok overujeme počas rovnakého 24-hodinového záťažového testu, akým prechádza každá zostava GOMP, takže toto všetko získate bez akéhokoľvek kompromisu vo výkone.',
+    cta: 'Začať stavať',
+    back_home: 'Späť na hlavnú stránku',
   },
   cz: {
-    eyebrow: 'GOMP UNDERVOLTING',
+    eyebrow: 'GOMP undervolting',
     title: 'Tišší. Chladnější. Stejně rychlé.',
     intro:
-      'Undervolting snižuje napětí přiváděné do CPU nebo GPU, přičemž komponenta si zachová své původní takty. Méně napětí znamená méně tepla, a tedy i méně práce pro ventilátory — bez ztráty jediného snímku výkonu.',
+      'Undervolting snižuje napětí přiváděné do CPU nebo GPU, přičemž komponenta si zachová své původní takty. Méně napětí znamená méně tepla, a tedy i méně práce pro ventilátory, bez ztráty jediného snímku výkonu.',
     point1_title: 'Nižší teploty',
     point1_body: 'Méně napětí znamená méně tepla pod zátěží, takže komponenty zůstávají chladnější i při dlouhém hraní.',
     point2_title: 'Tišší provoz',
@@ -52,9 +52,9 @@ const T = {
     point3_title: 'Nižší spotřeba',
     point3_body: 'Nižší odběr ze zásuvky znamená nižší účet za elektřinu a méně tepla vyzařovaného do místnosti.',
     closing:
-      'Každý CPU a GPU podvoltujeme všude, kde to konkrétní čip a platforma umožňují, a výsledek ověřujeme během stejného 24hodinového zátěžového testu, jakým prochází každá sestava GOMP — takže tohle všechno získáte bez jakéhokoli kompromisu ve výkonu.',
-    cta: 'Začít stavět →',
-    back_home: '← Zpět na hlavní stránku',
+      'Každý CPU a GPU podvoltujeme všude, kde to konkrétní čip a platforma umožňují, a výsledek ověřujeme během stejného 24hodinového zátěžového testu, jakým prochází každá sestava GOMP, takže tohle všechno získáte bez jakéhokoli kompromisu ve výkonu.',
+    cta: 'Začít stavět',
+    back_home: 'Zpět na hlavní stránku',
   },
 } as const;
 
@@ -114,7 +114,7 @@ export default function UndervoltingPage() {
               { title: t.point2_title, body: t.point2_body },
               { title: t.point3_title, body: t.point3_body },
             ].map((p) => (
-              <div key={p.title} style={{ background: PANEL_BG, border: '0.5px solid rgba(235,230,218,0.1)', borderRadius: 3, padding: 20, borderLeft: `3px solid ${ACCENT}` }}>
+              <div key={p.title} style={{ background: PANEL_BG, border: '0.5px solid rgba(235,230,218,0.1)', borderRadius: 3, padding: 20 }}>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: INK, marginBottom: 6 }}>{p.title}</div>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, fontWeight: 300, lineHeight: 1.6 }}>{p.body}</div>
               </div>

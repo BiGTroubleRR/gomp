@@ -125,14 +125,14 @@ const TRANSLATIONS = {
     zip_postal: 'ZIP / Postal',
     shipping_method: 'Shipping Method',
     phone_number: 'Phone',
-    continue_payment: 'Continue to Payment →',
+    continue_payment: 'Continue to Payment',
     payment: 'Payment',
     payment_desc: 'Choose your payment method.',
     // Sits as quiet fine print beside the submit button rather than a banner:
     // the visitor is told what will and won't happen at the moment they decide,
     // without the page shouting "this is a mockup" at them.
     submit_note:
-      'Payment is not live yet, so nothing is charged now. The GOMP team will contact you to confirm availability and complete the order — the final price may vary.',
+      'Payment is not live yet, so nothing is charged now. The GOMP team will contact you to confirm availability and complete the order. The final price may vary.',
     method_card: 'Card',
     method_card_desc: 'Visa · Mastercard',
     method_google: 'Google Pay',
@@ -143,16 +143,16 @@ const TRANSLATIONS = {
     promo_code: 'Promo Code',
     optional: 'optional',
     apply: 'Apply',
-    promo_success: 'GOMP2026 — 5% discount applied',
+    promo_success: 'GOMP2026: 5% discount applied',
     consent_label: 'You may email me about this order and when GOMP starts selling.',
     consent_required: 'Please confirm we may contact you.',
     email_required: 'Please enter an email address so we can reach you.',
-    back: '← Back',
+    back: 'Back',
     processing: 'Submitting…',
     submit_request: 'Submit Order Request  ·  ',
     we_will_contact: 'The GOMP team will reach out at',
     your_build: 'Your build',
-    build_another: '← Build Another',
+    build_another: 'Build Another',
     go_home: 'Go to Home',
     itemCount: (n: number) => `${n} components · assembled & tested`,
   },
@@ -181,11 +181,11 @@ const TRANSLATIONS = {
     zip_postal: 'PSČ',
     shipping_method: 'Spôsob dopravy',
     phone_number: 'Telefón',
-    continue_payment: 'Pokračovať na platbu →',
+    continue_payment: 'Pokračovať na platbu',
     payment: 'Platba',
     payment_desc: 'Vyberte spôsob platby.',
     submit_note:
-      'Platba ešte nie je aktívna, takže sa teraz nič nestrhne. Tím GOMP vás bude kontaktovať, aby potvrdil dostupnosť a dokončil objednávku — konečná cena sa môže líšiť.',
+      'Platba ešte nie je aktívna, takže sa teraz nič nestrhne. Tím GOMP vás bude kontaktovať, aby potvrdil dostupnosť a dokončil objednávku. Konečná cena sa môže líšiť.',
     method_card: 'Karta',
     method_card_desc: 'Visa · Mastercard',
     method_google: 'Google Pay',
@@ -196,16 +196,16 @@ const TRANSLATIONS = {
     promo_code: 'Zľavový kód',
     optional: 'nepovinné',
     apply: 'Použiť',
-    promo_success: 'GOMP2026 — uplatnená zľava 5 %',
+    promo_success: 'GOMP2026: uplatnená zľava 5 %',
     consent_label: 'Môžete mi napísať o tejto objednávke a keď GOMP začne predávať.',
     consent_required: 'Potvrďte, prosím, že vás môžeme kontaktovať.',
     email_required: 'Zadajte, prosím, e-mail, aby sme vás vedeli kontaktovať.',
-    back: '← Späť',
+    back: 'Späť',
     processing: 'Odosiela sa…',
     submit_request: 'Odoslať žiadosť  ·  ',
     we_will_contact: 'Tím GOMP sa ozve na',
     your_build: 'Vaša zostava',
-    build_another: '← Zostaviť ďalšiu',
+    build_another: 'Zostaviť ďalšiu',
     go_home: 'Prejsť na domovskú stránku',
     itemCount: (n: number) => `${n} komponentov · zostavené a otestované`,
   },
@@ -234,11 +234,11 @@ const TRANSLATIONS = {
     zip_postal: 'PSČ',
     shipping_method: 'Způsob dopravy',
     phone_number: 'Telefon',
-    continue_payment: 'Pokračovat k platbě →',
+    continue_payment: 'Pokračovat k platbě',
     payment: 'Platba',
     payment_desc: 'Vyberte způsob platby.',
     submit_note:
-      'Platba zatím není aktivní, takže se teď nic nestrhne. Tým GOMP vás bude kontaktovat, aby potvrdil dostupnost a dokončil objednávku — konečná cena se může lišit.',
+      'Platba zatím není aktivní, takže se teď nic nestrhne. Tým GOMP vás bude kontaktovat, aby potvrdil dostupnost a dokončil objednávku. Konečná cena se může lišit.',
     method_card: 'Karta',
     method_card_desc: 'Visa · Mastercard',
     method_google: 'Google Pay',
@@ -249,16 +249,16 @@ const TRANSLATIONS = {
     promo_code: 'Slevový kód',
     optional: 'nepovinné',
     apply: 'Použít',
-    promo_success: 'GOMP2026 — uplatněna sleva 5 %',
+    promo_success: 'GOMP2026: uplatněna sleva 5 %',
     consent_label: 'Můžete mi napsat ohledně této objednávky a až GOMP začne prodávat.',
     consent_required: 'Potvrďte prosím, že vás můžeme kontaktovat.',
     email_required: 'Zadejte prosím e-mail, abychom vás mohli kontaktovat.',
-    back: '← Zpět',
+    back: 'Zpět',
     processing: 'Odesílá se…',
     submit_request: 'Odeslat žádost  ·  ',
     we_will_contact: 'Tým GOMP se ozve na',
     your_build: 'Vaše sestava',
-    build_another: '← Sestavit další',
+    build_another: 'Sestavit další',
     go_home: 'Přejít na domovskou stránku',
     itemCount: (n: number) => {
       const word = n === 1 ? 'komponenta' : n >= 2 && n <= 4 ? 'komponenty' : 'komponent';
@@ -278,8 +278,8 @@ const labelStyle: CSSProperties = {
   fontSize: 11,
   fontWeight: 600,
   color: MUTED,
-  letterSpacing: 2,
-  textTransform: 'uppercase',
+  
+  
   display: 'block',
   marginBottom: 8,
 };
@@ -563,7 +563,7 @@ export default function CheckoutPage() {
             flexDirection: 'column',
           }}
         >
-          <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 28 }}>
+          <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, marginBottom: 28 }}>
             {t.order_summary}
           </div>
           <div style={{ ...serif, fontSize: isMobile ? 22 : 28, fontWeight: 600, color: INK, lineHeight: 1.15, marginBottom: 6 }}>{t.custom_pc_build}</div>
@@ -575,7 +575,7 @@ export default function CheckoutPage() {
                 style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderBottom: '0.5px solid rgba(235,230,218,0.08)' }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ ...sans, fontSize: 11, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>{item.category}</div>
+                  <div style={{ ...sans, fontSize: 11, color: MUTED, marginBottom: 2 }}>{item.category}</div>
                   <div style={{ ...sans, fontSize: 13, color: INK, fontWeight: 400, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {item.name}
                   </div>
@@ -601,7 +601,7 @@ export default function CheckoutPage() {
           </div>
           <div style={{ ...sans, fontSize: 11, color: MUTED, textAlign: 'right', marginBottom: 24 }}>{t.vat_included} ({vatRatePct}%)</div>
           <div style={{ background: 'rgba(63,174,116,0.06)', border: '0.5px solid rgba(63,174,116,0.14)', borderRadius: 2, padding: '14px 16px', marginBottom: 14 }}>
-            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: ACCENT, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
+            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: ACCENT, marginBottom: 4 }}>
               {t.estimated_delivery}
             </div>
             <div style={{ ...serif, fontSize: 18, fontWeight: 500, color: INK }}>{deliveryDate}</div>
@@ -662,7 +662,7 @@ export default function CheckoutPage() {
 
               {savedAddresses.length > 0 && (
                 <div style={{ marginBottom: 24 }}>
-                  <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>
+                  <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, marginBottom: 10 }}>
                     {t.saved_addresses}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -685,7 +685,7 @@ export default function CheckoutPage() {
                           }}
                         >
                           <div>
-                            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 3 }}>
+                            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, marginBottom: 3 }}>
                               {a.label}
                             </div>
                             <div style={{ ...sans, fontSize: 13, color: INK }}>
@@ -739,7 +739,7 @@ export default function CheckoutPage() {
                 <Field label={t.zip_postal} value={form.zip} onChange={(v) => setForm((f) => ({ ...f, zip: v }))} />
               </div>
 
-              <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
+              <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, marginBottom: 12 }}>
                 {t.shipping_method}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 40 }}>
