@@ -26,7 +26,7 @@ const CATS: ({ href: string; tag: string } & L3)[] = [
   { href: '/shop?cat=performance', tag: 'A', en: 'Performance', sk: 'Výkonné', cz: 'Výkonné' },
   { href: '/shop?cat=midrange', tag: 'B', en: 'Mid-range', sk: 'Stredná trieda', cz: 'Střední třída' },
   { href: '/shop?cat=entry', tag: 'B–D', en: 'Entry', sk: 'Základné', cz: 'Základní' },
-  { href: '/gbb', tag: '→', en: 'Budget Builds', sk: 'Budget Builds', cz: 'Budget Builds' },
+  { href: '/gbb', tag: '→', en: 'Help me', sk: 'Pomôžte mi', cz: 'Pomozte mi' },
   { href: '/build', tag: '3D', en: 'Custom configuration', sk: 'Vlastná konfigurácia', cz: 'Vlastní konfigurace' },
 ];
 
@@ -146,7 +146,7 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
       {NAV.map((n) => (
         <Link key={n.href} href={n.href} aria-current={active === n.href ? 'page' : undefined}>{pick(lang, n)}</Link>
       ))}
-      <Link className="hl" href="/gbb">Budget Builds</Link>
+      <Link className="hl" href="/gbb">{pick(lang, { en: 'Help me', sk: 'Pomôžte mi', cz: 'Pomozte mi' })}</Link>
     </div>
   );
 

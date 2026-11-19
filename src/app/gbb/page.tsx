@@ -1,139 +1,368 @@
 'use client';
 
-import { useState, type CSSProperties, type FormEvent } from 'react';
+// "Help me" (route stays /gbb so old links, the admin inbox and the API keep working): a short step-by-step
+// request wizard. Every question is answered by tapping a button; the last step asks how to reach the person.
+// The answers go through the existing /api/gbb endpoint without a schema change: the topic is stored in
+// `use_case`, the budget in `budget_eur`, and everything else as a readable block at the top of `notes`.
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
+import Link from 'next/link';
 import { useSite } from '@/contexts/SiteContext';
 import { useAuth } from '@/contexts/AuthContext';
 import SiteNav from '@/components/SiteNav';
 import SiteFooter from '@/components/SiteFooter';
 import { useIsMobile } from '@/lib/use-media-query';
 import { submitGbbRequest } from '@/lib/gbb-submit';
-import { GBB_ACCENT, GBB_ACCENT_DARK, GBB_ACCENT_TINT, GBB_ON_ACCENT } from '@/lib/gbb-theme';
-// Only the bordeaux accent is swapped for GBB_ACCENT — gold, ink, and the cream/parchment
-// backgrounds are identical to the rest of the site, so this reads as the same store rather
-// than a different brand bolted on.
-import { GOLD, INK, MUTED, PAGE_BG, PANEL_BG } from '@/lib/design-tokens';
+import {
+  ACCENT, ACCENT_FILL, ACCENT_GRADIENT, BORDER, BORDER_STRONG, FAINT, INK, MUTED, ON_ACCENT, PAGE_BG, PANEL_BG,
+  SURFACE_ALT, hexToRgba,
+} from '@/lib/design-tokens';
 
-type UseCase = 'gaming' | 'office' | 'creative' | 'server' | 'other';
-const USE_CASES: UseCase[] = ['gaming', 'office', 'creative', 'server', 'other'];
+type Topic = 'pick' | 'upgrade' | 'used' | 'check' | 'order' | 'other';
+type Use = 'gaming' | 'work' | 'creative' | 'server' | 'mixed';
+type BudgetId = 'b500' | 'b800' | 'b1200' | 'b2000' | 'b2000plus' | 'unsure';
+type Channel = 'email' | 'phone';
+type StepId = 'topic' | 'use' | 'budget' | 'notes' | 'contact';
+
+const TOPICS: { id: Topic; icon: string }[] = [
+  { id: 'pick', icon: '🖥️' },
+  { id: 'upgrade', icon: '⚡' },
+  { id: 'used', icon: '♻️' },
+  { id: 'check', icon: '✅' },
+  { id: 'order', icon: '📦' },
+  { id: 'other', icon: '💬' },
+];
+const USES: { id: Use; icon: string }[] = [
+  { id: 'gaming', icon: '🎮' },
+  { id: 'work', icon: '💼' },
+  { id: 'creative', icon: '🎬' },
+  { id: 'server', icon: '🗄️' },
+  { id: 'mixed', icon: '✨' },
+];
+// `max` is what is stored as the budget (the top of the band); the band's own wording goes into the notes.
+const BUDGETS: { id: BudgetId; max: number | null }[] = [
+  { id: 'b500', max: 500 },
+  { id: 'b800', max: 800 },
+  { id: 'b1200', max: 1200 },
+  { id: 'b2000', max: 2000 },
+  { id: 'b2000plus', max: 2000 },
+  { id: 'unsure', max: null },
+];
+
+// Which questions a topic needs. Parts questions (use, budget) only make sense when we are specifying a PC.
+function stepsFor(topic: Topic | null): StepId[] {
+  if (topic === 'pick' || topic === 'upgrade' || topic === 'used') return ['topic', 'use', 'budget', 'notes', 'contact'];
+  return ['topic', 'notes', 'contact'];
+}
+
+type Dict = {
+  topic: Record<Topic, { label: string; sub: string }>;
+  use: Record<Use, string>;
+  budget: Record<BudgetId, string>;
+  notes_placeholder: Record<Topic, string>;
+  [k: string]: unknown;
+};
 
 const T = {
   en: {
-    nav_home: 'Home', nav_shop: 'Shop', nav_build: 'Build', nav_about: 'About', nav_account: 'Account',
-    eyebrow: 'GOMP BUDGET BUILDS',
-    title: 'A great PC doesn’t have to be new.',
+    nav_label: 'Help me',
+    eyebrow: 'HELP ME',
+    title: 'Not sure where to start? Let’s work it out together.',
     intro:
-      'Tell us your budget and what you need the machine for. We’ll price out a build from carefully checked secondhand parts and send you a proposal — no obligation, no automated pricing, just a real look at what’s actually available right now.',
-    point1_title: 'Real, current pricing',
-    point1_body: 'Every proposal is priced from what’s actually listed right now — not a stale average.',
-    point2_title: 'Checked before it ships',
-    point2_body: 'Every secondhand part is tested before it goes into your build, same as our new-parts builds.',
-    point3_title: 'Clear on what’s used',
-    point3_body: 'You’ll know exactly what’s secondhand, its condition, and the warranty that comes with it.',
-    form_title: 'Request a proposal',
-    first_name: 'First name', last_name: 'Last name', email: 'Email', phone: 'Phone',
-    budget: 'Budget (EUR)', budget_placeholder: 'e.g. 500',
-    use_case: 'What’s it for?',
-    use_case_gaming: 'Gaming', use_case_office: 'Office & everyday use', use_case_creative: 'Content creation / editing',
-    use_case_server: 'Home server / NAS', use_case_other: 'Something else',
-    notes: 'Anything specific?', notes_placeholder: 'Preferred brand, must reuse a part you already have, quiet operation, etc.',
-    submit: 'Send request →', submitting: 'Sending…',
-    success_title: 'Request sent.',
-    success_body: 'We’ll email you a price proposal once we’ve checked current listings. Usually within 1–2 business days.',
+      'Tap through a few quick questions and tell us how to reach you. A real person from GOMP answers — usually within 1–2 business days, with no obligation.',
+    aside_title: 'What happens next',
+    aside: [
+      { t: 'You tell us what you need', b: 'Two minutes, mostly taps.' },
+      { t: 'We take a real look', b: 'A person checks current parts and prices — no automated quote.' },
+      { t: 'We get back to you', b: 'By e-mail or phone, whichever you prefer.' },
+    ],
+    aside_badge: 'Free · No obligation',
+    step_of: (n: number, total: number) => `Step ${n} of ${total}`,
+    q_topic: 'What do you need help with?',
+    q_use: 'What will you use it for?',
+    q_budget: 'What budget do you have in mind?',
+    budget_custom: 'Or type an exact amount (EUR)',
+    q_notes_optional: 'Anything specific we should know?',
+    q_notes_required: 'Tell us a bit more',
+    optional: 'Optional',
+    q_contact: 'How can we reach you?',
+    channel_label: 'Preferred way to reach you',
+    channel_email: 'E-mail',
+    channel_phone: 'Phone call',
+    first_name: 'First name', last_name: 'Last name', email: 'E-mail', phone: 'Phone', phone_needed: '(needed for a call)',
+    privacy_pre: 'We only use your details to answer this request. ',
+    privacy_link: 'Privacy policy',
+    back: '← Back',
+    next: 'Continue →',
+    skip: 'Skip →',
+    submit: 'Send request →',
+    submitting: 'Sending…',
+    topic: {
+      pick: { label: 'Pick a PC for me', sub: 'Tell us what you need and we recommend a build.' },
+      upgrade: { label: 'Upgrade my current PC', sub: 'Make the machine you have faster.' },
+      used: { label: 'Budget build from used parts', sub: 'Carefully checked secondhand parts, priced on current listings.' },
+      check: { label: 'Check my parts list', sub: 'A compatibility and sanity check.' },
+      order: { label: 'A question about an order', sub: 'Status, delivery, warranty.' },
+      other: { label: 'Something else', sub: 'Anything PC-related.' },
+    },
+    use: { gaming: 'Gaming', work: 'Work & everyday use', creative: 'Content creation / editing', server: 'Home server / NAS', mixed: 'A bit of everything' },
+    budget: { b500: 'Up to €500', b800: '€500 – €800', b1200: '€800 – €1,200', b2000: '€1,200 – €2,000', b2000plus: 'Over €2,000', unsure: 'Not sure yet' },
+    notes_placeholder: {
+      pick: 'Preferred brand, a part you already have, quiet operation, games you play…',
+      upgrade: 'What PC do you have now (CPU, GPU, RAM) and what bothers you?',
+      used: 'Preferred brand, a part you already have, quiet operation, games you play…',
+      check: 'Paste your parts list or a link and we’ll check it.',
+      order: 'Your order number and your question.',
+      other: 'Tell us what’s on your mind.',
+    },
+    success_title: 'Thanks — we’ve got it.',
+    success_email: (e: string) => `We’ll write to you at ${e}, usually within 1–2 business days.`,
+    success_phone: (p: string) => `We’ll call you on ${p}, usually within 1–2 business days.`,
     back_home: '← Back to home',
+    again: 'Send another request',
     error_generic: 'Something went wrong. Please try again.',
   },
   sk: {
-    nav_home: 'Domov', nav_shop: 'Obchod', nav_build: 'Zostaviť', nav_about: 'O nás', nav_account: 'Účet',
-    eyebrow: 'GOMP BUDGET BUILDS',
-    title: 'Skvelé PC nemusí byť nové.',
+    nav_label: 'Pomôžte mi',
+    eyebrow: 'POMÔŽTE MI',
+    title: 'Neviete, kde začať? Poradíme vám.',
     intro:
-      'Povedzte nám svôj rozpočet a na čo počítač potrebujete. Naceníme zostavu z dôkladne overených bazarových komponentov a pošleme vám návrh — bez záväzku, bez automatického oceňovania, len reálny prehľad o tom, čo je práve dostupné.',
-    point1_title: 'Reálne, aktuálne ceny',
-    point1_body: 'Každý návrh je nacenený podľa toho, čo je práve v ponuke — nie podľa starého priemeru.',
-    point2_title: 'Overené pred odoslaním',
-    point2_body: 'Každá bazarová súčiastka je otestovaná pred tým, ako sa dostane do vašej zostavy.',
-    point3_title: 'Jasno v tom, čo je použité',
-    point3_body: 'Presne budete vedieť, čo je bazarové, v akom stave a s akými zárukami.',
-    form_title: 'Vyžiadajte si návrh',
-    first_name: 'Meno', last_name: 'Priezvisko', email: 'E-mail', phone: 'Telefón',
-    budget: 'Rozpočet (EUR)', budget_placeholder: 'napr. 500',
-    use_case: 'Na čo to bude?',
-    use_case_gaming: 'Hranie', use_case_office: 'Kancelária a bezné použitie', use_case_creative: 'Tvorba obsahu / strih',
-    use_case_server: 'Domáci server / NAS', use_case_other: 'Niečo iné',
-    notes: 'Niečo konkrétne?', notes_placeholder: 'Preferovaná značka, chcete použiť vlastnú súčiastku, tichá prevádzka...',
-    submit: 'Odoslať žiadosť →', submitting: 'Odosielam…',
-    success_title: 'Žiadosť odoslaná.',
-    success_body: 'Pošleme vám e-mailom cenový návrh, hneď ako overíme aktuálnu ponuku. Zvyčajne do 1–2 pracovných dní.',
+      'Prekliknite sa pár rýchlymi otázkami a napíšte nám, ako vás môžeme zastihnúť. Ozve sa vám živý človek z GOMP — zvyčajne do 1–2 pracovných dní, bez záväzku.',
+    aside_title: 'Čo bude nasledovať',
+    aside: [
+      { t: 'Poviete nám, čo potrebujete', b: 'Dve minúty, väčšinou len klikanie.' },
+      { t: 'Pozrieme sa na to', b: 'Skutočný človek skontroluje aktuálne súčiastky a ceny — žiadna automatická ponuka.' },
+      { t: 'Ozveme sa vám', b: 'E-mailom alebo telefonicky, ako vám viac vyhovuje.' },
+    ],
+    aside_badge: 'Zdarma · Bez záväzku',
+    step_of: (n: number, total: number) => `Krok ${n} z ${total}`,
+    q_topic: 'S čím vám môžeme pomôcť?',
+    q_use: 'Na čo to bude?',
+    q_budget: 'Aký rozpočet máte na mysli?',
+    budget_custom: 'Alebo zadajte presnú sumu (EUR)',
+    q_notes_optional: 'Je niečo, čo by sme mali vedieť?',
+    q_notes_required: 'Povedzte nám trochu viac',
+    optional: 'Nepovinné',
+    q_contact: 'Ako vás môžeme zastihnúť?',
+    channel_label: 'Preferovaný spôsob kontaktu',
+    channel_email: 'E-mail',
+    channel_phone: 'Telefonát',
+    first_name: 'Meno', last_name: 'Priezvisko', email: 'E-mail', phone: 'Telefón', phone_needed: '(potrebný pre telefonát)',
+    privacy_pre: 'Vaše údaje použijeme len na vybavenie tejto žiadosti. ',
+    privacy_link: 'Ochrana osobných údajov',
+    back: '← Späť',
+    next: 'Pokračovať →',
+    skip: 'Preskočiť →',
+    submit: 'Odoslať žiadosť →',
+    submitting: 'Odosielam…',
+    topic: {
+      pick: { label: 'Vyberte mi PC', sub: 'Povedzte nám, čo potrebujete, a odporučíme zostavu.' },
+      upgrade: { label: 'Vylepšiť moje PC', sub: 'Zrýchlite počítač, ktorý už máte.' },
+      used: { label: 'Zostava z bazarových súčiastok', sub: 'Dôkladne overené súčiastky z druhej ruky, ceny podľa aktuálnej ponuky.' },
+      check: { label: 'Skontrolovať zoznam súčiastok', sub: 'Kontrola kompatibility a zmysluplnosti.' },
+      order: { label: 'Otázka k objednávke', sub: 'Stav, doručenie, záruka.' },
+      other: { label: 'Niečo iné', sub: 'Čokoľvek okolo PC.' },
+    },
+    use: { gaming: 'Hranie', work: 'Práca a bežné použitie', creative: 'Tvorba obsahu / strih', server: 'Domáci server / NAS', mixed: 'Od všetkého trochu' },
+    budget: { b500: 'Do 500 €', b800: '500 – 800 €', b1200: '800 – 1 200 €', b2000: '1 200 – 2 000 €', b2000plus: 'Nad 2 000 €', unsure: 'Zatiaľ neviem' },
+    notes_placeholder: {
+      pick: 'Preferovaná značka, súčiastka, ktorú už máte, tichá prevádzka, hry, ktoré hráte…',
+      upgrade: 'Aké PC máte teraz (CPU, GPU, RAM) a čo vás trápi?',
+      used: 'Preferovaná značka, súčiastka, ktorú už máte, tichá prevádzka, hry, ktoré hráte…',
+      check: 'Vložte zoznam súčiastok alebo odkaz a skontrolujeme ho.',
+      order: 'Číslo objednávky a vaša otázka.',
+      other: 'Napíšte nám, čo máte na srdci.',
+    },
+    success_title: 'Ďakujeme — máme to.',
+    success_email: (e: string) => `Napíšeme vám na ${e}, zvyčajne do 1–2 pracovných dní.`,
+    success_phone: (p: string) => `Zavoláme vám na ${p}, zvyčajne do 1–2 pracovných dní.`,
     back_home: '← Späť na hlavnú stránku',
+    again: 'Odoslať ďalšiu žiadosť',
     error_generic: 'Niečo sa pokazilo. Skúste to znova.',
   },
   cz: {
-    nav_home: 'Domů', nav_shop: 'Obchod', nav_build: 'Sestavit', nav_about: 'O nás', nav_account: 'Účet',
-    eyebrow: 'GOMP BUDGET BUILDS',
-    title: 'Skvělé PC nemusí být nové.',
+    nav_label: 'Pomozte mi',
+    eyebrow: 'POMOZTE MI',
+    title: 'Nevíte, kde začít? Poradíme vám.',
     intro:
-      'Řekněte nám svůj rozpočet a k čemu počítač potřebujete. Naceníme sestavu z pečlivě prověřených bazarových komponent a pošleme vám návrh — bez závazku, bez automatického oceňování, jen reálný přehled o tom, co je zrovna dostupné.',
-    point1_title: 'Reálné, aktuální ceny',
-    point1_body: 'Každý návrh je naceněn podle toho, co je právě v nabídce — ne podle starého průměru.',
-    point2_title: 'Prověřeno před odesláním',
-    point2_body: 'Každá bazarová součástka je otestována dřív, než se dostane do vaší sestavy, stejně jako u sestav z nových dílů.',
-    point3_title: 'Jasno v tom, co je použité',
-    point3_body: 'Budete přesně vědět, co je bazarové, v jakém je stavu a jakou má záruku.',
-    form_title: 'Vyžádat si návrh',
-    first_name: 'Jméno', last_name: 'Příjmení', email: 'E-mail', phone: 'Telefon',
-    budget: 'Rozpočet (EUR)', budget_placeholder: 'např. 500',
-    use_case: 'K čemu to bude?',
-    use_case_gaming: 'Hraní', use_case_office: 'Kancelář a běžné použití', use_case_creative: 'Tvorba obsahu / střih',
-    use_case_server: 'Domácí server / NAS', use_case_other: 'Něco jiného',
-    notes: 'Něco konkrétního?', notes_placeholder: 'Preferovaná značka, chcete využít vlastní součástku, tichý provoz…',
-    submit: 'Odeslat žádost →', submitting: 'Odesílám…',
-    success_title: 'Žádost odeslána.',
-    success_body: 'Jakmile ověříme aktuální nabídku, pošleme vám e-mailem cenový návrh. Obvykle do 1–2 pracovních dnů.',
+      'Proklikejte se několika rychlými otázkami a napište nám, jak vás můžeme zastihnout. Ozve se vám živý člověk z GOMP — obvykle do 1–2 pracovních dnů, bez závazku.',
+    aside_title: 'Co bude následovat',
+    aside: [
+      { t: 'Řeknete nám, co potřebujete', b: 'Dvě minuty, většinou jen klikání.' },
+      { t: 'Podíváme se na to', b: 'Skutečný člověk zkontroluje aktuální součástky a ceny — žádná automatická nabídka.' },
+      { t: 'Ozveme se vám', b: 'E-mailem nebo telefonicky, jak vám více vyhovuje.' },
+    ],
+    aside_badge: 'Zdarma · Bez závazku',
+    step_of: (n: number, total: number) => `Krok ${n} z ${total}`,
+    q_topic: 'S čím vám můžeme pomoct?',
+    q_use: 'K čemu to bude?',
+    q_budget: 'Jaký rozpočet máte na mysli?',
+    budget_custom: 'Nebo zadejte přesnou částku (EUR)',
+    q_notes_optional: 'Je něco, co bychom měli vědět?',
+    q_notes_required: 'Řekněte nám trochu víc',
+    optional: 'Nepovinné',
+    q_contact: 'Jak vás můžeme zastihnout?',
+    channel_label: 'Preferovaný způsob kontaktu',
+    channel_email: 'E-mail',
+    channel_phone: 'Telefonát',
+    first_name: 'Jméno', last_name: 'Příjmení', email: 'E-mail', phone: 'Telefon', phone_needed: '(potřebný pro telefonát)',
+    privacy_pre: 'Vaše údaje použijeme jen k vyřízení této žádosti. ',
+    privacy_link: 'Ochrana osobních údajů',
+    back: '← Zpět',
+    next: 'Pokračovat →',
+    skip: 'Přeskočit →',
+    submit: 'Odeslat žádost →',
+    submitting: 'Odesílám…',
+    topic: {
+      pick: { label: 'Vyberte mi PC', sub: 'Řekněte nám, co potřebujete, a doporučíme sestavu.' },
+      upgrade: { label: 'Vylepšit moje PC', sub: 'Zrychlete počítač, který už máte.' },
+      used: { label: 'Sestava z bazarových součástek', sub: 'Pečlivě prověřené součástky z druhé ruky, ceny podle aktuální nabídky.' },
+      check: { label: 'Zkontrolovat seznam součástek', sub: 'Kontrola kompatibility a smysluplnosti.' },
+      order: { label: 'Dotaz k objednávce', sub: 'Stav, doručení, záruka.' },
+      other: { label: 'Něco jiného', sub: 'Cokoli kolem PC.' },
+    },
+    use: { gaming: 'Hraní', work: 'Práce a běžné použití', creative: 'Tvorba obsahu / střih', server: 'Domácí server / NAS', mixed: 'Od všeho trochu' },
+    budget: { b500: 'Do 500 €', b800: '500 – 800 €', b1200: '800 – 1 200 €', b2000: '1 200 – 2 000 €', b2000plus: 'Nad 2 000 €', unsure: 'Zatím nevím' },
+    notes_placeholder: {
+      pick: 'Preferovaná značka, součástka, kterou už máte, tichý provoz, hry, které hrajete…',
+      upgrade: 'Jaké PC máte nyní (CPU, GPU, RAM) a co vás trápí?',
+      used: 'Preferovaná značka, součástka, kterou už máte, tichý provoz, hry, které hrajete…',
+      check: 'Vložte seznam součástek nebo odkaz a zkontrolujeme ho.',
+      order: 'Číslo objednávky a váš dotaz.',
+      other: 'Napište nám, co máte na srdci.',
+    },
+    success_title: 'Děkujeme — máme to.',
+    success_email: (e: string) => `Napíšeme vám na ${e}, obvykle do 1–2 pracovních dnů.`,
+    success_phone: (p: string) => `Zavoláme vám na ${p}, obvykle do 1–2 pracovních dnů.`,
     back_home: '← Zpět na hlavní stránku',
+    again: 'Odeslat další žádost',
     error_generic: 'Něco se pokazilo. Zkuste to prosím znovu.',
   },
-} as const;
+} satisfies Record<string, Dict>;
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const INPUT_STYLE: CSSProperties = {
-  width: '100%', padding: '11px 12px', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 3,
-  fontSize: 14, fontFamily: 'var(--font-sans)', background: PAGE_BG, color: INK, outline: 'none',
+  width: '100%', boxSizing: 'border-box', padding: '12px 14px', border: `1px solid ${BORDER_STRONG}`, borderRadius: 8,
+  fontSize: 15, fontFamily: 'var(--font-sans)', background: SURFACE_ALT, color: INK,
 };
 const LABEL_STYLE: CSSProperties = {
   fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 0.8,
   textTransform: 'uppercase', marginBottom: 6,
 };
 
-export default function GbbPage() {
+const CSS = `
+.hm-step { animation: hmIn 0.28s ease both; }
+@keyframes hmIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.hm-choice { transition: border-color .15s, background .15s, transform .15s; }
+.hm-choice:hover { border-color: ${hexToRgba(ACCENT, 0.7)}; background: ${hexToRgba(ACCENT, 0.07)}; transform: translateY(-1px); }
+.hm-choice:focus-visible, .hm-btn:focus-visible, .hm-input:focus-visible { outline: 2px solid ${ACCENT}; outline-offset: 2px; }
+.hm-choice[aria-pressed="true"] { border-color: ${ACCENT}; background: ${hexToRgba(ACCENT, 0.12)}; }
+.hm-input:focus { border-color: ${ACCENT}; outline: none; box-shadow: 0 0 0 3px ${hexToRgba(ACCENT, 0.18)}; }
+.hm-btn { transition: filter .15s, transform .15s; }
+.hm-btn:hover:not(:disabled) { filter: brightness(1.08); }
+.hm-ghost:hover:not(:disabled) { color: ${INK}; }
+@media (prefers-reduced-motion: reduce) { .hm-step { animation: none; } .hm-choice, .hm-btn { transition: none; } .hm-choice:hover { transform: none; } }
+`;
+
+function Choice({ selected, onClick, icon, label, sub }: { selected: boolean; onClick: () => void; icon?: string; label: string; sub?: string }) {
+  return (
+    <button
+      type="button"
+      className="hm-choice"
+      aria-pressed={selected}
+      onClick={onClick}
+      style={{
+        display: 'flex', alignItems: 'flex-start', gap: 12, textAlign: 'left', padding: '14px 16px', borderRadius: 10,
+        border: `1.5px solid ${BORDER_STRONG}`, background: PAGE_BG, color: INK, cursor: 'pointer',
+        fontFamily: 'var(--font-sans)',
+      }}
+    >
+      {icon && <span aria-hidden style={{ fontSize: 22, lineHeight: '26px' }}>{icon}</span>}
+      <span style={{ display: 'block' }}>
+        <span style={{ display: 'block', fontSize: 15, fontWeight: 600 }}>{label}</span>
+        {sub && <span style={{ display: 'block', fontSize: 12.5, color: MUTED, fontWeight: 300, lineHeight: 1.5, marginTop: 3 }}>{sub}</span>}
+      </span>
+    </button>
+  );
+}
+
+export default function HelpMePage() {
   const { lang } = useSite();
   const { user, profile } = useAuth();
   const isMobile = useIsMobile();
   const t = T[lang] ?? T.en;
 
+  const [topic, setTopic] = useState<Topic | null>(null);
+  const [use, setUse] = useState<Use | null>(null);
+  const [budgetId, setBudgetId] = useState<BudgetId | null>(null);
+  const [customBudget, setCustomBudget] = useState('');
+  const [notes, setNotes] = useState('');
+  const [channel, setChannel] = useState<Channel>('email');
   const [firstName, setFirstName] = useState(profile?.first_name ?? '');
   const [lastName, setLastName] = useState(profile?.last_name ?? '');
   const [email, setEmail] = useState(profile?.email ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');
-  const [budget, setBudget] = useState('');
-  const [useCase, setUseCase] = useState<UseCase>('gaming');
-  const [notes, setNotes] = useState('');
+  const [stepIdx, setStepIdx] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const steps = stepsFor(topic);
+  const step = steps[Math.min(stepIdx, steps.length - 1)];
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const [moved, setMoved] = useState(false);
+  // Keyboard / screen-reader users land on the new question when the step changes (not on first paint).
+  useEffect(() => {
+    if (!moved) return;
+    headingRef.current?.focus({ preventScroll: true });
+  }, [stepIdx, submitted, moved]);
+
+  function go(delta: number) {
+    setMoved(true);
+    setError(null);
+    setStepIdx((i) => Math.max(0, Math.min(steps.length - 1, i + delta)));
+  }
+  function chooseTopic(next: Topic) {
+    setTopic(next);
+    setMoved(true);
+    setStepIdx(1); // every topic's second step comes after 'topic'
+  }
+
+  const customBudgetNum = customBudget.trim() !== '' ? Number(customBudget) : null;
+  const customBudgetValid = customBudgetNum != null && !isNaN(customBudgetNum) && customBudgetNum > 0;
+  const notesRequired = topic === 'check' || topic === 'order' || topic === 'other';
+  const phoneNeeded = channel === 'phone';
+  const contactValid =
+    firstName.trim() !== '' && lastName.trim() !== '' && EMAIL_RE.test(email.trim()) && (!phoneNeeded || phone.trim() !== '');
+
+  // The readable summary (English: it is read by GOMP staff in the admin inbox) put in front of the free text.
+  function buildNotes(): string {
+    const en = T.en;
+    const lines: string[] = [];
+    if (topic) lines.push(`Topic: ${en.topic[topic].label}`);
+    if (use) lines.push(`Use: ${en.use[use]}`);
+    if (customBudgetValid) lines.push(`Budget: about €${customBudgetNum}`);
+    else if (budgetId) lines.push(`Budget: ${en.budget[budgetId]}`);
+    lines.push(`Preferred contact: ${channel === 'phone' ? 'phone call' : 'e-mail'}`);
+    const free = notes.trim();
+    return free ? `${lines.join('\n')}\n---\n${free}` : lines.join('\n');
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (submitting) return;
+    if (submitting || !topic || !contactValid) return;
     setSubmitting(true);
     setError(null);
+    const bandMax = BUDGETS.find((b) => b.id === budgetId)?.max ?? null;
     const result = await submitGbbRequest({
       userId: user?.id ?? null,
-      firstName,
-      lastName,
-      email,
-      phone,
-      budgetEur: budget.trim() !== '' ? Number(budget) : null,
-      useCase,
-      notes,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      budgetEur: customBudgetValid ? customBudgetNum : bandMax,
+      useCase: topic,
+      notes: buildNotes(),
       lang,
     });
     setSubmitting(false);
@@ -141,149 +370,277 @@ export default function GbbPage() {
       setError(result.error || t.error_generic);
       return;
     }
+    setMoved(true);
     setSubmitted(true);
   }
 
+  function reset() {
+    setTopic(null); setUse(null); setBudgetId(null); setCustomBudget(''); setNotes(''); setChannel('email');
+    setStepIdx(0); setSubmitted(false); setError(null);
+  }
+
+  const primaryBtn: CSSProperties = {
+    padding: '13px 26px', background: ACCENT_GRADIENT, color: ON_ACCENT, border: 'none', borderRadius: 8,
+    fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, letterSpacing: 0.3, cursor: 'pointer',
+  };
+  const ghostBtn: CSSProperties = {
+    padding: '13px 4px', background: 'transparent', color: MUTED, border: 'none',
+    fontFamily: 'var(--font-sans)', fontSize: 14, cursor: 'pointer',
+  };
+  const heading: CSSProperties = {
+    fontFamily: 'var(--font-sans)', fontSize: isMobile ? 22 : 26, fontWeight: 600, color: INK, letterSpacing: -0.3,
+    margin: '0 0 18px', outline: 'none',
+  };
+
+  const choiceGrid = (cols: number): CSSProperties => ({
+    display: 'grid', gridTemplateColumns: isMobile ? '1fr' : `repeat(${cols}, 1fr)`, gap: 10,
+  });
+
+  const nav = (opts: { next?: { label: string; disabled?: boolean; onClick: () => void } }) => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 22 }}>
+      {stepIdx > 0 ? (
+        <button type="button" className="hm-btn hm-ghost" style={ghostBtn} onClick={() => go(-1)}>{t.back}</button>
+      ) : <span />}
+      {opts.next && (
+        <button
+          type="button"
+          className="hm-btn"
+          disabled={opts.next.disabled}
+          onClick={opts.next.onClick}
+          style={{ ...primaryBtn, opacity: opts.next.disabled ? 0.45 : 1, cursor: opts.next.disabled ? 'not-allowed' : 'pointer' }}
+        >
+          {opts.next.label}
+        </button>
+      )}
+    </div>
+  );
+
+  // Before a topic is chosen assume the longest path, so the counter does not jump from 3 to 5 steps.
+  const shownSteps = topic ? steps : stepsFor('pick');
+  const total = shownSteps.length;
+
   return (
     <div style={{ minHeight: '100vh', background: PAGE_BG }}>
-      <style>{`@keyframes gompPulseDot { 0%,100% { opacity:0.18; transform:scale(0.8); } 50% { opacity:0.6; transform:scale(1.2); } }`}</style>
+      <style>{CSS}</style>
       <SiteNav />
 
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '28px 20px 60px' : '44px 32px 90px', position: 'relative' }}>
-        <div style={{ position: 'relative' }}>
-          {/* ambient floaties, mirrors the landing-page hero — same motif, green instead of bordeaux */}
-          {!isMobile && (
-            <>
-              <div style={{ position: 'absolute', top: -46, left: -56, width: 210, height: 210, pointerEvents: 'none', zIndex: 0 }}>
-                <div style={{ position: 'absolute', inset: 0, border: `0.5px solid ${GBB_ACCENT_TINT(0.22)}`, borderRadius: '50%', animation: 'gompRotateSlow 110s linear infinite' }} />
-                <div style={{ position: 'absolute', inset: 30, border: `0.5px solid ${GBB_ACCENT_TINT(0.13)}`, borderRadius: '50%', animation: 'gompRotateSlowRev 85s linear infinite' }} />
-              </div>
-              <div style={{ position: 'absolute', top: 6, left: 'calc(100% - 40px)', width: 7, height: 7, borderRadius: '50%', background: GBB_ACCENT, pointerEvents: 'none', zIndex: 1, animation: 'gompPulseDot 5s ease-in-out infinite' }} />
-              <div style={{ position: 'absolute', top: 172, left: -26, width: 6, height: 6, borderRadius: '50%', background: GOLD, filter: 'blur(0.5px)', pointerEvents: 'none', zIndex: 1, animation: 'gompPulseDot 4.5s ease-in-out infinite 0.8s' }} />
-            </>
-          )}
-          <div
-            style={{
-              fontFamily: 'var(--font-serif)', fontSize: 15, fontWeight: 600,
-              letterSpacing: 1.5, color: GBB_ACCENT, marginBottom: 12, position: 'relative', zIndex: 2,
-            }}
-          >
+      {/* ---- Hero ---- */}
+      <div
+        style={{
+          background: `radial-gradient(ellipse 70% 120% at 15% 0%, ${hexToRgba(ACCENT, 0.16)} 0%, transparent 60%)`,
+          borderBottom: `1px solid ${BORDER}`,
+        }}
+      >
+        <div style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '34px 20px 30px' : '64px 32px 52px' }}>
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 700, letterSpacing: 2.5, color: ACCENT, marginBottom: 14 }}>
             {t.eyebrow}
           </div>
           <h1
             style={{
-              fontFamily: 'var(--font-sans)', fontSize: isMobile ? 30 : 44, fontWeight: 600, color: INK,
-              letterSpacing: -0.5, lineHeight: 1.15, margin: '0 0 18px', maxWidth: 640, position: 'relative', zIndex: 2,
+              fontFamily: 'var(--font-sans)', fontSize: isMobile ? 30 : 48, fontWeight: 600, color: INK, letterSpacing: -0.8,
+              lineHeight: 1.12, margin: '0 0 16px', maxWidth: 720,
             }}
           >
             {t.title}
           </h1>
-          <p style={{ fontFamily: 'var(--font-sans)', fontSize: 15, color: MUTED, fontWeight: 300, lineHeight: 1.7, maxWidth: 620, marginBottom: 44, position: 'relative', zIndex: 2 }}>
+          <p style={{ fontFamily: 'var(--font-sans)', fontSize: isMobile ? 15 : 17, color: MUTED, fontWeight: 300, lineHeight: 1.65, maxWidth: 640, margin: 0 }}>
             {t.intro}
           </p>
         </div>
+      </div>
 
-        <div style={{ position: 'relative', marginBottom: 56 }}>
-          {!isMobile && (
-            <div style={{ position: 'absolute', top: -30, right: -20, width: 150, height: 150, pointerEvents: 'none', zIndex: 0 }}>
-              <div style={{ position: 'absolute', inset: 0, border: '0.5px solid rgba(196,163,90,0.28)', borderRadius: '50%', animation: 'gompRotateSlowRev 95s linear infinite' }} />
-              <div style={{ position: 'absolute', inset: 26, border: '0.5px solid rgba(196,163,90,0.16)', borderRadius: '50%', animation: 'gompRotateSlow 65s linear infinite' }} />
-            </div>
-          )}
-          <div style={{ position: 'relative', zIndex: 2, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap: 20 }}>
-            {[
-              { title: t.point1_title, body: t.point1_body },
-              { title: t.point2_title, body: t.point2_body },
-              { title: t.point3_title, body: t.point3_body },
-            ].map((p) => (
-              <div key={p.title} style={{ background: PANEL_BG, border: '0.5px solid rgba(235,230,218,0.1)', borderRadius: 3, padding: 20, borderLeft: `3px solid ${GBB_ACCENT}` }}>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: INK, marginBottom: 6 }}>{p.title}</div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: MUTED, fontWeight: 300, lineHeight: 1.6 }}>{p.body}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {!isMobile && (
-          <div style={{ position: 'absolute', top: 340, left: -20, width: 130, height: 130, pointerEvents: 'none', zIndex: 0 }}>
-            <div style={{ position: 'absolute', inset: 0, border: `0.5px solid ${GBB_ACCENT_TINT(0.2)}`, borderRadius: '50%', animation: 'gompRotateSlow 92s linear infinite' }} />
-          </div>
-        )}
-        <div style={{ position: 'absolute', top: 300, left: '38%', width: 5, height: 5, borderRadius: '50%', background: GOLD, pointerEvents: 'none', zIndex: 0, animation: 'gompPulseDot 5.4s ease-in-out infinite 0.6s', display: isMobile ? 'none' : 'block' }} />
-
-        <div style={{ background: PANEL_BG, border: '0.5px solid rgba(235,230,218,0.12)', borderRadius: 4, padding: isMobile ? 22 : 36, maxWidth: 640, position: 'relative', zIndex: 2 }}>
+      {/* ---- Wizard + what happens next ---- */}
+      <div
+        style={{
+          maxWidth: 1080, margin: '0 auto', padding: isMobile ? '24px 20px 60px' : '44px 32px 90px',
+          display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) 320px', gap: isMobile ? 28 : 40, alignItems: 'start',
+        }}
+      >
+        <div style={{ background: PANEL_BG, border: `1px solid ${BORDER}`, borderRadius: 14, padding: isMobile ? 20 : 36, minHeight: 360 }}>
           {submitted ? (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ width: 52, height: 52, borderRadius: '50%', background: GBB_ACCENT_TINT(0.12), border: `1.5px solid ${GBB_ACCENT}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: 22, color: GBB_ACCENT }}>
+            <div className="hm-step" style={{ textAlign: 'center', padding: '24px 0' }}>
+              <div style={{ width: 60, height: 60, borderRadius: '50%', background: hexToRgba(ACCENT, 0.14), border: `1.5px solid ${ACCENT}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 26, color: ACCENT }}>
                 ✓
               </div>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 19, fontWeight: 600, color: INK, marginBottom: 8 }}>{t.success_title}</div>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: MUTED, fontWeight: 300, lineHeight: 1.6, maxWidth: 420, margin: '0 auto' }}>{t.success_body}</div>
+              <h2 ref={headingRef} tabIndex={-1} style={{ ...heading, margin: '0 0 8px' }}>{t.success_title}</h2>
+              <p style={{ fontFamily: 'var(--font-sans)', fontSize: 15, color: MUTED, fontWeight: 300, lineHeight: 1.6, maxWidth: 420, margin: '0 auto 26px' }}>
+                {channel === 'phone' ? t.success_phone(phone.trim()) : t.success_email(email.trim())}
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 18, flexWrap: 'wrap' }}>
+                <Link href="/" style={{ ...ghostBtn, textDecoration: 'none' }}>{t.back_home}</Link>
+                <button type="button" className="hm-btn hm-ghost" style={{ ...ghostBtn, color: ACCENT }} onClick={reset}>{t.again}</button>
+              </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit}>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 600, color: INK, marginBottom: 20 }}>{t.form_title}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
-                <div>
-                  <div style={LABEL_STYLE}>{t.first_name}</div>
-                  <input required value={firstName} onChange={(e) => setFirstName(e.target.value)} style={INPUT_STYLE} />
+            <>
+              {/* progress: one segment per step */}
+              <div style={{ marginBottom: 26 }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, letterSpacing: 1, color: FAINT, textTransform: 'uppercase', marginBottom: 8 }}>
+                  {t.step_of(stepIdx + 1, total)}
                 </div>
-                <div>
-                  <div style={LABEL_STYLE}>{t.last_name}</div>
-                  <input required value={lastName} onChange={(e) => setLastName(e.target.value)} style={INPUT_STYLE} />
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
-                <div>
-                  <div style={LABEL_STYLE}>{t.email}</div>
-                  <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={INPUT_STYLE} />
-                </div>
-                <div>
-                  <div style={LABEL_STYLE}>{t.phone}</div>
-                  <input value={phone} onChange={(e) => setPhone(e.target.value)} style={INPUT_STYLE} />
+                <div style={{ display: 'flex', gap: 6 }} role="presentation">
+                  {shownSteps.map((s, i) => (
+                    <div key={s} style={{ flex: 1, height: 4, borderRadius: 2, background: i <= stepIdx ? ACCENT : 'rgba(235,230,218,0.12)', transition: 'background .25s' }} />
+                  ))}
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '160px 1fr', gap: 14, marginBottom: 14 }}>
-                <div>
-                  <div style={LABEL_STYLE}>{t.budget}</div>
-                  <input type="number" min={0} placeholder={t.budget_placeholder} value={budget} onChange={(e) => setBudget(e.target.value)} style={INPUT_STYLE} />
-                </div>
-                <div>
-                  <div style={LABEL_STYLE}>{t.use_case}</div>
-                  <select value={useCase} onChange={(e) => setUseCase(e.target.value as UseCase)} style={INPUT_STYLE}>
-                    {USE_CASES.map((uc) => (
-                      <option key={uc} value={uc}>{t[`use_case_${uc}` as const]}</option>
-                    ))}
-                  </select>
-                </div>
+
+              <div key={step} className="hm-step" aria-live="polite">
+                {step === 'topic' && (
+                  <>
+                    <h2 ref={headingRef} tabIndex={-1} style={heading}>{t.q_topic}</h2>
+                    <div style={choiceGrid(2)}>
+                      {TOPICS.map((o) => (
+                        <Choice key={o.id} selected={topic === o.id} onClick={() => chooseTopic(o.id)} icon={o.icon} label={t.topic[o.id].label} sub={t.topic[o.id].sub} />
+                      ))}
+                    </div>
+                    {nav({})}
+                  </>
+                )}
+
+                {step === 'use' && (
+                  <>
+                    <h2 ref={headingRef} tabIndex={-1} style={heading}>{t.q_use}</h2>
+                    <div style={choiceGrid(2)}>
+                      {USES.map((o) => (
+                        <Choice key={o.id} selected={use === o.id} onClick={() => { setUse(o.id); go(1); }} icon={o.icon} label={t.use[o.id]} />
+                      ))}
+                    </div>
+                    {nav({ next: { label: t.skip, onClick: () => go(1) } })}
+                  </>
+                )}
+
+                {step === 'budget' && (
+                  <>
+                    <h2 ref={headingRef} tabIndex={-1} style={heading}>{t.q_budget}</h2>
+                    <div style={choiceGrid(3)}>
+                      {BUDGETS.map((o) => (
+                        <Choice key={o.id} selected={budgetId === o.id && !customBudgetValid} onClick={() => { setBudgetId(o.id); setCustomBudget(''); go(1); }} label={t.budget[o.id]} />
+                      ))}
+                    </div>
+                    <div style={{ marginTop: 16, maxWidth: 260 }}>
+                      <div style={LABEL_STYLE}>{t.budget_custom}</div>
+                      <input
+                        className="hm-input"
+                        type="number"
+                        min={0}
+                        inputMode="numeric"
+                        placeholder="750"
+                        value={customBudget}
+                        onChange={(e) => setCustomBudget(e.target.value)}
+                        style={INPUT_STYLE}
+                      />
+                    </div>
+                    {nav({ next: { label: t.next, disabled: !customBudgetValid && !budgetId, onClick: () => go(1) } })}
+                  </>
+                )}
+
+                {step === 'notes' && topic && (
+                  <>
+                    <h2 ref={headingRef} tabIndex={-1} style={{ ...heading, marginBottom: 6 }}>
+                      {notesRequired ? t.q_notes_required : t.q_notes_optional}
+                    </h2>
+                    {!notesRequired && (
+                      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: FAINT, marginBottom: 14 }}>{t.optional}</div>
+                    )}
+                    <textarea
+                      className="hm-input"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder={t.notes_placeholder[topic]}
+                      rows={6}
+                      style={{ ...INPUT_STYLE, resize: 'vertical', marginTop: notesRequired ? 12 : 0 }}
+                    />
+                    {nav({ next: { label: t.next, disabled: notesRequired && notes.trim() === '', onClick: () => go(1) } })}
+                  </>
+                )}
+
+                {step === 'contact' && (
+                  <form onSubmit={handleSubmit}>
+                    <h2 ref={headingRef} tabIndex={-1} style={heading}>{t.q_contact}</h2>
+                    <div style={LABEL_STYLE}>{t.channel_label}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
+                      <Choice selected={channel === 'email'} onClick={() => setChannel('email')} icon="✉️" label={t.channel_email} />
+                      <Choice selected={channel === 'phone'} onClick={() => setChannel('phone')} icon="📞" label={t.channel_phone} />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 14 }}>
+                      <label>
+                        <div style={LABEL_STYLE}>{t.first_name}</div>
+                        <input className="hm-input" required autoComplete="given-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} style={INPUT_STYLE} />
+                      </label>
+                      <label>
+                        <div style={LABEL_STYLE}>{t.last_name}</div>
+                        <input className="hm-input" required autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} style={INPUT_STYLE} />
+                      </label>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14, marginBottom: 16 }}>
+                      <label>
+                        <div style={LABEL_STYLE}>{t.email}</div>
+                        <input className="hm-input" required type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} style={INPUT_STYLE} />
+                      </label>
+                      <label>
+                        <div style={LABEL_STYLE}>{t.phone} {phoneNeeded && <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: ACCENT }}>{t.phone_needed}</span>}</div>
+                        <input className="hm-input" required={phoneNeeded} type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={INPUT_STYLE} />
+                      </label>
+                    </div>
+                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: FAINT, lineHeight: 1.5 }}>
+                      {t.privacy_pre}
+                      <Link href="/privacy" style={{ color: MUTED }}>{t.privacy_link}</Link>
+                    </div>
+                    {error && (
+                      <div role="alert" style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#E5645F', marginTop: 14 }}>{error}</div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 22 }}>
+                      <button type="button" className="hm-btn hm-ghost" style={ghostBtn} onClick={() => go(-1)}>{t.back}</button>
+                      <button
+                        type="submit"
+                        className="hm-btn"
+                        disabled={submitting || !contactValid}
+                        style={{ ...primaryBtn, background: submitting ? ACCENT_FILL : ACCENT_GRADIENT, opacity: !contactValid ? 0.45 : 1, cursor: submitting ? 'default' : !contactValid ? 'not-allowed' : 'pointer' }}
+                      >
+                        {submitting ? t.submitting : t.submit}
+                      </button>
+                    </div>
+                  </form>
+                )}
               </div>
-              <div style={{ marginBottom: 20 }}>
-                <div style={LABEL_STYLE}>{t.notes}</div>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder={t.notes_placeholder}
-                  rows={4}
-                  style={{ ...INPUT_STYLE, resize: 'vertical', fontFamily: 'var(--font-sans)' }}
-                />
-              </div>
-              {error && (
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#E5645F', marginBottom: 14 }}>{error}</div>
-              )}
-              <button
-                type="submit"
-                disabled={submitting}
-                style={{
-                  width: '100%', padding: '13px 0', background: submitting ? GBB_ACCENT_DARK : GBB_ACCENT, color: GBB_ON_ACCENT,
-                  border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600,
-                  cursor: submitting ? 'default' : 'pointer', letterSpacing: 0.3,
-                }}
-              >
-                {submitting ? t.submitting : t.submit}
-              </button>
-            </form>
+            </>
           )}
         </div>
+
+        {/* ---- What happens next ---- */}
+        <aside style={{ paddingTop: isMobile ? 0 : 6 }}>
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, color: MUTED, textTransform: 'uppercase', marginBottom: 18 }}>
+            {t.aside_title}
+          </div>
+          <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 22 }}>
+            {t.aside.map((a, i) => (
+              <li key={a.t} style={{ display: 'flex', gap: 14 }}>
+                <span
+                  aria-hidden
+                  style={{
+                    flex: 'none', width: 30, height: 30, borderRadius: '50%', border: `1.5px solid ${hexToRgba(ACCENT, 0.6)}`, color: ACCENT,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700,
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <span>
+                  <span style={{ display: 'block', fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 600, color: INK, marginBottom: 3 }}>{a.t}</span>
+                  <span style={{ display: 'block', fontFamily: 'var(--font-sans)', fontSize: 13.5, color: MUTED, fontWeight: 300, lineHeight: 1.55 }}>{a.b}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
+          <div
+            style={{
+              display: 'inline-block', marginTop: 26, padding: '7px 14px', borderRadius: 20, border: `1px solid ${hexToRgba(ACCENT, 0.4)}`,
+              background: hexToRgba(ACCENT, 0.08), color: ACCENT, fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600,
+            }}
+          >
+            {t.aside_badge}
+          </div>
+        </aside>
       </div>
 
       <SiteFooter />
