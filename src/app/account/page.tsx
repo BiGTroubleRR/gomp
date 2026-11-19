@@ -7,6 +7,7 @@ import { useSite } from '@/contexts/SiteContext';
 import { useAuth } from '@/contexts/AuthContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
+import PageTitle from '@/components/PageTitle';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
 import { pick } from '@/lib/i18n';
 import { useIsMobile } from '@/lib/use-media-query';
@@ -452,6 +453,7 @@ function AuthGate({ isMobile }: { isMobile: boolean }) {
   return (
     <div style={{ position: 'relative', zIndex: 2, background: '#0D0D0C', minHeight: '100vh' }}>
       <SiteNav />
+      <PageTitle>{copy.title}</PageTitle>
       <div
         style={{
           minHeight: '100vh',

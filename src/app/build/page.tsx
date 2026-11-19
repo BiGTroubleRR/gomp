@@ -9,6 +9,7 @@ import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
 import InfoTip from '@/components/InfoTip';
+import PageTitle from '@/components/PageTitle';
 import { navigateWithTransition } from '@/lib/gomp-nav';
 import { writeJSON } from '@/lib/gomp-storage';
 import { fetchComponentDb, getCachedComponentDb } from '@/lib/supabase/components';
@@ -53,7 +54,7 @@ import {
   type BuildScene,
   type CompId,
 } from '@/lib/build-scene';
-import { useIsMobile } from '@/lib/use-media-query';
+import { useIsMobile, useIsTouch } from '@/lib/use-media-query';
 import { fetchAlignmentTuningConfig, subscribeAlignmentTuning, resolveAlignmentTuning, type AlignmentTuningConfig } from '@/lib/supabase/alignment-tuning';
 import { PAGE_BG as BG, PANEL_BG as PANEL, INK, MUTED, GOLD, ACCENT, ACCENT_FILL, LIGHTBOX_BACKDROP } from '@/lib/design-tokens';
 
@@ -61,7 +62,7 @@ const T = {
   en: {
     nav_home: 'Home', nav_shop: 'Shop', nav_build: 'Build', nav_about: 'About', nav_account: 'Account',
     pc_builder: 'PC Builder', select_components: 'Select components to add', build_complete: 'Build Complete PC',
-    clear_all: 'Clear All', drag_to_orbit: 'Drag to orbit  ·  Scroll to zoom', hide_panel: 'Hide Side Panel',
+    clear_all: 'Clear All', drag_to_orbit: '🖱️ Drag to orbit  ·  🔍 Scroll to zoom', drag_to_orbit_touch: '👆 Drag to rotate  ·  🤏 Pinch to zoom', hide_panel: 'Hide Side Panel',
     show_panel: 'Show Side Panel', complete: 'Complete', your_build: 'Your Build', selected_part: 'Selected Part',
     build_total: 'Build Total', passmark_score: 'PassMark Score', verify_passmark: 'Verify on PassMark ↗', dimensions: 'Dimensions',
     vat_included: 'Price includes VAT',
@@ -131,7 +132,7 @@ const T = {
   sk: {
     nav_home: 'Domov', nav_shop: 'Obchod', nav_build: 'Zostaviť', nav_about: 'O nás', nav_account: 'Účet',
     pc_builder: 'Konfigurátor PC', select_components: 'Vyberte komponenty na pridanie', build_complete: 'Zostaviť kompletné PC',
-    clear_all: 'Vymazať všetko', drag_to_orbit: 'Ťahaním otáčať  ·  Kolieskom priblížiť', hide_panel: 'Skryť bočný panel',
+    clear_all: 'Vymazať všetko', drag_to_orbit: '🖱️ Ťahaním otoč  ·  🔍 Kolieskom priblíž', drag_to_orbit_touch: '👆 Ťahaním otoč  ·  🤏 Dvoma prstami priblíž', hide_panel: 'Skryť bočný panel',
     show_panel: 'Zobraziť bočný panel', complete: 'Dokončené', your_build: 'Vaša zostava', selected_part: 'Vybraný diel',
     build_total: 'Celková cena', passmark_score: 'Skóre PassMark', verify_passmark: 'Overiť na PassMark ↗', dimensions: 'Rozmery',
     vat_included: 'Cena vrátane DPH',
@@ -201,7 +202,7 @@ const T = {
   cz: {
     nav_home: 'Domů', nav_shop: 'Obchod', nav_build: 'Sestavit', nav_about: 'O nás', nav_account: 'Účet',
     pc_builder: 'Konfigurátor PC', select_components: 'Vyberte komponenty k přidání', build_complete: 'Sestavit kompletní PC',
-    clear_all: 'Vymazat vše', drag_to_orbit: 'Tažením otáčet  ·  Kolečkem přiblížit', hide_panel: 'Skrýt boční panel',
+    clear_all: 'Vymazat vše', drag_to_orbit: '🖱️ Tažením otoč  ·  🔍 Kolečkem přibliž', drag_to_orbit_touch: '👆 Tažením otoč  ·  🤏 Dvěma prsty přibliž', hide_panel: 'Skrýt boční panel',
     show_panel: 'Zobrazit boční panel', complete: 'Dokončeno', your_build: 'Vaše sestava', selected_part: 'Vybraný díl',
     build_total: 'Celková cena', passmark_score: 'Skóre PassMark', verify_passmark: 'Ověřit na PassMark ↗', dimensions: 'Rozměry',
     vat_included: 'Cena včetně DPH',
@@ -388,7 +389,7 @@ function SpecPill({ label }: { label: string }) {
     <div
       style={{
         padding: '2px 6px', borderRadius: 3, border: '1px solid rgba(235,230,218,0.2)',
-        fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 9, color: MUTED, whiteSpace: 'nowrap',
+        fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: 11, color: MUTED, whiteSpace: 'nowrap',
       }}
     >
       {label}
@@ -408,7 +409,7 @@ function FilterChip({ active, label, onClick }: { active: boolean; label: string
         border: `1px solid ${active ? ACCENT : 'rgba(235,230,218,0.2)'}`,
         background: active ? 'rgba(63,174,116,0.08)' : 'transparent',
         color: active ? ACCENT : MUTED,
-        fontFamily: 'var(--font-mono)', fontSize: 9, cursor: 'pointer',
+        fontFamily: 'var(--font-mono)', fontSize: 11, cursor: 'pointer',
       }}
     >
       {label}
@@ -492,6 +493,7 @@ function BuildPageContent() {
     }
   }
   const isMobile = useIsMobile();
+  const isTouch = useIsTouch();
   // Desktop's sidebar/right panel float semi-transparently over the 3D scene — a hard cream
   // outline (four offset copies, not just a soft blur) keeps the text legible against both the
   // light empty scene and the dark case body, since a single soft halo isn't opaque enough at
@@ -1346,6 +1348,7 @@ function BuildPageContent() {
     <div style={{ position: 'relative', background: BG, minHeight: '100vh', paddingBottom: isMobile ? 72 : 0 }}>
       {/* ---- Nav ---- */}
       <SiteNav variant="compact" />
+      <PageTitle>{t.pc_builder}</PageTitle>
 
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: isMobile ? 'auto' : 'calc(100vh - var(--gomp-bar-h))', minHeight: isMobile ? '100vh' : undefined }}>
         {/* ---- Sidebar ----
@@ -1372,7 +1375,7 @@ function BuildPageContent() {
           }}
         >
             <div style={{ padding: isMobile ? '20px 20px 10px' : '20px 20px 14px' }}>
-              <div style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase' }}>
+              <div style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase' }}>
                 {t.pc_builder}
                 <InfoTip text={t.select_components} label={t.pc_builder} />
               </div>
@@ -1382,7 +1385,7 @@ function BuildPageContent() {
                 automatic pick; has no effect on manual per-part selection. ---- */}
             <div style={{ padding: isMobile ? '0 20px 14px' : '0 20px 14px' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ ...textPop, display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                <span style={{ ...textPop, display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>
                   {t.budget}
                   <InfoTip text={t.budget_hint} label={t.budget} />
                 </span>
@@ -1401,7 +1404,7 @@ function BuildPageContent() {
             </div>
             <div style={{ flex: isMobile ? 'none' : 1, overflowY: isMobile ? 'visible' : 'auto', padding: '0 20px 16px' }}>
               {/* ---- Step pills — free-jump between categories, green/checked once picked ---- */}
-              <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, letterSpacing: 1, marginBottom: 8 }}>
+              <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: MUTED, letterSpacing: 1, marginBottom: 8 }}>
                 {t.step_of(SLOTS.indexOf(activeStep) + 1)}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
@@ -1418,7 +1421,7 @@ function BuildPageContent() {
                         border: `1px solid ${isActive ? ACCENT : done ? 'rgba(63,174,116,0.4)' : 'rgba(235,230,218,0.2)'}`,
                         background: isActive ? ACCENT_FILL : done ? 'rgba(63,174,116,0.08)' : 'transparent',
                         color: isActive ? '#FDFAF4' : done ? ACCENT : MUTED,
-                        fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: isActive ? 600 : 500, cursor: 'pointer',
+                        fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: isActive ? 600 : 500, cursor: 'pointer',
                       }}
                     >
                       {done && !isActive && <span style={{ fontSize: 9 }}>✓</span>}
@@ -1489,7 +1492,7 @@ function BuildPageContent() {
                   {ramSpeedSteps.length > 1 && (
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <span style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED }}>{t.ram_min_speed}</span>
+                        <span style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED }}>{t.ram_min_speed}</span>
                         <span style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: INK, fontWeight: 600 }}>
                           {ramMinSpeedIdx === 0 ? t.ram_min_speed_any : `${ramSpeedSteps[Math.min(ramMinSpeedIdx, ramSpeedSteps.length - 1)]} MHz+`}
                         </span>
@@ -1627,7 +1630,7 @@ function BuildPageContent() {
                       <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: INK, marginBottom: 4 }}>
                         {selectedGpuModel}
                       </div>
-                      <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                         {t.gpu_choose_variant}
                       </div>
                       <AnimatePresence initial={false} key={`gpu-variant-${selectedGpuModel}`}>
@@ -1677,7 +1680,7 @@ function BuildPageContent() {
                                     <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: isThisSelected ? ACCENT : INK }}>{c.name}</div>
                                     <TierBadge tier={groupTier} small />
                                   </div>
-                                  <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {c.specs}
                                   </div>
                                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
@@ -1686,7 +1689,7 @@ function BuildPageContent() {
                                       style={{
                                         width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         background: isThisSelected ? ACCENT_FILL : 'transparent', border: `1px solid ${isThisSelected ? ACCENT : 'rgba(235,230,218,0.3)'}`,
-                                        color: isThisSelected ? '#FDFAF4' : MUTED, fontSize: 10, fontWeight: 700,
+                                        color: isThisSelected ? '#FDFAF4' : MUTED, fontSize: 11, fontWeight: 700,
                                       }}
                                     >
                                       {isThisSelected ? '✓' : '+'}
@@ -1824,7 +1827,7 @@ function BuildPageContent() {
                       <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: INK, marginBottom: 10 }}>
                         {brandLabel}{genLabel && speedLabel ? ` · DDR${genLabel}-${speedLabel}` : ''}
                       </div>
-                      <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                         {t.ram_choose_sticks}
                       </div>
                       <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
@@ -1851,7 +1854,7 @@ function BuildPageContent() {
                       </div>
                       {expandedStickCount != null && (byCount.get(expandedStickCount)?.length ?? 0) > 1 && (
                         <div>
-                          <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                          <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                             {t.ram_choose_capacity}
                           </div>
                           <AnimatePresence initial={false} key={`ram-capacity-${expandedStickCount}`}>
@@ -2004,7 +2007,7 @@ function BuildPageContent() {
                               </span>
                             </div>
                           </div>
-                          <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: MUTED, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {c.specs}
                           </div>
                           {activeStep === 'storage' &&
@@ -2014,13 +2017,13 @@ function BuildPageContent() {
                               const moboGen = moboPcieGeneration(selectedMobo);
                               if (!ssdGen || !moboGen || ssdGen <= moboGen) return null;
                               return (
-                                <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9.5, color: ACCENT, marginTop: 3, lineHeight: 1.3 }}>
+                                <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: ACCENT, marginTop: 3, lineHeight: 1.3 }}>
                                   {t.storage_pcie_capped(ssdGen, moboGen)}
                                 </div>
                               );
                             })()}
                           {dimensionLabel(activeStep, c) && (
-                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 9, color: '#A89A78', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: '#A89A78', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {dimensionLabel(activeStep, c)}
                             </div>
                           )}
@@ -2030,7 +2033,7 @@ function BuildPageContent() {
                               style={{
                                 width: 16, height: 16, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 background: isThisSelected ? ACCENT_FILL : 'transparent', border: `1px solid ${isThisSelected ? ACCENT : 'rgba(235,230,218,0.3)'}`,
-                                color: isThisSelected ? '#FDFAF4' : MUTED, fontSize: 10, fontWeight: 700,
+                                color: isThisSelected ? '#FDFAF4' : MUTED, fontSize: 11, fontWeight: 700,
                               }}
                             >
                               {isThisSelected ? '✓' : '+'}
@@ -2103,7 +2106,7 @@ function BuildPageContent() {
               {autoBuildNotes.length > 0 && (
                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {autoBuildNotes.map((note, i) => (
-                    <div key={i} style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, lineHeight: 1.4 }}>
+                    <div key={i} style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, lineHeight: 1.4 }}>
                       · {autoBuildNoteMessage(note)}
                     </div>
                   ))}
@@ -2132,8 +2135,8 @@ function BuildPageContent() {
             <div style={{ ...textPop, position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)', fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(235,230,218,0.35)' }}>
               {t.installed(installedCount)}
             </div>
-            <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', background: 'rgba(19,26,23,0.85)', padding: '6px 14px', borderRadius: 20, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED }}>
-              {t.drag_to_orbit}
+            <div style={{ position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)', background: 'rgba(19,26,23,0.85)', padding: '7px 16px', borderRadius: 20, fontFamily: 'var(--font-sans)', fontSize: 12, lineHeight: 1.45, color: MUTED, textAlign: 'center', width: 'max-content', maxWidth: 'calc(100% - 32px)', whiteSpace: isMobile ? 'normal' : 'nowrap' }}>
+              {isTouch ? t.drag_to_orbit_touch : t.drag_to_orbit}
             </div>
             <div
               style={{
@@ -2190,7 +2193,7 @@ function BuildPageContent() {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 9, fontWeight: 600, color: 'rgba(235,230,218,0.55)', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: 'rgba(235,230,218,0.55)', letterSpacing: 1.5, textTransform: 'uppercase' }}>
                     {t.cat_names[hoverId]}
                   </span>
                   <TierBadge tier={hoverTier} small />
@@ -2211,19 +2214,19 @@ function BuildPageContent() {
                 </div>
                 <div style={{ marginBottom: hoverPassmark || dimensionLabel(hoverId, hoverComp) ? 8 : 0 }}>
                   {(hoverComp.specs || '').split(' · ').map((s, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(235,230,218,0.85)', marginBottom: 3 }}>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'rgba(235,230,218,0.85)', marginBottom: 3 }}>
                       <span style={{ width: 3, height: 3, borderRadius: '50%', background: GOLD, flexShrink: 0 }} /> {s}
                     </div>
                   ))}
                 </div>
                 {dimensionLabel(hoverId, hoverComp) && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(235,230,218,0.5)', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(235,230,218,0.5)', marginBottom: 8 }}>
                     <span>{t.dimensions}</span>
                     <span style={{ fontFamily: 'var(--font-mono)', color: 'rgba(235,230,218,0.9)' }}>{dimensionLabel(hoverId, hoverComp)}</span>
                   </div>
                 )}
                 {hoverPassmark && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-sans)', fontSize: 10, color: 'rgba(235,230,218,0.5)', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: 'var(--font-sans)', fontSize: 11, color: 'rgba(235,230,218,0.5)', marginBottom: 8 }}>
                     <span>{t.passmark_score}</span>
                     <span style={{ fontFamily: 'var(--font-mono)', color: 'rgba(235,230,218,0.9)' }}>{hoverPassmark.score.toLocaleString()}</span>
                   </div>
@@ -2334,7 +2337,7 @@ function BuildPageContent() {
                         <>
                           <div onClick={toggleExpanded} style={{ cursor: 'pointer' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                              <div style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                              <div style={{ ...textPop, display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase' }}>
                                 {t.cat_names[id]}
                                 <InfoTip text={t.cat_desc[id]} label={t.cat_names[id]} size={13} />
                               </div>
@@ -2380,13 +2383,13 @@ function BuildPageContent() {
                           </div>
                           {dimensionLabel(id, comp) && (
                             <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 12 }}>
-                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.dimensions}</div>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.dimensions}</div>
                               <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 14, color: INK, fontWeight: 600 }}>{dimensionLabel(id, comp)}</div>
                             </div>
                           )}
                           {passmark && (
                             <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 12 }}>
-                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.passmark_score}</div>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.passmark_score}</div>
                               <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 16, color: tier ? TIER_COLORS[tier].text : INK, fontWeight: 600 }}>{passmark.score.toLocaleString()}</div>
                               <a href={passmark.url} target="_blank" rel="noopener noreferrer" style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: ACCENT }}>{t.verify_passmark}</a>
                             </div>
@@ -2396,10 +2399,10 @@ function BuildPageContent() {
                       ) : (
                         <div onClick={toggleExpanded} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, cursor: 'pointer' }}>
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>{t.cat_names[id]}</div>
+                            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 0.5 }}>{t.cat_names[id]}</div>
                             <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 12, color: INK, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{comp.name}</div>
                             {partAvailability(id) !== 'live' && (
-                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9.5, fontWeight: 600, color: ACCENT }}>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600, color: ACCENT }}>
                                 {partAvailability(id) === 'hidden' ? t.part_unavailable : t.part_missing}
                               </div>
                             )}
@@ -2419,7 +2422,7 @@ function BuildPageContent() {
                           if (!ssdGen || !moboGen || ssdGen <= moboGen) return null;
                           return (
                             <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 12 }}>
-                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: ACCENT, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
+                              <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: ACCENT, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
                                 {t.storage_pcie_capped_title}
                               </div>
                               <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 12, color: ACCENT, marginTop: 3, lineHeight: 1.4 }}>
@@ -2430,7 +2433,7 @@ function BuildPageContent() {
                         })()}
                       {SHOW_FAN_CHOOSER && id === 'case' && comp.fanMounts && comp.fanMounts.length > 0 && (
                         <div style={{ marginTop: 12, borderTop: '0.5px solid rgba(235,230,218,0.1)', paddingTop: 12 }}>
-                          <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{t.fans}</div>
+                          <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{t.fans}</div>
                           {comp.fanMounts.map((mount) => {
                             const cfg = fanConfig[mount.position] || { count: 0, sizeMm: mount.sizesMm[0] };
                             // Real fan products (from the 'fan' catalog) that physically fit this mount —
@@ -2445,7 +2448,7 @@ function BuildPageContent() {
                                     <select
                                       value={cfg.fanName || ''}
                                       onChange={(e) => setFanProduct(mount.position, e.target.value)}
-                                      style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 10, color: MUTED, background: 'transparent', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 3, padding: '2px 4px', maxWidth: 150 }}
+                                      style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: MUTED, background: 'transparent', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 3, padding: '2px 4px', maxWidth: 150 }}
                                     >
                                       <option value="">{t.fan_generic}</option>
                                       {matchingFans.map((f) => (
@@ -2459,7 +2462,7 @@ function BuildPageContent() {
                                     <select
                                       value={cfg.sizeMm}
                                       onChange={(e) => setFanSize(mount.position, Number(e.target.value))}
-                                      style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 10, color: MUTED, background: 'transparent', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 3, padding: '2px 4px' }}
+                                      style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 11, color: MUTED, background: 'transparent', border: '0.5px solid rgba(235,230,218,0.2)', borderRadius: 3, padding: '2px 4px' }}
                                     >
                                       {mount.sizesMm.map((s) => (
                                         <option key={s} value={s}>{s}mm</option>
@@ -2496,7 +2499,7 @@ function BuildPageContent() {
           {estimatedWatts > 0 && (
             <div style={{ padding: '16px 20px 0', borderTop: '0.5px solid rgba(235,230,218,0.1)' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.power_draw}</div>
+                <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.power_draw}</div>
                 <div style={{ ...textPop, fontFamily: 'var(--font-mono)', fontSize: 13, color: psuWatts && estimatedWatts > psuWatts ? ACCENT : INK, fontWeight: 600 }}>
                   {estimatedWatts}W{psuWatts ? ` / ${psuWatts}W` : ''}
                 </div>
@@ -2514,7 +2517,7 @@ function BuildPageContent() {
                       }}
                     />
                   </div>
-                  <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: estimatedWatts > psuWatts ? ACCENT : MUTED, marginTop: 5, marginBottom: 2 }}>
+                  <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: estimatedWatts > psuWatts ? ACCENT : MUTED, marginTop: 5, marginBottom: 2 }}>
                     {estimatedWatts > psuWatts ? t.psu_insufficient : t.psu_ok}
                   </div>
                 </>
@@ -2522,9 +2525,9 @@ function BuildPageContent() {
             </div>
           )}
           <div style={{ padding: 20, borderTop: estimatedWatts > 0 ? 'none' : '0.5px solid rgba(235,230,218,0.1)', marginTop: 'auto' }}>
-            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.build_total}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t.build_total}</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 40, color: INK, fontWeight: 500, margin: '4px 0' }}>{fmt(totalPriceGross)}</div>
-            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 10, color: '#6B7570' }}>{t.vat_included} ({vatRatePct}%)</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570' }}>{t.vat_included} ({vatRatePct}%)</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570', marginBottom: 14 }}>{t.ofComponents(installedCount)}</div>
             <button onClick={handleOrder} style={{ width: '100%', padding: 13, background: ACCENT_FILL, color: '#FDFAF4', border: 'none', borderRadius: 3, fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, cursor: 'pointer', marginBottom: 8 }}>
               {t.continue_benchmarks}
@@ -2559,9 +2562,9 @@ function BuildPageContent() {
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 9, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.build_total}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: MUTED, textTransform: 'uppercase', letterSpacing: 1 }}>{t.build_total}</div>
             <div style={{ ...textPop, fontFamily: 'var(--font-serif)', fontSize: 18, color: INK, fontWeight: 600 }}>{fmt(totalPriceGross)}</div>
-            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 8, color: '#6B7570' }}>{t.vat_included}</div>
+            <div style={{ ...textPop, fontFamily: 'var(--font-sans)', fontSize: 11, color: '#6B7570' }}>{t.vat_included}</div>
           </div>
           <button
             onClick={handleOrder}

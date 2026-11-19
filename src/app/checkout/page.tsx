@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import TransitionLink from '@/components/TransitionLink';
 import type { CompDb } from '@/components/Case3DViewer';
 import SiteNav from '@/components/SiteNav';
+import PageTitle from '@/components/PageTitle';
 import OrderTicket from '@/components/OrderTicket';
 import { normalizeCurrency, type OrderTicketData } from '@/lib/order-ticket';
 import { readJSON, type Currency, type Lang } from '@/lib/gomp-storage';
@@ -274,7 +275,7 @@ const mono: CSSProperties = { fontFamily: 'var(--font-mono)' };
 
 const labelStyle: CSSProperties = {
   ...sans,
-  fontSize: 10,
+  fontSize: 11,
   fontWeight: 600,
   color: MUTED,
   letterSpacing: 2,
@@ -542,6 +543,7 @@ export default function CheckoutPage() {
   return (
     <div style={{ position: 'relative', zIndex: 2, background: PAGE_BG, minHeight: '100vh' }}>
       <SiteNav />
+      <PageTitle>{t.order_summary}</PageTitle>
 
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'stretch' }}>
         {/* Order Summary sidebar */}
@@ -561,7 +563,7 @@ export default function CheckoutPage() {
             flexDirection: 'column',
           }}
         >
-          <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 28 }}>
+          <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 28 }}>
             {t.order_summary}
           </div>
           <div style={{ ...serif, fontSize: isMobile ? 22 : 28, fontWeight: 600, color: INK, lineHeight: 1.15, marginBottom: 6 }}>{t.custom_pc_build}</div>
@@ -573,7 +575,7 @@ export default function CheckoutPage() {
                 style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '12px 0', borderBottom: '0.5px solid rgba(235,230,218,0.08)' }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ ...sans, fontSize: 10, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>{item.category}</div>
+                  <div style={{ ...sans, fontSize: 11, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>{item.category}</div>
                   <div style={{ ...sans, fontSize: 13, color: INK, fontWeight: 400, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {item.name}
                   </div>
@@ -599,7 +601,7 @@ export default function CheckoutPage() {
           </div>
           <div style={{ ...sans, fontSize: 11, color: MUTED, textAlign: 'right', marginBottom: 24 }}>{t.vat_included} ({vatRatePct}%)</div>
           <div style={{ background: 'rgba(63,174,116,0.06)', border: '0.5px solid rgba(63,174,116,0.14)', borderRadius: 2, padding: '14px 16px', marginBottom: 14 }}>
-            <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: ACCENT, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
+            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: ACCENT, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 4 }}>
               {t.estimated_delivery}
             </div>
             <div style={{ ...serif, fontSize: 18, fontWeight: 500, color: INK }}>{deliveryDate}</div>
@@ -640,9 +642,9 @@ export default function CheckoutPage() {
                         transition: 'background 0.3s, border-color 0.3s',
                       }}
                     >
-                      <span style={{ ...mono, fontSize: isMobile ? 8 : 9, fontWeight: 500, color: done || active ? ON_ACCENT : MUTED }}>{n}</span>
+                      <span style={{ ...mono, fontSize: isMobile ? 10 : 11, fontWeight: 500, color: done || active ? ON_ACCENT : MUTED }}>{n}</span>
                     </div>
-                    <span style={{ ...sans, fontSize: isMobile ? 10 : 12, fontWeight: active ? 500 : 400, color: active ? INK : MUTED, letterSpacing: 0.3, whiteSpace: 'nowrap' }}>
+                    <span style={{ ...sans, fontSize: isMobile ? 11 : 12, fontWeight: active ? 500 : 400, color: active ? INK : MUTED, letterSpacing: 0.3, whiteSpace: 'nowrap' }}>
                       {stepLabels[i]}
                     </span>
                   </div>
@@ -660,7 +662,7 @@ export default function CheckoutPage() {
 
               {savedAddresses.length > 0 && (
                 <div style={{ marginBottom: 24 }}>
-                  <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>
+                  <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 }}>
                     {t.saved_addresses}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -683,7 +685,7 @@ export default function CheckoutPage() {
                           }}
                         >
                           <div>
-                            <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 3 }}>
+                            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 3 }}>
                               {a.label}
                             </div>
                             <div style={{ ...sans, fontSize: 13, color: INK }}>
@@ -737,7 +739,7 @@ export default function CheckoutPage() {
                 <Field label={t.zip_postal} value={form.zip} onChange={(v) => setForm((f) => ({ ...f, zip: v }))} />
               </div>
 
-              <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
+              <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
                 {t.shipping_method}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 40 }}>
@@ -939,7 +941,7 @@ export default function CheckoutPage() {
                 </button>
               </div>
 
-              <div style={{ ...sans, fontSize: 10.5, color: MUTED, fontWeight: 300, lineHeight: 1.65, marginTop: 14 }}>
+              <div style={{ ...sans, fontSize: 11, color: MUTED, fontWeight: 300, lineHeight: 1.65, marginTop: 14 }}>
                 {t.submit_note}
               </div>
             </div>

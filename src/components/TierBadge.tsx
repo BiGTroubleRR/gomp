@@ -12,7 +12,7 @@ export default function TierBadge({ tier, small }: { tier?: Tier; small?: boolea
       style={{
         width: sz, height: sz, display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: c.bg, color: c.text, border: `1.5px solid ${c.border}`, borderRadius: 3,
-        fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: small ? 10 : 12,
+        fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: small ? 11 : 12,
       }}
     >
       {tier}

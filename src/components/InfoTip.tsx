@@ -23,7 +23,9 @@ export default function InfoTip({ text, label, size = 14, style }: { text: strin
   const place = useCallback(() => {
     const el = btnRef.current;
     if (!el) return;
-    const r = el.getBoundingClientRect();
+    const rr = el.getBoundingClientRect();
+    // the button is a larger transparent tap area around the visible 14 px icon: position against the icon itself
+    const r = { left: rr.left + 12, right: rr.right - 12, top: rr.top + 12, bottom: rr.bottom - 12, width: rr.width - 24 };
     const width = Math.min(BUBBLE_W, window.innerWidth - MARGIN * 2);
     const left = Math.max(MARGIN, Math.min(r.left + r.width / 2 - width / 2, window.innerWidth - width - MARGIN));
     // Below the icon by default; above it when the icon sits in the lower half of the screen.
@@ -75,13 +77,15 @@ export default function InfoTip({ text, label, size = 14, style }: { text: strin
           if (open) hide();
           else show();
         }}
+        // The button is a 44 px-ish transparent tap area (negative margin keeps the layout unchanged); the visible
+        // round "i" is the inner span.
         style={{
           flexShrink: 0,
-          width: size,
-          height: size,
+          width: size + 24,
+          height: size + 24,
+          margin: -12,
           padding: 0,
-          borderRadius: '50%',
-          border: `1px solid ${open ? ACCENT : BORDER_STRONG}`,
+          border: 0,
           background: 'transparent',
           color: open ? ACCENT : MUTED,
           cursor: 'help',
@@ -89,15 +93,29 @@ export default function InfoTip({ text, label, size = 14, style }: { text: strin
           alignItems: 'center',
           justifyContent: 'center',
           verticalAlign: 'middle',
-          transition: 'color 0.15s, border-color 0.15s',
+          transition: 'color 0.15s',
           textShadow: 'none',
           ...style,
         }}
       >
-        <svg width={size * 0.5} height={size * 0.64} viewBox="0 0 6 9" fill="currentColor" aria-hidden="true">
-          <circle cx="3" cy="1.2" r="1.05" />
-          <rect x="2.1" y="3.2" width="1.8" height="5.2" rx="0.5" />
-        </svg>
+        <span
+          style={{
+            width: size,
+            height: size,
+            borderRadius: '50%',
+            border: `1px solid ${open ? ACCENT : BORDER_STRONG}`,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxSizing: 'border-box',
+            transition: 'border-color 0.15s',
+          }}
+        >
+          <svg width={size * 0.5} height={size * 0.64} viewBox="0 0 6 9" fill="currentColor" aria-hidden="true">
+            <circle cx="3" cy="1.2" r="1.05" />
+            <rect x="2.1" y="3.2" width="1.8" height="5.2" rx="0.5" />
+          </svg>
+        </span>
       </button>
       {open &&
         pos &&

@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useSite } from '@/contexts/SiteContext';
 import TransitionLink from '@/components/TransitionLink';
 import SiteNav from '@/components/SiteNav';
+import PageTitle from '@/components/PageTitle';
 import { navigateWithTransition } from '@/lib/gomp-nav';
 import { readJSON, writeJSON } from '@/lib/gomp-storage';
 import { passmarkLookup, TIER_COLORS } from '@/lib/passmark';
@@ -572,7 +573,7 @@ export default function BenchmarksPage() {
               border: '0.5px solid rgba(235,230,218,0.18)',
               borderRadius: 2,
               ...mono,
-              fontSize: 10,
+              fontSize: 11,
               fontWeight: 600,
               letterSpacing: 0.5,
               color: INK,
@@ -591,7 +592,7 @@ export default function BenchmarksPage() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 9,
+              fontSize: 11,
               fontWeight: 600,
               color: checkColor,
               ...sans,
@@ -607,7 +608,7 @@ export default function BenchmarksPage() {
               display: 'inline-flex',
               width: 'fit-content',
               ...mono,
-              fontSize: 9,
+              fontSize: 11,
               fontWeight: 700,
               color: '#7A5500',
               letterSpacing: 1.5,
@@ -655,7 +656,7 @@ export default function BenchmarksPage() {
           >
             {b.tier}
           </div>
-          <span style={{ ...mono, fontSize: 10, color: MUTED }}>{`~${b.duration} min`}</span>
+          <span style={{ ...mono, fontSize: 11, color: MUTED }}>{`~${b.duration} min`}</span>
         </div>
       </div>
     );
@@ -677,6 +678,7 @@ export default function BenchmarksPage() {
       <div style={{ position: 'relative', zIndex: 2, background: PAGE_BG, minHeight: '100vh' }}>
         {/* Nav */}
         <SiteNav />
+        <PageTitle>{`${t.choose_title_line1} ${t.choose_title_em}`}</PageTitle>
 
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: 'stretch' }}>
           {/* Left sidebar */}
@@ -696,13 +698,13 @@ export default function BenchmarksPage() {
               flexDirection: 'column',
             }}
           >
-            <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 20 }}>
+            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 20 }}>
               {t.your_build}
             </div>
             <div style={{ ...serif, fontSize: 26, fontWeight: 600, color: INK, lineHeight: 1.15, marginBottom: 6 }}>{buildLabel}</div>
             <div style={{ ...sans, fontSize: 12, color: MUTED, fontWeight: 300, marginBottom: 28 }}>{buildSubline}</div>
             <div style={{ height: 0.5, background: 'rgba(235,230,218,0.15)', marginBottom: 28 }} />
-            <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 12 }}>
+            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 12 }}>
               {t.benchmark_suite}
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
@@ -720,7 +722,7 @@ export default function BenchmarksPage() {
                     style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderBottom: '0.5px solid rgba(235,230,218,0.08)' }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ ...sans, fontSize: 10, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>{item.groupLabel}</div>
+                      <div style={{ ...sans, fontSize: 11, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 2 }}>{item.groupLabel}</div>
                       <div style={{ ...sans, fontSize: 13, color: INK, fontWeight: 400, lineHeight: 1.4 }}>{item.name}</div>
                     </div>
                     <div style={{ ...mono, fontSize: 11, color: MUTED, flexShrink: 0, paddingTop: 2, whiteSpace: 'nowrap' }}>{item.durationLabel}</div>
@@ -761,7 +763,7 @@ export default function BenchmarksPage() {
                   <div key={step.num} style={{ display: 'flex', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 8 }}>
                       <div style={{ width: isMobile ? 20 : 22, height: isMobile ? 20 : 22, borderRadius: '50%', background: bgColor, border: `0.5px solid ${borderColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <span style={{ ...mono, fontSize: 9, fontWeight: 500, color: numColor }}>{step.num}</span>
+                        <span style={{ ...mono, fontSize: 11, fontWeight: 500, color: numColor }}>{step.num}</span>
                       </div>
                       <span style={{ ...sans, fontSize: isMobile ? 11 : 12, fontWeight: labelWeight, color: labelColor, letterSpacing: 0.3, whiteSpace: 'nowrap' }}>{step.label}</span>
                     </div>
@@ -794,16 +796,16 @@ export default function BenchmarksPage() {
             </div>
 
             {/* FPS section */}
-            <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 4 }}>{t.section_fps_title}</div>
+            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 4 }}>{t.section_fps_title}</div>
             <div style={{ ...sans, fontSize: 12, color: FAINT, fontWeight: 300, marginBottom: 16 }}>{t.section_fps_desc}</div>
             <div style={{ background: PANEL_BG, border: '0.5px solid rgba(235,230,218,0.14)', borderRadius: 2, padding: isMobile ? '14px 16px' : '16px 18px', marginBottom: 20 }}>
-              <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>{t.fps_source_title}</div>
+              <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 6 }}>{t.fps_source_title}</div>
               <div style={{ ...sans, fontSize: 12, color: MUTED, fontWeight: 300, lineHeight: 1.6, marginBottom: showFpsPicker ? 14 : 0 }}>{fpsSourceDesc}</div>
               {showFpsPicker && (
                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12 }}>
                   {needManualGpu && (
                     <div>
-                      <div style={{ ...sans, fontSize: 9, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>GPU</div>
+                      <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>GPU</div>
                       <select
                         value={manualGpuId}
                         onChange={(e) => setManualGpuId(e.target.value)}
@@ -819,7 +821,7 @@ export default function BenchmarksPage() {
                   )}
                   {needManualCpu && (
                     <div>
-                      <div style={{ ...sans, fontSize: 9, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>CPU</div>
+                      <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 6 }}>CPU</div>
                       <select
                         value={manualCpuId}
                         onChange={(e) => setManualCpuId(e.target.value)}
@@ -839,12 +841,12 @@ export default function BenchmarksPage() {
             <div style={{ ...cardGridStyle, marginBottom: 44 }}>{fpsCards.map(renderCard)}</div>
 
             {/* AAA section */}
-            <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 4 }}>{t.section_aaa_title}</div>
+            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 4 }}>{t.section_aaa_title}</div>
             <div style={{ ...sans, fontSize: 12, color: FAINT, fontWeight: 300, marginBottom: 16 }}>{t.section_aaa_desc}</div>
             <div style={{ ...cardGridStyle, marginBottom: 44 }}>{aaaCards.map(renderCard)}</div>
 
             {/* Synthetic section */}
-            <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 4 }}>{t.section_synth_title}</div>
+            <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2.5, textTransform: 'uppercase', marginBottom: 4 }}>{t.section_synth_title}</div>
             <div style={{ ...sans, fontSize: 12, color: FAINT, fontWeight: 300, marginBottom: 16 }}>{t.section_synth_desc}</div>
             <div style={cardGridStyle}>{synthCards.map(renderCard)}</div>
           </div>

@@ -159,7 +159,7 @@ function SpecRow({
         <span
           style={{
             fontFamily: 'var(--font-sans)',
-            fontSize: 10,
+            fontSize: 11,
             color: '#3FAE74',
             fontWeight: 700,
             textTransform: 'uppercase',
@@ -181,7 +181,7 @@ function SpecRow({
             borderBottom: '0.5px solid rgba(235,230,218,0.07)',
           }}
         >
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: tierColor ?? undefined, fontWeight: 600 }}>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: tierColor ?? undefined, fontWeight: 600 }}>
             PassMark {passmark.score.toLocaleString()}
           </span>
           {passmark.url && (
@@ -189,7 +189,7 @@ function SpecRow({
               href={passmark.url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ fontFamily: 'var(--font-sans)', fontSize: 10, color: '#3FAE74', textDecoration: 'none', fontWeight: 500 }}
+              style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#3FAE74', textDecoration: 'none', fontWeight: 500, padding: '8px 4px', margin: '-8px -4px' }}
             >
               {verifyLabel}
             </a>
@@ -382,7 +382,7 @@ function ShopInner() {
                   <div
                     style={{
                       fontFamily: 'var(--font-sans)',
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: 600,
                       color: '#98A39D',
                       letterSpacing: 2,

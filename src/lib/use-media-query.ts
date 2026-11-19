@@ -29,6 +29,14 @@ export function useIsMobile(): boolean {
   return real || forcePhone;
 }
 
+// Finger instead of mouse: the primary pointer is coarse (phones, tablets), or the phone-view preview is on. Used for
+// wording that differs by input, e.g. the 3D "how to move the model" hint.
+export function useIsTouch(): boolean {
+  const real = useMediaQuery('(pointer: coarse)');
+  const { forcePhone } = useDeviceView();
+  return real || forcePhone;
+}
+
 export function useIsPhone(): boolean {
   return useMediaQuery('(max-width: 480px)');
 }

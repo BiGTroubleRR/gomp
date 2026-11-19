@@ -403,7 +403,7 @@ export default function TermsPage() {
           {/* Table of contents */}
           {!isMobile && (
             <nav style={{ position: 'sticky', top: 'calc(var(--gomp-bar-h) + 24px)' }}>
-              <div style={{ ...sans, fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
+              <div style={{ ...sans, fontSize: 11, fontWeight: 600, color: MUTED, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 16 }}>
                 {t.toc_label}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
