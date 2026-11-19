@@ -57,7 +57,9 @@ type Suggestion = { name: string; passmark?: number; passmarkUrl?: string; specs
 
 // Visual tab order on the Components tab (matches the original site; differs from the
 // shared CATEGORIES export's declaration order, which isn't meant to dictate UI order).
-const CATEGORY_TAB_ORDER: Category[] = ['gpu', 'cpu', 'ram', 'storage', 'mobo', 'cooler', 'psu', 'case', 'fan'];
+// 'fan' is deliberately not a tab any more: customers can't pick fans on /build (SHOW_FAN_CHOOSER is off), so
+// the Fan catalog isn't managed here. The fan rows stay in the database; add 'fan' back here to edit them again.
+const CATEGORY_TAB_ORDER: Category[] = ['gpu', 'cpu', 'ram', 'storage', 'mobo', 'cooler', 'psu', 'case'];
 
 const CAT_LABELS: Record<'en' | 'sk', Record<Category, string>> = {
   en: { gpu: 'GPU', cpu: 'CPU', ram: 'RAM', storage: 'SSD', mobo: 'Motherboard', cooler: 'Cooler', psu: 'PSU', case: 'Case', fan: 'Fan' },
