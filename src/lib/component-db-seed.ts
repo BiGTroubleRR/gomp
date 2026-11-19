@@ -120,6 +120,10 @@ export const CASE_FORM_FACTOR_SUPPORT: Record<string, FormFactor[]> = {
   SFF: ['Mini-ITX'],
 };
 
+// Case sizes the public site does not offer right now. The rows stay in the database (and in Admin) — to bring a
+// size back, just remove it from this list.
+export const HIDDEN_CASE_SIZES: readonly string[] = ['Mini Tower'];
+
 export function caseFitsFormFactor(caseCategory: string | undefined, formFactor: FormFactor | undefined): boolean {
   if (!caseCategory || !formFactor) return true;
   const supported = CASE_FORM_FACTOR_SUPPORT[caseCategory];

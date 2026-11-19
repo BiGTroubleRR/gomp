@@ -19,6 +19,7 @@ import TierBadge from '@/components/TierBadge';
 import {
   defaultComponentDb,
   caseFitsFormFactor,
+  HIDDEN_CASE_SIZES,
   caseHasVerticalGpuMount,
   fitsInCase,
   cpuManufacturer,
@@ -394,6 +395,8 @@ function normalizeComponentDb(raw: ComponentDb): ComponentDb {
   SLOTS.forEach((id) => {
     db[id] = (db[id] || []).filter((c) => c.isLive !== false);
   });
+  // Sizes the site does not offer for now (rows stay in the database, see HIDDEN_CASE_SIZES).
+  db.case = (db.case || []).filter((c) => !c.category || !HIDDEN_CASE_SIZES.includes(c.category));
   db.ram = [...(db.ram || []), ...synthesizeDoubledRamKits(db.ram || [])];
   return db;
 }
@@ -1585,7 +1588,7 @@ function BuildPageContent() {
 
               {activeStep === 'case' && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-                  {t.case_cats.map((c) => (
+                  {t.case_cats.filter((c) => !HIDDEN_CASE_SIZES.includes(c.id)).map((c) => (
                     <FilterChip key={c.id} active={caseCat === c.id} label={c.label} onClick={() => changeCaseCat(c.id)} />
                   ))}
                 </div>
