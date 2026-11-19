@@ -21,14 +21,12 @@ const stars = (r: number) => '★'.repeat(Math.round(r)) + '☆'.repeat(5 - Math
 type L3Hl = { en: [string, string, string]; sk: [string, string, string]; cz: [string, string, string] };
 
 const T = {
-  heroEyebrow: { en: 'Custom gaming PCs', sk: 'Herné PC na mieru', cz: 'Herní PC na míru' },
   heroTitle: { en: ['Build your ', 'Legend.', ''], sk: ['Postav si svoju ', 'Legendu.', ''], cz: ['Postav si svou ', 'Legendu.', ''] } as L3Hl,
   heroSub: { en: 'Dreamed up, tested, yours.', sk: 'Vysnený, testovaný, tvoj.', cz: 'Vysněný, testovaný, tvůj.' },
   pricesFrom: { en: 'Prices from', sk: 'Ceny od', cz: 'Ceny od' },
   cfg3d: { en: 'GOMP 3D Config', sk: 'GOMP 3D Config', cz: 'GOMP 3D Config' },
   prebuilt: { en: 'Prebuilt builds', sk: 'Prebuilt zostavy', cz: 'Prebuilt sestavy' },
   heroAlt: { en: 'Gaming PC with RGB fans', sk: 'Herné PC s RGB ventilátormi', cz: 'Herní PC s RGB ventilátory' },
-  stress: { en: 'Stress-tested', sk: 'Záťažovo testované', cz: 'Zátěžově testované' },
   monster: { en: ['Gaming ', 'beast', ''], sk: ['Herné ', 'monštrum', ''], cz: ['Herní ', 'monstrum', ''] } as L3Hl,
   inclVat: { en: 'incl. VAT', sk: 'vrátane DPH', cz: 'včetně DPH' },
   configureThis: { en: 'Configure this build', sk: 'Nakonfigurovať túto zostavu', cz: 'Nakonfigurovat tuto sestavu' },
@@ -299,7 +297,6 @@ export default function GompHome({ onStartBuilding }: { onStartBuilding: () => v
           <div className="slider">
             <div className={`slide photo${on('hero')}`} style={bg(SLIDE_BG.hero.bg, SLIDE_BG.hero.pos)} role="img" aria-label={s('heroAlt')}>
               <div>
-                <span className="eyebrow">{s('heroEyebrow')}</span>
                 <h1>{em(h('heroTitle'))}</h1>
                 <p>{s('heroSub')}</p>
                 <div className="price">
@@ -316,7 +313,6 @@ export default function GompHome({ onStartBuilding }: { onStartBuilding: () => v
             {flagship && (
               <div className={`slide photo${on('flagship')}`} style={bg(SLIDE_BG.flagship.bg, SLIDE_BG.flagship.pos)}>
                 <div>
-                  <span className="pill">{s('stress')}</span>
                   <h1>{em(h('monster'))}</h1>
                   <p>
                     <span className="mono">{flagship.name}</span> · {flagship.tagline}.
