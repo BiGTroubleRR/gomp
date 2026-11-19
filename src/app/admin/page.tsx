@@ -230,7 +230,7 @@ type Translations = {
   ram_family_label: string; ram_family_help: string;
   ram_tier_help: string; ram_tier_pending: string;
   build_tier_pending: string; build_tier_help: string;
-  fan_size_mm: string; preinstalled_fans: string; preinstalled_fans_help: string; fan_none: string;
+  fan_size_mm: string; 
   dimensions_mm: string;
   case_width_mm: string; case_height_mm: string; case_depth_mm: string;
   max_gpu_length_mm: string; max_cooler_height_mm: string; max_radiator_mm: string; max_psu_length_mm: string;
@@ -322,9 +322,6 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     build_tier_pending: 'Pick components with a set tier to see this build’s computed tier.',
     build_tier_help: 'Computed automatically from the average tier of this build’s own components — not manually editable.',
     fan_size_mm: 'Fan size (mm)',
-    preinstalled_fans: 'Pre-installed fans',
-    preinstalled_fans_help: 'Which fan (if any) ships in each mount out of the box — keeping it is free; swapping to another fan on Build charges that fan’s price.',
-    fan_none: 'None (bundled, unbranded)',
     dimensions_mm: 'Dimensions (mm)',
     case_width_mm: 'Width', case_height_mm: 'Height', case_depth_mm: 'Depth',
     max_gpu_length_mm: 'Max GPU length', max_cooler_height_mm: 'Max cooler height', max_radiator_mm: 'Max radiator size', max_psu_length_mm: 'Max PSU length',
@@ -417,9 +414,6 @@ const TRANSLATIONS: Record<'en' | 'sk', Translations> = {
     build_tier_pending: 'Vyberte komponenty s nastavenou triedou pre zobrazenie vypočítanej triedy tejto zostavy.',
     build_tier_help: 'Vypočítané automaticky z priemernej triedy komponentov tejto zostavy — nedá sa upraviť ručne.',
     fan_size_mm: 'Veľkosť ventilátora (mm)',
-    preinstalled_fans: 'Predinštalované ventilátory',
-    preinstalled_fans_help: 'Ktorý ventilátor (ak nejaký) je v danej pozícii od výroby — ponechanie je zadarmo, výmena za iný ventilátor na stránke Zostaviť účtuje jeho cenu.',
-    fan_none: 'Žiadny (súčasť skrine, bez značky)',
     dimensions_mm: 'Rozmery (mm)',
     case_width_mm: 'Šírka', case_height_mm: 'Výška', case_depth_mm: 'Hĺbka',
     max_gpu_length_mm: 'Max. dĺžka GPU', max_cooler_height_mm: 'Max. výška chladiča', max_radiator_mm: 'Max. veľkosť radiátora', max_psu_length_mm: 'Max. dĺžka zdroja',
@@ -1483,11 +1477,6 @@ export default function AdminPage() {
 
   // ---- derived values ----
 
-  // The case actually being edited (fanMounts/existing dimension data lives on it, not on
-  // compForm) — used by the "Pre-installed fans" section below, which only appears once a case
-  // with real fanMounts positions is being edited (there's no UI here for defining new mount
-  // positions from scratch, only for assigning a fan to ones the case already has).
-  const editingCase = compCat === 'case' && editCompId ? (compDb.case || []).find((c) => c.id === editCompId) : undefined;
   const suggestQ = compForm.name.trim().toLowerCase();
   const existingNames = new Set((compDb[compCat] || []).map((c) => c.name.toLowerCase()));
   const filteredSuggestions = (SUGGESTIONS[compCat] || []).filter((s) => !suggestQ || s.name.toLowerCase().includes(suggestQ));
@@ -3210,45 +3199,6 @@ export default function AdminPage() {
                       onChange={(e) => setCompForm({ ...compForm, psuLengthMm: e.target.value })}
                       style={INPUT_STYLE}
                     />
-                  </div>
-                )}
-                {editingCase && editingCase.fanMounts && editingCase.fanMounts.length > 0 && (
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={LABEL_STYLE}>{t.preinstalled_fans}</div>
-                    <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: '#98A39D', fontWeight: 300, lineHeight: 1.5, marginBottom: 10 }}>
-                      {t.preinstalled_fans_help}
-                    </div>
-                    {editingCase.fanMounts.map((mount) => {
-                      const pre = compForm.fanPreinstalled[mount.position] ?? { fanName: '', count: '0' };
-                      const matchingFans = (compDb.fan || []).filter((f) => f.fanSizeMm != null && mount.sizesMm.includes(f.fanSizeMm));
-                      return (
-                        <div key={mount.position} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '90px 1fr 70px', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#EBE6DA', textTransform: 'capitalize' }}>{mount.position}</div>
-                          <select
-                            value={pre.fanName}
-                            onChange={(e) =>
-                              setCompForm({ ...compForm, fanPreinstalled: { ...compForm.fanPreinstalled, [mount.position]: { ...pre, fanName: e.target.value } } })
-                            }
-                            style={INPUT_STYLE}
-                          >
-                            <option value="">{t.fan_none}</option>
-                            {matchingFans.map((f) => (
-                              <option key={f.id} value={f.name}>{f.name}</option>
-                            ))}
-                          </select>
-                          <input
-                            type="number"
-                            min={0}
-                            max={mount.maxCount}
-                            value={pre.count}
-                            onChange={(e) =>
-                              setCompForm({ ...compForm, fanPreinstalled: { ...compForm.fanPreinstalled, [mount.position]: { ...pre, count: e.target.value } } })
-                            }
-                            style={INPUT_STYLE}
-                          />
-                        </div>
-                      );
-                    })}
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
