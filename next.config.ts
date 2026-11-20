@@ -44,6 +44,8 @@ const csp = [
 ].join('; ');
 
 const nextConfig: NextConfig = {
+  // The invoice PDF reads its Inter font files from disk at runtime; make sure they ship with the API functions.
+  outputFileTracingIncludes: { '/api/**': ['./src/lib/invoice/fonts/**'] },
   // Rewrites named imports from these packages into per-module imports at build time (e.g.
   // `import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'` already does
   // this by hand; this setting gets the same effect automatically for three's and Clerk's own

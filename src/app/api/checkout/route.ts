@@ -18,7 +18,10 @@ import { createAdminClient, MissingServiceRoleKeyError } from '@/lib/supabase/ad
 import { auth } from '@clerk/nextjs/server';
 import { checkRateLimit, clientIpFromHeaders } from '@/lib/rate-limit';
 import { applyVat } from '@/lib/component-db-seed';
-import { sendOrderConfirmationEmail } from '@/lib/email/resend';
+import { sendOrderConfirmationEmail, type EmailAttachment } from '@/lib/email/resend';
+import { isInvoicingEnabled } from '@/lib/invoice/company';
+import { buildInvoiceFromOrder } from '@/lib/invoice/invoice';
+import { renderInvoicePdf } from '@/lib/invoice/pdf';
 import { normalizeCurrency, normalizeLang, type OrderTicketData } from '@/lib/order-ticket';
 
 // Cosmetic, human-friendly handle for the thank-you screen, the confirmation email, and the
@@ -231,7 +234,18 @@ export async function POST(request: Request) {
     // same verified email, so it's useful to a guest as soon as they register/sign in with that address.
     accountUrl: `${siteOrigin(request)}/account`,
   };
-  const emailResult = await sendOrderConfirmationEmail(order);
+  // Proforma invoice (PDF with payment QR) attached to the confirmation — only when INVOICE_ENABLED=true and GOMP's company and bank
+  // details are filled in (src/lib/invoice/company.ts), so a half-empty invoice can never reach a customer.
+  const attachments: EmailAttachment[] = [];
+  if (isInvoicingEnabled()) {
+    try {
+      const invoice = buildInvoiceFromOrder(order, { kind: 'proforma', vatRatePct });
+      attachments.push({ filename: `${invoice.number}.pdf`, content: Buffer.from(await renderInvoicePdf(invoice)) });
+    } catch (e) {
+      console.error('Could not build the proforma invoice PDF:', e);
+    }
+  }
+  const emailResult = await sendOrderConfirmationEmail(order, attachments);
   await supabase
     .from('checkout_intents')
     .update({

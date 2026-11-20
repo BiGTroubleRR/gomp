@@ -31,6 +31,8 @@ import {
 import { ACCENT, ACCENT_DEEP, ACCENT_FILL, ON_ACCENT, BORDER, BORDER_STRONG, GOLD, INK, MUTED, PANEL_BG, SURFACE_ALT } from '@/lib/design-tokens';
 
 const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL || 'GOMP <onboarding@resend.dev>';
+// Czech customers get the confirmation from the Czech domain (both gomp.sk and gomp.cz are verified at Resend).
+const FROM_ADDRESS_CZ = process.env.RESEND_FROM_EMAIL_CZ || (process.env.RESEND_FROM_EMAIL ? 'GOMP <objednavky@gomp.cz>' : FROM_ADDRESS);
 
 let client: Resend | null | undefined;
 
@@ -280,7 +282,9 @@ export function renderOrderConfirmation(d: OrderTicketData): { subject: string; 
 
 export type EmailSendResult = { status: 'sent' } | { status: 'failed'; error: string } | { status: 'skipped' };
 
-export async function sendOrderConfirmationEmail(input: OrderConfirmationInput): Promise<EmailSendResult> {
+export type EmailAttachment = { filename: string; content: Buffer };
+
+export async function sendOrderConfirmationEmail(input: OrderConfirmationInput, attachments: EmailAttachment[] = []): Promise<EmailSendResult> {
   const resend = getClient();
   if (!resend) return { status: 'skipped' };
 
@@ -290,7 +294,7 @@ export async function sendOrderConfirmationEmail(input: OrderConfirmationInput):
     // address, quota exceeded, etc.) — like Supabase's client, it resolves normally with an
     // { error } field instead. The try/catch below only catches real network-level exceptions;
     // the `error` check is what actually catches a rejected send.
-    const { error } = await resend.emails.send({ from: FROM_ADDRESS, to: input.email, subject, html, text });
+    const { error } = await resend.emails.send({ from: input.lang === 'cz' ? FROM_ADDRESS_CZ : FROM_ADDRESS, to: input.email, subject, html, text, ...(attachments.length ? { attachments } : {}) });
     if (error) {
       console.error('Order-confirmation email rejected by Resend:', error.message);
       return { status: 'failed', error: error.message };
