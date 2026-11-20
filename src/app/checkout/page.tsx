@@ -335,32 +335,6 @@ function Field({
 }
 
 
-function EntryOverlay() {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        background: 'radial-gradient(circle at 50% 45%, #1F8A55 0%, #0F5C3A 55%, #0A4129 100%)',
-        pointerEvents: 'none',
-        overflow: 'hidden',
-        animation: 'gompOverlayOut 0.45s 0.05s cubic-bezier(.16,1,.3,1) forwards',
-      }}
-    >
-      <div style={{ position: 'absolute', top: '50%', left: '50%', width: 640, height: 640, margin: '-320px 0 0 -320px', border: '0.5px solid rgba(196,163,90,0.22)', borderRadius: '50%', animation: 'gompRotateSlow 8s linear infinite' }} />
-      <div style={{ position: 'absolute', top: '50%', left: '50%', width: 420, height: 420, margin: '-210px 0 0 -210px', border: '0.5px solid rgba(196,163,90,0.32)', borderRadius: '50%', animation: 'gompRotateSlowRev 6s linear infinite' }} />
-      <div style={{ position: 'absolute', top: '50%', left: '50%', width: 960, height: 960, margin: '-480px 0 0 -480px', background: 'radial-gradient(circle, rgba(196,163,90,0.16) 0%, transparent 60%)', animation: 'gompGlowPulse 2.2s ease-in-out infinite' }} />
-      <div style={{ position: 'absolute', top: '62%', left: '20%', width: 6, height: 6, borderRadius: '50%', background: GOLD, boxShadow: '0 0 10px 3px rgba(196,163,90,0.55)', animation: 'gompEmberRise 1.6s ease-out infinite' }} />
-      <div style={{ position: 'absolute', top: '70%', left: '68%', width: 4, height: 4, borderRadius: '50%', background: '#9FE0BC', boxShadow: '0 0 8px 2px rgba(159,224,188,0.5)', animation: 'gompEmberRise 1.9s 0.2s ease-out infinite' }} />
-      <div style={{ position: 'absolute', top: '55%', left: '80%', width: 5, height: 5, borderRadius: '50%', background: GOLD, boxShadow: '0 0 9px 2px rgba(196,163,90,0.5)', animation: 'gompEmberRise 1.4s 0.35s ease-out infinite' }} />
-      <div style={{ position: 'absolute', top: '78%', left: '40%', width: 3, height: 3, borderRadius: '50%', background: '#9FE0BC', animation: 'gompEmberRise 2.1s 0.1s ease-out infinite' }} />
-      <div style={{ position: 'absolute', top: '32%', left: '14%', width: 4, height: 4, borderRadius: '50%', background: GOLD, boxShadow: '0 0 8px 2px rgba(196,163,90,0.5)', animation: 'gompEmberRise 1.7s 0.5s ease-out infinite' }} />
-      <div style={{ position: 'absolute', top: '28%', left: '86%', width: 5, height: 5, borderRadius: '50%', background: '#9FE0BC', animation: 'gompEmberRise 1.5s 0.25s ease-out infinite' }} />
-    </div>
-  );
-}
-
 export default function CheckoutPage() {
   const { lang, currency, setLang, setCurrency, fmt, vatRatePct } = useSite();
   const t = TRANSLATIONS[lang];
@@ -983,8 +957,6 @@ export default function CheckoutPage() {
           </div>
         )}
       </div>
-
-      <EntryOverlay />
     </div>
   );
 }

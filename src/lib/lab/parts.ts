@@ -6,7 +6,7 @@
 // (a world position from computeLayout), so the scene can fly a part in by moving only its group.
 import * as THREE from 'three';
 import { box, COL, fan, glow, mat } from '@/lib/pc3d';
-import { mmToUnits } from '@/lib/build-scene';
+import { mmToUnits } from '@/lib/build-scene-data';
 import type { FanMountPosition } from '@/lib/component-db-seed';
 import { aioHose, fanTransform, RADIATOR_WIDTH, type CaseSize, type Layout, type V3 } from './layout';
 

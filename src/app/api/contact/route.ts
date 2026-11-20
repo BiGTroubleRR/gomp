@@ -42,16 +42,16 @@ export async function POST(request: Request) {
   const email = (body.email ?? '').trim();
   if (!EMAIL_RE.test(email)) return NextResponse.json({ error: 'A valid email is required.' }, { status: 400 });
 
-  const message = (body.message ?? '').trim();
+  const message = (body.message ?? '').trim().slice(0, 5000);
   if (!message) return NextResponse.json({ error: 'A message is required.' }, { status: 400 });
 
   const { data, error } = await supabase
     .from('contact_messages')
     .insert({
-      first_name: (body.firstName ?? '').trim(),
-      last_name: (body.lastName ?? '').trim(),
-      email,
-      phone: (body.phone ?? '').trim(),
+      first_name: (body.firstName ?? '').trim().slice(0, 100),
+      last_name: (body.lastName ?? '').trim().slice(0, 100),
+      email: email.slice(0, 200),
+      phone: (body.phone ?? '').trim().slice(0, 40),
       message,
     })
     .select('id')

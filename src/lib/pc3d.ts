@@ -198,7 +198,7 @@ export function disposeTree(o: THREE.Object3D) {
 function createStage(width: number, height: number, transparent = false) {
   const camDist = transparent ? 2.15 : 2.0; // live view sits a touch closer
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: transparent, preserveDrawingBuffer: transparent });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.setSize(width, height, false);
   const scene = new THREE.Scene();
   if (!transparent) scene.background = new THREE.Color(COL.bg);
@@ -280,6 +280,7 @@ export function createPc3DViewer(container: HTMLElement): Pc3DViewer {
     st.renderer.setSize(r.width, r.height, false);
     st.camera.aspect = r.width / r.height;
     applyOffset();
+    dirty = true;
   });
   ro.observe(container);
 
@@ -295,6 +296,10 @@ export function createPc3DViewer(container: HTMLElement): Pc3DViewer {
   window.addEventListener('gomp:navstart', onNavStart);
   window.addEventListener('gomp:navend', onNavEnd);
 
+  // Reduced motion: nothing moves on its own, so redraw only when the orbit controls, the size or the model changed.
+  let dirty = true;
+  controls.addEventListener('change', () => { dirty = true; });
+
   let raf = 0, last = performance.now();
   const loop = (t: number) => {
     raf = requestAnimationFrame(loop);
@@ -302,6 +307,8 @@ export function createPc3DViewer(container: HTMLElement): Pc3DViewer {
     last = t;
     if (!visible || paused) return;
     controls.update();
+    if (reduced && !dirty) return;
+    dirty = false;
     const pc = st.getPc();
     if (!reduced && pc) pc.userData.fans.forEach((b) => { b.rotation.z += dt * 7; });
     st.renderer.render(st.scene, st.camera);
@@ -312,8 +319,10 @@ export function createPc3DViewer(container: HTMLElement): Pc3DViewer {
     focus(px) {
       focusPx = px;
       applyOffset();
+      dirty = true;
     },
     show(spec) {
+      dirty = true;
       st.setBuild(spec);
       controls.target.set(0, -0.1, 0);
       controls.update();

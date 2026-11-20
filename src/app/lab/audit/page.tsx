@@ -7,7 +7,7 @@
 // Results are grouped by rule + parts and exposed as window.__auditResult for scripted reading.
 import { useEffect, useState } from 'react';
 import * as THREE from 'three';
-import { caseUnitsFor, dimensionSpecsFor, MM_PER_UNIT, mmToUnits, moboRamSlotCount, ramModuleCount, type DimensionSpec } from '@/lib/build-scene';
+import { caseUnitsFor, dimensionSpecsFor, MM_PER_UNIT, mmToUnits, moboRamSlotCount, ramModuleCount, type DimensionSpec } from '@/lib/build-scene-data';
 import { caseFitsFormFactor, caseHasVerticalGpuMount, fitsInCase, type Component, type ComponentDb, type FanMountPosition, type FormFactor } from '@/lib/component-db-seed';
 import { aioHose, aioHoseDistance, aioHoseReachUnits, computeLayout, fanTransform, DEFAULT_INPUTS, type CaseSize, type PartInputs, type V3 } from '@/lib/lab/layout';
 import { fetchComponentDb } from '@/lib/supabase/components';

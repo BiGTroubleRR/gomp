@@ -12,11 +12,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
-  buildCanMesh,
   DEFAULT_ALIGNMENT_TUNING,
   type AlignmentTuning,
-  CAN_DIAMETER_MM,
-  CAN_HEIGHT_MM,
   caseUnitsFor,
   cm,
   dimensionSpecsFor,
@@ -24,13 +21,12 @@ import {
   mmToUnits,
   moboRamSlotCount,
   ramModuleCount,
-  sceneLabelFont,
   SIZES,
   SLOTS,
   type CompId,
   type DimensionSpec,
-  type SceneCallbacks,
-} from '@/lib/build-scene';
+} from '@/lib/build-scene-data';
+import { buildCanMesh, CAN_DIAMETER_MM, CAN_HEIGHT_MM, sceneLabelFont, type SceneCallbacks } from '@/lib/lab/scene-can';
 import type { Component, FanMountPosition } from '@/lib/component-db-seed';
 import { COL, disposeTree } from '@/lib/pc3d';
 import { radiatorMountsFor } from './fit';
@@ -655,6 +651,9 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
   }
 
   // ---- completion: swing to the front view, spin up, then ease back to the idle rotation ----------------
+  let completionRaf = 0;
+  let completionDecay: ReturnType<typeof setInterval> | undefined;
+  let completionEnd: ReturnType<typeof setTimeout> | undefined;
   function triggerCompletion() {
     completionRunning = true;
     controls.autoRotate = false;
@@ -672,20 +671,20 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
       camera.lookAt(0, 0.2, 0);
       controls.update();
       if (p < 1) {
-        requestAnimationFrame(align);
+        completionRaf = requestAnimationFrame(align);
         return;
       }
       controls.enabled = true;
       controls.autoRotate = true;
       controls.autoRotateSpeed = 4.2;
       let steps = 0;
-      const decay = setInterval(() => {
+      const decay = (completionDecay = setInterval(() => {
         steps++;
         const st = Math.min(1, steps * 0.035);
         controls.autoRotateSpeed = 4.2 * Math.pow(1 - st, 2) + 0.4;
         if (st >= 1) clearInterval(decay);
-      }, 80);
-      setTimeout(() => {
+      }, 80));
+      completionEnd = setTimeout(() => {
         completionRunning = false;
         cb.onCompletionEnd?.();
       }, 4200);
@@ -720,7 +719,10 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
   // Parts glow via an inflated back-face hull (a clean rim, no postprocessing); instanced meshes (fan blades,
   // cooler fins) copy their instance matrices. The case uses its edge wireframe — wrapping large panels the
   // same way would read as the whole side lighting up.
+  let outlinedId: CompId | null = null;
   function setHoverOutline(id: CompId | null) {
+    if (id === outlinedId) return;
+    outlinedId = id;
     hoverClear();
     if (!id) return;
     const roots: THREE.Object3D[] = id === 'case' ? [fans, ...shell.children.filter((c) => c.type === 'Group')] : slots[id]?.group.visible ? [slots[id].group] : [];
@@ -895,6 +897,9 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
     },
     dispose() {
       running = false;
+      cancelAnimationFrame(completionRaf);
+      clearInterval(completionDecay);
+      clearTimeout(completionEnd);
       space.dispose();
       resizeObserver.disconnect();
       visibilityObserver.disconnect();
@@ -908,6 +913,7 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
       });
       controls.dispose();
       renderer.dispose();
+      renderer.forceContextLoss(); // free the GPU context now; browsers only allow ~16 and the page is revisited often
       renderer.domElement.remove();
     },
   };

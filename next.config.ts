@@ -57,12 +57,18 @@ const nextConfig: NextConfig = {
   // URL (see src/app/api/admin/upload-image/route.ts's getPublicUrl call) with real resizing/
   // format negotiation, instead of every page shipping the original uploaded file untouched.
   images: {
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: 'ojosovibspcbmwveoled.supabase.co', pathname: '/storage/v1/object/public/**' },
     ],
   },
   async headers() {
+    // Static brand/photo/font files: cached for a day and refreshed in the background for a week (no revalidation request per visit).
+    const assetCache = [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }];
     return [
+      { source: '/images/:path*', headers: assetCache },
+      { source: '/brand/:path*', headers: assetCache },
+      { source: '/fonts/:path*', headers: assetCache },
       {
         source: '/:path*',
         headers: [

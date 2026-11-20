@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
-import type { BuildScene, CompId } from '@/lib/build-scene';
+import type { BuildSceneV2 as BuildScene } from '@/lib/lab/scene-v2';
+import type { CompId } from '@/lib/build-scene-data';
 import type { Component } from '@/lib/component-db-seed';
 import { INK, MUTED, PANEL_BG, ACCENT } from '@/lib/design-tokens';
 

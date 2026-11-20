@@ -58,7 +58,12 @@ export function isSellerComplete(s: InvoiceSeller = SELLER): boolean {
 // AND the seller details above are complete. It is off by default, so nothing can go out by accident.
 export function isInvoicingEnabled(): boolean {
   if ((process.env.INVOICE_ENABLED ?? '').trim().toLowerCase() !== 'true') return false;
-  return isInvoiceTestMode() || isSellerComplete();
+  if (isInvoiceTestMode()) return true;
+  // Real (non-test) invoices additionally need INVOICE_REAL_APPROVED=true: set it only after (1) invoice numbers come from a
+  // gap-free series in the database (invoice.ts provisionalInvoiceNumber is NOT unique enough) and (2) the accountant has confirmed
+  // the VAT rate to use for Slovak and Czech customers (checkout currently passes one store-wide rate to every invoice).
+  const approved = (process.env.INVOICE_REAL_APPROVED ?? '').trim().toLowerCase() === 'true';
+  return approved && isSellerComplete();
 }
 
 // ---- Test mode ------------------------------------------------------------------------------------------------------

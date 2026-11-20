@@ -51,6 +51,7 @@ const PROMO_CODE = 'gomp2026';
 const PROMO_DISCOUNT_RATE = 0.05;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_ITEMS = 20; // a PC has about 8 parts; anything much bigger is not a real order
 
 type CheckoutRequestBody = {
   userId?: string | null;
@@ -114,8 +115,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid shipping method.' }, { status: 400 });
   }
   const submittedItems = Array.isArray(body.buildItems) ? body.buildItems : [];
-  if (submittedItems.length === 0) {
-    return NextResponse.json({ error: 'No build items submitted.' }, { status: 400 });
+  if (submittedItems.length === 0 || submittedItems.length > MAX_ITEMS) {
+    return NextResponse.json({ error: 'Invalid number of build items.' }, { status: 400 });
   }
 
   // Reads the live shared VAT rate; falls back to the standard default if the settings row is
@@ -141,16 +142,19 @@ export async function POST(request: Request) {
     (catalogRows ?? []).map((r) => [r.name, { price: Number(r.price), sitePrice: r.site_price != null ? Number(r.site_price) : null }]),
   );
 
-  const buildItems = submittedItems.map((item) => {
-    const name = (item.name ?? '').trim();
+  // Every price comes from the live catalog. A name that is not in the catalog (renamed, removed, or invented) is refused instead of
+  // falling back to the price the browser sent, which could be anything, even negative.
+  const buildItems: { category: string; name: string; price_eur: number }[] = [];
+  for (const item of submittedItems) {
+    const name = (item.name ?? '').trim().slice(0, 200);
     const catalogEntry = catalogByName.get(name);
-    const priceEur = catalogEntry ? catalogEntry.sitePrice ?? applyVat(catalogEntry.price, vatRatePct) : Number(item.priceEur) || 0;
-    return {
-      category: (item.category ?? '').trim(),
+    if (!catalogEntry) return NextResponse.json({ error: 'Unknown component in the build.', item: name }, { status: 400 });
+    buildItems.push({
+      category: (item.category ?? '').trim().slice(0, 60),
       name,
-      price_eur: priceEur,
-    };
-  });
+      price_eur: catalogEntry.sitePrice ?? applyVat(catalogEntry.price, vatRatePct),
+    });
+  }
 
   // Every figure from here down is already gross (VAT-inclusive, per-item overrides respected) —
   // summed directly rather than net-totaled-then-VAT-ed-once, since that would silently ignore any

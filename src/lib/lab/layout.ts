@@ -2,7 +2,7 @@
 // real-mm dimensions, returns where every part sits. No three.js / WebGL here, so it is easy to reason
 // about and to check. Frame (same as the production scene): X points from the motherboard tray (-X, the
 // solid side) toward the glass panel (+X); Y is up; the case front is -Z and the rear (I/O side) is +Z.
-import { DEFAULT_ALIGNMENT_TUNING, mmToUnits, type AlignmentTuning, type CompId, type DimensionSpec } from '@/lib/build-scene';
+import { DEFAULT_ALIGNMENT_TUNING, mmToUnits, type AlignmentTuning, type CompId, type DimensionSpec } from '@/lib/build-scene-data';
 import {
   GPU_HEIGHT_MM,
   MOBO_FORM_FACTOR_SIZE_MM,

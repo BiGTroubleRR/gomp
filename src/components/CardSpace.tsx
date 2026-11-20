@@ -15,7 +15,7 @@ type Shot = { x: number; y: number; life: number };
 const PALETTE = ['223,232,255', '223,232,255', '223,232,255', '170,200,255', '255,236,200', '190,255,215'];
 const FADE_MS = 320;
 
-export default function CardSpace({ color, active }: { color: string; active: boolean }) {
+export default function CardSpace({ color, active, maxFps }: { color: string; active: boolean; maxFps?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const ctl = useRef<{ start: () => void; stop: () => void } | null>(null);
 
@@ -35,6 +35,7 @@ export default function CardSpace({ color, active }: { color: string; active: bo
     let raf = 0;
     let running = false;
     let last = 0;
+    const minGap = maxFps ? 1000 / maxFps - 2 : 0;
 
     const seed = () => {
       const n = Math.max(55, Math.min(130, Math.round((w * h) / 4200)));
@@ -103,6 +104,10 @@ export default function CardSpace({ color, active }: { color: string; active: bo
     };
 
     const frame = (now: number) => {
+      if (minGap && now - last < minGap) {
+        raf = requestAnimationFrame(frame); // too soon: skip this frame (admin backdrop runs at ~24 fps)
+        return;
+      }
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       t += dt;
@@ -164,7 +169,7 @@ export default function CardSpace({ color, active }: { color: string; active: bo
       cancelAnimationFrame(raf);
       ro.disconnect();
     };
-  }, [color]);
+  }, [color, maxFps]);
 
   // run only while hovered (plus the fade-out)
   useEffect(() => {

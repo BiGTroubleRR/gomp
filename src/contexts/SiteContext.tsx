@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { Currency, Lang, clearStoredLang, fmtPrice, getCurrency, getLang, langRedirectUrl, setCurrency as persistCurrency, setLang as persistLang } from '@/lib/gomp-storage';
 import { applyVat } from '@/lib/component-db-seed';
-import { DEFAULT_VAT_RATE_PCT, fetchStoreSettings, subscribeStoreSettings } from '@/lib/supabase/store-settings';
+import { DEFAULT_VAT_RATE_PCT, fetchStoreSettings } from '@/lib/supabase/store-settings';
 
 type SiteContextValue = {
   lang: Lang;
@@ -53,14 +53,8 @@ export function SiteProvider({ children, initialLang = 'sk' }: { children: React
     fetchStoreSettings().then((s) => {
       if (!cancelled) setVatRatePct(s.vatRatePct);
     });
-    const unsubscribe = subscribeStoreSettings(() => {
-      fetchStoreSettings().then((s) => {
-        if (!cancelled) setVatRatePct(s.vatRatePct);
-      });
-    });
     return () => {
       cancelled = true;
-      unsubscribe();
     };
   }, []);
 

@@ -14,7 +14,7 @@
 'use client';
 
 import { createClient } from './client';
-import type { AlignmentTuning } from '@/lib/build-scene';
+import type { AlignmentTuning } from '@/lib/build-scene-data';
 import type { FormFactor } from '@/lib/component-db-seed';
 
 export type AlignmentTuningConfig = {

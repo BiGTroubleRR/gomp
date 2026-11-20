@@ -4,11 +4,11 @@
 // The checkout stores amounts in CZK, gross (VAT included); EUR is derived at the site's reference
 // rate (1 € = 24.30 Kč, see fmtPrice in gomp-storage.ts). Invoices are issued in the currency the
 // customer saw: EUR for Slovak customers, CZK for Czech ones.
-import type { Currency, Lang } from '@/lib/gomp-storage';
+import { CZK_PER_EUR, type Currency, type Lang } from '@/lib/gomp-storage';
 import { type OrderTicketData, TICKET_T } from '@/lib/order-ticket';
 import { type InvoiceSeller, SELLER } from './company';
 
-export const EUR_RATE = 24.3;
+export const EUR_RATE = CZK_PER_EUR; // same rate as the shop (gomp-storage.ts), so invoice and site never disagree
 
 // 'proforma' = zálohová faktúra (advance / proforma invoice, no tax document). 'invoice' = daňový doklad.
 export type InvoiceKind = 'proforma' | 'invoice';

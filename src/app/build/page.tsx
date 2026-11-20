@@ -58,7 +58,7 @@ import {
   dimensionSpecsFor,
   type CompId,
 } from '@/lib/build-scene-data';
-import type { BuildScene } from '@/lib/build-scene';
+import type { BuildSceneV2 as BuildScene } from '@/lib/lab/scene-v2';
 import { useIsMobile, useIsTouch } from '@/lib/use-media-query';
 import { fetchAlignmentTuningConfig, subscribeAlignmentTuning, resolveAlignmentTuning, type AlignmentTuningConfig } from '@/lib/supabase/alignment-tuning';
 import { PAGE_BG as BG, PANEL_BG as PANEL, INK, MUTED, GOLD, ACCENT, ACCENT_FILL, LIGHTBOX_BACKDROP } from '@/lib/design-tokens';
@@ -569,7 +569,7 @@ function BuildPageContent() {
   // can still be resolved and shown (flagged unavailable) instead of silently falling back to an
   // unrelated part. See findComp, resolveAnyComp, partAvailability, and the prebuilt-hydration
   // effect below — this is the fix for the "Configure opens a different GPU" bug.
-  const [rawComponentDb, setRawComponentDb] = useState<ComponentDb>(defaultComponentDb());
+  const [rawComponentDb, setRawComponentDb] = useState<ComponentDb>(defaultComponentDb);
   const [selected, setSelected] = useState<Record<CompId, boolean>>({} as Record<CompId, boolean>);
   const [selections, setSelections] = useState<Record<CompId, string>>({} as Record<CompId, string>);
   const [caseCat, setCaseCat] = useState('Mid Tower');
@@ -682,11 +682,12 @@ function BuildPageContent() {
     if (!container) return;
     let cancelled = false;
     let scene: BuildScene | null = null;
+    const completionTimers: ReturnType<typeof setTimeout>[] = [];
     const callbacks = {
       onCompletionStart: () => {
         setCompletionRunning(true);
-        setTimeout(() => setShowComplete(true), 680);
-        setTimeout(() => setShowComplete(false), 680 + 4200);
+        completionTimers.push(setTimeout(() => setShowComplete(true), 680));
+        completionTimers.push(setTimeout(() => setShowComplete(false), 680 + 4200));
       },
       onCompletionEnd: () => setCompletionRunning(false),
     };
@@ -714,6 +715,7 @@ function BuildPageContent() {
       .catch((err) => console.error('3D scene failed to load', err));
     return () => {
       cancelled = true;
+      completionTimers.forEach(clearTimeout);
       setSceneReady(false);
       scene?.dispose();
       sceneRef.current = null;
@@ -1294,9 +1296,17 @@ function BuildPageContent() {
       const rect = viewportRef.current?.getBoundingClientRect();
       if (!rect) return;
       const id = sceneRef.current?.pickComponentAt(clientX, clientY) ?? null;
-      setHoverId(id);
+      setHoverId(id); // React skips the render when the id is unchanged
       sceneRef.current?.setHoverOutline(id);
-      setHoverPos({ x: clientX - rect.left, y: clientY - rect.top, w: rect.width, h: rect.height });
+      // The tooltip position only matters while a part is hovered, and an 8 px step is invisible: over empty space and for tiny
+      // moves no state changes, so the 2 800-line page is not re-rendered 60 times a second.
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      setHoverPos((prev) => {
+        if (!id) return null;
+        if (prev && Math.abs(prev.x - x) < 8 && Math.abs(prev.y - y) < 8) return prev;
+        return { x, y, w: rect.width, h: rect.height };
+      });
     });
   }
 
@@ -1429,8 +1439,16 @@ function BuildPageContent() {
 
   function handleOrder() {
     if (ordering) return;
-    writeJSON('gomp_build', { selected, selections, compDb, totalPrice, fanConfig });
-    writeJSON('gomp_cart_summary', summarizeBuildForCart({ selected, selections, compDb }));
+    // Checkout, benchmarks and the preview only ever look up the SELECTED part of each category (by name), so that is all we save.
+    // Saving the whole catalog (~800 parts) risked silently hitting the browser's storage limit and losing the order.
+    const savedDb = {} as ComponentDb;
+    (Object.keys(compDb) as (keyof ComponentDb)[]).forEach((cat) => {
+      const list = compDb[cat] || [];
+      const comp = selected[cat as CompId] ? list.find((c) => c.name === selections[cat as CompId]) || list[0] : undefined;
+      savedDb[cat] = comp ? [comp] : [];
+    });
+    writeJSON('gomp_build', { selected, selections, compDb: savedDb, totalPrice, fanConfig });
+    writeJSON('gomp_cart_summary', summarizeBuildForCart({ selected, selections, compDb: savedDb }));
     setOrdering(true);
     // two frames: the "preparing order" overlay is painted first, then the whole page (overlay included) slides away
     requestAnimationFrame(() =>

@@ -732,7 +732,7 @@ export default function AdminPage() {
 
   const [tab, setTab] = useState<'builds' | 'components' | 'requests' | 'gbb' | 'contact' | 'customerGomps' | 'alignment'>('requests');
   const [builds, setBuilds] = useState<Build[]>([]);
-  const [compDb, setCompDb] = useState<ComponentDb>(defaultComponentDb());
+  const [compDb, setCompDb] = useState<ComponentDb>(defaultComponentDb);
 
   const [customerGomps, setCustomerGomps] = useState<CustomerBuild[]>([]);
   const [showCgForm, setShowCgForm] = useState(false);
@@ -1772,7 +1772,7 @@ export default function AdminPage() {
             background: '#070B09', pointerEvents: 'none',
           }}
         >
-          <CardSpace color="#1F8A55" active />
+          <CardSpace color="#1F8A55" active maxFps={24} />
         </div>
         <div style={{ flex: 1, position: 'relative', zIndex: 1, background: 'transparent', overflowY: 'auto', minHeight: 'calc(100vh - 54px)' }}>
           {tab === 'requests' && (

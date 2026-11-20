@@ -358,26 +358,6 @@ function EmberRings() {
 
 const overlayBg = 'radial-gradient(circle at 50% 45%, #1F8A55 0%, #0F5C3A 55%, #0A4129 100%)';
 
-function EntryOverlay() {
-  // Fades out once on mount and stays invisible (pointer-events:none throughout) — the
-  // receiving half of the Build page's "Booting up your legend..." exit transition.
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        background: overlayBg,
-        pointerEvents: 'none',
-        overflow: 'hidden',
-        animation: 'gompOverlayOut 0.45s 0.05s cubic-bezier(.16,1,.3,1) forwards',
-      }}
-    >
-      <EmberRings />
-    </div>
-  );
-}
-
 function ExitOverlay({ label }: { label: string }) {
   return (
     <div
@@ -675,7 +655,6 @@ export default function BenchmarksPage() {
 
   return (
     <>
-      <EntryOverlay />
       <div style={{ position: 'relative', zIndex: 2, background: PAGE_BG, minHeight: '100vh' }}>
         {/* Nav */}
         <SiteNav />

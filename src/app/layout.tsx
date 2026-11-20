@@ -18,7 +18,7 @@ import PhoneFrame from '@/components/PhoneFrame';
 // ~140 call sites and the design tokens read them — but globals.css points both at --font-sans, so
 // headings, logos, labels and numbers all render in DM Sans.
 const dmSans = DM_Sans({
-  subsets: ['latin'],
+  subsets: ['latin', 'latin-ext'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-sans',
   display: 'swap',

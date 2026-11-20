@@ -61,13 +61,13 @@ export async function POST(request: Request) {
     .from('gbb_requests')
     .insert({
       clerk_user_id: clerkUserId,
-      first_name: (body.firstName ?? '').trim(),
-      last_name: (body.lastName ?? '').trim(),
+      first_name: (body.firstName ?? '').trim().slice(0, 100),
+      last_name: (body.lastName ?? '').trim().slice(0, 100),
       email,
-      phone: (body.phone ?? '').trim(),
+      phone: (body.phone ?? '').trim().slice(0, 40),
       budget_eur: budgetEur,
       use_case: (body.useCase ?? '').trim(),
-      notes: (body.notes ?? '').trim(),
+      notes: (body.notes ?? '').trim().slice(0, 5000),
       lang: body.lang === 'sk' ? 'sk' : body.lang === 'cz' ? 'cz' : 'en',
     })
     .select('id')

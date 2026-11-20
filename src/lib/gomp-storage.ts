@@ -72,9 +72,10 @@ export function setCurrency(currency: Currency) {
 // number and currency symbol are joined with a non-breaking space, not a plain one, so the pair
 // can never wrap onto separate lines at narrow widths (a plain space let the symbol drop onto
 // its own line mid-resize, which read as the currency sign "jumping around").
+export const CZK_PER_EUR = 24.3;
 export function fmtPrice(czk: number, currency: Currency): string {
   if (currency === 'eur') {
-    const eur = Math.round(czk / 24.3);
+    const eur = Math.round(czk / CZK_PER_EUR);
     return eur.toLocaleString('sk-SK') + ' €';
   }
   return czk.toLocaleString('cs-CZ') + ' Kč';
