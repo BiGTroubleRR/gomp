@@ -80,10 +80,6 @@ export function afterNavTransition(timeoutMs = 900): Promise<void> {
   });
 }
 
-export function isNavigating() {
-  return navigating;
-}
-
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 

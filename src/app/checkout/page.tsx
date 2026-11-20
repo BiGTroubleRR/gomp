@@ -146,6 +146,7 @@ const TRANSLATIONS = {
     promo_success: 'GOMP2026: 5% discount applied',
     consent_label: 'You may email me about this order and when GOMP starts selling.',
     consent_required: 'Please confirm we may contact you.',
+    no_build_error: 'Build your PC in the configurator first, then you can place the order.',
     email_required: 'Please enter an email address so we can reach you.',
     back: 'Back',
     processing: 'Submitting…',
@@ -199,6 +200,7 @@ const TRANSLATIONS = {
     promo_success: 'GOMP2026: uplatnená zľava 5 %',
     consent_label: 'Môžete mi napísať o tejto objednávke a keď GOMP začne predávať.',
     consent_required: 'Potvrďte, prosím, že vás môžeme kontaktovať.',
+    no_build_error: 'Najprv si poskladajte PC v konfigurátore, potom môžete objednať.',
     email_required: 'Zadajte, prosím, e-mail, aby sme vás vedeli kontaktovať.',
     back: 'Späť',
     processing: 'Odosiela sa…',
@@ -252,6 +254,7 @@ const TRANSLATIONS = {
     promo_success: 'GOMP2026: uplatněna sleva 5 %',
     consent_label: 'Můžete mi napsat ohledně této objednávky a až GOMP začne prodávat.',
     consent_required: 'Potvrďte prosím, že vás můžeme kontaktovat.',
+    no_build_error: 'Nejdříve si sestavte PC v konfigurátoru, poté můžete objednat.',
     email_required: 'Zadejte prosím e-mail, abychom vás mohli kontaktovat.',
     back: 'Zpět',
     processing: 'Odesílá se…',
@@ -446,6 +449,10 @@ export default function CheckoutPage() {
     }
     if (!consent) {
       setOrderError(t.consent_required);
+      return;
+    }
+    if (!build) {
+      setOrderError(t.no_build_error); // the page shows demo items without a saved build; the server only sells real catalog parts
       return;
     }
     setPlacing(true);

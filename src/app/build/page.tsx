@@ -385,6 +385,7 @@ function synthesizeDoubledRamKits(ramList: Component[]): Component[] {
         // rows need distinct names or they'd resolve to the same catalog entry once picked.
         name: `${base.name} (2× kits)`,
         price: Math.round(base.price * 2),
+        sitePrice: base.sitePrice != null ? base.sitePrice * 2 : undefined, // an override is per kit: the bundle holds two
         specs,
         // Recomputed against the doubled specs (4 sticks, not 2) rather than inherited from
         // base — tier now depends on stick count, so a synthetic 4-stick bundle should get the

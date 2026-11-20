@@ -693,7 +693,9 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
   }
 
   // ---- picking / hover outline -----------------------------------------------------------------------
+  let outlinedId: CompId | null = null; // the part that currently has the hover outline (declared before hoverClear: the first build calls it)
   function hoverClear() {
+    outlinedId = null;
     outline.children.slice().forEach((c) => outline.remove(c)); // geometries are shared with the real meshes (hull) or owned by the edge lines
     edgeGeoms.splice(0).forEach((g) => g.dispose());
   }
@@ -719,11 +721,10 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
   // Parts glow via an inflated back-face hull (a clean rim, no postprocessing); instanced meshes (fan blades,
   // cooler fins) copy their instance matrices. The case uses its edge wireframe — wrapping large panels the
   // same way would read as the whole side lighting up.
-  let outlinedId: CompId | null = null;
   function setHoverOutline(id: CompId | null) {
     if (id === outlinedId) return;
-    outlinedId = id;
     hoverClear();
+    outlinedId = id;
     if (!id) return;
     const roots: THREE.Object3D[] = id === 'case' ? [fans, ...shell.children.filter((c) => c.type === 'Group')] : slots[id]?.group.visible ? [slots[id].group] : [];
     roots.forEach((root) => {

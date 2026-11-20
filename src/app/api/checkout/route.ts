@@ -20,6 +20,7 @@ import { checkRateLimit, clientIpFromHeaders } from '@/lib/rate-limit';
 import { applyVat } from '@/lib/component-db-seed';
 import { sendOrderConfirmationEmail, type EmailAttachment } from '@/lib/email/resend';
 import { TEST_SELLER, isInvoiceTestMode, isInvoicingEnabled } from '@/lib/invoice/company';
+import { catalogGrossPrice } from '@/lib/checkout-pricing';
 import { buildInvoiceFromOrder } from '@/lib/invoice/invoice';
 import { renderInvoicePdf } from '@/lib/invoice/pdf';
 import { normalizeCurrency, normalizeLang, type OrderTicketData } from '@/lib/order-ticket';
@@ -147,13 +148,9 @@ export async function POST(request: Request) {
   const buildItems: { category: string; name: string; price_eur: number }[] = [];
   for (const item of submittedItems) {
     const name = (item.name ?? '').trim().slice(0, 200);
-    const catalogEntry = catalogByName.get(name);
-    if (!catalogEntry) return NextResponse.json({ error: 'Unknown component in the build.', item: name }, { status: 400 });
-    buildItems.push({
-      category: (item.category ?? '').trim().slice(0, 60),
-      name,
-      price_eur: catalogEntry.sitePrice ?? applyVat(catalogEntry.price, vatRatePct),
-    });
+    const price = catalogGrossPrice(name, catalogByName, vatRatePct);
+    if (price == null) return NextResponse.json({ error: 'Unknown component in the build.', item: name }, { status: 400 });
+    buildItems.push({ category: (item.category ?? '').trim().slice(0, 60), name, price_eur: price });
   }
 
   // Every figure from here down is already gross (VAT-inclusive, per-item overrides respected) —

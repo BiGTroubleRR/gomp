@@ -39,20 +39,6 @@ export async function fetchStoreSettings(): Promise<StoreSettings> {
   return { vatRatePct: typeof raw?.vatRatePct === 'number' ? raw.vatRatePct : DEFAULT_VAT_RATE_PCT };
 }
 
-// Fires on any change to the row (there's only ever one), by anyone — same no-payload,
-// refetch-on-any-event shape as subscribeComponents/subscribeAlignmentTuning. Returns an
-// unsubscribe function.
-export function subscribeStoreSettings(onChange: () => void): () => void {
-  const supabase = createClient();
-  const channel = supabase
-    .channel('store-settings-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'store_settings' }, onChange)
-    .subscribe();
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}
-
 export async function saveStoreSettings(settings: StoreSettings): Promise<void> {
   const res = await fetch('/api/admin/store-settings', {
     method: 'PUT',
