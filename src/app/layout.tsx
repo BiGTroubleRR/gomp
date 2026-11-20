@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { DM_Sans } from 'next/font/google';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Analytics } from '@vercel/analytics/next';
-import { ClerkProvider } from '@clerk/nextjs';
+import ClerkThemeProvider from '@/components/ClerkThemeProvider';
 import './globals.css';
 import { SiteProvider } from '@/contexts/SiteContext';
 import { langForHost } from '@/lib/gomp-storage';
@@ -59,16 +59,17 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html lang={lang === 'cz' ? 'cs' : 'sk'} className={dmSans.variable}>
       <body>
-        <ClerkProvider>
-          <SiteProvider initialLang={lang ?? 'sk'}>
+        {/* SiteProvider wraps Clerk so the sign-in window can follow the site's language */}
+        <SiteProvider initialLang={lang ?? 'sk'}>
+          <ClerkThemeProvider>
             <AuthProvider>
               <DeviceViewProvider>
                 <PhoneFrame>{children}</PhoneFrame>
                 <CursorDustMount />
               </DeviceViewProvider>
             </AuthProvider>
-          </SiteProvider>
-        </ClerkProvider>
+          </ClerkThemeProvider>
+        </SiteProvider>
         <SpeedInsights />
         <Analytics />
       </body>
