@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { Currency, Lang, fmtPrice, getCurrency, getLang, setCurrency as persistCurrency, setLang as persistLang } from '@/lib/gomp-storage';
+import { Currency, Lang, clearStoredLang, fmtPrice, getCurrency, getLang, langRedirectUrl, setCurrency as persistCurrency, setLang as persistLang } from '@/lib/gomp-storage';
 import { applyVat } from '@/lib/component-db-seed';
 import { DEFAULT_VAT_RATE_PCT, fetchStoreSettings, subscribeStoreSettings } from '@/lib/supabase/store-settings';
 
@@ -56,6 +56,13 @@ export function SiteProvider({ children, initialLang = 'sk' }: { children: React
       lang,
       currency,
       setLang: (l: Lang) => {
+        // gomp.sk <-> gomp.cz: picking the other country's language moves to that domain, same page.
+        const url = langRedirectUrl(l);
+        if (url) {
+          clearStoredLang();
+          window.location.assign(url);
+          return;
+        }
         persistLang(l);
         setLangState(l);
       },

@@ -23,6 +23,28 @@ export function getLang(): Lang {
   }
 }
 
+// On the two storefront domains, picking Czech or Slovak moves the visitor to the matching domain (gomp.cz / gomp.sk),
+// on the same page. Returns the URL to go to, or null when no move is needed (English, an unrelated host such as the
+// vercel.app address or localhost, or already on the right domain). The www prefix of the current host is kept.
+export function langRedirectUrl(lang: Lang): string | null {
+  if (typeof window === 'undefined') return null;
+  const host = window.location.hostname.toLowerCase();
+  const base = host.replace(/^www\./, '');
+  if (base !== 'gomp.cz' && base !== 'gomp.sk') return null;
+  const wanted = lang === 'cz' ? 'gomp.cz' : lang === 'sk' ? 'gomp.sk' : null;
+  if (!wanted || wanted === base) return null;
+  const { protocol, pathname, search, hash } = window.location;
+  return `${protocol}//${host.startsWith('www.') ? 'www.' : ''}${wanted}${pathname}${search}${hash}`;
+}
+
+// Forget a stored choice (used just before moving to the other domain, so the old domain does not keep a language that
+// no longer matches it).
+export function clearStoredLang() {
+  try {
+    localStorage.removeItem(LANG_KEY);
+  } catch {}
+}
+
 export function setLang(lang: Lang) {
   try {
     localStorage.setItem(LANG_KEY, lang);

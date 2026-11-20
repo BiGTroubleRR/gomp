@@ -22,24 +22,24 @@ const NAV: ({ href: string } & L3)[] = [
 ];
 
 const CATS: ({ href: string; tag: string } & L3)[] = [
-  { href: '/shop?cat=flagship', tag: 'S', en: 'Flagship', sk: 'Vlajkové', cz: 'Vlajkové' },
-  { href: '/shop?cat=performance', tag: 'A', en: 'Performance', sk: 'Výkonné', cz: 'Výkonné' },
-  { href: '/shop?cat=midrange', tag: 'B', en: 'Mid-range', sk: 'Stredná trieda', cz: 'Střední třída' },
-  { href: '/shop?cat=entry', tag: 'B–D', en: 'Entry', sk: 'Základné', cz: 'Základní' },
+  { href: '/shop?cat=flagship', tag: 'S', en: 'Lightspeed', sk: 'Lightspeed', cz: 'Lightspeed' },
+  { href: '/shop?cat=performance', tag: 'A', en: 'Hypersonic', sk: 'Hypersonic', cz: 'Hypersonic' },
+  { href: '/shop?cat=midrange', tag: 'B', en: 'Supersonic', sk: 'Supersonic', cz: 'Supersonic' },
+  { href: '/shop?cat=entry', tag: 'B–D', en: 'Subsonic', sk: 'Subsonic', cz: 'Subsonic' },
   { href: '/gbb', tag: '→', en: 'Help me', sk: 'Pomôžte mi', cz: 'Pomozte mi' },
   { href: '/build', tag: '3D', en: 'Custom configuration', sk: 'Vlastná konfigurácia', cz: 'Vlastní konfigurace' },
 ];
 
 const CAT_OPTIONS: { value: string; label: L3 }[] = [
-  { value: 'flagship', label: { en: 'Flagship', sk: 'Vlajkové', cz: 'Vlajkové' } },
-  { value: 'performance', label: { en: 'Performance', sk: 'Výkonné', cz: 'Výkonné' } },
-  { value: 'midrange', label: { en: 'Mid-range', sk: 'Stredná trieda', cz: 'Střední třída' } },
-  { value: 'entry', label: { en: 'Entry', sk: 'Základné', cz: 'Základní' } },
+  { value: 'flagship', label: { en: 'Lightspeed', sk: 'Lightspeed', cz: 'Lightspeed' } },
+  { value: 'performance', label: { en: 'Hypersonic', sk: 'Hypersonic', cz: 'Hypersonic' } },
+  { value: 'midrange', label: { en: 'Supersonic', sk: 'Supersonic', cz: 'Supersonic' } },
+  { value: 'entry', label: { en: 'Subsonic', sk: 'Subsonic', cz: 'Subsonic' } },
 ];
 
 const T = {
   home: { en: 'GOMP – home', sk: 'GOMP – domov', cz: 'GOMP – domů' },
-  tagline: { en: 'PCs built for you', sk: 'PC stavané pre vás', cz: 'PC stavěná pro vás' },
+  allBuilds: { en: 'All builds', sk: 'Všetky zostavy', cz: 'Všechny sestavy' },
   language: { en: 'Language', sk: 'Jazyk', cz: 'Jazyk' },
   currency: { en: 'Currency', sk: 'Mena', cz: 'Měna' },
   account: { en: 'Account', sk: 'Účet', cz: 'Účet' },
@@ -73,6 +73,8 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('');
   const catsRef = useRef<HTMLDivElement>(null);
+  const [shopMenu, setShopMenu] = useState<{ left: number; top: number } | null>(null);
+  const shopTimer = useRef<number | undefined>(undefined);
   const topRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLElement>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -141,12 +143,52 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
       </ul>
     </div>
   );
+  // "Obchod" opens the same category list as the KATEGÓRIE button, as a dropdown under the tab (hover / keyboard focus;
+  // on touch screens a tap just goes to the shop, the list is in the KATEGÓRIE menu). The list is position: fixed so
+  // the scrolling .links bar cannot clip it.
+  const openShop = (el: HTMLElement) => {
+    window.clearTimeout(shopTimer.current);
+    const r = el.getBoundingClientRect();
+    setShopMenu({ left: r.left, top: r.bottom });
+  };
+  const closeShop = () => {
+    window.clearTimeout(shopTimer.current);
+    shopTimer.current = window.setTimeout(() => setShopMenu(null), 140);
+  };
   const navLinks = (
     <div className="links">
-      {NAV.map((n) => (
-        <Link key={n.href} href={n.href} aria-current={active === n.href ? 'page' : undefined}>{pick(lang, n)}</Link>
-      ))}
-      <Link className="hl" href="/gbb">{pick(lang, { en: 'Help me', sk: 'Pomôžte mi', cz: 'Pomozte mi' })}</Link>
+      {NAV.map((n) =>
+        n.href === '/shop' ? (
+          <span
+            key={n.href}
+            className="drop"
+            onMouseEnter={(e) => openShop(e.currentTarget)}
+            onMouseLeave={closeShop}
+            onFocus={(e) => openShop(e.currentTarget)}
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) closeShop();
+            }}
+          >
+            <Link href={n.href} aria-current={active === n.href ? 'page' : undefined} aria-haspopup="true" aria-expanded={!!shopMenu}>{pick(lang, n)}</Link>
+            {shopMenu && (
+              <ul
+                className="drop-menu"
+                style={{ left: shopMenu.left, top: shopMenu.top }}
+                onMouseEnter={() => window.clearTimeout(shopTimer.current)}
+                onMouseLeave={closeShop}
+              >
+                <li><Link href="/shop" onClick={() => setShopMenu(null)}>{pick(lang, T.allBuilds)}</Link></li>
+                {CATS.map((c) => (
+                  <li key={c.href}><Link href={c.href} onClick={() => setShopMenu(null)}>{pick(lang, c)} <span>{c.tag}</span></Link></li>
+                ))}
+              </ul>
+            )}
+          </span>
+        ) : (
+          <Link key={n.href} href={n.href} aria-current={active === n.href ? 'page' : undefined}>{pick(lang, n)}</Link>
+        ),
+      )}
+      <Link className="hl" href="/gbb">{pick(lang, { en: 'Assistant', sk: 'Asistent', cz: 'Asistent' })}</Link>
     </div>
   );
 
@@ -172,7 +214,6 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
     <>
       <div className="topbar" ref={topRef}>
         <div className="wrap">
-          <span className="left">{s('tagline')}</span>
           <div className="right">
             {langSeg}
             {currencySeg}

@@ -363,7 +363,7 @@ export default function GompHome({ onStartBuilding }: { onStartBuilding: () => v
             {budget && (
               <TransitionLink className="banner photo" href="/gbb" style={bg('/images/home/banner-purple.jpg')}>
                 <div>
-                  <small>{pick(lang, { en: 'Help me', sk: 'Pomôžte mi', cz: 'Pomozte mi' })}</small>
+                  <small>{pick(lang, { en: 'Assistant', sk: 'Asistent', cz: 'Asistent' })}</small>
                   <h3>{em(h('budgetTitle'))}</h3>
                   <span className="sub num">
                     {budget.name} · {fmt(budget.priceCzk)}

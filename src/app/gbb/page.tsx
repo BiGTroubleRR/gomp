@@ -24,7 +24,7 @@ type Channel = 'email' | 'phone';
 type StepId = 'topic' | 'use' | 'budget' | 'notes' | 'contact';
 
 const TOPICS: { id: Topic }[] = [{ id: 'pick' }, { id: 'upgrade' }, { id: 'used' }, { id: 'check' }, { id: 'order' }, { id: 'other' }];
-const USES: { id: Use }[] = [{ id: 'gaming' }, { id: 'work' }, { id: 'creative' }, { id: 'server' }, { id: 'mixed' }];
+const USES: { id: Use }[] = [{ id: 'gaming' }, { id: 'work' }, { id: 'creative' }, { id: 'mixed' }];
 // `max` is what is stored as the budget (the top of the band); the band's own wording goes into the notes.
 const BUDGETS: { id: BudgetId; max: number | null }[] = [
   { id: 'b500', max: 500 },
@@ -51,8 +51,8 @@ type Dict = {
 
 const T = {
   en: {
-    nav_label: 'Help me',
-    eyebrow: 'Help me',
+    nav_label: 'Assistant',
+    eyebrow: 'Assistant',
     title: 'Not sure where to start? Let’s work it out together.',
     intro:
       'Tap through a few quick questions and tell us how to reach you. A real person from GOMP answers, usually within 1–2 business days, with no obligation.',
@@ -109,8 +109,8 @@ const T = {
     error_generic: 'Something went wrong. Please try again.',
   },
   sk: {
-    nav_label: 'Pomôžte mi',
-    eyebrow: 'Pomôžte mi',
+    nav_label: 'Asistent',
+    eyebrow: 'Asistent',
     title: 'Neviete, kde začať? Poradíme vám.',
     intro:
       'Prekliknite sa pár rýchlymi otázkami a napíšte nám, ako vás môžeme zastihnúť. Ozve sa vám živý človek z GOMP, zvyčajne do 1–2 pracovných dní, bez záväzku.',
@@ -167,8 +167,8 @@ const T = {
     error_generic: 'Niečo sa pokazilo. Skúste to znova.',
   },
   cz: {
-    nav_label: 'Pomozte mi',
-    eyebrow: 'Pomozte mi',
+    nav_label: 'Asistent',
+    eyebrow: 'Asistent',
     title: 'Nevíte, kde začít? Poradíme vám.',
     intro:
       'Proklikejte se několika rychlými otázkami a napište nám, jak vás můžeme zastihnout. Ozve se vám živý člověk z GOMP, obvykle do 1–2 pracovních dnů, bez závazku.',

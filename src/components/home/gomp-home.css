@@ -24,7 +24,7 @@
 /* ---------- top bar ---------- */
 .gomp-home .topbar{border-bottom:1px solid var(--line);font:500 11px/1 var(--mono);color:var(--muted)}
 .gomp-home .topbar .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:40px;flex-wrap:wrap}
-.gomp-home .topbar .right{display:flex;gap:18px;align-items:center}
+.gomp-home .topbar .right{display:flex;gap:18px;align-items:center;margin-left:auto}
 .gomp-home .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .gomp-home .seg button{border:0;background:none;padding:5px 8px;font:inherit;letter-spacing:inherit;color:var(--muted)}
 .gomp-home .seg button[aria-pressed="true"]{background:var(--ink);color:var(--panel)}
@@ -384,3 +384,11 @@
 /* slider dots on the homepage hero: the 3 px bar stays thin but its tap area is generous */
 .gomp-home .dots button{position:relative}
 .gomp-home .dots button::after{content:"";position:absolute;inset:-14px -4px}
+
+/* ---------- "Obchod" dropdown under the tab (same list and look as the KATEGÓRIE menu) ---------- */
+.gomp-home .links .drop{display:flex}
+.gomp-home .links .drop-menu{position:fixed;z-index:200;min-width:240px;margin:0;padding:6px 0;list-style:none;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;box-shadow:0 14px 30px -12px rgba(0,0,0,.6)}
+.gomp-home .links .drop-menu a{display:flex;justify-content:space-between;align-items:center;height:auto;padding:10px 20px;border-left:0;font:400 14px/1.4 var(--body);color:var(--ink);white-space:nowrap}
+.gomp-home .links .drop-menu a:hover,.gomp-home .links .drop-menu a:focus-visible{background:var(--tint);color:var(--green-hi)}
+.gomp-home .links .drop-menu a span{font:500 11px/1.9 var(--mono);color:var(--faint);margin-left:24px}
+@media (hover:none){.gomp-home .links .drop-menu{display:none}}

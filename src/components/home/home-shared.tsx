@@ -18,10 +18,10 @@ export type L3 = { en: string; sk: string; cz: string };
 export const MIN_CONFIG_NET_CZK = 25248;
 
 export const CAT_LABEL: Record<Build['cat'], L3> = {
-  flagship: { en: 'Flagship', sk: 'Vlajková loď', cz: 'Vlajková loď' },
-  performance: { en: 'Performance', sk: 'Výkonnostná', cz: 'Výkonnostní' },
-  midrange: { en: 'Mid-range', sk: 'Stredná trieda', cz: 'Střední třída' },
-  entry: { en: 'Entry', sk: 'Základná', cz: 'Základní' },
+  flagship: { en: 'Lightspeed', sk: 'Lightspeed', cz: 'Lightspeed' },
+  performance: { en: 'Hypersonic', sk: 'Hypersonic', cz: 'Hypersonic' },
+  midrange: { en: 'Supersonic', sk: 'Supersonic', cz: 'Supersonic' },
+  entry: { en: 'Subsonic', sk: 'Subsonic', cz: 'Subsonic' },
 };
 
 // One live prebuilt with everything the homepage sections need already resolved.
