@@ -2,7 +2,8 @@
 // correctly) with a payment QR code. Returns the PDF bytes.
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { PDFDocument, PDFFont, PDFPage, rgb } from 'pdf-lib';
+import { PDFDocument, PDFFont, PDFImage, PDFPage, rgb } from 'pdf-lib';
+import sharp from 'sharp';
 import fontkit from '@pdf-lib/fontkit';
 import { INVOICE_T, invoiceTotals, type InvoiceData } from './invoice';
 import { paymentAmount, paymentQrPayload, qrMatrix } from './qr';
@@ -53,6 +54,28 @@ function wrap(text: string, font: PDFFont, size: number, maxWidth: number): stri
   }
   if (line) out.push(line);
   return out.length ? out : [''];
+}
+
+// Product thumbnail for a line: fetched from the catalog's own Supabase Storage host only (https), flattened onto white
+// and re-encoded as a small PNG. Any problem (timeout, wrong host, not an image) just means "no thumbnail".
+async function loadThumb(url: string): Promise<Uint8Array | null> {
+  try {
+    const u = new URL(url);
+    const allowedHost = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host : '';
+    if (u.protocol !== 'https:' || !allowedHost || u.host !== allowedHost) return null;
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > 8_000_000) return null;
+    const png = await sharp(buf)
+      .resize(96, 96, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 1 } })
+      .flatten({ background: '#ffffff' })
+      .png()
+      .toBuffer();
+    return new Uint8Array(png);
+  } catch {
+    return null;
+  }
 }
 
 export async function renderInvoicePdf(inv: InvoiceData): Promise<Uint8Array> {
@@ -161,20 +184,37 @@ export async function renderInvoicePdf(inv: InvoiceData): Promise<Uint8Array> {
     y -= 14;
   };
   headRow();
+  // thumbnails, embedded once per distinct image
+  const thumbs = new Map<string, PDFImage>();
+  await Promise.all(
+    [...new Set(inv.lines.map((l) => l.imageUrl).filter((u): u is string => !!u))].map(async (u) => {
+      const bytes = await loadThumb(u);
+      if (bytes) thumbs.set(u, await pdf.embedPng(bytes));
+    }),
+  );
+  const IMG = 24;
   for (const l of inv.lines) {
-    const descX = xDesc + 70;
-    const descLines = wrap(l.description, reg, 9, xQty - descX - 40);
-    const rowH = descLines.length * 11.5 + 1;
+    const isPart = !!l.detail;
+    const descX = isPart ? xDesc + IMG + 8 : xDesc;
+    const descLines = wrap(l.description, reg, 9, xQty - descX - 20);
+    const rowH = isPart ? Math.max(IMG + 2, 10 + descLines.length * 11 + 1) : descLines.length * 11.5 + 1;
     if (y - rowH < M + 40) {
       page = pdf.addPage(A4);
       y = H - M;
       headRow();
     }
-    if (l.detail) text(l.detail.toUpperCase().slice(0, 14), xDesc, y, 6.3, bold, MUTED);
-    descLines.forEach((d, i) => text(d, descX, y - i * 11.5, 9));
-    text(String(l.qty), xQty, y, 9, reg, INK, 'right');
-    text(m(l.unitGross), xUnit, y, 9, reg, INK, 'right');
-    text(m(l.qty * l.unitGross), xTot, y, 9, bold, l.unitGross < 0 ? ACCENT : INK, 'right');
+    const img = l.imageUrl ? thumbs.get(l.imageUrl) : undefined;
+    if (img) {
+      page.drawRectangle({ x: xDesc, y: y - IMG + 8, width: IMG, height: IMG, borderColor: LINE, borderWidth: 0.5, color: rgb(1, 1, 1) });
+      page.drawImage(img, { x: xDesc + 1, y: y - IMG + 9, width: IMG - 2, height: IMG - 2 });
+    }
+    const dy = isPart ? 10 : 0; // part rows: small category label above the name
+    if (l.detail) text(l.detail.toUpperCase().slice(0, 28), descX, y, 6.3, bold, MUTED);
+    descLines.forEach((d, i) => text(d, descX, y - dy - i * 11, 9));
+    const cy = isPart ? y - 5 : y;
+    text(String(l.qty), xQty, cy, 9, reg, INK, 'right');
+    text(m(l.unitGross), xUnit, cy, 9, reg, INK, 'right');
+    text(m(l.qty * l.unitGross), xTot, cy, 9, bold, l.unitGross < 0 ? ACCENT : INK, 'right');
     y -= rowH;
     rule(y + 4);
     y -= 7;

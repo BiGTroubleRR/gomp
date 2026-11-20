@@ -13,7 +13,7 @@ export const EUR_RATE = 24.3;
 // 'proforma' = zálohová faktúra (advance / proforma invoice, no tax document). 'invoice' = daňový doklad.
 export type InvoiceKind = 'proforma' | 'invoice';
 
-export type InvoiceLine = { description: string; detail?: string; qty: number; unitGross: number };
+export type InvoiceLine = { description: string; detail?: string; imageUrl?: string; qty: number; unitGross: number };
 
 export type InvoiceData = {
   kind: InvoiceKind;
@@ -74,7 +74,7 @@ const LINE_WORDS: Record<Lang, LineWords> = {
 // shipping and an optional discount.
 export function buildInvoiceFromOrder(
   order: OrderTicketData,
-  opts: { kind?: InvoiceKind; vatRatePct: number; seller?: InvoiceSeller; invoiceNumber?: string; dueDays?: number },
+  opts: { kind?: InvoiceKind; vatRatePct: number; imageByName?: Record<string, string>; seller?: InvoiceSeller; invoiceNumber?: string; dueDays?: number },
 ): InvoiceData {
   const kind = opts.kind ?? 'proforma';
   const { lang, currency } = order;
@@ -85,6 +85,7 @@ export function buildInvoiceFromOrder(
   const lines: InvoiceLine[] = order.items.map((i) => ({
     description: i.name,
     detail: i.category || undefined,
+    imageUrl: opts.imageByName?.[i.name],
     qty: 1,
     unitGross: money(i.price),
   }));

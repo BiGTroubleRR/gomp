@@ -133,7 +133,10 @@ export async function POST(request: Request) {
   // already sent (it computes the same way) — the items that matter (a real, currently-sold
   // component) are always server-priced; there is no live catalog entry to be honest about
   // otherwise.
-  const { data: catalogRows } = await supabase.from('components').select('name, price, site_price');
+  const { data: catalogRows } = await supabase.from('components').select('name, price, site_price, image_url');
+  // Product photos for the invoice's line items (best effort — a part without a photo just has no thumbnail).
+  const imageByName: Record<string, string> = {};
+  for (const r of catalogRows ?? []) if (r.image_url) imageByName[r.name] = r.image_url;
   const catalogByName = new Map(
     (catalogRows ?? []).map((r) => [r.name, { price: Number(r.price), sitePrice: r.site_price != null ? Number(r.site_price) : null }]),
   );
@@ -239,7 +242,7 @@ export async function POST(request: Request) {
   const attachments: EmailAttachment[] = [];
   if (isInvoicingEnabled()) {
     try {
-      const invoice = buildInvoiceFromOrder(order, { kind: 'proforma', vatRatePct });
+      const invoice = buildInvoiceFromOrder(order, { kind: 'proforma', vatRatePct, imageByName });
       attachments.push({ filename: `${invoice.number}.pdf`, content: Buffer.from(await renderInvoicePdf(invoice)) });
     } catch (e) {
       console.error('Could not build the proforma invoice PDF:', e);

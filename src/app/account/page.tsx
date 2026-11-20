@@ -932,28 +932,28 @@ export default function Account() {
                                   >
                                     {t.components}
                                   </div>
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                                     {order.items.map((part) => {
                                       const img = partImages.get(part);
                                       return (
                                         <div
                                           key={part}
-                                          style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#EBE6DA', display: 'flex', alignItems: 'center', gap: 8 }}
+                                          style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: '#EBE6DA', display: 'flex', alignItems: 'center', gap: 10 }}
                                         >
-                                          {img ? (
-                                            <div
-                                              style={{
-                                                width: 22, height: 22, borderRadius: 3, flexShrink: 0,
-                                                background: 'repeating-conic-gradient(rgba(235,230,218,0.06) 0% 25%, transparent 0% 50%) 0 0 / 8px 8px',
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
-                                                position: 'relative',
-                                              }}
-                                            >
-                                              <Image src={img} alt={part} fill sizes="22px" style={{ objectFit: 'contain' }} />
-                                            </div>
-                                          ) : (
-                                            <span style={{ color: 'rgba(235,230,218,0.28)', flexShrink: 0 }}>—</span>
-                                          )}
+                                          <div
+                                            style={{
+                                              width: 40, height: 40, borderRadius: 4, flexShrink: 0,
+                                              background: 'rgba(235,230,218,0.05)', border: '0.5px solid rgba(235,230,218,0.1)',
+                                              display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                                              position: 'relative',
+                                            }}
+                                          >
+                                            {img ? (
+                                              <Image src={img} alt={part} fill sizes="40px" style={{ objectFit: 'contain' }} />
+                                            ) : (
+                                              <span style={{ color: 'rgba(235,230,218,0.28)' }}>—</span>
+                                            )}
+                                          </div>
                                           <span>{part}</span>
                                         </div>
                                       );
