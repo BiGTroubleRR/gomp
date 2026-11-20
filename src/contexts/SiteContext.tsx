@@ -31,6 +31,19 @@ export function SiteProvider({ children, initialLang = 'sk' }: { children: React
   const [vatRatePct, setVatRatePct] = useState<number>(DEFAULT_VAT_RATE_PCT);
 
   useEffect(() => {
+    // A visitor sent over from gomp.sk to gomp.cz to sign in arrives with ?lang=sk&cur=eur — keep their language and
+    // currency (storage is per domain) and tidy the address bar. Set directly, so it does not bounce back to gomp.sk.
+    const params = new URLSearchParams(window.location.search);
+    const qLang = params.get('lang');
+    const qCur = params.get('cur');
+    if (qLang === 'sk' || qLang === 'cz' || qLang === 'en') persistLang(qLang);
+    if (qCur === 'eur' || qCur === 'czk') persistCurrency(qCur);
+    if (qLang || qCur) {
+      params.delete('lang');
+      params.delete('cur');
+      const qs = params.toString();
+      window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+    }
     setLangState(getLang());
     setCurrencyState(getCurrency());
   }, []);

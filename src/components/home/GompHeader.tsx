@@ -26,7 +26,7 @@ const CATS: ({ href: string; tag: string } & L3)[] = [
   { href: '/shop?cat=performance', tag: 'A', en: 'Hypersonic', sk: 'Hypersonic', cz: 'Hypersonic' },
   { href: '/shop?cat=midrange', tag: 'B', en: 'Supersonic', sk: 'Supersonic', cz: 'Supersonic' },
   { href: '/shop?cat=entry', tag: 'B–D', en: 'Subsonic', sk: 'Subsonic', cz: 'Subsonic' },
-  { href: '/gbb', tag: '→', en: 'Help me', sk: 'Pomôžte mi', cz: 'Pomozte mi' },
+  { href: '/gbb', tag: '→', en: 'Assistant', sk: 'Asistent', cz: 'Asistent' },
   { href: '/build', tag: '3D', en: 'Custom configuration', sk: 'Vlastná konfigurácia', cz: 'Vlastní konfigurace' },
 ];
 
@@ -69,12 +69,10 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
   const { lang, setLang, currency, setCurrency, fmt } = useSite();
   const { count, totalCzk } = useCartSummary();
   const router = useRouter();
-  const [catsOpen, setCatsOpen] = useState(false);
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('');
-  const catsRef = useRef<HTMLDivElement>(null);
+  const dropRef = useRef<HTMLSpanElement>(null);
   const [shopMenu, setShopMenu] = useState<{ left: number; top: number } | null>(null);
-  const shopTimer = useRef<number | undefined>(undefined);
   const topRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLElement>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -96,12 +94,23 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
     return () => ro.disconnect();
   }, [variant]);
 
+  // The "Obchod" dropdown closes on an outside click, Escape, scrolling or resizing (it is position: fixed under the button).
   useEffect(() => {
-    if (!catsOpen) return;
-    const close = (e: MouseEvent) => { if (!catsRef.current?.contains(e.target as Node)) setCatsOpen(false); };
-    document.addEventListener('click', close);
-    return () => document.removeEventListener('click', close);
-  }, [catsOpen]);
+    if (!shopMenu) return;
+    const onClick = (e: MouseEvent) => { if (!dropRef.current?.contains(e.target as Node)) setShopMenu(null); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShopMenu(null); };
+    const close = () => setShopMenu(null);
+    document.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      document.removeEventListener('click', onClick);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', close, true);
+    };
+  }, [shopMenu]);
 
   function onSearch(query: string, category: string) {
     const p = new URLSearchParams();
@@ -130,53 +139,34 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
       <span><small>{count} {itemsLabel(count, lang)}</small><b className="num">{fmt(totalCzk)}</b></span>
     </Link>
   );
-  const catsMenu = (
-    <div className="cats" ref={catsRef}>
-      <button type="button" aria-expanded={catsOpen} aria-controls="gomp-cats" onClick={() => setCatsOpen((v) => !v)}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
-        <span className="t">{s('categories')}</span>
-      </button>
-      <ul id="gomp-cats" hidden={!catsOpen}>
-        {CATS.map((c) => (
-          <li key={c.href}><Link href={c.href}>{pick(lang, c)} <span>{c.tag}</span></Link></li>
-        ))}
-      </ul>
-    </div>
-  );
-  // "Obchod" opens the same category list as the KATEGÓRIE button, as a dropdown under the tab (hover / keyboard focus;
-  // on touch screens a tap just goes to the shop, the list is in the KATEGÓRIE menu). The list is position: fixed so
-  // the scrolling .links bar cannot clip it.
-  const openShop = (el: HTMLElement) => {
-    window.clearTimeout(shopTimer.current);
-    const r = el.getBoundingClientRect();
-    setShopMenu({ left: r.left, top: r.bottom });
-  };
-  const closeShop = () => {
-    window.clearTimeout(shopTimer.current);
-    shopTimer.current = window.setTimeout(() => setShopMenu(null), 140);
+  // "Obchod" is a split button: the label goes to the shop, the small arrow next to it opens the category list as a
+  // dropdown (a click, so it works on touch screens too). The list is position: fixed so the scrolling .links bar cannot clip it.
+  const toggleShop = () => {
+    if (shopMenu) {
+      setShopMenu(null);
+      return;
+    }
+    const r = dropRef.current?.getBoundingClientRect();
+    if (r) setShopMenu({ left: Math.max(8, Math.min(r.left, window.innerWidth - 256)), top: r.bottom });
   };
   const navLinks = (
     <div className="links">
       {NAV.map((n) =>
         n.href === '/shop' ? (
-          <span
-            key={n.href}
-            className="drop"
-            onMouseEnter={(e) => openShop(e.currentTarget)}
-            onMouseLeave={closeShop}
-            onFocus={(e) => openShop(e.currentTarget)}
-            onBlur={(e) => {
-              if (!e.currentTarget.contains(e.relatedTarget as Node | null)) closeShop();
-            }}
-          >
-            <Link href={n.href} aria-current={active === n.href ? 'page' : undefined} aria-haspopup="true" aria-expanded={!!shopMenu}>{pick(lang, n)}</Link>
+          <span key={n.href} className="drop" ref={dropRef}>
+            <Link href={n.href} aria-current={active === n.href ? 'page' : undefined}>{pick(lang, n)}</Link>
+            <button
+              type="button"
+              className="drop-arrow"
+              aria-label={s('categories')}
+              aria-haspopup="true"
+              aria-expanded={!!shopMenu}
+              onClick={toggleShop}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: shopMenu ? 'rotate(180deg)' : 'none', transition: 'transform .18s ease' }}><path d="m6 9 6 6 6-6" /></svg>
+            </button>
             {shopMenu && (
-              <ul
-                className="drop-menu"
-                style={{ left: shopMenu.left, top: shopMenu.top }}
-                onMouseEnter={() => window.clearTimeout(shopTimer.current)}
-                onMouseLeave={closeShop}
-              >
+              <ul className="drop-menu" style={{ left: shopMenu.left, top: shopMenu.top }}>
                 <li><Link href="/shop" onClick={() => setShopMenu(null)}>{pick(lang, T.allBuilds)}</Link></li>
                 {CATS.map((c) => (
                   <li key={c.href}><Link href={c.href} onClick={() => setShopMenu(null)}>{pick(lang, c)} <span>{c.tag}</span></Link></li>
@@ -197,7 +187,6 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
       <nav className="nav nav-compact" ref={navRef} aria-label={s('mainNav')}>
         <div className="wrap">
           <Link className="gomp-logo-link nav-logo" href="/" aria-label={s('home')}><GompLogo height={LOGO_HEIGHT.bar} tone="white" /></Link>
-          {catsMenu}
           {navLinks}
           <div className="right">
             {langSeg}
@@ -245,7 +234,6 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
 
       <nav className="nav" ref={navRef} aria-label={s('mainNav')}>
         <div className="wrap">
-          {catsMenu}
           {navLinks}
         </div>
       </nav>

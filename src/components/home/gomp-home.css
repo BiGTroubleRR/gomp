@@ -386,9 +386,13 @@
 .gomp-home .dots button::after{content:"";position:absolute;inset:-14px -4px}
 
 /* ---------- "Obchod" dropdown under the tab (same list and look as the KATEGÓRIE menu) ---------- */
-.gomp-home .links .drop{display:flex}
+.gomp-home .links .drop{display:flex;align-items:center}
+.gomp-home .links .drop>a{padding-right:10px}
+.gomp-home .links .drop-arrow{display:flex;align-items:center;justify-content:center;width:30px;height:44px;margin-left:-4px;padding:0;background:transparent;border:0;border-left:1px solid rgba(253,250,244,.2);border-radius:0 8px 8px 0;color:inherit;cursor:pointer}
+.gomp-home .links .drop-arrow:hover,.gomp-home .links .drop-arrow[aria-expanded="true"]{background:var(--green-2)}
+.gomp-home .links .drop>a:hover{border-radius:8px 0 0 8px}
 .gomp-home .links .drop-menu{position:fixed;z-index:200;min-width:240px;margin:0;padding:6px 0;list-style:none;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;box-shadow:0 14px 30px -12px rgba(0,0,0,.6)}
 .gomp-home .links .drop-menu a{display:flex;justify-content:space-between;align-items:center;height:auto;padding:10px 20px;border-left:0;font:400 14px/1.4 var(--body);color:var(--ink);white-space:nowrap}
 .gomp-home .links .drop-menu a:hover,.gomp-home .links .drop-menu a:focus-visible{background:var(--tint);color:var(--green-hi)}
 .gomp-home .links .drop-menu a span{font:500 11px/1.9 var(--mono);color:var(--faint);margin-left:24px}
-@media (hover:none){.gomp-home .links .drop-menu{display:none}}
+
