@@ -10,7 +10,7 @@ import type { NextConfig } from "next";
 //     despite living under a Vercel-owned domain)
 // Fonts are self-hosted at build time via next/font, so no fonts.googleapis.com
 // entry is needed.
-const CLERK_ORIGINS = 'https://*.accounts.dev https://*.clerk.accounts.dev';
+const CLERK_ORIGINS = 'https://*.accounts.dev https://*.clerk.accounts.dev https://clerk.gomp.cz https://accounts.gomp.cz';
 const SUPABASE_URL = 'https://ojosovibspcbmwveoled.supabase.co';
 const SUPABASE_WS = 'wss://ojosovibspcbmwveoled.supabase.co';
 const VERCEL_INSIGHTS_SCRIPT = 'https://va.vercel-scripts.com';
