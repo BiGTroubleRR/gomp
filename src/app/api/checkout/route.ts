@@ -19,7 +19,7 @@ import { auth } from '@clerk/nextjs/server';
 import { checkRateLimit, clientIpFromHeaders } from '@/lib/rate-limit';
 import { applyVat } from '@/lib/component-db-seed';
 import { sendOrderConfirmationEmail, type EmailAttachment } from '@/lib/email/resend';
-import { isInvoicingEnabled } from '@/lib/invoice/company';
+import { TEST_SELLER, isInvoiceTestMode, isInvoicingEnabled } from '@/lib/invoice/company';
 import { buildInvoiceFromOrder } from '@/lib/invoice/invoice';
 import { renderInvoicePdf } from '@/lib/invoice/pdf';
 import { normalizeCurrency, normalizeLang, type OrderTicketData } from '@/lib/order-ticket';
@@ -242,7 +242,12 @@ export async function POST(request: Request) {
   const attachments: EmailAttachment[] = [];
   if (isInvoicingEnabled()) {
     try {
-      const invoice = buildInvoiceFromOrder(order, { kind: 'proforma', vatRatePct, imageByName });
+      const invoice = buildInvoiceFromOrder(order, {
+        kind: 'proforma',
+        vatRatePct,
+        imageByName,
+        ...(isInvoiceTestMode() ? { test: true, seller: TEST_SELLER } : {}),
+      });
       attachments.push({ filename: `${invoice.number}.pdf`, content: Buffer.from(await renderInvoicePdf(invoice)) });
     } catch (e) {
       console.error('Could not build the proforma invoice PDF:', e);

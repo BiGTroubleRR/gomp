@@ -46,6 +46,8 @@ export function payBySquarePayload(inv: InvoiceData): string {
 
 // Which standard to use: SK customers (EUR) get PAY by square, Czech (CZK) get SPAYD.
 export function paymentQrPayload(inv: InvoiceData): { text: string; standard: 'bysquare' | 'spayd' } {
+  // Test invoice: a QR that is just text, so no banking app can read it as a payment.
+  if (inv.test) return { text: `GOMP TESTOVACIA FAKTURA ${inv.number} - NEPLATNY QR KOD`, standard: 'spayd' };
   if (inv.currency === 'eur') return { text: payBySquarePayload(inv), standard: 'bysquare' };
   return { text: spaydPayload(inv), standard: 'spayd' };
 }

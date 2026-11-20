@@ -57,5 +57,32 @@ export function isSellerComplete(s: InvoiceSeller = SELLER): boolean {
 // Master switch. Invoices are attached to order emails only when INVOICE_ENABLED=true is set on the server
 // AND the seller details above are complete. It is off by default, so nothing can go out by accident.
 export function isInvoicingEnabled(): boolean {
-  return (process.env.INVOICE_ENABLED ?? '').trim().toLowerCase() === 'true' && isSellerComplete();
+  if ((process.env.INVOICE_ENABLED ?? '').trim().toLowerCase() !== 'true') return false;
+  return isInvoiceTestMode() || isSellerComplete();
 }
+
+// ---- Test mode ------------------------------------------------------------------------------------------------------
+// While GOMP's real company and bank details are not filled in, every invoice that goes out is a clearly marked TEST invoice:
+// "TESTOVACIA FAKTÚRA" in the title and as a diagonal watermark on every page, fake company data, an invalid test IBAN, a QR
+// code that no bank app can pay, and the final amount replaced by "xxx" (the component amounts are still shown). Test mode is ON
+// unless INVOICE_TEST_MODE=false is set on the server — so going live with real invoices is a deliberate, separate step.
+export function isInvoiceTestMode(): boolean {
+  return (process.env.INVOICE_TEST_MODE ?? '').trim().toLowerCase() !== 'false';
+}
+
+export const TEST_SELLER: InvoiceSeller = {
+  name: 'GOMP – TESTOVACIA FAKTÚRA',
+  addressLines: ['Testovacia 1', '000 00 Testovo', 'Slovensko'],
+  ico: '00000000',
+  dic: '0000000000',
+  icDph: 'SK0000000000',
+  registration: 'Testovací doklad bez právnej platnosti.',
+  email: SELLER.email,
+  phone: '',
+  web: SELLER.web,
+  iban: 'SK00 0000 0000 0000 0000 0000', // deliberately invalid (checksum 00) — nothing can be paid to it
+  bic: 'TESTSKBX',
+  bankName: 'Testovacia banka (neplatný účet)',
+  czAccount: '',
+  vatPayer: true,
+};

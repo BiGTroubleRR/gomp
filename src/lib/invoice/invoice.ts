@@ -31,6 +31,8 @@ export type InvoiceData = {
   paymentLabel: string;
   note?: string;
   orderRef: string;
+  // Test invoice: watermark, fake bank details, unpayable QR code, final amount shown as "xxx".
+  test?: boolean;
 };
 
 export const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -74,7 +76,7 @@ const LINE_WORDS: Record<Lang, LineWords> = {
 // shipping and an optional discount.
 export function buildInvoiceFromOrder(
   order: OrderTicketData,
-  opts: { kind?: InvoiceKind; vatRatePct: number; imageByName?: Record<string, string>; seller?: InvoiceSeller; invoiceNumber?: string; dueDays?: number },
+  opts: { kind?: InvoiceKind; vatRatePct: number; imageByName?: Record<string, string>; seller?: InvoiceSeller; test?: boolean; invoiceNumber?: string; dueDays?: number },
 ): InvoiceData {
   const kind = opts.kind ?? 'proforma';
   const { lang, currency } = order;
@@ -111,6 +113,7 @@ export function buildInvoiceFromOrder(
     lines,
     paymentLabel: lang === 'en' ? 'Bank transfer' : lang === 'sk' ? 'Prevodom na účet' : 'Bankovním převodem',
     orderRef: order.referenceCode,
+    test: opts.test,
   };
 }
 

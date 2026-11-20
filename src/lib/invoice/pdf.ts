@@ -2,7 +2,7 @@
 // correctly) with a payment QR code. Returns the PDF bytes.
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { PDFDocument, PDFFont, PDFImage, PDFPage, rgb } from 'pdf-lib';
+import { PDFDocument, PDFFont, PDFImage, PDFPage, degrees, rgb } from 'pdf-lib';
 import sharp from 'sharp';
 import fontkit from '@pdf-lib/fontkit';
 import { INVOICE_T, invoiceTotals, type InvoiceData } from './invoice';
@@ -78,6 +78,12 @@ async function loadThumb(url: string): Promise<Uint8Array | null> {
   }
 }
 
+const TEST_WORDS: Record<InvoiceData['lang'], { title: string; qr: string; note: string; amount: string }> = {
+  sk: { title: 'TESTOVACIA FAKTÚRA', qr: 'TESTOVACÍ QR KÓD – NEPLATNÝ', note: 'Testovací doklad bez právnej platnosti. Nič neplaťte.', amount: 'xxx' },
+  cz: { title: 'TESTOVACÍ FAKTURA', qr: 'TESTOVACÍ QR KÓD – NEPLATNÝ', note: 'Testovací doklad bez právní platnosti. Nic neplaťte.', amount: 'xxx' },
+  en: { title: 'TEST INVOICE', qr: 'TEST QR CODE – NOT VALID', note: 'Test document with no legal validity. Do not pay.', amount: 'xxx' },
+};
+
 export async function renderInvoicePdf(inv: InvoiceData): Promise<Uint8Array> {
   const t = INVOICE_T[inv.lang];
   const [regularBytes, boldBytes] = await loadFonts();
@@ -107,7 +113,8 @@ export async function renderInvoicePdf(inv: InvoiceData): Promise<Uint8Array> {
   // ---- Header: wordmark + title -------------------------------------------------------------
   text('GOMP', M, y - 20, 26, bold, ACCENT);
   page.drawRectangle({ x: M, y: y - 30, width: 34, height: 2.5, color: GOLD });
-  text(t.title[inv.kind].toUpperCase(), W - M, y - 8, 14, bold, INK, 'right');
+  const TW = TEST_WORDS[inv.lang];
+  text((inv.test ? TW.title : t.title[inv.kind]).toUpperCase(), W - M, y - 8, 14, bold, inv.test ? rgb(0.8, 0.2, 0.15) : INK, 'right');
   text(`${t.numberLabel} ${inv.number}`, W - M, y - 26, 11, reg, MUTED, 'right');
   y -= 50;
   rule(y);
@@ -229,13 +236,13 @@ export async function renderInvoicePdf(inv: InvoiceData): Promise<Uint8Array> {
     y -= 13;
   };
   if (inv.seller.vatPayer) {
-    totalRow(t.base, m(totals.net));
-    totalRow(`${t.vat} ${inv.vatRatePct} %`, m(totals.vat));
+    totalRow(t.base, inv.test ? TW.amount : m(totals.net));
+    totalRow(`${t.vat} ${inv.vatRatePct} %`, inv.test ? TW.amount : m(totals.vat));
   }
   y -= 12;
   page.drawRectangle({ x: tx - 10, y: y - 9, width: xTot - tx + 10, height: 27, color: ACCENT });
   text(inv.kind === 'proforma' ? t.toPay.toUpperCase() : t.amount.toUpperCase(), tx, y + 1, 9, bold, rgb(1, 1, 1));
-  text(m(paymentAmount(inv)), xTot - 10, y, 13, bold, rgb(1, 1, 1), 'right');
+  text(inv.test ? TW.amount : m(paymentAmount(inv)), xTot - 10, y, 13, bold, rgb(1, 1, 1), 'right');
   y -= 32;
   if (!inv.seller.vatPayer) {
     text(t.notVatPayer, M, y + 20, 8.5, reg, MUTED);
@@ -256,7 +263,7 @@ export async function renderInvoicePdf(inv: InvoiceData): Promise<Uint8Array> {
     [t.bank, inv.seller.bankName],
     ...(inv.currency === 'czk' && inv.seller.czAccount ? ([[t.account, inv.seller.czAccount]] as [string, string][]) : []),
     [t.variableSymbol, inv.variableSymbol],
-    [t.toPay, m(paymentAmount(inv))],
+    [t.toPay, inv.test ? TW.amount : m(paymentAmount(inv))],
   ];
   pay.forEach(([k, v], i) => {
     const yy = y - 36 - i * 13.5;
@@ -285,7 +292,7 @@ export async function renderInvoicePdf(inv: InvoiceData): Promise<Uint8Array> {
       if (on) page.drawRectangle({ x: qx + (c + quiet) * cell, y: qy + qrSize - (r + quiet + 1) * cell, width: cell + 0.15, height: cell + 0.15, color: INK });
     }),
   );
-  const caption = inv.lang === 'en' ? t.qrCaptionEn : standard === 'bysquare' ? t.qrCaption.sk : t.qrCaption.cz;
+  const caption = inv.test ? TW.qr : inv.lang === 'en' ? t.qrCaptionEn : standard === 'bysquare' ? t.qrCaption.sk : t.qrCaption.cz;
   const capW = reg.widthOfTextAtSize(caption, 7);
   text(caption, qx + qrSize / 2 - capW / 2, qy - 14, 7, reg, MUTED);
   y -= blockH + 14;
@@ -293,6 +300,7 @@ export async function renderInvoicePdf(inv: InvoiceData): Promise<Uint8Array> {
   // ---- Footer -------------------------------------------------------------------------------
   const footer: string[] = [];
   if (inv.seller.registration) footer.push(inv.seller.registration);
+  if (inv.test) footer.push(TW.note);
   footer.push(inv.kind === 'proforma' ? t.footerProforma : t.footerInvoice);
   footer.push(`${t.orderRef}: ${inv.orderRef}`);
   const contact = [inv.seller.email, inv.seller.phone, inv.seller.web].filter(Boolean).join('  ·  ');
@@ -309,6 +317,15 @@ export async function renderInvoicePdf(inv: InvoiceData): Promise<Uint8Array> {
   text('GOMP', M, M - 4, 8, bold, ACCENT);
 
   // page numbers when it spilled over
+  // test invoice: a big diagonal watermark across every page
+  if (inv.test) {
+    const mark = TW.title;
+    for (const p of pdf.getPages()) {
+      const size = 62;
+      const w = bold.widthOfTextAtSize(mark, size);
+      p.drawText(mark, { x: W / 2 - (w / 2) * Math.cos(Math.PI / 4.6), y: H / 2 - (w / 2) * Math.sin(Math.PI / 4.6), size, font: bold, color: rgb(0.8, 0.2, 0.15), opacity: 0.13, rotate: degrees(39) });
+    }
+  }
   const pages = pdf.getPages();
   if (pages.length > 1) {
     pages.forEach((p, i) => {

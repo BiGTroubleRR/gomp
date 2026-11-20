@@ -2,7 +2,7 @@
 // Open /api/invoice-sample?lang=sk|cz|en to see the template.
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin-server';
-import { SELLER } from '@/lib/invoice/company';
+import { TEST_SELLER } from '@/lib/invoice/company';
 import { buildInvoiceFromOrder } from '@/lib/invoice/invoice';
 import { renderInvoicePdf } from '@/lib/invoice/pdf';
 import { normalizeLang, type OrderTicketData } from '@/lib/order-ticket';
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     total: 58730,
   };
   // Made-up bank details (a documentation IBAN) so the template shows a working QR; the real ones come from company.ts.
-  const seller = { ...SELLER, iban: 'SK31 1200 0000 1987 4263 7541', bic: 'TATRSKBX', bankName: 'Tatra banka, a.s.' };
+  const seller = TEST_SELLER;
   // Real catalog parts that have a photo, so the thumbnails can be checked in the template.
   const imageByName: Record<string, string> = {};
   try {
@@ -58,7 +58,7 @@ export async function GET(request: Request) {
   } catch {
     // no database in this environment: the template renders without thumbnails
   }
-  const inv = buildInvoiceFromOrder(order, { vatRatePct: lang === 'cz' ? 21 : 23, seller, imageByName });
+  const inv = buildInvoiceFromOrder(order, { vatRatePct: lang === 'cz' ? 21 : 23, seller, imageByName, test: true });
   const pdf = await renderInvoicePdf(inv);
   return new NextResponse(Buffer.from(pdf), { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="${inv.number}.pdf"` } });
 }
