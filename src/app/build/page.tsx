@@ -12,7 +12,8 @@ import InfoTip from '@/components/InfoTip';
 import AnimatedDropdown from '@/components/AnimatedDropdown';
 import ToggleSwitch from '@/components/ToggleSwitch';
 import PageTitle from '@/components/PageTitle';
-import { navigateWithTransition } from '@/lib/gomp-nav';
+import { afterNavTransition, navigateWithTransition } from '@/lib/gomp-nav';
+import { summarizeBuildForCart } from '@/lib/use-cart-summary';
 import { writeJSON } from '@/lib/gomp-storage';
 import { fetchComponentDb, getCachedComponentDb } from '@/lib/supabase/components';
 import { passmarkLookup, tierFromPassmark, ramTier, TIER_COLORS, type Tier } from '@/lib/passmark';
@@ -55,9 +56,9 @@ import {
   ramPerStickCapacityGB,
   moboRamSlotCount,
   dimensionSpecsFor,
-  type BuildScene,
   type CompId,
-} from '@/lib/build-scene';
+} from '@/lib/build-scene-data';
+import type { BuildScene } from '@/lib/build-scene';
 import { useIsMobile, useIsTouch } from '@/lib/use-media-query';
 import { fetchAlignmentTuningConfig, subscribeAlignmentTuning, resolveAlignmentTuning, type AlignmentTuningConfig } from '@/lib/supabase/alignment-tuning';
 import { PAGE_BG as BG, PANEL_BG as PANEL, INK, MUTED, GOLD, ACCENT, ACCENT_FILL, LIGHTBOX_BACKDROP } from '@/lib/design-tokens';
@@ -689,18 +690,26 @@ function BuildPageContent() {
       },
       onCompletionEnd: () => setCompletionRunning(false),
     };
-    const init = (make: (c: HTMLDivElement, cb: typeof callbacks) => BuildScene) => {
-      scene = make(container, callbacks);
-      sceneRef.current = scene;
+    const init = (make: (c: HTMLDivElement, cb: typeof callbacks, o: { initialCase: { w: number; h: number; d: number } }) => BuildScene) => {
       const size = CASE_SIZES[caseCat] || CASE_SIZES['Mid Tower'];
-      scene.updateCase(size.w, size.h, size.d);
+      scene = make(container, callbacks, { initialCase: { w: size.w, h: size.h, d: size.d } });
+      sceneRef.current = scene;
       setSceneReady(true);
     };
     // The configurator's scene is v2 (src/lib/lab/scene-v2.ts — the homepage model's part designs, same API
-    // as the original createBuildScene). Loaded on demand so the page shell doesn't carry the 3D code.
-    import('@/lib/lab/scene-v2')
+    // as the original createBuildScene). Loaded on demand so the page shell doesn't carry the 3D code. Creating it (WebGL context,
+    // starfield, shader compile) is the heaviest thing this page does, so it waits until the slide transition from the previous
+    // page has finished and the browser is idle — otherwise it lands right in the middle of the animation and makes it stutter.
+    const idle = (cb: () => void) => {
+      const w = window as Window & { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number };
+      if (w.requestIdleCallback) w.requestIdleCallback(cb, { timeout: 500 });
+      else window.setTimeout(cb, 60);
+    };
+    afterNavTransition(900)
+      .then(() => new Promise<void>((resolve) => idle(resolve)))
+      .then(() => (cancelled ? null : import('@/lib/lab/scene-v2')))
       .then((m) => {
-        if (!cancelled) init(m.createBuildSceneV2);
+        if (m && !cancelled) init(m.createBuildSceneV2);
       })
       .catch((err) => console.error('3D scene failed to load', err));
     return () => {
@@ -748,11 +757,17 @@ function BuildPageContent() {
       alignmentConfigRef.current = config;
       sceneRef.current?.applyAlignmentTuning(resolveAlignmentTuning(config, currentMoboFormFactorRef.current));
     }
-    loadAndApply();
-    const unsubscribe = subscribeAlignmentTuning(loadAndApply);
+    // Not on the first frames: the Supabase fetch + websocket (and a possible part rebuild) wait until the scene has settled.
+    let unsubscribe: (() => void) | null = null;
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      loadAndApply();
+      unsubscribe = subscribeAlignmentTuning(loadAndApply);
+    }, 1200);
     return () => {
       cancelled = true;
-      unsubscribe();
+      window.clearTimeout(timer);
+      unsubscribe?.();
     };
   }, [sceneReady]);
 
@@ -814,7 +829,7 @@ function BuildPageContent() {
       const byId = idRef ? (rawComponentDb[id] || []).find((c) => c.id === idRef) : undefined;
       const name = byId?.name ?? names[id];
       if (!name) return;
-      setTimeout(() => selectCard(id, name, false), 600 + i * 90);
+      setTimeout(() => selectCard(id, name, false), 300 + i * 90); // the scene is created after the slide now, so no extra wait
     });
   }, [compDb, rawComponentDb, searchParams, prebuiltPcs]);
 
@@ -1415,8 +1430,12 @@ function BuildPageContent() {
   function handleOrder() {
     if (ordering) return;
     writeJSON('gomp_build', { selected, selections, compDb, totalPrice, fanConfig });
+    writeJSON('gomp_cart_summary', summarizeBuildForCart({ selected, selections, compDb }));
     setOrdering(true);
-    setTimeout(() => navigateWithTransition(pathname, '/benchmarks', () => router.push('/benchmarks')), 300);
+    // two frames: the "preparing order" overlay is painted first, then the whole page (overlay included) slides away
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => navigateWithTransition(pathname, '/benchmarks', () => router.push('/benchmarks'))),
+    );
   }
 
   const hoverComp = hoverId ? findComp(hoverId) : null;
@@ -1448,7 +1467,7 @@ function BuildPageContent() {
             left: isMobile ? undefined : 0,
             zIndex: isMobile ? undefined : 10,
             background: isMobile ? PANEL : 'rgba(19,26,23,0.5)',
-            backdropFilter: isMobile ? undefined : 'blur(20px)',
+            backdropFilter: isMobile || !sceneReady ? undefined : 'blur(20px)', // no live blur until the 3D scene exists (it is expensive over a moving canvas)
             borderRight: isMobile ? 'none' : '0.5px solid rgba(235,230,218,0.1)',
             borderTop: isMobile ? '0.5px solid rgba(235,230,218,0.1)' : 'none',
             borderBottom: isMobile ? '0.5px solid rgba(235,230,218,0.1)' : 'none',
@@ -2447,7 +2466,7 @@ function BuildPageContent() {
             right: isMobile ? undefined : 0,
             zIndex: isMobile ? undefined : 10,
             background: isMobile ? PANEL : 'rgba(19,26,23,0.5)',
-            backdropFilter: isMobile ? undefined : 'blur(20px)',
+            backdropFilter: isMobile || !sceneReady ? undefined : 'blur(20px)', // no live blur until the 3D scene exists (it is expensive over a moving canvas)
             borderLeft: isMobile ? 'none' : '0.5px solid rgba(235,230,218,0.1)',
             display: 'flex',
             flexDirection: 'column',

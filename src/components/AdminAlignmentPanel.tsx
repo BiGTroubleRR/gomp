@@ -12,7 +12,7 @@
 // strip below) — a linear real-mm scale isn't enough to make an ATX-tuned offset land right on a
 // much smaller board, since form factors don't just shrink the same layout, they rearrange it.
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { DEFAULT_ALIGNMENT_TUNING, MM_PER_UNIT, SIZES, type AlignmentTunableId, type AlignmentTuning } from '@/lib/build-scene';
+import { DEFAULT_ALIGNMENT_TUNING, MM_PER_UNIT, SIZES, type AlignmentTunableId, type AlignmentTuning } from '@/lib/build-scene-data';
 import type { FormFactor } from '@/lib/component-db-seed';
 import { fetchAlignmentTuningConfig, saveAlignmentTuningConfig, type AlignmentTuningConfig } from '@/lib/supabase/alignment-tuning';
 import { INK, SUBTEXT, ACCENT, BORDER } from '@/lib/design-tokens';

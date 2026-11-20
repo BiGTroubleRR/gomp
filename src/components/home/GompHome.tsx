@@ -263,7 +263,13 @@ export default function GompHome({ onStartBuilding }: { onStartBuilding: () => v
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const timer = setInterval(() => setSlide((x) => x + 1), 6000);
-    return () => clearInterval(timer);
+    // no slide change while the page is sliding away to another route
+    const stop = () => clearInterval(timer);
+    window.addEventListener('gomp:navstart', stop);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('gomp:navstart', stop);
+    };
   }, [slide]);
   const on = (k: SlideKey) => (slides[cur] === k ? ' on' : '');
 

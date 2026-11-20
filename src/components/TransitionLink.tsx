@@ -3,12 +3,13 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { MouseEvent, ReactNode, CSSProperties } from 'react';
-import { navigateWithTransition, ownIndex } from '@/lib/gomp-nav';
+import { isSameLocation, isSamePathOtherQuery, navigateWithTransition } from '@/lib/gomp-nav';
 import { burstDust, isDustEnabled } from '@/lib/cursor-dust';
 
-// Shared nav-link click handler: no-ops on the current page, plays the cursor-dust burst
-// then a same-document View Transition, mirroring the original site's cross-document
-// transitions + gomp-cursor-dust.js burst-then-navigate handoff.
+const isExternal = (href: string) => /^(https?:)?\/\/|^mailto:|^tel:/i.test(href);
+
+// The one link used for every in-site navigation: warms the route up on hover/focus, then slides the old page away to the left
+// (View Transition, see src/lib/gomp-nav.ts). The cursor-dust burst plays alongside the slide instead of delaying it.
 export default function TransitionLink({
   href,
   children,
@@ -17,6 +18,8 @@ export default function TransitionLink({
   onClick,
   onMouseEnter,
   onMouseLeave,
+  ariaLabel,
+  ariaCurrent,
 }: {
   href: string;
   children: ReactNode;
@@ -25,18 +28,28 @@ export default function TransitionLink({
   onClick?: () => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
+  ariaLabel?: string;
+  ariaCurrent?: 'page' | undefined;
 }) {
   const router = useRouter();
   const pathname = usePathname();
 
+  function warm() {
+    if (!isExternal(href)) router.prefetch(href);
+  }
+
   function handleClick(e: MouseEvent<HTMLAnchorElement>) {
+    // new tab / window, external links and modified clicks keep their native behaviour
+    if (isExternal(href) || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
-    if (ownIndex(href) !== -1 && ownIndex(href) === ownIndex(pathname)) return;
+    if (isSameLocation(href)) return;
     onClick?.();
-    const target = e.currentTarget;
-    const go = () => navigateWithTransition(pathname, href, () => router.push(href));
-    if (isDustEnabled()) burstDust(e.nativeEvent, target, go);
-    else go();
+    if (isSamePathOtherQuery(href)) {
+      router.push(href); // same page, new query (shop filters, ...): nothing to slide
+      return;
+    }
+    if (isDustEnabled()) burstDust(e.nativeEvent, e.currentTarget, () => {});
+    navigateWithTransition(pathname, href, () => router.push(href));
   }
 
   return (
@@ -44,9 +57,15 @@ export default function TransitionLink({
       href={href}
       className={className}
       style={style}
+      aria-label={ariaLabel}
+      aria-current={ariaCurrent}
       data-gomp-nav="1"
       onClick={handleClick}
-      onMouseEnter={onMouseEnter}
+      onMouseEnter={() => {
+        warm();
+        onMouseEnter?.();
+      }}
+      onFocus={warm}
       onMouseLeave={onMouseLeave}
     >
       {children}

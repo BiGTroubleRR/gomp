@@ -5,7 +5,7 @@
 // The answers go through the existing /api/gbb endpoint without a schema change: the topic is stored in
 // `use_case`, the budget in `budget_eur`, and everything else as a readable block at the top of `notes`.
 import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react';
-import Link from 'next/link';
+import TransitionLink from '@/components/TransitionLink';
 import { useSite } from '@/contexts/SiteContext';
 import { useAuth } from '@/contexts/AuthContext';
 import SiteNav from '@/components/SiteNav';
@@ -453,7 +453,7 @@ export default function HelpMePage() {
                 {channel === 'phone' ? t.success_phone(phone.trim()) : t.success_email(email.trim())}
               </p>
               <div style={{ display: 'flex', justifyContent: 'center', gap: 18, flexWrap: 'wrap' }}>
-                <Link href="/" style={{ ...ghostBtn, textDecoration: 'none' }}>{t.back_home}</Link>
+                <TransitionLink href="/" style={{ ...ghostBtn, textDecoration: 'none' }}>{t.back_home}</TransitionLink>
                 <button type="button" className="hm-btn hm-ghost" style={{ ...ghostBtn, color: ACCENT }} onClick={reset}>{t.again}</button>
               </div>
             </div>
@@ -571,7 +571,7 @@ export default function HelpMePage() {
                     </div>
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: FAINT, lineHeight: 1.5 }}>
                       {t.privacy_pre}
-                      <Link href="/privacy" style={{ color: MUTED }}>{t.privacy_link}</Link>
+                      <TransitionLink href="/privacy" style={{ color: MUTED }}>{t.privacy_link}</TransitionLink>
                     </div>
                     {error && (
                       <div role="alert" style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: '#E5645F', marginTop: 14 }}>{error}</div>

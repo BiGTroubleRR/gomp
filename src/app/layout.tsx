@@ -10,6 +10,7 @@ import { langForHost } from '@/lib/gomp-storage';
 import { DeviceViewProvider } from '@/contexts/DeviceViewContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import CursorDustMount from '@/components/CursorDustMount';
+import RouteSettle from '@/components/RouteSettle';
 import PhoneFrame from '@/components/PhoneFrame';
 
 // One typeface for the whole site: DM Sans, the same as the homepage. The older display (Nova Square) and
@@ -66,6 +67,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
               <DeviceViewProvider>
                 <PhoneFrame>{children}</PhoneFrame>
                 <CursorDustMount />
+                <RouteSettle />
               </DeviceViewProvider>
             </AuthProvider>
           </ClerkThemeProvider>

@@ -81,7 +81,7 @@ function labelSprite(text: string): THREE.Sprite {
   return sprite;
 }
 
-export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks = {}) {
+export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks = {}, opts: { initialCase?: { w: number; h: number; d: number } } = {}) {
   const W = container.clientWidth || 800;
   const H = container.clientHeight || 600;
 
@@ -481,9 +481,19 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
   }
 
   // Initial build — after the state above is declared (rebuild() refreshes dimension labels and clears the outline).
+  // With opts.initialCase the case size is known up front, so every part is built once (the page used to create the scene with the
+  // default size and immediately rebuild everything via updateCase).
+  if (opts.initialCase) {
+    caseSize = { ...opts.initialCase };
+    syncGpuInputs();
+  }
   rebuildShell();
   rebuildAllParts();
   rebuildFans();
+  if (opts.initialCase) {
+    refreshDimensions('case');
+    refreshCanDimensions();
+  }
 
   // ---- animation / toggling -------------------------------------------------------------------------
   function startMove(rec: Rec, toPos: THREE.Vector3, toScale: number, selected: boolean, delayMs: number, hideOnEnd: boolean) {
@@ -801,7 +811,14 @@ export function createBuildSceneV2(container: HTMLDivElement, cb: SceneCallbacks
     space.update(camera, t, motionOn);
     renderer.render(scene, camera);
   }
-  tick();
+  // Compile every shader program off the main thread first (KHR_parallel_shader_compile) and only then start drawing, instead of
+  // stalling on the whole compile in the very first frame.
+  const startLoop = () => {
+    if (running) tick();
+  };
+  const compiler = renderer as THREE.WebGLRenderer & { compileAsync?: (s: THREE.Object3D, c: THREE.Camera) => Promise<unknown> };
+  if (typeof compiler.compileAsync === 'function') compiler.compileAsync(scene, camera).then(startLoop, startLoop);
+  else startLoop();
 
   function onResize() {
     const w = container.clientWidth;

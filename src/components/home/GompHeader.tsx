@@ -1,7 +1,8 @@
 'use client';
 
-import Link from 'next/link';
+import TransitionLink from '@/components/TransitionLink';
 import { useRouter } from 'next/navigation';
+import { navigateWithTransition } from '@/lib/gomp-nav';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useSite } from '@/contexts/SiteContext';
 import { pick } from '@/lib/i18n';
@@ -117,7 +118,8 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
     if (query.trim()) p.set('q', query.trim());
     if (category) p.set('cat', category);
     const qs = p.toString();
-    router.push(qs ? `/shop?${qs}` : '/shop');
+    const target = qs ? `/shop?${qs}` : '/shop';
+    navigateWithTransition(window.location.pathname, target, () => router.push(target));
   }
 
   const langSeg = (
@@ -134,10 +136,10 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
     </div>
   );
   const cartLink = (
-    <Link className="cart" href={count > 0 ? '/checkout' : '/build'}>
+    <TransitionLink className="cart" href={count > 0 ? '/checkout' : '/build'}>
       <span className="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M3 4h2l2.4 11h11l2-8H6.2" /><circle cx="9" cy="19.5" r="1.3" /><circle cx="17" cy="19.5" r="1.3" /></svg></span>
       <span><small>{count} {itemsLabel(count, lang)}</small><b className="num">{fmt(totalCzk)}</b></span>
-    </Link>
+    </TransitionLink>
   );
   // "Obchod" is a split button: the label goes to the shop, the small arrow next to it opens the category list as a
   // dropdown (a click, so it works on touch screens too). The list is position: fixed so the scrolling .links bar cannot clip it.
@@ -154,7 +156,7 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
       {NAV.map((n) =>
         n.href === '/shop' ? (
           <span key={n.href} className="drop" ref={dropRef}>
-            <Link href={n.href} aria-current={active === n.href ? 'page' : undefined}>{pick(lang, n)}</Link>
+            <TransitionLink href={n.href} ariaCurrent={active === n.href ? 'page' : undefined}>{pick(lang, n)}</TransitionLink>
             <button
               type="button"
               className="drop-arrow"
@@ -167,18 +169,18 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
             </button>
             {shopMenu && (
               <ul className="drop-menu" style={{ left: shopMenu.left, top: shopMenu.top }}>
-                <li><Link href="/shop" onClick={() => setShopMenu(null)}>{pick(lang, T.allBuilds)}</Link></li>
+                <li><TransitionLink href="/shop" onClick={() => setShopMenu(null)}>{pick(lang, T.allBuilds)}</TransitionLink></li>
                 {CATS.map((c) => (
-                  <li key={c.href}><Link href={c.href} onClick={() => setShopMenu(null)}>{pick(lang, c)} <span>{c.tag}</span></Link></li>
+                  <li key={c.href}><TransitionLink href={c.href} onClick={() => setShopMenu(null)}>{pick(lang, c)} <span>{c.tag}</span></TransitionLink></li>
                 ))}
               </ul>
             )}
           </span>
         ) : (
-          <Link key={n.href} href={n.href} aria-current={active === n.href ? 'page' : undefined}>{pick(lang, n)}</Link>
+          <TransitionLink key={n.href} href={n.href} ariaCurrent={active === n.href ? 'page' : undefined}>{pick(lang, n)}</TransitionLink>
         ),
       )}
-      <Link className="hl" href="/gbb">{pick(lang, { en: 'Assistant', sk: 'Asistent', cz: 'Asistent' })}</Link>
+      <TransitionLink className="hl" href="/gbb">{pick(lang, { en: 'Assistant', sk: 'Asistent', cz: 'Asistent' })}</TransitionLink>
     </div>
   );
 
@@ -186,12 +188,12 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
     return (
       <nav className="nav nav-compact" ref={navRef} aria-label={s('mainNav')}>
         <div className="wrap">
-          <Link className="gomp-logo-link nav-logo" href="/" aria-label={s('home')}><GompLogo height={LOGO_HEIGHT.bar} tone="white" /></Link>
+          <TransitionLink className="gomp-logo-link nav-logo" href="/" ariaLabel={s('home')}><GompLogo height={LOGO_HEIGHT.bar} tone="white" /></TransitionLink>
           {navLinks}
           <div className="right">
             {langSeg}
             {currencySeg}
-            <Link href="/account">{s('account')}</Link>
+            <TransitionLink href="/account">{s('account')}</TransitionLink>
             {cartLink}
           </div>
         </div>
@@ -206,18 +208,18 @@ export default function GompHeader({ active = '/', variant = 'full' }: { active?
           <div className="right">
             {langSeg}
             {currencySeg}
-            <Link href="/account">{s('account')}</Link>
+            <TransitionLink href="/account">{s('account')}</TransitionLink>
           </div>
         </div>
       </div>
 
       <header className="header" ref={headRef}>
         <div className="wrap">
-          <Link className="gomp-logo-link" href="/" aria-label={s('home')}><GompLogo height={LOGO_HEIGHT.header} /></Link>
-          <Link className="support" href="/contact">
+          <TransitionLink className="gomp-logo-link" href="/" ariaLabel={s('home')}><GompLogo height={LOGO_HEIGHT.header} /></TransitionLink>
+          <TransitionLink className="support" href="/contact">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><path d="M4 14v-2a8 8 0 0 1 16 0v2" /><rect x="3" y="13" width="4" height="6" rx="1.5" /><rect x="17" y="13" width="4" height="6" rx="1.5" /><path d="M19 19c0 1.5-2 2.5-5 2.5" /></svg>
             <span><small>{s('personal')}</small><b>{s('support')}</b></span>
-          </Link>
+          </TransitionLink>
           <form className="search" role="search" onSubmit={(e) => { e.preventDefault(); onSearch(q, cat); }}>
             <input id="gomp-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={s('placeholder')} aria-label={s('searchLabel')} />
             <select id="gomp-qcat" value={cat} onChange={(e) => setCat(e.target.value)} aria-label={s('category')}>

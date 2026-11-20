@@ -50,10 +50,15 @@ function starPoints(count: number, pos: (i: number) => THREE.Vector3, size: (i: 
   const s = new Float32Array(count);
   const ph = new Float32Array(count);
   for (let i = 0; i < count; i++) {
-    const v = pos(i);
-    p.set([v.x, v.y, v.z], i * 3);
+    const v = pos(i); // may be a shared temp vector: read it right away
+    const o = i * 3;
+    p[o] = v.x;
+    p[o + 1] = v.y;
+    p[o + 2] = v.z;
     const col = color(i);
-    c.set([col.r, col.g, col.b], i * 3);
+    c[o] = col.r;
+    c[o + 1] = col.g;
+    c[o + 2] = col.b;
     s[i] = size(i);
     ph[i] = Math.random();
   }
@@ -67,20 +72,23 @@ function starPoints(count: number, pos: (i: number) => THREE.Vector3, size: (i: 
   return pts;
 }
 
-const onSphere = (r = STAR_R) => {
+// The two big star fields (15 500 points) ask for a position and a colour per point. Reusing one temp Vector3 / Color for them
+// (starPoints copies the numbers out immediately) avoids ~100 000 short-lived allocations while the configurator scene is built.
+const tmpV = new THREE.Vector3();
+const tmpC = new THREE.Color();
+const onSphereTmp = (r = STAR_R) => {
   const u = Math.random() * 2 - 1;
   const t = Math.random() * Math.PI * 2;
   const k = Math.sqrt(1 - u * u);
-  return new THREE.Vector3(k * Math.cos(t), u, k * Math.sin(t)).multiplyScalar(r);
+  return tmpV.set(k * Math.cos(t) * r, u * r, k * Math.sin(t) * r);
 };
-
 function starColor(): THREE.Color {
   const r = Math.random();
-  if (r < 0.55) return new THREE.Color().setHSL(0.6, 0.15, rand(0.78, 1)); // white-blue
-  if (r < 0.78) return new THREE.Color().setHSL(0.58, 0.55, rand(0.7, 0.85)); // blue
-  if (r < 0.9) return new THREE.Color().setHSL(0.11, 0.6, rand(0.72, 0.88)); // warm
-  if (r < 0.95) return new THREE.Color(0x3fae74); // brand green
-  return new THREE.Color(0xc9a95e); // brand gold
+  if (r < 0.55) return tmpC.setHSL(0.6, 0.15, rand(0.78, 1)); // white-blue
+  if (r < 0.78) return tmpC.setHSL(0.58, 0.55, rand(0.7, 0.85)); // blue
+  if (r < 0.9) return tmpC.setHSL(0.11, 0.6, rand(0.72, 0.88)); // warm
+  if (r < 0.95) return tmpC.set(0x3fae74); // brand green
+  return tmpC.set(0xc9a95e); // brand gold
 }
 
 // Soft radial gradient used for the nebulae / glows.
@@ -129,7 +137,7 @@ export function createSpace(pixelRatio = 1) {
   // 1) the star field
   const stars = starPoints(
     6500,
-    () => onSphere(),
+    () => onSphereTmp(),
     () => (Math.random() < 0.06 ? rand(5, 8) : Math.random() < 0.3 ? rand(3.2, 4.4) : rand(2.2, 3.2)),
     starColor,
     pixelRatio,
@@ -145,11 +153,15 @@ export function createSpace(pixelRatio = 1) {
     () => {
       const ang = Math.random() * Math.PI * 2;
       const gauss = (Math.random() + Math.random() + Math.random() - 1.5) * 0.28; // soft thickness
-      const v = ref.clone().multiplyScalar(Math.cos(ang)).add(ref2.clone().multiplyScalar(Math.sin(ang))).add(bandNormal.clone().multiplyScalar(gauss));
-      return v.normalize().multiplyScalar(STAR_R * 0.98);
+      const ca = Math.cos(ang);
+      const sa = Math.sin(ang);
+      return tmpV
+        .set(ref.x * ca + ref2.x * sa + bandNormal.x * gauss, ref.y * ca + ref2.y * sa + bandNormal.y * gauss, ref.z * ca + ref2.z * sa + bandNormal.z * gauss)
+        .normalize()
+        .multiplyScalar(STAR_R * 0.98);
     },
     () => rand(2, 3),
-    () => new THREE.Color().setHSL(rand(0.5, 0.68), 0.4, rand(0.55, 0.8)),
+    () => tmpC.setHSL(rand(0.5, 0.68), 0.4, rand(0.55, 0.8)),
     pixelRatio,
   );
   group.add(band);

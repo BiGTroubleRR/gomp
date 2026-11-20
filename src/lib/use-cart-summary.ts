@@ -11,6 +11,26 @@ type StoredBuild = {
 } | null;
 
 const KEY = 'gomp_build';
+// A few hundred bytes next to the (huge: it contains the whole component catalog) gomp_build payload. Every page mounts its own
+// header, so reading + JSON.parse-ing the big blob on each navigation was needless work. /build writes this key whenever it saves.
+const SUMMARY_KEY = 'gomp_cart_summary';
+
+type CartSummary = { items: { price: number; sitePrice?: number | null }[] };
+
+// What /build stores in SUMMARY_KEY: just the price fields of the selected parts.
+export function summarizeBuildForCart(b: { selected?: Record<string, boolean>; selections?: Record<string, string>; compDb?: Record<string, Component[]> }): CartSummary {
+  const selected = b.selected || {};
+  const selections = b.selections || {};
+  const compDb = b.compDb || {};
+  const items: CartSummary['items'] = [];
+  for (const id of Object.keys(selected)) {
+    if (!selected[id]) continue;
+    const list = compDb[id] || [];
+    const comp = list.find((c) => c.name === selections[id]) || list[0];
+    if (comp) items.push({ price: comp.price, sitePrice: comp.sitePrice ?? null });
+  }
+  return { items };
+}
 
 // The raw saved payload is the external store. Subscribing covers other tabs ('storage'), returning
 // to the page ('focus' / 'visibilitychange'); same-tab writes are picked up because every page mounts
@@ -28,7 +48,7 @@ function subscribe(onChange: () => void): () => void {
 
 function getSnapshot(): string | null {
   try {
-    return localStorage.getItem(KEY);
+    return localStorage.getItem(SUMMARY_KEY) ?? localStorage.getItem(KEY); // old saves (before the summary key) still work
   } catch {
     return null;
   }
@@ -49,18 +69,24 @@ export function useCartSummary(): { count: number; totalCzk: number } {
   const raw = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   return useMemo(() => {
-    let stored: StoredBuild = null;
+    let stored: StoredBuild | CartSummary = null;
     if (raw) {
       try {
-        stored = JSON.parse(raw) as StoredBuild;
+        stored = JSON.parse(raw) as StoredBuild | CartSummary;
       } catch {
         stored = null;
       }
     }
     if (!stored) return { count: 0, totalCzk: 0 };
-    const selected = stored.selected || {};
-    const selections = stored.selections || {};
-    const compDb = stored.compDb || {};
+    if ('items' in stored && Array.isArray(stored.items)) {
+      let totalCzk = 0;
+      for (const it of stored.items) totalCzk += effectiveSitePriceCzk({ price: it.price, sitePrice: it.sitePrice ?? undefined } as Component, vatRatePct);
+      return { count: stored.items.length, totalCzk };
+    }
+    const legacy = stored as NonNullable<StoredBuild>;
+    const selected = legacy.selected || {};
+    const selections = legacy.selections || {};
+    const compDb = legacy.compDb || {};
     let count = 0;
     let totalCzk = 0;
     // Same resolution as /checkout's buildItems: the named selection, else the category's first row.

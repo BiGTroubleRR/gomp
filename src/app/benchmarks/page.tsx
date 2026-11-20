@@ -529,9 +529,10 @@ export default function BenchmarksPage() {
     const chosen = BENCHMARKS.filter((b) => ids.includes(b.id)).map((b) => ({ id: b.id, name: b.name, group: b.group }));
     writeJSON('gomp_benchmarks', chosen);
     setExiting(true);
-    setTimeout(() => {
-      navigateWithTransition(pathname, '/checkout', () => router.push('/checkout'));
-    }, 300);
+    // two frames: the "preparing checkout" overlay is painted first, then the whole page (overlay included) slides away
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => navigateWithTransition(pathname, '/checkout', () => router.push('/checkout'))),
+    );
   }
 
   function renderCard(b: Benchmark) {

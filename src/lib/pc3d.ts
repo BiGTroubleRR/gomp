@@ -234,6 +234,7 @@ function createStage(width: number, height: number, transparent = false) {
     if (pc) disposeTree(pc);
     floor?.geometry.dispose();
     renderer.dispose();
+    renderer.forceContextLoss(); // hand the GPU context back right away (the next page may create its own)
   }
   return { renderer, scene, camera, setBuild, dispose, getPc: () => pc };
 }
@@ -286,12 +287,20 @@ export function createPc3DViewer(container: HTMLElement): Pc3DViewer {
   const io = new IntersectionObserver((e) => { visible = e[0]?.isIntersecting ?? true; });
   io.observe(container);
 
+  // While the page is sliding away (src/lib/gomp-nav.ts) the viewer stops drawing: the old page is only a bitmap by then, and the GPU
+  // and main thread are needed for the page that is arriving.
+  let paused = false;
+  const onNavStart = () => { paused = true; };
+  const onNavEnd = () => { paused = false; };
+  window.addEventListener('gomp:navstart', onNavStart);
+  window.addEventListener('gomp:navend', onNavEnd);
+
   let raf = 0, last = performance.now();
   const loop = (t: number) => {
     raf = requestAnimationFrame(loop);
     const dt = Math.min(0.05, (t - last) / 1000);
     last = t;
-    if (!visible) return;
+    if (!visible || paused) return;
     controls.update();
     const pc = st.getPc();
     if (!reduced && pc) pc.userData.fans.forEach((b) => { b.rotation.z += dt * 7; });
@@ -312,6 +321,8 @@ export function createPc3DViewer(container: HTMLElement): Pc3DViewer {
     dispose() {
       cancelAnimationFrame(raf);
       clearTimeout(resume);
+      window.removeEventListener('gomp:navstart', onNavStart);
+      window.removeEventListener('gomp:navend', onNavEnd);
       ro.disconnect();
       io.disconnect();
       controls.dispose();

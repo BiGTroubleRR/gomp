@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import TransitionLink from '@/components/TransitionLink';
 import { useSite } from '@/contexts/SiteContext';
 import { pick } from '@/lib/i18n';
 import { GompLogo, LOGO_HEIGHT } from '@/components/brand/GompLogo';
@@ -67,7 +67,7 @@ export default function GompFooter() {
           {COLS.map((c) => (
             <div key={c.title.en}>
               <h4>{pick(lang, c.title)}</h4>
-              <ul>{c.links.map((l) => <li key={l.href}><Link href={l.href}>{pick(lang, l)}</Link></li>)}</ul>
+              <ul>{c.links.map((l) => <li key={l.href}><TransitionLink href={l.href}>{pick(lang, l)}</TransitionLink></li>)}</ul>
             </div>
           ))}
         </div>
