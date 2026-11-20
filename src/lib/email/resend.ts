@@ -50,9 +50,13 @@ function getClient(): Resend | null {
 
 export type OrderConfirmationInput = OrderTicketData;
 
-const SERIF = "Georgia, 'Times New Roman', serif";
-const SANS = 'Arial, Helvetica, sans-serif';
-const MONO = "'Courier New', Courier, monospace";
+// One typeface, like the website (DM Sans for text, headings, numbers and the reference code alike). Mail apps that
+// honour web fonts (Apple Mail, iOS Mail, Outlook for Mac, Samsung Mail) load DM Sans from the @font-face in <head>;
+// Gmail and desktop Outlook ignore web fonts and show the Arial fallback — same sans-serif look, never a serif or mono face.
+const FONT = "'DM Sans', Arial, Helvetica, sans-serif";
+const SERIF = FONT;
+const SANS = FONT;
+const MONO = FONT;
 // ACCENT at ~12% over PANEL_BG — the check-circle fill (email clients can't blend alpha reliably).
 const CHECK_FILL = '#182C22';
 // The email's surround is white (the dark ticket card sits on it); the ticket's cut-out notches are
@@ -143,11 +147,18 @@ function renderHtml(d: OrderTicketData): string {
   // Brand logo: a PNG next to the site (email apps such as Gmail don't render SVG), addressed absolutely from
   // the account link's origin, which the checkout route builds from SITE_URL or the request. Without it the
   // old text wordmark is used.
+  let fontFaceCss = '';
   let logoUrl: string | null = null;
   try {
     if (d.accountUrl) logoUrl = new URL('/brand/gomp-email-logo.png', d.accountUrl).toString();
   } catch {
     logoUrl = null; // malformed link: keep the text wordmark rather than failing the email
+  }
+  if (logoUrl) {
+    const origin = new URL(logoUrl).origin;
+    const face = (weight: number, file: string) =>
+      `@font-face{font-family:'DM Sans';font-style:normal;font-weight:${weight};src:url('${origin}/fonts/${file}') format('truetype');}`;
+    fontFaceCss = `<style>${face(400, 'DMSans-Regular.ttf')}${face(700, 'DMSans-Bold.ttf')}</style>`;
   }
   const logoHtml = logoUrl
     ? `<img src="${esc(logoUrl)}" width="160" height="31" alt="GOMP" style="display:block;margin:0 auto;border:0;outline:none;height:auto;max-width:160px;font-family:${SERIF};font-weight:700;letter-spacing:4px;font-size:22px;color:${GOLD};">`
@@ -162,6 +173,7 @@ function renderHtml(d: OrderTicketData): string {
   <meta name="color-scheme" content="light dark">
   <meta name="supported-color-schemes" content="light dark">
   <title>${esc(t.subject(d.referenceCode))}</title>
+  ${fontFaceCss}
 </head>
 <body bgcolor="${EMAIL_BG}" style="margin:0;padding:0;background:${EMAIL_BG};">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="${EMAIL_BG}" style="background:${EMAIL_BG};padding:32px 12px;">

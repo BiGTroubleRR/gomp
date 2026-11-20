@@ -65,7 +65,7 @@ type TicketCopy = {
 
 export const TICKET_T: Record<Lang, TicketCopy> = {
   en: {
-    subject: (ref) => `Your GOMP order request ${ref}`,
+    subject: (ref) => `Your order request ${ref}`,
     heading: 'Thank you!',
     subtitle: 'Your order request has been received',
     reference: 'Reference',
@@ -93,7 +93,7 @@ export const TICKET_T: Record<Lang, TicketCopy> = {
     },
   },
   sk: {
-    subject: (ref) => `Vaša objednávka GOMP ${ref}`,
+    subject: (ref) => `Vaša objednávka ${ref}`,
     heading: 'Ďakujeme!',
     subtitle: 'Vašu žiadosť o objednávku sme prijali',
     reference: 'Referencia',
@@ -121,7 +121,7 @@ export const TICKET_T: Record<Lang, TicketCopy> = {
     },
   },
   cz: {
-    subject: (ref) => `Vaše objednávka GOMP ${ref}`,
+    subject: (ref) => `Vaše objednávka ${ref}`,
     heading: 'Děkujeme!',
     subtitle: 'Vaši žádost o objednávku jsme přijali',
     reference: 'Reference',

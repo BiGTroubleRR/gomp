@@ -19,7 +19,7 @@ const PANEL = rgb(0.96, 0.975, 0.965);
 const FONT_DIR = path.join(process.cwd(), 'src', 'lib', 'invoice', 'fonts');
 let fontBytes: Promise<[Buffer, Buffer]> | null = null;
 function loadFonts() {
-  fontBytes ??= Promise.all([readFile(path.join(FONT_DIR, 'Inter-Regular.ttf')), readFile(path.join(FONT_DIR, 'Inter-Bold.ttf'))]);
+  fontBytes ??= Promise.all([readFile(path.join(FONT_DIR, 'DMSans-Regular.ttf')), readFile(path.join(FONT_DIR, 'DMSans-Bold.ttf'))]);
   return fontBytes;
 }
 

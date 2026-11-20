@@ -26,6 +26,7 @@ import { fetchPrebuilts, subscribePrebuilts, insertPrebuilt, updatePrebuilt, del
 import { saveStoreSettings } from '@/lib/supabase/store-settings';
 import { passmarkLookup, tierFromPassmark, ramTier, TIER_COLORS } from '@/lib/passmark';
 import TierGlowOrb from '@/components/TierGlowOrb';
+import CardSpace from '@/components/CardSpace';
 import dynamic from 'next/dynamic';
 // Dynamically imported: AdminAlignmentPanel pulls in three.js (via src/lib/build-scene.ts, for
 // DEFAULT_ALIGNMENT_TUNING) purely for its own tab's 3D preview, but a plain static import here
@@ -1762,7 +1763,18 @@ export default function AdminPage() {
         </div>
 
         {/* Main */}
-        <div style={{ flex: 1, background: '#F2EDE3', overflowY: 'auto', minHeight: 'calc(100vh - 54px)' }}>
+        {/* The galaxy backdrop (same animation as the shop cards on hover) sits in a fixed layer behind the tab content, so the
+            work area is deep-space dark instead of white and the stars stay put while the content scrolls. */}
+        <div
+          aria-hidden
+          style={{
+            position: 'fixed', top: 54, bottom: 0, right: 0, left: isMobile ? 0 : 188, zIndex: 0,
+            background: '#070B09', pointerEvents: 'none',
+          }}
+        >
+          <CardSpace color="#1F8A55" active />
+        </div>
+        <div style={{ flex: 1, position: 'relative', zIndex: 1, background: 'transparent', overflowY: 'auto', minHeight: 'calc(100vh - 54px)' }}>
           {tab === 'requests' && (
             <div style={{ padding: isMobile ? '20px 16px' : '36px 44px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
